@@ -1,0 +1,124 @@
+/* Morning brief – living-room TV.
+   Large type, high contrast, RTL, one screen, no scrolling.
+   The agent writes only the markup; every visual decision lives here. */
+
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --ink: #f0f6fc;
+  --muted: #9198a1;
+  --line: #262c36;
+  --accent: #7ee787;   /* experiences – the encouraging tone */
+  --warn: #f0883e;
+  --bad: #ff7b72;
+  --gap: clamp(0.6rem, 1.4vh, 1.4rem);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;               /* no scrolling from the couch */
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Rubik", "Assistant", "Segoe UI", "Arial Hebrew", Arial, sans-serif;
+  font-size: clamp(18px, 1.9vw, 34px);
+  line-height: 1.35;
+}
+
+.brief {
+  height: 100%;
+  padding: clamp(1rem, 2.5vh, 2.5rem) clamp(1.2rem, 3vw, 3.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* --- header --------------------------------------------------------------- */
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: var(--gap);
+  border-bottom: 2px solid var(--line);
+}
+.topbar .date { font-size: 1.5em; font-weight: 600; }
+.topbar .weather { font-size: 1.25em; color: var(--muted); white-space: nowrap; }
+
+/* --- sections ------------------------------------------------------------- */
+.section { min-height: 0; }
+.section h2 {
+  margin: 0 0 0.25em;
+  font-size: 0.72em;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-transform: none;
+}
+.section p { margin: 0.1em 0; }
+
+.schedule { font-size: 1.25em; font-weight: 600; }
+.empty, .unavailable { color: var(--muted); }
+
+/* --- preparations --------------------------------------------------------- */
+ul.prep { margin: 0; padding: 0; list-style: none; }
+ul.prep li {
+  position: relative;
+  padding-inline-start: 1.4em;
+  font-size: 1.1em;
+}
+ul.prep li::before {
+  content: "▸";
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--accent);
+}
+
+/* --- money ---------------------------------------------------------------- */
+#money .headline { font-size: 1.2em; font-weight: 600; }
+#money .envelopes { color: var(--ink); }
+#money .trend { color: var(--muted); }
+#money .encourage { color: var(--accent); }
+#money .low { color: var(--warn); }
+#money .negative { color: var(--bad); }
+#money .notice { color: var(--warn); }
+
+/* --- week ----------------------------------------------------------------- */
+#week .week { font-size: 1.05em; }
+
+/* --- robot ---------------------------------------------------------------- */
+#robot {
+  margin-top: auto;                /* pinned to the bottom of the screen */
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: var(--gap);
+  border-top: 2px solid var(--line);
+  background: transparent;
+}
+#robot .robot-status { color: var(--muted); }
+button.action {
+  font: inherit;
+  font-size: 0.95em;
+  color: var(--ink);
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 0.6em;
+  padding: 0.35em 1.1em;
+  cursor: pointer;
+}
+button.action:hover, button.action:focus-visible { border-color: var(--accent); }
+button.action[disabled] { opacity: 0.5; cursor: default; }
+.action-result { color: var(--muted); }
+
+/* --- staleness banner (served by the local server, not by the agent) ------- */
+.stale-banner {
+  background: var(--warn);
+  color: #1b1200;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.35em;
+}
