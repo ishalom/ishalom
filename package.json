@@ -4,12 +4,15 @@
   "private": true,
   "description": "First-gen personal assistant: a Hebrew morning brief rendered on the living-room TV, built on the Claude Agent SDK and MCP servers.",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "envelopes": "tsx src/cli/envelopes.ts",
     "brief": "tsx src/cli/brief.ts",
+    "preview": "tsx src/cli/preview.ts",
     "weekly": "tsx src/cli/weekly.ts",
     "doctor": "tsx src/cli/doctor.ts",
     "clean-now": "tsx src/cli/clean.ts",

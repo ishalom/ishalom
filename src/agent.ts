@@ -127,6 +127,7 @@ export async function runSkill(options: RunSkillOptions): Promise<RunSkillResult
 
   const queryOptions: Options = {
     model: config.agent.model,
+    ...(config.agent.fallback_model ? { fallbackModel: config.agent.fallback_model } : {}),
     systemPrompt,
     mcpServers: servers,
     tools: builtinTools,
@@ -152,15 +153,25 @@ export async function runSkill(options: RunSkillOptions): Promise<RunSkillResult
   let durationMs = 0;
   let ok = false;
 
-  for await (const message of query({ prompt: options.task, options: queryOptions })) {
-    trace(message, options.verbose ?? false);
-    if (message.type === 'result') {
-      turns = message.num_turns;
-      costUsd = message.total_cost_usd;
-      durationMs = message.duration_ms;
-      ok = message.subtype === 'success' && !message.is_error;
-      text = message.subtype === 'success' ? message.result : `agent error: ${message.subtype}`;
+  const startedAt = Date.now();
+  try {
+    for await (const message of query({ prompt: options.task, options: queryOptions })) {
+      trace(message, options.verbose ?? false);
+      if (message.type === 'result') {
+        turns = message.num_turns;
+        costUsd = message.total_cost_usd;
+        durationMs = message.duration_ms;
+        ok = message.subtype === 'success' && !message.is_error;
+        text = message.subtype === 'success' ? message.result : `agent error: ${message.subtype}`;
+      }
     }
+  } catch (error) {
+    // An overloaded API or a dead subprocess must not take the caller down: an
+    // unattended run still has to reach its fallback (the cached brief).
+    ok = false;
+    durationMs = Date.now() - startedAt;
+    text = `agent run failed: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(`! ${text}`);
   }
 
   return { ok, text, turns, costUsd, durationMs, skipped };

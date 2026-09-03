@@ -44,6 +44,8 @@ const ConfigSchema = z.object({
   agent: z
     .object({
       model: z.string().default('claude-opus-5'),
+      /** Tried when the primary model is overloaded, so a 529 does not cost a brief. */
+      fallback_model: z.string().optional(),
       max_turns: z.number().int().positive().default(60),
     })
     .default({ model: 'claude-opus-5', max_turns: 60 }),

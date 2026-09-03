@@ -192,8 +192,10 @@ Rules for filling it in:
   `class="low"` (or `class="negative"` when below zero), then the `.trend` line. Wrap
   an `encourage` amount in `<span class="encourage">…</span>`. The renew-token notice
   goes in a single `<p class="notice">`.
-- `#week` — the remaining days of the week that carry something worth naming, as
-  `א׳ כותרת`, joined with ` · `. Today is not repeated here.
+- `#week` — the rest of the lookahead window (tomorrow through day
+  `brief.calendar_days_ahead`, never only "until Saturday"), one entry per day that
+  carries something worth naming, as `א׳ כותרת`, joined with ` · `. Today is not
+  repeated here. Past six entries, keep the ones that cost money or need preparation.
 - `#robot` — only when `roborock` answered. Include the battery, how long ago the last
   clean was, and any error. When today is an office day and the last clean was more
   than `roborock.suggest_clean_after_days` days ago, make the line the suggestion:

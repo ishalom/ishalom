@@ -13,6 +13,7 @@ home:
 
 agent:
   model: claude-opus-5
+  fallback_model: claude-sonnet-5   # used only when the primary is overloaded
   max_turns: 60
 
 brief:
