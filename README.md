@@ -14,12 +14,11 @@ for it, and see what's left before spending.
 │  09:00 משרד · 18:30 אימון                   │
 │                                             │
 │  להיום                                      │
-│  ▸ שים חטיף בתיק – אימון היום               │
+│  ▸ שים חטיף בתיק – אימון מחר                │
 │  ▸ להכין אוכל למחר (משרד)                   │
 │                                             │
 │  כסף                                        │
 │  אין הוצאות מתוכננות היום.                  │
-│  חוויות 1,000 ₪ · סופר 620 ₪ · LIME 90 ₪    │
 │  אוכל בחוץ: 2 הזמנות השבוע (שבוע שעבר 5) ↓  │
 │                                             │
 │  השבוע                                      │
@@ -143,8 +142,15 @@ accordingly — the keyword lists live in `config.yaml` under `event_rules`, and
 category means adding a line there, not changing code. Same for reminders
 (`prep_rules`) and for how each envelope is spoken about (`tone`).
 
+Balances are shown to be read *before* a purchase, so they only appear on a day that
+spends: a poker night surfaces `חוויות`, the weekly grocery reminder surfaces `סופר`, and
+a day with nothing planned shows no numbers at all. Flip `show_daily_balances: always`
+if you'd rather see them daily.
+
 Tones are deliberate: experiences encourage ("מותר עד X, תיהנה"), durables are stated
-quietly and never suggested, eating out gets a trend and nothing else.
+quietly and never suggested, eating out gets a trend and nothing else. Reminders that
+prevent a purchase land the day before — the gym bag is packed tonight, not at 07:00 on
+the day.
 
 ## When something breaks
 

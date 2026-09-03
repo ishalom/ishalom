@@ -14,8 +14,9 @@ second — money only exists here because an event costs something.
 
 ## Principles
 
-- **The default daily budget is zero.** A day with no relevant event says
-  `אין הוצאות מתוכננות היום.` That is the correct output, not a failure.
+- **The default daily budget is zero.** A day that spends nothing says
+  `אין הוצאות מתוכננות היום.` and shows no balances at all. That is the correct
+  output, not a failure.
 - **What is not in the calendar does not exist.** Remaining events, home days and
   workouts are counted from the calendar and nowhere else.
 - **Preparation beats arithmetic.** A reminder that prevents a purchase (snack in the
@@ -55,7 +56,10 @@ written by `weekly-planning`.
 Apply `prep_rules` against the classified week. The `when` field is a short condition
 in English; read it literally:
 
-- `workout tomorrow` — a `workout` event exists on tomorrow's date.
+- `workout tomorrow` — a `workout` event exists on tomorrow's date. Note the timing:
+  the bag is packed the night before, so this fires the **day before** the workout and
+  never on the day itself. A workout today appears in the schedule line and nowhere
+  else — by 07:00 the reminder would be useless.
 - `office_day tomorrow` — tomorrow is marked as an office day.
 - `office_days in next 7 days >= 2` — count office days in the window.
 - `friends_dinner in 2 days` — a `friends_dinner` event exactly two days out.
@@ -81,22 +85,36 @@ say one sentence about why in your console summary.
 Format amounts as whole shekels with a thousands separator and a trailing `₪`
 (`1,000 ₪`). Never show agorot.
 
-**Envelopes by role** (`config.yaml` → `envelopes`, keyed by RiseUp envelope id):
+**Balances follow the day's expenses.** An envelope's balance is on screen to be read
+**before** the purchase it belongs to, so it appears only on a day with a `spend` event
+that points at it. Everything else is off:
 
-- `daily` — always shown, with its balance.
-- `track` — shown only when the balance is negative, or below
-  `brief.track_threshold_pct` of `originalAmount`.
-- `hidden` — never shown, and never counted into any total.
+| Today | Headline | `.envelopes` line |
+|---|---|---|
+| no `spend` event | `אין הוצאות מתוכננות היום.` | omitted entirely — not empty, absent |
+| one or more `spend` events | the event and its amount, e.g. `פוקר הערב – מותר עד 250 ₪, תיהנה` | the envelopes those events spend from |
 
-**Spend events today.** For each `spend` event today, work out the recommended amount:
+A day with nothing planned shows no numbers at all. Resist adding them back "for
+reference": a wall of balances every morning is the "how much money do I have" screen
+this brief exists to avoid.
+
+`brief.show_daily_balances: always` overrides the third column and lists every `daily`
+envelope every day. It does not change the headline.
+
+**Recommended amount** for each `spend` event today:
 
 - `per_event` is a number → that is the amount.
 - `per_event: null` → the envelope's remaining balance ÷ the number of remaining
   `spend` events this month that point at the same envelope, counted from the calendar
   only (today's event included), rounded down to the nearest 10 ₪.
 
-If there are no `spend` events today, the money headline is exactly
-`אין הוצאות מתוכננות היום.`
+**Envelope roles** (`config.yaml` → `envelopes`, keyed by RiseUp envelope id):
+
+- `daily` — can appear, on the terms above.
+- `track` — shown only when the balance is negative, or below
+  `brief.track_threshold_pct` of `originalAmount`. A warning, not a budget, so it
+  appears regardless of what today spends.
+- `hidden` — never shown, and never counted into any total.
 
 **Eating-out trend.** Count transactions in the eating-out envelope for the last seven
 days and for the seven days before that, from `get_transactions`. Report both counts
@@ -153,7 +171,7 @@ styles, no inline scripts, no other files.
   <section class="section" id="prep">
     <h2>להיום</h2>
     <ul class="prep">
-      <li>שים חטיף בתיק – אימון היום</li>
+      <li>שים חטיף / משקה חלבון בתיק – אימון מחר</li>
       <li>להכין אוכל למחר (משרד)</li>
     </ul>
   </section>
@@ -161,7 +179,6 @@ styles, no inline scripts, no other files.
   <section class="section" id="money">
     <h2>כסף</h2>
     <p class="headline">אין הוצאות מתוכננות היום.</p>
-    <p class="envelopes">חוויות 1,000 ₪ · סופר 620 ₪ · מטלטלין 800 ₪ · LIME 90 ₪</p>
     <p class="trend">אוכל בחוץ: 2 הזמנות השבוע (שבוע שעבר 5) ↓</p>
   </section>
 
@@ -187,11 +204,13 @@ Rules for filling it in:
   `רוח חזקה` above 30 km/h. If weather failed, leave the div empty.
 - `#today .schedule` — today's timed events, `HH:MM כותרת`, joined with ` · `. Nothing
   today: `<p class="empty">אין אירועים היום</p>`.
-- `#money` — the headline, then one `.envelopes` line for the `daily` envelopes joined
-  with ` · `, then `track` envelopes that crossed the threshold on their own line with
-  `class="low"` (or `class="negative"` when below zero), then the `.trend` line. Wrap
-  an `encourage` amount in `<span class="encourage">…</span>`. The renew-token notice
-  goes in a single `<p class="notice">`.
+- `#money` — the headline; then, only if today spends from them, one `.envelopes` line
+  for those envelopes joined with ` · `; then `track` envelopes that crossed the
+  threshold on their own line with `class="low"` (or `class="negative"` when below
+  zero); then the `.trend` line. Omit the `.envelopes` line entirely on a day with
+  nothing planned — do not emit it empty. Wrap an `encourage` amount in
+  `<span class="encourage">…</span>`. The renew-token notice goes in a single
+  `<p class="notice">`.
 - `#week` — the rest of the lookahead window (tomorrow through day
   `brief.calendar_days_ahead`, never only "until Saturday"), one entry per day that
   carries something worth naming, as `א׳ כותרת`, joined with ` · `. Today is not

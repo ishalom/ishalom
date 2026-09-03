@@ -19,6 +19,10 @@ agent:
 brief:
   refresh_seconds: 300      # the page re-requests itself every 5 minutes
   track_threshold_pct: 20   # a `track` envelope shows only below this, or when negative
+  # on_expense – a daily envelope's balance appears only on a day that spends
+  #              from it, so a day with nothing planned shows no numbers at all.
+  # always     – every daily envelope, every day.
+  show_daily_balances: on_expense
   calendar_days_ahead: 7
   port: 8080
 
@@ -32,6 +36,8 @@ roborock:
 #   daily  – always shown, with balance
 #   track  – shown only below brief.track_threshold_pct, or when negative
 #   hidden – never shown
+# `daily` envelopes are the ones that can appear; `show_daily_balances` above
+# decides when. `track` shows only when it goes low or negative. `hidden` never.
 envelopes:
   "<riseup-id-experiences>": { name: חוויות,            role: daily, tone: encourage }
   "<riseup-id-durables>":    { name: מטלטלין,           role: daily, tone: quiet }

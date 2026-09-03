@@ -3,7 +3,10 @@
  *
  * The point is to iterate on layout and Hebrew wording without credentials,
  * a network or a real budget: edit samples/week.json (or the skill), run this,
- * look at out/preview.html. Nothing here touches the real brief.
+ * look at out/preview-week.html. Nothing here touches the real brief.
+ *
+ *   npm run preview                          -> samples/week.json
+ *   npm run preview -- samples/spend-day.json
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -44,8 +47,10 @@ const events = ((sample['events'] as SampleEvent[] | undefined) ?? []).map((even
   };
 });
 
-const previewPath = path.join(outDir, 'preview.html');
+const previewPath = path.join(outDir, `preview-${path.basename(samplePath, '.json')}.html`);
 ensureOutDirs();
+// See renderBrief: Write will not overwrite a file this run has not read.
+fs.rmSync(previewPath, { force: true });
 
 const run = await runSkill({
   skill: 'morning-brief',
@@ -71,5 +76,9 @@ const run = await runSkill({
 });
 
 console.log('\n' + run.text.trim());
-console.log(`\npreview → ${previewPath} · ${run.turns} turns · $${run.costUsd.toFixed(3)}`);
-process.exit(fs.existsSync(previewPath) ? 0 : 1);
+const written = fs.existsSync(previewPath);
+console.log(
+  `\n${written ? 'preview →' : 'NOTHING WRITTEN —'} ${previewPath}` +
+    ` · ${run.turns} turns · $${run.costUsd.toFixed(3)}`,
+);
+process.exit(written ? 0 : 1);

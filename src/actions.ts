@@ -21,6 +21,11 @@ function mtimeOrZero(file: string): number {
  */
 export async function renderBrief(options: { trigger?: string; verbose?: boolean } = {}): Promise<BriefRun> {
   ensureOutDirs();
+  // Clear the target first. The Write tool refuses to overwrite a file it has not
+  // read, and these runs have no Read tool — so without this the 07:00 render would
+  // succeed and every refresh after it would silently fail. The last good brief
+  // lives in the cache, so nothing is lost if this run then writes nothing.
+  fs.rmSync(briefPath, { force: true });
   const before = mtimeOrZero(briefPath);
   const trigger = options.trigger ?? 'manual';
 

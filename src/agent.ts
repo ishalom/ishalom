@@ -74,6 +74,39 @@ function runtimeFacts(skipped: Record<string, string>, servers: string[]): strin
 }
 
 /**
+ * The SDK spawns the Claude Code CLI, which picks up CLAUDE_* variables from its
+ * environment. When this host itself runs inside Claude Code, those leak into the
+ * child: CLAUDE_CODE_SESSION_ID in particular makes the run attach to the parent's
+ * session, so it replays that session's system prompt and edits to the skill or to
+ * config.yaml silently have no effect.
+ *
+ * Only the session and control variables are dropped. Provider and auth variables
+ * are kept, since on some hosts they are how the CLI authenticates at all.
+ */
+const INHERITED_CONTROL_VARS = [
+  'CLAUDECODE',
+  'CLAUDE_CODE_SESSION_ID',
+  'CLAUDE_CODE_CHILD_SESSION',
+  'CLAUDE_CODE_MESSAGING_SOCKET',
+  'CLAUDE_CODE_WORKER_EPOCH',
+  'CLAUDE_CODE_DEBUG',
+  'CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD',
+  'CLAUDE_PID',
+  'CLAUDE_EFFORT',
+  'CLAUDE_AFTER_LAST_COMPACT',
+  'CLAUDE_AUTOCOMPACT_PCT_OVERRIDE',
+  'CLAUDE_AUTO_BACKGROUND_TASKS',
+  'AI_AGENT',
+];
+
+function subprocessEnv(): Record<string, string | undefined> {
+  const env: Record<string, string | undefined> = { ...process.env };
+  for (const name of INHERITED_CONTROL_VARS) delete env[name];
+  env['CLAUDE_AGENT_SDK_CLIENT_APP'] = 'morning-brief/0.1.0';
+  return env;
+}
+
+/**
  * Belt-and-braces guard: the tool surface is already tiny, but this makes the
  * set of files a run can touch explicit rather than a matter of prompt discipline.
  */
@@ -141,6 +174,7 @@ export async function runSkill(options: RunSkillOptions): Promise<RunSkillResult
         : { behavior: 'deny', message: `${toolName} is not available in this run.` };
     },
     settingSources: [],
+    env: subprocessEnv(),
     cwd: projectRoot,
     maxTurns: options.maxTurns ?? config.agent.max_turns,
     includePartialMessages: false,

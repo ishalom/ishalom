@@ -1,0 +1,35 @@
+{
+  "_comment": "Same week, but poker falls today — so the money section has something to say. Used to check the on_expense balance rule against the quiet day in week.json.",
+
+  "weather": { "condition": "בהיר", "max_c": 29, "min_c": 22, "rain_mm": 0, "wind_kmh": 12 },
+
+  "events": [
+    { "day_offset": 0, "time": "09:00", "title": "משרד" },
+    { "day_offset": 0, "time": "21:00", "title": "פוקר אצל יואב" },
+    { "day_offset": 1, "time": "09:00", "title": "משרד" },
+    { "day_offset": 3, "time": "09:00", "title": "משרד" },
+    { "day_offset": 4, "time": "20:00", "title": "בישול חברים" },
+    { "day_offset": 6, "time": "22:00", "title": "הופעה של אסף אבידן" }
+  ],
+
+  "budget": {
+    "month": "current",
+    "envelopes": [
+      { "id": "<riseup-id-experiences>", "originalAmount": 2000, "balancedAmount": 1000 },
+      { "id": "<riseup-id-durables>",    "originalAmount": 1200, "balancedAmount": 400 },
+      { "id": "<riseup-id-eating-out>",  "originalAmount": 800,  "balancedAmount": 520 },
+      { "id": "<riseup-id-groceries>",   "originalAmount": 1800, "balancedAmount": 1180 },
+      { "id": "<riseup-id-lime>",        "originalAmount": 200,  "balancedAmount": 110 },
+      { "id": "<riseup-id-pets>",        "originalAmount": 300,  "balancedAmount": 250 },
+      { "id": "<riseup-id-smoking>",     "originalAmount": 400,  "balancedAmount": 200 },
+      { "id": "<riseup-id-car>",         "originalAmount": 500,  "balancedAmount": 100 },
+      { "id": "<riseup-id-bills>",       "originalAmount": 3200, "balancedAmount": 3200 },
+      { "id": "<riseup-id-savings>",     "originalAmount": 1500, "balancedAmount": 1500 },
+      { "id": "<riseup-id-fixed>",       "originalAmount": 2400, "balancedAmount": 2400 }
+    ]
+  },
+
+  "eating_out_transactions": { "last_7_days": 4, "previous_7_days": 3 },
+
+  "robot": { "battery": 100, "state": "charging", "last_clean_days_ago": 1, "error": null }
+}

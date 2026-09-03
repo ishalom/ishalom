@@ -53,10 +53,18 @@ const ConfigSchema = z.object({
     .object({
       refresh_seconds: z.number().int().positive().default(300),
       track_threshold_pct: z.number().min(0).max(100).default(20),
+      /** Whether a daily envelope's balance shows every day, or only when today spends from it. */
+      show_daily_balances: z.enum(['on_expense', 'always']).default('on_expense'),
       calendar_days_ahead: z.number().int().positive().default(7),
       port: z.number().int().positive().default(8080),
     })
-    .default({ refresh_seconds: 300, track_threshold_pct: 20, calendar_days_ahead: 7, port: 8080 }),
+    .default({
+      refresh_seconds: 300,
+      track_threshold_pct: 20,
+      show_daily_balances: 'on_expense',
+      calendar_days_ahead: 7,
+      port: 8080,
+    }),
   roborock: z
     .object({ suggest_clean_after_days: z.number().int().positive().default(3) })
     .default({ suggest_clean_after_days: 3 }),
