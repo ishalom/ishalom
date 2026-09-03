@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+out/
+*.tgz
+
+# Google Calendar MCP OAuth material – never commit
+gcp-oauth.keys.json
+secrets/
+
+# Python (Roborock MCP)
+__pycache__/
+*.pyc
+.venv/

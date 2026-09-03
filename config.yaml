@@ -1,0 +1,108 @@
+# ---------------------------------------------------------------------------
+# The only configuration the agent reads. Rules, not data.
+# Everything here is handed to the agent verbatim on every run.
+# ---------------------------------------------------------------------------
+
+timezone: Asia/Jerusalem
+locale: he-IL
+
+home:
+  location: Tel Aviv        # what the weather MCP is asked about
+  latitude: 32.0853
+  longitude: 34.7818
+
+agent:
+  model: claude-opus-5
+  fallback_model: claude-sonnet-5   # used only when the primary is overloaded
+  max_turns: 60
+
+brief:
+  refresh_seconds: 300      # the page re-requests itself every 5 minutes
+  track_threshold_pct: 20   # a `track` envelope shows only below this, or when negative
+  # on_expense – a daily envelope's balance appears only on a day that spends
+  #              from it, so a day with nothing planned shows no numbers at all.
+  # always     – every daily envelope, every day.
+  show_daily_balances: on_expense
+  calendar_days_ahead: 7
+  port: 8080
+
+roborock:
+  suggest_clean_after_days: 3
+
+# --- 4.1 Envelopes ----------------------------------------------------------
+# Keys are RiseUp envelope ids. Run `npm run envelopes` once, then paste the
+# block it prints over this one. Until then the money section cannot match
+# your real budget.
+#   daily  – always shown, with balance
+#   track  – shown only below brief.track_threshold_pct, or when negative
+#   hidden – never shown
+# `daily` envelopes are the ones that can appear; `show_daily_balances` above
+# decides when. `track` shows only when it goes low or negative. `hidden` never.
+envelopes:
+  "<riseup-id-experiences>": { name: חוויות,            role: daily, tone: encourage }
+  "<riseup-id-durables>":    { name: מטלטלין,           role: daily, tone: quiet }
+  "<riseup-id-eating-out>":  { name: אוכל בחוץ והזמנות, role: daily, tone: reduce }
+  "<riseup-id-groceries>":   { name: סופר,              role: daily, tone: quiet }
+  "<riseup-id-lime>":        { name: LIME,              role: daily, tone: quiet }
+  "<riseup-id-pets>":        { name: חיות מחמד,         role: track }
+  "<riseup-id-smoking>":     { name: עישונים,           role: track }
+  "<riseup-id-car>":         { name: רכב,               role: track }
+  "<riseup-id-bills>":       { name: חשבונות,           role: hidden }
+  "<riseup-id-savings>":     { name: הפקדות לחיסכון,    role: hidden }
+  "<riseup-id-fixed>":       { name: הוצאות קבועות,     role: hidden }
+
+# --- 4.2 Event rules (calendar title keywords) ------------------------------
+# per_event: null  -> split the envelope's remaining balance evenly across the
+#                     remaining spend events this month, as they appear in the
+#                     calendar.
+event_rules:
+  - { match: [משרד, office],                   kind: office_day }
+  - { match: [בית, WFH, מהבית],                kind: home_day }
+  - { match: [אימון, gym, כושר],               kind: workout }
+  - { match: [פוקר],                           kind: spend, envelope: חוויות, per_event: 250 }
+  - { match: [הופעה, מסיבה, חתונה, יום הולדת], kind: spend, envelope: חוויות, per_event: null }
+  - { match: [בישול חברים, ארוחת שני],         kind: friends_dinner }
+
+# --- 4.3 Preparation rules --------------------------------------------------
+# Reminders repeat every day while their condition holds. No "seen" state.
+prep_rules:
+  - { when: workout tomorrow,                remind: "שים חטיף / משקה חלבון בתיק – אימון מחר" }
+  - { when: office_day tomorrow,             remind: "להכין אוכל למחר" }
+  - { when: office_days in next 7 days >= 2, remind: "להזמין קניות לשבוע", once_per_week: true }
+  - { when: friends_dinner in 2 days,        remind: "לבדוק מי עושה קניות ליום שני" }
+
+# --- Data sources -----------------------------------------------------------
+# Every source is an MCP server. `${VAR}` reads from .env; `${VAR:-default}`
+# falls back. A server whose `requires_env` is missing is skipped, and the
+# section that needed it degrades instead of failing the run.
+mcp_servers:
+  riseup:
+    command: npx
+    args: ["-y", "@riseup-oss/mcp@0.3.0"]
+    env:
+      RISEUP_PAT: "${RISEUP_PAT}"
+      RISEUP_API_BASE: "${RISEUP_API_BASE}"
+    requires_env: [RISEUP_PAT]
+
+  google-calendar:
+    command: npx
+    args: ["-y", "@cocal/google-calendar-mcp@2.6.2"]
+    env:
+      GOOGLE_OAUTH_CREDENTIALS: "${GOOGLE_OAUTH_CREDENTIALS}"
+      GOOGLE_CALENDAR_MCP_TOKEN_PATH: "${GOOGLE_CALENDAR_MCP_TOKEN_PATH}"
+    requires_env: [GOOGLE_OAUTH_CREDENTIALS]
+
+  weather:
+    command: npx
+    args: ["-y", "open-meteo-mcp@0.1.0"]
+
+  roborock:
+    command: "${PYTHON_BIN:-python}"
+    args: ["-m", "roborock_mcp"]
+    env:
+      PYTHONPATH: "${PROJECT_ROOT}/mcp-servers/roborock"
+      ROBOROCK_USERNAME: "${ROBOROCK_USERNAME}"
+      ROBOROCK_PASSWORD: "${ROBOROCK_PASSWORD}"
+      ROBOROCK_DEVICE_NAME: "${ROBOROCK_DEVICE_NAME}"
+    requires_env: [ROBOROCK_USERNAME, ROBOROCK_PASSWORD]
+    timeout_ms: 60000
