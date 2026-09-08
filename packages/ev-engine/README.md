@@ -66,10 +66,18 @@ step and no test framework.
 
 ```sh
 npm test           # 86 tests, ~15s
-npm run test:slow  # adds Monte Carlo cross-validation, ~45s
-npm run typecheck  # needs devDependencies installed
+npm run test:slow  # adds Monte Carlo cross-validation, ~35s
+npm run typecheck  # needs devDependencies installed (npm install)
 npm run charts     # derives every preset's chart in exact mode into charts/
 ```
+
+Verified on Linux/Node 22 and Windows/Node 26; the golden charts come out byte
+identical on both. The scripts go through `scripts/test.ts` rather than putting
+a glob and an environment variable straight into an npm script, because npm runs
+scripts under `cmd.exe` on Windows and neither POSIX quoting nor `VAR=1 cmd`
+survives that. The runner also refuses to report success when it matched no test
+files — an empty suite exits 0 and looks exactly like a passing one, which is
+how that bug went unnoticed in the first place.
 
 ## How it is validated (§14.1)
 

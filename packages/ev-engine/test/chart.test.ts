@@ -44,6 +44,16 @@ const UPCARDS: BjRank[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0];
 const pairLabel = (rank: BjRank) =>
   rank === ACE ? 'A,A' : rank === TEN ? 'T,T' : `${rank + 1},${rank + 1}`;
 
+/**
+ * Compare charts by content, not by line ending. `.gitattributes` pins these
+ * files to LF, but a checkout that predates it — or an editor that helpfully
+ * rewrites them — should surface as nothing at all, rather than as a §14.4
+ * sign-off failure that has no bearing on the strategy.
+ */
+function normaliseEol(text: string): string {
+  return text.split('\r\n').join('\n');
+}
+
 function diffAgainstPublished(chart: StrategyChart, published: PublishedChart): string[] {
   const problems: string[] = [];
 
@@ -211,10 +221,10 @@ test('golden charts are unchanged', () => {
       writeFileSync(path, rendered);
       continue;
     }
-    assert.ok(existsSync(path), `missing golden file ${path}; run UPDATE_GOLDEN=1 npm test`);
+    assert.ok(existsSync(path), `missing golden file ${path}; run \`npm run charts:golden\``);
     assert.equal(
-      readFileSync(path, 'utf8'),
-      rendered,
+      normaliseEol(readFileSync(path, 'utf8')),
+      normaliseEol(rendered),
       `${preset.id} chart changed. This needs explicit sign-off (spec §14.4).`,
     );
   }

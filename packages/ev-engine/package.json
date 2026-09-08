@@ -12,10 +12,10 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "test": "node --test 'test/**/*.test.ts'",
-    "test:slow": "EV_ENGINE_SLOW_TESTS=1 node --test --test-timeout=3600000 'test/**/*.test.ts'",
+    "test": "node scripts/test.ts",
+    "test:slow": "node scripts/test.ts --slow",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
-    "charts:golden": "UPDATE_GOLDEN=1 node --test test/chart.test.ts",
+    "charts:golden": "node scripts/test.ts --update-golden test/chart.test.ts",
     "charts": "node scripts/generate-charts.ts"
   },
   "dependencies": {},
