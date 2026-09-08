@@ -59,6 +59,7 @@ surrender is exactly `-0.5`.
 | `uth/river` | §6.3 | The river decision, exact over all 990 dealer holdings |
 | `uth/flop` | §6.3 | The flop decision, exact over all 1,070,190 outcomes |
 | `uth/trips` | §5.2.4 | Trips EV per paytable, from the exhaustive hand distribution |
+| `uth/preflop` | §6.3 | The pre-flop decision: the offline 169-class EV table |
 
 It is **dependency-free**: zero runtime dependencies, and no imports outside the
 package. `test/engine-contract.test.ts` enforces that, along with §12's promise
@@ -141,6 +142,31 @@ every seven-card hand is checked to score as the best of its 21 five-card
 subsets — 0 disagreements across all 133,784,560, which pins the seven-card path
 to the five-card path already proven correct.
 
+**Pre-flop** is the one decision that cannot be solved at runtime, so it is an
+offline job whose output ships as a lookup asset (§6.3, §6.5). Two things make
+the 2.1-billion-outcome enumeration tractable rather than merely large. The board
+is fixed across the dealer's 990 holdings, so its four suit masks are built once
+and each dealer hand costs two ORs and a score — and the player's seven cards are
+that same board plus the two hole cards, which is the identical operation. And
+settlement splits into a part independent of the raise size (ante and blind) and
+a part that *is* the raise, so one pass over a board yields its value at 4x, 3x,
+2x and 1x at once. That is what lets the check branch — which needs correct play
+on both later streets — fall out of the same enumeration instead of a second,
+far larger one.
+
+The board indexing that makes this work is a combinatorial-number-system rank,
+and a bug in it would silently corrupt every number the job produces, so it is
+verified exhaustively: the rank is a bijection onto all 2,118,760 boards with no
+collisions, and each board is reached through exactly the 10 ways its five cards
+can be split into a flop and two more.
+
+The generated table is then checked against published pre-flop strategy at the
+classes where the rule flips — 33 versus 22, K5o versus K4o, Q6s versus Q5s, Q8o
+versus Q7o, J8s versus J7s, JTo versus J9o — which are the sharpest cells because
+they are the ones where the two branches sit closest together. §5.2.3's claim
+that a 3x raise is never correct is likewise asserted against the numbers rather
+than taken on faith.
+
 ### What still needs a human (§14.2)
 
 `test/fixtures/published-strategy.ts` holds the published grids the engine is
@@ -184,18 +210,16 @@ the worst case from 47 seconds to 5 milliseconds.
 
 ## What is not here yet
 
-The pre-flop decision, which is the one piece the spec says cannot be solved at
-runtime. Fully exact is C(50,5) x C(45,2) = 2.1 billion outcomes *per hole-card
-class*, and 169 classes of those is roughly six hours on one machine — the
-"one-time cost of hours" §6.3 budgets for. It wants an offline job whose output
-ships as a lookup asset, not a solver.
-
-Also outstanding:
-
-- the UTH scenario abstraction, spec §17's first open question. It explicitly
+- **The full pre-flop table run.** The job is built and validated; what remains
+  is the wall-clock. `npm run preflop` solves all 169 classes at about 93 seconds
+  each — roughly four and a half hours, which is the "one-time cost of hours" §6.3
+  budgets for. It writes after every class and resumes from what it finds, so it
+  survives being interrupted; killing it costs at most one class.
+- **The UTH scenario abstraction**, spec §17's first open question. It explicitly
   wants prototyping against real usage data rather than a guess, so it should
   wait for the game loop rather than being invented here.
-- the 3x pre-flop trap as its own micro-drill (§5.2.3). The rules module already
-  models the 3x raise so it can be graded; the drill is session-controller work.
+- **The 3x micro-drill** (§5.2.3). The engine already models and prices the 3x
+  raise so it can be graded; building the drill around it is session-controller
+  work.
 
 Nothing in the Blackjack side needs to change to accommodate any of it.

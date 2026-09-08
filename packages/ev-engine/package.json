@@ -16,7 +16,8 @@
     "test:slow": "node scripts/test.ts --slow",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "charts:golden": "node scripts/test.ts --update-golden test/chart.test.ts",
-    "charts": "node scripts/generate-charts.ts"
+    "charts": "node scripts/generate-charts.ts",
+    "preflop": "node --max-old-space-size=4096 scripts/generate-preflop.ts"
   },
   "dependencies": {},
   "devDependencies": {

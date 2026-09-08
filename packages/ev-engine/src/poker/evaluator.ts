@@ -108,35 +108,13 @@ function popcount(x: number): number {
  * every caller enumerates from a deck and cannot produce them, and the check
  * would cost more than it is worth in the flop solver's inner loop.
  */
-export function evaluate(cards: readonly Card[]): number {
-  const n = cards.length;
-  if (n < 5 || n > 7) {
-    throw new Error(`Cannot evaluate a ${n}-card hand; poker hands here are 5 to 7 cards`);
-  }
-
-  // One 13-bit rank mask per suit. Everything below is derived from these four.
-  let s0 = 0;
-  let s1 = 0;
-  let s2 = 0;
-  let s3 = 0;
-  for (let i = 0; i < n; i++) {
-    const card = cards[i]!;
-    const bit = 1 << ((card / NUM_SUITS) | 0);
-    switch (card % NUM_SUITS) {
-      case 0:
-        s0 |= bit;
-        break;
-      case 1:
-        s1 |= bit;
-        break;
-      case 2:
-        s2 |= bit;
-        break;
-      default:
-        s3 |= bit;
-    }
-  }
-
+/**
+ * Score a hand from its four suit masks.
+ *
+ * Everything the evaluator decides is a function of these four words, so the
+ * card count never enters: five, six and seven card hands all take this path.
+ */
+function scoreFromMasks(s0: number, s1: number, s2: number, s3: number): number {
   // A flush needs five cards of one suit, and seven cards can only manage that
   // in one suit, so the first match is the only match.
   let flushRanks = -1;
@@ -208,6 +186,87 @@ export function evaluate(cards: readonly Card[]): number {
   }
 
   return (HIGH_CARD << CATEGORY_SHIFT) | (topRanks(atLeast1, 5) & 0xfffff);
+}
+
+/**
+ * The four suit masks for a set of cards, for callers that hold part of a hand
+ * fixed while the rest varies.
+ *
+ * The UTH solvers deal one board and then evaluate hundreds or billions of hands
+ * against it. Rebuilding the whole hand's masks each time re-reads cards that
+ * have not changed; this lets a caller pay for the board once.
+ */
+export function suitMasksOf(cards: readonly Card[]): Int32Array {
+  const masks = new Int32Array(NUM_SUITS);
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i]!;
+    masks[card % NUM_SUITS]! |= 1 << ((card / NUM_SUITS) | 0);
+  }
+  return masks;
+}
+
+/**
+ * Score `masks` plus two more cards, without touching `masks`.
+ *
+ * The two cards must not already be in the masks. As with `evaluate`, that is
+ * not checked: the callers enumerate from a deck and this sits in the innermost
+ * loop of the pre-flop job, where the check would cost more than the work.
+ */
+export function evaluateWithTwo(masks: Int32Array, a: Card, b: Card): number {
+  let s0 = masks[0]!;
+  let s1 = masks[1]!;
+  let s2 = masks[2]!;
+  let s3 = masks[3]!;
+
+  const bitA = 1 << ((a / NUM_SUITS) | 0);
+  switch (a % NUM_SUITS) {
+    case 0: s0 |= bitA; break;
+    case 1: s1 |= bitA; break;
+    case 2: s2 |= bitA; break;
+    default: s3 |= bitA;
+  }
+
+  const bitB = 1 << ((b / NUM_SUITS) | 0);
+  switch (b % NUM_SUITS) {
+    case 0: s0 |= bitB; break;
+    case 1: s1 |= bitB; break;
+    case 2: s2 |= bitB; break;
+    default: s3 |= bitB;
+  }
+
+  return scoreFromMasks(s0, s1, s2, s3);
+}
+
+export function evaluate(cards: readonly Card[]): number {
+  const n = cards.length;
+  if (n < 5 || n > 7) {
+    throw new Error(`Cannot evaluate a ${n}-card hand; poker hands here are 5 to 7 cards`);
+  }
+
+  // One 13-bit rank mask per suit. Everything below is derived from these four.
+  let s0 = 0;
+  let s1 = 0;
+  let s2 = 0;
+  let s3 = 0;
+  for (let i = 0; i < n; i++) {
+    const card = cards[i]!;
+    const bit = 1 << ((card / NUM_SUITS) | 0);
+    switch (card % NUM_SUITS) {
+      case 0:
+        s0 |= bit;
+        break;
+      case 1:
+        s1 |= bit;
+        break;
+      case 2:
+        s2 |= bit;
+        break;
+      default:
+        s3 |= bit;
+    }
+  }
+
+  return scoreFromMasks(s0, s1, s2, s3);
 }
 
 /** Human-readable category, for feedback text and test failure messages. */

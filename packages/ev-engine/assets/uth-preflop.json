@@ -1,0 +1,146 @@
+{
+  "generatedWith": "scripts/generate-preflop.ts",
+  "blindPaytable": "standard",
+  "classes": {
+    "22": {
+      "label": "22",
+      "ev4x": -0.2878776990023634,
+      "ev3x": -0.29455808056962934,
+      "evCheck": -0.1794784366918627,
+      "optimalAction": "check",
+      "margin": 0.10839926231050068,
+      "flopRaiseFrequency": 0.14438775510204083,
+      "riverFoldFrequency": 0.06359757594064452
+    },
+    "33": {
+      "label": "33",
+      "ev4x": 0.08845558179425665,
+      "ev3x": 0.0145940540597555,
+      "evCheck": 0.007454228326048681,
+      "optimalAction": "raise4x",
+      "margin": 0.08100135346820797,
+      "flopRaiseFrequency": 0.33948979591836737,
+      "riverFoldFrequency": 0.04857463799580887
+    },
+    "A2o": {
+      "label": "A2o",
+      "ev4x": 0.04172992932349652,
+      "ev3x": -0.05684124419356213,
+      "evCheck": -0.08232740996210702,
+      "optimalAction": "raise4x",
+      "margin": 0.12405733928560354,
+      "flopRaiseFrequency": 0.515,
+      "riverFoldFrequency": 0.049865015386358055
+    },
+    "K5o": {
+      "label": "K5o",
+      "ev4x": -0.11758213470919712,
+      "ev3x": -0.18386159138010777,
+      "evCheck": -0.15109970158836616,
+      "optimalAction": "raise4x",
+      "margin": 0.03351756687916904,
+      "flopRaiseFrequency": 0.39464285714285713,
+      "riverFoldFrequency": 0.0741150484245502
+    },
+    "K4o": {
+      "label": "K4o",
+      "ev4x": -0.22881163934891227,
+      "ev3x": -0.27536108145903315,
+      "evCheck": -0.20601432408244946,
+      "optimalAction": "check",
+      "margin": 0.02279731526646281,
+      "flopRaiseFrequency": 0.3807142857142857,
+      "riverFoldFrequency": 0.08985538711321717
+    },
+    "K2s": {
+      "label": "K2s",
+      "ev4x": -0.07450668448882375,
+      "ev3x": -0.13874125107798377,
+      "evCheck": -0.0799197399813249,
+      "optimalAction": "raise4x",
+      "margin": 0.005413055492501151,
+      "flopRaiseFrequency": 0.45005102040816325,
+      "riverFoldFrequency": 0.10810568445694652
+    },
+    "Q8o": {
+      "label": "Q8o",
+      "ev4x": -0.06942854034551268,
+      "ev3x": -0.1414243818228927,
+      "evCheck": -0.0925628876028314,
+      "optimalAction": "raise4x",
+      "margin": 0.02313434725731872,
+      "flopRaiseFrequency": 0.3939285714285714,
+      "riverFoldFrequency": 0.08086427910664729
+    },
+    "Q7o": {
+      "label": "Q7o",
+      "ev4x": -0.2776057994472402,
+      "ev3x": -0.3129191183102297,
+      "evCheck": -0.20938796753809472,
+      "optimalAction": "check",
+      "margin": 0.06821783190914546,
+      "flopRaiseFrequency": 0.3634183673469388,
+      "riverFoldFrequency": 0.08312597934641017
+    },
+    "Q6s": {
+      "label": "Q6s",
+      "ev4x": -0.006073839453488858,
+      "ev3x": -0.07832516818022242,
+      "evCheck": -0.028120218067324846,
+      "optimalAction": "raise4x",
+      "margin": 0.022046378613835987,
+      "flopRaiseFrequency": 0.44673469387755105,
+      "riverFoldFrequency": 0.08602437274632332
+    },
+    "Q5s": {
+      "label": "Q5s",
+      "ev4x": -0.09568226441235636,
+      "ev3x": -0.15107048223898753,
+      "evCheck": -0.0744700579107548,
+      "optimalAction": "check",
+      "margin": 0.021212206501601563,
+      "flopRaiseFrequency": 0.44224489795918365,
+      "riverFoldFrequency": 0.09315920632822972
+    },
+    "JTo": {
+      "label": "JTo",
+      "ev4x": 0.17402375217105207,
+      "ev3x": 0.06906969051511944,
+      "evCheck": 0.11028687186196572,
+      "optimalAction": "raise4x",
+      "margin": 0.06373688030908635,
+      "flopRaiseFrequency": 0.46596938775510205,
+      "riverFoldFrequency": 0.16379108535180956
+    },
+    "J9o": {
+      "label": "J9o",
+      "ev4x": -0.07000007341853272,
+      "ev3x": -0.13502401108986248,
+      "evCheck": -0.03854835027386967,
+      "optimalAction": "check",
+      "margin": 0.031451723144663046,
+      "flopRaiseFrequency": 0.42,
+      "riverFoldFrequency": 0.16213445600256754
+    },
+    "J8s": {
+      "label": "J8s",
+      "ev4x": 0.10738602657993926,
+      "ev3x": 0.02707314298254699,
+      "evCheck": 0.09631778965055236,
+      "optimalAction": "raise4x",
+      "margin": 0.011068236929386896,
+      "flopRaiseFrequency": 0.4574489795918367,
+      "riverFoldFrequency": 0.1516283108988276
+    },
+    "J7s": {
+      "label": "J7s",
+      "ev4x": -0.10660755309312663,
+      "ev3x": -0.15310317679553848,
+      "evCheck": -0.03444510945128834,
+      "optimalAction": "check",
+      "margin": 0.07216244364183828,
+      "flopRaiseFrequency": 0.4328061224489796,
+      "riverFoldFrequency": 0.1542548471747626
+    }
+  }
+}
