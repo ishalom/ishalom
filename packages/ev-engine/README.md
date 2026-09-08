@@ -57,6 +57,8 @@ surrender is exactly `-0.5`.
 | `uth/rules` | §5.2.2 | Blind and Trips paytables, raise sizes, the 3x trap |
 | `uth/showdown` | §5.2.1 | Settling one hand: three bets, three different rules |
 | `uth/river` | §6.3 | The river decision, exact over all 990 dealer holdings |
+| `uth/flop` | §6.3 | The flop decision, exact over all 1,070,190 outcomes |
+| `uth/trips` | §5.2.4 | Trips EV per paytable, from the exhaustive hand distribution |
 
 It is **dependency-free**: zero runtime dependencies, and no imports outside the
 package. `test/engine-contract.test.ts` enforces that, along with §12's promise
@@ -182,13 +184,18 @@ the worst case from 47 seconds to 5 milliseconds.
 
 ## What is not here yet
 
-The two expensive Ultimate Texas Hold'em decisions (spec §6.3). The evaluator and
-the river solver are done; what remains is:
+The pre-flop decision, which is the one piece the spec says cannot be solved at
+runtime. Fully exact is C(50,5) x C(45,2) = 2.1 billion outcomes *per hole-card
+class*, and 169 classes of those is roughly six hours on one machine — the
+"one-time cost of hours" §6.3 budgets for. It wants an offline job whose output
+ships as a lookup asset, not a solver.
 
-- the flop decision — exact over C(45,2) x C(43,2) = 893,970 outcomes, under the
-  200 ms target
-- the offline pre-flop EV table, 169 hole-card classes, and the Trips tables
-- the UTH scenario abstraction, which is spec §17's first open question and
-  wants prototyping against real usage data rather than a guess
+Also outstanding:
+
+- the UTH scenario abstraction, spec §17's first open question. It explicitly
+  wants prototyping against real usage data rather than a guess, so it should
+  wait for the game loop rather than being invented here.
+- the 3x pre-flop trap as its own micro-drill (§5.2.3). The rules module already
+  models the 3x raise so it can be graded; the drill is session-controller work.
 
 Nothing in the Blackjack side needs to change to accommodate any of it.

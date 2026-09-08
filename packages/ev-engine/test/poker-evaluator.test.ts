@@ -46,6 +46,7 @@ import {
   referenceEvaluate5,
   referenceEvaluate7,
 } from './helpers/poker-reference.ts';
+import { SEVEN_CARD_FREQUENCIES } from '../src/uth/trips.ts';
 
 const slow = process.env.EV_ENGINE_SLOW_TESTS ? false : 'set EV_ENGINE_SLOW_TESTS=1';
 
@@ -222,6 +223,7 @@ test('every seven-card hand is categorised, and the totals match the published f
   const counts = new Float64Array(9);
   const hand: Card[] = new Array<Card>(7);
   let total = 0;
+  let royals = 0;
 
   for (let a = 0; a < 46; a++) {
     hand[0] = a;
@@ -237,7 +239,13 @@ test('every seven-card hand is categorised, and the totals match the published f
               hand[5] = f;
               for (let g = f + 1; g < 52; g++) {
                 hand[6] = g;
-                counts[categoryOf(evaluate(hand))]! += 1;
+                const value = evaluate(hand);
+                const cat = categoryOf(value);
+                counts[cat]! += 1;
+                // A royal flush is a straight flush to the ace. The Trips bet
+                // pays the two differently, so the split is counted here too and
+                // checked against the frequencies that module embeds.
+                if (cat === STRAIGHT_FLUSH && ((value >>> 16) & 0xf) === 12) royals++;
                 total++;
               }
             }
@@ -256,6 +264,25 @@ test('every seven-card hand is categorised, and the totals match the published f
       `${CATEGORY_NAMES[index]}: got ${counts[index]}, published ${expected}`,
     );
   }
+
+  // The Trips module embeds this same distribution, with the royal split out.
+  // Checking it here is what stops the two drifting apart silently.
+  assert.equal(royals, SEVEN_CARD_FREQUENCIES.royalFlush, 'royal flushes');
+  assert.equal(
+    counts[STRAIGHT_FLUSH]! - royals,
+    SEVEN_CARD_FREQUENCIES.straightFlush,
+    'straight flushes below a royal',
+  );
+  assert.equal(counts[FOUR_OF_A_KIND], SEVEN_CARD_FREQUENCIES.fourOfAKind);
+  assert.equal(counts[FULL_HOUSE], SEVEN_CARD_FREQUENCIES.fullHouse);
+  assert.equal(counts[FLUSH], SEVEN_CARD_FREQUENCIES.flush);
+  assert.equal(counts[STRAIGHT], SEVEN_CARD_FREQUENCIES.straight);
+  assert.equal(counts[THREE_OF_A_KIND], SEVEN_CARD_FREQUENCIES.threeOfAKind);
+  assert.equal(
+    counts[HIGH_CARD]! + counts[PAIR]! + counts[TWO_PAIR]!,
+    SEVEN_CARD_FREQUENCIES.losing,
+    'hands below trips, which lose the Trips bet',
+  );
 });
 
 test(
