@@ -12,7 +12,7 @@
  */
 
 import { evaluate } from '../poker/evaluator.ts';
-import { NUM_CARDS, type Card } from '../core/cards.ts';
+import { unseenCards, type Card } from '../core/cards.ts';
 import { FOLD_RESULT, RIVER_RAISE, type BlindPaytable } from './rules.ts';
 import { settle } from './showdown.ts';
 
@@ -28,21 +28,6 @@ export interface RiverDecision {
   wins: number;
   ties: number;
   losses: number;
-}
-
-/**
- * Cards not visible to the player. The dealer's two hole cards are unknown and
- * therefore still in here; nothing else is.
- */
-function unseenCards(known: readonly Card[]): Card[] {
-  const seen = new Uint8Array(NUM_CARDS);
-  for (const card of known) {
-    if (seen[card] === 1) throw new Error(`Duplicate card in the deal: ${card}`);
-    seen[card] = 1;
-  }
-  const out: Card[] = [];
-  for (let card = 0; card < NUM_CARDS; card++) if (seen[card] === 0) out.push(card);
-  return out;
 }
 
 /**

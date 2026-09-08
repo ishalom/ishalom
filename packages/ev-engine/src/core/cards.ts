@@ -64,3 +64,23 @@ export function formatCards(cards: readonly Card[]): string {
 export function fullDeck(): Card[] {
   return Array.from({ length: NUM_CARDS }, (_, i) => i);
 }
+
+/**
+ * The cards not among `known`, in ascending order.
+ *
+ * "Unseen" is from one player's point of view: an opponent's hole cards are
+ * unknown and therefore still in here. Duplicates in `known` throw, because a
+ * card dealt twice silently corrupts every enumeration built on the result and
+ * is far cheaper to catch at the edge.
+ */
+export function unseenCards(known: readonly Card[]): Card[] {
+  const seen = new Uint8Array(NUM_CARDS);
+  for (const card of known) {
+    if (card < 0 || card >= NUM_CARDS) throw new Error(`Not a card: ${card}`);
+    if (seen[card] === 1) throw new Error(`Duplicate card in the deal: ${formatCard(card)}`);
+    seen[card] = 1;
+  }
+  const out: Card[] = [];
+  for (let card = 0; card < NUM_CARDS; card++) if (seen[card] === 0) out.push(card);
+  return out;
+}
