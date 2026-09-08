@@ -53,6 +53,10 @@ surrender is exactly `-0.5`.
 | `blackjack/scenario` | §11 | Canonical `scenarioKey`, the join between play and progress |
 | `blackjack/chart` | §6.1, §6.5 | Charts derived from the EV computation, never copied from a website |
 | `blackjack/feedback` | §7.2 | EV cost and severity tier — the pure part of the feedback system |
+| `poker/evaluator` | §6.4 | Seven-card hand evaluator: no tables, no five-card subsets, 60 ns a hand |
+| `uth/rules` | §5.2.2 | Blind and Trips paytables, raise sizes, the 3x trap |
+| `uth/showdown` | §5.2.1 | Settling one hand: three bets, three different rules |
+| `uth/river` | §6.3 | The river decision, exact over all 990 dealer holdings |
 
 It is **dependency-free**: zero runtime dependencies, and no imports outside the
 package. `test/engine-contract.test.ts` enforces that, along with §12's promise
@@ -117,8 +121,23 @@ evidence that it computes from the rule set rather than reciting a chart (§6.1,
 `test/golden/`. A change to one fails the suite and needs explicit sign-off.
 Regenerate deliberately with `npm run charts:golden`.
 
-**Hand-evaluator verification** — the third bullet of §14.1 — belongs to the
-poker evaluator, which is Phase 3 work and is not in this commit. See below.
+**Hand evaluator (§14.1's third bullet)** is verified against an exhaustive
+enumeration of all C(52,7) = 133,784,560 seven-card hands, in three layers.
+
+Every hand is categorised and the nine totals are compared against the published
+seven-card frequencies — straight flush 41,584 through high card 23,294,460, and
+they match exactly. That runs in the default suite in about eight seconds. An
+off-by-one at any category boundary moves at least two of those counts, so nine
+numbers turn out to be a sharp test.
+
+A tally cannot see kickers, so the slow suite adds two more. All 2,598,960
+five-card hands are scored by both the fast evaluator and a naive independent one
+(sort, group, branch through the categories, return a comparable array), and the
+two orderings are checked to be isomorphic: same order, same ties, no exceptions.
+That yields exactly 7,462 distinct hand values, the long-published figure. Then
+every seven-card hand is checked to score as the best of its 21 five-card
+subsets — 0 disagreements across all 133,784,560, which pins the seven-card path
+to the five-card path already proven correct.
 
 ### What still needs a human (§14.2)
 
@@ -163,13 +182,13 @@ the worst case from 47 seconds to 5 milliseconds.
 
 ## What is not here yet
 
-Phase 3 of the roadmap — the whole Ultimate Texas Hold'em side of §6.3 and §6.4,
-and with it the exhaustive C(52,7) evaluator check that is §14.1's third bullet:
+The two expensive Ultimate Texas Hold'em decisions (spec §6.3). The evaluator and
+the river solver are done; what remains is:
 
-- a fast 7-card poker evaluator, verified against all 133,784,560 seven-card hands
-- the UTH river solver (exact, 990 dealer holdings)
-- the UTH flop solver (exact, ~894k outcomes, under the 200 ms target)
-- the offline pre-flop EV table (169 hole-card classes) and the Trips tables
+- the flop decision — exact over C(45,2) x C(43,2) = 893,970 outcomes, under the
+  200 ms target
+- the offline pre-flop EV table, 169 hole-card classes, and the Trips tables
+- the UTH scenario abstraction, which is spec §17's first open question and
+  wants prototyping against real usage data rather than a guess
 
-The `core/cards` module is already shaped for it. Nothing in the Blackjack side
-needs to change to accommodate it.
+Nothing in the Blackjack side needs to change to accommodate any of it.

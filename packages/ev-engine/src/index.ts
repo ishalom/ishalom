@@ -11,3 +11,4 @@
 
 export * as cards from './core/cards.ts';
 export * from './blackjack/index.ts';
+export * as poker from './poker/index.ts';
