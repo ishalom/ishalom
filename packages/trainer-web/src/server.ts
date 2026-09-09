@@ -98,6 +98,9 @@ const server = createServer(async (request, response) => {
         case '/api/chart':
           return json(session.chart);
 
+        case '/api/weak-spots':
+          return json(session.weakSpots);
+
         default:
           return json({ error: 'no such endpoint' }, 404);
       }

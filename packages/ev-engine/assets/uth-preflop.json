@@ -22,6 +22,16 @@
       "flopRaiseFrequency": 0.33948979591836737,
       "riverFoldFrequency": 0.04857463799580887
     },
+    "99": {
+      "label": "99",
+      "ev4x": 2.1325134054904105,
+      "ev3x": 1.6913683665889787,
+      "evCheck": 1.2502816821960505,
+      "optimalAction": "raise4x",
+      "margin": 0.88223172329436,
+      "flopRaiseFrequency": 0.9990816326530613,
+      "riverFoldFrequency": 0.000388906719024335
+    },
     "A2o": {
       "label": "A2o",
       "ev4x": 0.04172992932349652,
@@ -1041,6 +1051,106 @@
       "margin": 0.46292013758124323,
       "flopRaiseFrequency": 0.374030612244898,
       "riverFoldFrequency": 0.2765296682965508
+    },
+    "T3o": {
+      "label": "T3o",
+      "ev4x": -1.2480828127809982,
+      "ev3x": -1.0999738297485877,
+      "evCheck": -0.6100154819447443,
+      "optimalAction": "check",
+      "margin": 0.6380673308362539,
+      "flopRaiseFrequency": 0.3190816326530612,
+      "riverFoldFrequency": 0.296055239857275
+    },
+    "T2s": {
+      "label": "T2s",
+      "ev4x": -0.9448546207478626,
+      "ev3x": -0.8416442753080988,
+      "evCheck": -0.4298413679070119,
+      "optimalAction": "check",
+      "margin": 0.5150132528408508,
+      "flopRaiseFrequency": 0.36331632653061224,
+      "riverFoldFrequency": 0.28002699692272837
+    },
+    "T2o": {
+      "label": "T2o",
+      "ev4x": -1.3544930413379994,
+      "ev3x": -1.1878600531281989,
+      "evCheck": -0.6594542085412722,
+      "optimalAction": "check",
+      "margin": 0.6950388327967272,
+      "flopRaiseFrequency": 0.3166326530612245,
+      "riverFoldFrequency": 0.2993430119503861
+    },
+    "98s": {
+      "label": "98s",
+      "ev4x": -0.17047555903168907,
+      "ev3x": -0.18649066678122972,
+      "evCheck": 0.051068794383450286,
+      "optimalAction": "check",
+      "margin": 0.22154435341513934,
+      "flopRaiseFrequency": 0.4142857142857143,
+      "riverFoldFrequency": 0.3414379165172082
+    },
+    "98o": {
+      "label": "98o",
+      "ev4x": -0.6093633576133629,
+      "ev3x": -0.5713040129140196,
+      "evCheck": -0.2361106637844775,
+      "optimalAction": "check",
+      "margin": 0.3732526938288854,
+      "flopRaiseFrequency": 0.3442857142857143,
+      "riverFoldFrequency": 0.3675885895523797
+    },
+    "97s": {
+      "label": "97s",
+      "ev4x": -0.38345300572297275,
+      "ev3x": -0.36580762766543806,
+      "evCheck": -0.07168506298042532,
+      "optimalAction": "check",
+      "margin": 0.31176794274254743,
+      "flopRaiseFrequency": 0.3983673469387755,
+      "riverFoldFrequency": 0.34473418414544355
+    },
+    "97o": {
+      "label": "97o",
+      "ev4x": -0.8141929396559976,
+      "ev3x": -0.7401490677998525,
+      "evCheck": -0.34195540206383734,
+      "optimalAction": "check",
+      "margin": 0.47223753759216025,
+      "flopRaiseFrequency": 0.33698979591836736,
+      "riverFoldFrequency": 0.37075081651532027
+    },
+    "96s": {
+      "label": "96s",
+      "ev4x": -0.597023806423366,
+      "ev3x": -0.5455896218412217,
+      "evCheck": -0.19658492870138677,
+      "optimalAction": "check",
+      "margin": 0.4004388777219793,
+      "flopRaiseFrequency": 0.3905612244897959,
+      "riverFoldFrequency": 0.35161603957031473
+    },
+    "96o": {
+      "label": "96o",
+      "ev4x": -1.019603985300628,
+      "ev3x": -0.9094308904430515,
+      "evCheck": -0.4500325201647403,
+      "optimalAction": "check",
+      "margin": 0.5695714651358876,
+      "flopRaiseFrequency": 0.33198979591836736,
+      "riverFoldFrequency": 0.37798334875115636
+    },
+    "95s": {
+      "label": "95s",
+      "ev4x": -0.8124760125063185,
+      "ev3x": -0.7269135036786148,
+      "evCheck": -0.32348703019738384,
+      "optimalAction": "check",
+      "margin": 0.48898898230893467,
+      "flopRaiseFrequency": 0.38137755102040816,
+      "riverFoldFrequency": 0.35902697804376144
     }
   }
 }

@@ -354,6 +354,71 @@ function renderStats(view) {
   el('stat-units').textContent = `${stats.netUnits > 0 ? '+' : ''}${stats.netUnits}`;
 }
 
+/**
+ * The session's finished hands.
+ *
+ * Tapping one reopens its reasoning — the same three steps the feedback card
+ * showed, which is what makes this a review surface rather than a receipt.
+ */
+function renderLog(view) {
+  const panel = el('log-panel');
+  const log = el('log');
+  const hands = view.history ?? [];
+  panel.hidden = hands.length === 0;
+  log.replaceChildren();
+
+  for (const hand of hands) {
+    // A hand's grade is its worst decision; a natural has none at all.
+    const worst = hand.decisions.reduce(
+      (acc, d) => (acc === null || d.evCost > acc.evCost ? d : acc),
+      null,
+    );
+    const row = document.createElement('div');
+    row.className = 'log-row';
+
+    const tier = document.createElement('div');
+    tier.className = `log-tier ${worst ? worst.severity : 'optimal'}`;
+
+    const body = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'log-hand';
+    title.textContent =
+      hand.playerHands.map((h) => h.map((c) => c.rank + c.suit).join(' ')).join('  |  ') +
+      '  vs  ' +
+      hand.dealerCards.map((c) => c.rank + c.suit).join(' ');
+    const detail = document.createElement('div');
+    detail.className = 'log-detail';
+    detail.textContent = worst
+      ? worst.correct
+        ? `${worst.headline} · played correctly`
+        : `${worst.headline} · played ${worst.chosen.toLowerCase()} · cost ${worst.evCost.toFixed(3)}`
+      : 'natural — nothing to decide';
+    body.append(title, detail);
+
+    const net = document.createElement('div');
+    net.className = 'log-net ' + (hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : '');
+    net.textContent = `${hand.netUnits > 0 ? '+' : ''}${hand.netUnits}`;
+
+    row.append(tier, body, net);
+
+    const steps = document.createElement('div');
+    steps.className = 'log-steps';
+    steps.hidden = true;
+    for (const decision of hand.decisions) {
+      for (const line of decision.steps) {
+        const p = document.createElement('p');
+        p.textContent = line;
+        steps.appendChild(p);
+      }
+    }
+    row.addEventListener('click', () => {
+      steps.hidden = !steps.hidden;
+    });
+
+    log.append(row, steps);
+  }
+}
+
 function render() {
   const view = state.view;
   if (!view) return;
@@ -369,6 +434,7 @@ function render() {
   renderFeedback(view);
   renderActions(view);
   renderStats(view);
+  renderLog(view);
 }
 
 // --- Settings and the reference chart --------------------------------------

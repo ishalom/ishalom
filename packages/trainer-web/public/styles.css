@@ -373,3 +373,51 @@ td.R { background: #4a3d21; }
   z-index: 20;
 }
 .stat:hover .tip, .stat:focus .tip, .stat:focus-within .tip { display: block; }
+
+
+/* --- Hand log --------------------------------------------------------------
+ * Every finished hand, kept rather than counted. Tapping one reopens its
+ * reasoning, which is the ground §8's Replay mode is built on.
+ */
+.panel { margin: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 8px;
+}
+.panel-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel-note { font-size: 11.5px; color: var(--muted); }
+
+.log { max-height: 280px; overflow-y: auto; }
+.log-row {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 13px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.log-row:hover { background: var(--panel-2); }
+.log-tier { align-self: stretch; border-radius: 2px; background: var(--negligible); }
+.log-tier.optimal { background: var(--optimal); }
+.log-tier.negligible { background: var(--negligible); }
+.log-tier.minor { background: var(--minor); }
+.log-tier.significant { background: var(--significant); }
+.log-tier.blunder { background: var(--blunder); }
+.log-hand { font-size: 13px; }
+.log-detail { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.log-net { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.log-net.win { color: var(--optimal); }
+.log-net.loss { color: var(--blunder); }
+.log-steps { padding: 2px 13px 12px 26px; }
+.log-steps p { margin: 0 0 5px; font-size: 12.5px; color: var(--muted); }

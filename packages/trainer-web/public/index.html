@@ -57,6 +57,15 @@
     <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->
     <section class="feedback" id="feedback" hidden aria-live="polite"></section>
 
+    <!-- The reviewable record of the session (§8's Replay mode is built on this). -->
+    <section class="panel" id="log-panel" hidden>
+      <div class="panel-head">
+        <h2 class="panel-title">Hands this session</h2>
+        <span class="panel-note">tap to reopen</span>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+
     <!-- Spec §10.1: primary actions along the bottom edge, reachable one-handed. -->
     <nav class="actions" id="actions" aria-label="Actions"></nav>
 

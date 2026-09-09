@@ -261,48 +261,136 @@
         return `${LABEL[best.action]}, every time. That one cost you ${cost.toFixed(3)} of a unit.`;
       }
 
+      /**
+       * The guided reveal (§3.4): read the dealer, read your hand, then combine.
+       *
+       * The verdict, its cost and the EV chips all arrive together at step
+       * three. Hiding the chips alone would be theatre, since the verdict names
+       * the best action — so both wait.
+       */
+      let reveal = null;
+      const STEP_TITLES = ['Read the dealer', 'Read your hand', 'Put them together'];
+
       function showFeedback(action) {
-        const { chosen, best, cost, severity } = grade(action);
+        reveal = { action, shown: 1 };
+        renderFeedback();
+      }
+
+      function renderFeedback() {
+        if (!reveal) return;
+        const { chosen, best, cost, severity } = grade(reveal.action);
+        const done = reveal.shown >= 3;
         const box = $('feedback');
         box.hidden = false;
-        box.className = `feedback ${severity}`;
+        box.className = done ? `feedback ${severity}` : 'feedback';
+        box.replaceChildren();
 
-        const evs = live.ranked
-          .map((r) => {
-            const cls =
-              'ev' +
-              (r.action === best.action ? ' best' : '') +
-              (r.action === action ? ' chosen' : '');
-            const sign = r.ev >= 0 ? '+' : '';
-            return `<span class="${cls}">${LABEL[r.action]}: ${sign}${r.ev.toFixed(3)}</span>`;
-          })
-          .join('');
+        // The evaluated hand, so every step has a referent.
+        const anchor = document.createElement('p');
+        anchor.className = 'anchor';
+        anchor.innerHTML = done
+          ? `<b>${live.headline}</b>`
+          : `<b>${live.headline.split(' → ')[0]}</b> — thinking it through`;
+        box.appendChild(anchor);
 
-        const sensitivity = live.sensitivity.length
-          ? `<p class="sensitivity">Rule-sensitive: <b>${live.sensitivity
-              .map((s) => `${LABEL[s.action].toLowerCase()} ${s.label}`)
-              .join('; ')}</b>.</p>`
-          : '';
+        if (done) {
+          const verdict = document.createElement('p');
+          verdict.className = 'verdict';
+          verdict.textContent =
+            cost > 0
+              ? `${TIER[severity]} — cost ${cost.toFixed(3)} units`
+              : `Correct — ${LABEL[best.action].toLowerCase()}`;
+          box.appendChild(verdict);
+          if (cost > 0) {
+            const did = document.createElement('p');
+            did.className = 'did';
+            did.textContent =
+              `You chose ${LABEL[reveal.action].toLowerCase()}. ` +
+              `Best is ${LABEL[best.action].toLowerCase()}.`;
+            box.appendChild(did);
+          }
+        }
 
-        box.innerHTML =
-          `<p class="verdict">${TIER[severity]}${cost > 0 ? ` — cost ${cost.toFixed(3)} units` : ` — ${LABEL[best.action].toLowerCase()}`}</p>` +
-          (cost > 0
-            ? `<p class="did">You chose ${LABEL[action].toLowerCase()}. Best is ${LABEL[best.action].toLowerCase()}.</p>`
-            : '') +
-          `<div class="evs">${evs}</div>` +
-          `<p class="reason">${live.reason}</p>${sensitivity}`;
+        const list = document.createElement('div');
+        list.className = 'reveal';
+        for (let i = 0; i < reveal.shown && i < 3; i++) {
+          const step = document.createElement('div');
+          step.className = 'step' + (i === reveal.shown - 1 ? ' latest' : '');
+          const n = document.createElement('div');
+          n.className = 'step-n';
+          n.textContent = String(i + 1);
+          const body = document.createElement('div');
+          const head = document.createElement('div');
+          head.className = 'step-head';
+          head.textContent = STEP_TITLES[i];
+          const text = document.createElement('p');
+          text.textContent = live.steps[i];
+          body.append(head, text);
+          step.append(n, body);
+          list.appendChild(step);
+        }
+        box.appendChild(list);
+
+        if (!done) {
+          const controls = document.createElement('div');
+          controls.className = 'reveal-controls';
+          const next = document.createElement('button');
+          next.className = 'reveal-next';
+          next.innerHTML = 'Next<span class="key">SPACE</span>';
+          next.addEventListener('click', advanceReveal);
+          const skip = document.createElement('button');
+          skip.className = 'reveal-skip';
+          skip.textContent = 'Show all';
+          skip.addEventListener('click', () => {
+            reveal.shown = 3;
+            renderFeedback();
+          });
+          controls.append(next, skip);
+          box.appendChild(controls);
+          $('say').textContent = 'Take a moment. What is my card telling you?';
+          return;
+        }
+
+        const evs = document.createElement('div');
+        evs.className = 'evs';
+        for (const r of live.ranked) {
+          const chip = document.createElement('span');
+          chip.className =
+            'ev' + (r.action === best.action ? ' best' : '') +
+            (r.action === reveal.action ? ' chosen' : '');
+          const sign = r.ev >= 0 ? '+' : '';
+          chip.textContent = `${LABEL[r.action]}: ${sign}${r.ev.toFixed(3)}`;
+          evs.appendChild(chip);
+        }
+        box.appendChild(evs);
+
+        if (live.sensitivity.length) {
+          const note = document.createElement('p');
+          note.className = 'sensitivity';
+          note.textContent =
+            'Rule-sensitive: ' +
+            live.sensitivity.map((s) => `${LABEL[s.action].toLowerCase()} ${s.label}`).join('; ') +
+            '.';
+          box.appendChild(note);
+        }
 
         $('say').textContent = dealerLine({ severity, cost, best });
         $('answer').hidden = true;
         for (const b of asks.children) b.setAttribute('aria-pressed', 'false');
 
-        // The Elo swing for this exact hand, from its real difficulty rating.
-        const expected = 1 / (1 + 10 ** ((live.difficulty - DATA.rating.blackjack.rating) / 400));
+        const expected =
+          1 / (1 + 10 ** ((live.difficulty - DATA.rating.blackjack.rating) / 400));
         const swing = Math.round(24 * ((severity === 'optimal' ? 1 : 0) - expected));
         const delta = $('delta');
         delta.textContent = `${swing >= 0 ? '+' : ''}${swing} this hand`;
         delta.className = `delta ${swing >= 0 ? 'up' : 'down'}`;
-        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      function advanceReveal() {
+        if (!reveal || reveal.shown >= 3) return false;
+        reveal.shown++;
+        renderFeedback();
+        return true;
       }
 
       const actions = $('actions');
@@ -315,7 +403,12 @@
       }
 
       document.addEventListener('keydown', (event) => {
-        const action = Object.keys(KEY).find((a) => KEY[a].toLowerCase() === event.key.toLowerCase());
+        const key = event.key.toLowerCase();
+        if ((key === ' ' || key === 'enter') && advanceReveal()) {
+          event.preventDefault();
+          return;
+        }
+        const action = Object.keys(KEY).find((a) => KEY[a].toLowerCase() === key);
         if (action && DATA.table.legalActions.includes(action)) showFeedback(action);
       });
 

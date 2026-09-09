@@ -57,6 +57,47 @@ function cardView(card: number): CardView {
   };
 }
 
+/** One finished hand, kept so it can be reviewed rather than only counted. */
+export interface PlayedHand {
+  id: number;
+  /** Cards as dealt, which is all Replay mode (§8) needs to reconstruct it. */
+  dealtCards: number[];
+  playerHands: CardView[][];
+  dealerCards: CardView[];
+  netUnits: number;
+  insuranceTaken: boolean;
+  decisions: Array<{
+    scenarioKey: string;
+    headline: string;
+    chosen: string;
+    optimal: string;
+    correct: boolean;
+    evCost: number;
+    severity: SeverityTier;
+    closeCall: boolean;
+    steps: string[];
+    ranked: Array<{ action: string; ev: number }>;
+  }>;
+}
+
+/**
+ * Per-scenario history (spec §11, ScenarioStat).
+ *
+ * The mastery grid, weakness detection and any adaptive difficulty all need
+ * this and none of them can exist without it, which is why it is kept from the
+ * start even though nothing reads it yet.
+ */
+export interface ScenarioStat {
+  scenarioKey: string;
+  attempts: number;
+  correct: number;
+  consecutiveCorrect: number;
+  evCostTotal: number;
+  /** What was played when it was wrong — the basis for "you keep standing on 12". */
+  confusion: Record<string, number>;
+  lastAttemptAt: number;
+}
+
 export interface SessionStats {
   hands: number;
   decisions: number;
@@ -101,6 +142,12 @@ export class TrainerSession {
   };
   private lastFeedback: unknown = null;
   private countedHand = -1;
+  /** Finished hands, newest first. */
+  private history: PlayedHand[] = [];
+  /** Decisions of the hand in progress, moved into `history` when it settles. */
+  private pending: PlayedHand['decisions'] = [];
+  private scenarioStats = new Map<string, ScenarioStat>();
+  private clock = 0;
 
   constructor(presetId = 'vegas-strip-6d-s17', seed = Date.now() % 2147483647) {
     this.presetId = presetId;
@@ -135,6 +182,7 @@ export class TrainerSession {
   deal(): void {
     this.table.startHand(1);
     this.lastFeedback = null;
+    this.pending = [];
     this.settleIfDone();
   }
 
@@ -202,6 +250,40 @@ export class TrainerSession {
         ? []
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
+    this.pending.push({
+      scenarioKey: record.scenarioKey,
+      headline: explanation.headline,
+      chosen: prettyAction(record.chosenAction),
+      optimal: prettyAction(record.optimalAction),
+      correct: record.evCost === 0,
+      evCost: record.evCost,
+      severity: record.severityTier,
+      closeCall,
+      steps: [...explanation.steps],
+      ranked: ranked.map((r) => ({ action: r.action, ev: r.ev })),
+    });
+
+    const stat = this.scenarioStats.get(record.scenarioKey) ?? {
+      scenarioKey: record.scenarioKey,
+      attempts: 0,
+      correct: 0,
+      consecutiveCorrect: 0,
+      evCostTotal: 0,
+      confusion: {},
+      lastAttemptAt: 0,
+    };
+    stat.attempts++;
+    stat.evCostTotal += record.evCost;
+    stat.lastAttemptAt = this.clock++;
+    if (record.evCost === 0) {
+      stat.correct++;
+      stat.consecutiveCorrect++;
+    } else {
+      stat.consecutiveCorrect = 0;
+      stat.confusion[record.chosenAction] = (stat.confusion[record.chosenAction] ?? 0) + 1;
+    }
+    this.scenarioStats.set(record.scenarioKey, stat);
+
     this.lastFeedback = {
       scenarioKey: record.scenarioKey,
       // Anchors every step of the reveal to what was actually decided, which
@@ -226,7 +308,14 @@ export class TrainerSession {
     };
   }
 
-  /** Fold a finished hand into the session totals exactly once. */
+  /**
+   * Fold a finished hand into the session totals exactly once — and keep it.
+   *
+   * This used to read `id` and `netUnits` off the record and throw the rest
+   * away on the next deal, which is why there was no hand log, no mastery grid
+   * and no way to build a rating. The record is complete and replayable; the
+   * only thing that was missing was somewhere to put it.
+   */
   private settleIfDone(): void {
     if (this.table.view.phase !== 'settled') return;
     const record = this.table.handRecord;
@@ -234,6 +323,17 @@ export class TrainerSession {
     this.countedHand = record.id;
     this.hands++;
     this.netUnits += record.netUnits;
+
+    this.history.unshift({
+      id: record.id,
+      dealtCards: [...record.dealtCards],
+      playerHands: record.playerCards.map((hand) => hand.map(cardView)),
+      dealerCards: record.dealerCards.map(cardView),
+      netUnits: record.netUnits,
+      insuranceTaken: record.insuranceTaken,
+      decisions: this.pending,
+    });
+    this.pending = [];
   }
 
   get stats(): SessionStats {
@@ -295,9 +395,46 @@ export class TrainerSession {
       insuranceOffered: view.phase === 'insurance',
       netUnits: view.netUnits,
       feedback: this.lastFeedback,
+      history: this.history.slice(0, 40),
       stats: this.stats,
       ruleSet: this.ruleSet,
     };
+  }
+
+  /** Finished hands, newest first — the reviewable record of the session. */
+  get hands_(): PlayedHand[] {
+    return this.history;
+  }
+
+  /**
+   * Scenarios ranked by §9.3's weighting: error rate × how often the spot comes
+   * up × what the average error costs. A rare cheap mistake matters less than a
+   * common expensive one.
+   */
+  get weakSpots(): unknown {
+    const chart = chartFor(this.rules);
+    return [...this.scenarioStats.values()]
+      .filter((stat) => stat.attempts > stat.correct)
+      .map((stat) => {
+        const errors = stat.attempts - stat.correct;
+        const errorRate = errors / stat.attempts;
+        const averageCost = stat.evCostTotal / stat.attempts;
+        const cell = chart.cells.get(stat.scenarioKey);
+        return {
+          scenarioKey: stat.scenarioKey,
+          attempts: stat.attempts,
+          errors,
+          errorRate,
+          averageCost,
+          optimal: cell?.optimalAction ?? null,
+          confusion: stat.confusion,
+          // §9.3's product. Frequency is not shipped yet, so this is the two
+          // terms that exist; the third lands with the frequency asset.
+          weight: errorRate * averageCost,
+        };
+      })
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, 10);
   }
 
   /** The derived chart for the Reference screen (spec §10, screen 7). */
