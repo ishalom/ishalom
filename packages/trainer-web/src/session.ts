@@ -286,6 +286,17 @@ export class TrainerSession {
    */
   private static readonly CLOSE_CALL = 0.01;
 
+  /**
+   * What the player sits down with, in units of the base bet.
+   *
+   * The engine reasons in units of the wager and always will — that is what
+   * makes an EV comparable between a one-chip hand and a doubled one. The stack
+   * is the same number given a rail to sit on, so a hand feels like a hand
+   * rather than an exercise. Two hundred is chosen so an ordinary bad run moves
+   * it visibly without emptying it, which is the only thing the figure has to do.
+   */
+  private static readonly STARTING_STACK = 200;
+
   /** Turn one graded decision into the feedback card §7.1 describes. */
   private absorb(record: DecisionRecord): void {
     this.lastRecord = record;
@@ -488,6 +499,21 @@ export class TrainerSession {
       legalActions: view.legalActions,
       insuranceOffered: view.phase === 'insurance',
       netUnits: view.netUnits,
+      stack: {
+        start: TrainerSession.STARTING_STACK,
+        // Settled hands only. A wager still on the felt has not been lost yet,
+        // and showing it as though it had would misreport the one figure on
+        // screen that is supposed to be simple arithmetic.
+        balance: TrainerSession.STARTING_STACK + this.netUnits,
+        // Swept the moment the hand settles, because by then it has already
+        // moved into the balance — leaving it on the felt would show the same
+        // chips in two places and make the arithmetic look wrong.
+        wager: settled
+          ? 0
+          : view.hands.reduce((total, hand) => total + hand.bet, 0) +
+            (view.insuranceTaken ? 0.5 : 0),
+        lastNet: view.netUnits,
+      },
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       history: this.history.slice(0, 40),

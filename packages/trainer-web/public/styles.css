@@ -1275,3 +1275,133 @@ body { font-family: var(--body); }
 /* The feedback card below is now reasoning only, so it starts with a step
    rather than a heading and needs no top padding of its own. */
 .feedback .reveal { margin-top: 0; }
+
+/* ===========================================================================
+ * Where a card came from.
+ *
+ * Three cards totalling sixteen say nothing about how the hand got there, and
+ * 10+6 is a different lesson from 5+4 then 7. The opening two sit flush and
+ * plain; every card taken since is stepped down and carries the number of the
+ * draw that brought it. Shape and badge, never colour alone (§13).
+ * ======================================================================== */
+
+.card { position: relative; }
+.card.drawn {
+  transform: translateY(7px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.card.drawn::after {
+  content: attr(data-draw);
+  position: absolute;
+  top: -7px;
+  inset-inline-end: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--voice);
+  color: #16110a;
+  font-family: var(--display);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 19px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+/* The cards sit lower now, so the row needs the headroom back. */
+.felt .cards { align-items: flex-start; padding-bottom: 9px; }
+
+/* --- Seat headers: readable from where the player actually sits ----------- */
+
+.seat-title {
+  font-size: 18px;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.seat-total { font-size: 24px; letter-spacing: 0; }
+
+/* ===========================================================================
+ * The rail.
+ *
+ * Real denominations broken high to low, because a stack of two hundred ones is
+ * a bar chart and a stack with a black chip in it is money. The colours are the
+ * ones every table uses, so the stack reads before the figure beside it does.
+ *
+ * §3.1 still holds: the balance is the arithmetic of settled hands, and the
+ * swing from the last one appears only once the grade is out.
+ * ======================================================================== */
+
+.rail {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 34px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+.rail-spot {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  position: relative;
+}
+.rail-value {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+}
+.rail-bank .rail-value { font-size: 29px; }
+.rail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+}
+.rail-delta {
+  position: absolute;
+  top: -13px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.rail-delta.win { color: var(--optimal); }
+.rail-delta.loss { color: var(--blunder); }
+
+/* Chips stack upward, each one overlapping the last, the way they do on a felt. */
+.chips {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  min-height: 20px;
+  margin-bottom: 5px;
+}
+.chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  margin-top: -19px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.chip:first-child { margin-top: 0; }
+.chip-white { background: #eef2f6; border: 2px dashed #b9c3cd; }
+.chip-red { background: #b6283a; border: 2px dashed #e2818c; }
+.chip-green { background: #1f7a4c; border: 2px dashed #6cc396; }
+.chip-black { background: #1a1f26; border: 2px dashed #78838f; }
+.chip-half { background: #eef2f6; border: 2px dashed #b9c3cd; opacity: 0.55; height: 13px; border-radius: 999px; }
+
+/* The wager riding with each hand, so a double or a split reads as money. */
+.hand-wager { display: flex; justify-content: center; gap: 3px; min-height: 16px; margin-top: 8px; }
+.hand-wager .chip { width: 17px; height: 17px; margin-top: 0; border-width: 2px; }
+
+@media (max-width: 560px) {
+  .rail { gap: 22px; }
+  .rail-bank .rail-value { font-size: 24px; }
+  .seat-title { font-size: 15px; }
+  .seat-total { font-size: 20px; }
+}

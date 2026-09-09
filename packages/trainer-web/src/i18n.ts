@@ -361,6 +361,14 @@ const EN: Catalogue = {
   'welcome.fine': 'No account, no password. The name is so the others can see you at the table.',
 
   'fb.thinking': 'thinking it through',
+
+  // --- The rail ---
+  'ui.stack': 'stack',
+  'ui.wager': 'in play',
+  'ui.dealt': 'dealt',
+  'ui.drawn': 'drawn',
+  'ui.cardDealt': '{card}, dealt',
+  'ui.cardDrawn': '{card}, drawn on hit {n}',
 };
 
 const HE: Catalogue = {
@@ -666,6 +674,14 @@ const HE: Catalogue = {
   'welcome.fine': 'בלי חשבון ובלי סיסמה. השם הוא כדי שהאחרים יראו אותך בשולחן.',
 
   'fb.thinking': 'חושבים על זה',
+
+  // --- The rail ---
+  'ui.stack': 'קופה',
+  'ui.wager': 'על השולחן',
+  'ui.dealt': 'חולק',
+  'ui.drawn': 'נמשך',
+  'ui.cardDealt': '{card}, מהחלוקה',
+  'ui.cardDrawn': '{card}, נמשך בלקיחה {n}',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

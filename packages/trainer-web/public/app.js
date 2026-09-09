@@ -70,11 +70,27 @@ async function send(path, body) {
 
 // --- Rendering -------------------------------------------------------------
 
-function cardNode(card) {
+/**
+ * One card, marked by where it came from.
+ *
+ * A hand of three cards tells you nothing about how it got there, and "16" that
+ * arrived as 10+6 is a different lesson from one that arrived as 5+4 then 7. So
+ * the opening two sit flush and plain, and every card taken since carries the
+ * number of the draw that brought it. The distinction is in the shape and the
+ * badge, not in colour alone (§13), and it reaches a screen reader too.
+ */
+function cardNode(card, index) {
+  const drawn = index !== undefined && index >= 2;
   const node = document.createElement('div');
-  node.className = 'card' + (card.red ? ' red' : '');
+  node.className = 'card' + (card.red ? ' red' : '') + (drawn ? ' drawn' : ' dealt');
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', card.label);
+  node.setAttribute(
+    'aria-label',
+    drawn
+      ? T('ui.cardDrawn', { card: card.label, n: index - 1 })
+      : T('ui.cardDealt', { card: card.label }),
+  );
+  if (drawn) node.dataset.draw = index - 1;
   const rank = document.createElement('span');
   rank.className = 'card-rank';
   rank.textContent = card.rank;
@@ -87,7 +103,7 @@ function cardNode(card) {
 
 function faceDownNode() {
   const node = document.createElement('div');
-  node.className = 'card back';
+  node.className = 'card back dealt';
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', 'face-down card');
   return node;
@@ -100,7 +116,7 @@ function renderDealer(view) {
   // grade would break that far more thoroughly than an early EV chip.
   const withhold = !revealComplete();
   const cards = withhold ? view.dealer.cards.slice(0, 1) : view.dealer.cards;
-  box.replaceChildren(...cards.map(cardNode));
+  box.replaceChildren(...cards.map((card, i) => cardNode(card, i)));
   if (view.dealer.hidden || withhold) box.appendChild(faceDownNode());
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
@@ -123,6 +139,89 @@ function renderDealer(view) {
   }
 }
 
+/*
+ * Chips.
+ *
+ * Real denominations, broken high to low, because a stack of two hundred ones
+ * is a bar chart and a stack with a black chip in it is money. The colours are
+ * the ones every table uses — white one, red five, green twenty-five, black
+ * hundred — so the stack is readable before the number beside it is.
+ */
+const DENOMINATIONS = [
+  { value: 100, name: 'black' },
+  { value: 25, name: 'green' },
+  { value: 5, name: 'red' },
+  { value: 1, name: 'white' },
+];
+
+function chipNodes(amount, cap) {
+  const chips = [];
+  let left = Math.max(0, Math.round(amount * 2) / 2);
+  for (const { value, name } of DENOMINATIONS) {
+    let count = Math.floor(left / value);
+    left -= count * value;
+    while (count-- > 0 && chips.length < cap) chips.push(name);
+  }
+  // A half unit is what a surrender leaves behind; it is worth showing rather
+  // than rounding away, since it is the whole point of the play.
+  if (left >= 0.5 && chips.length < cap) chips.push('half');
+
+  return chips.map((name) => {
+    const chip = document.createElement('span');
+    chip.className = `chip chip-${name}`;
+    return chip;
+  });
+}
+
+/** The player's rail: what is in play, and what is behind it. */
+function renderRail(view) {
+  const box = el('rail');
+  if (!box) return;
+  const stack = view.stack;
+  box.replaceChildren();
+
+  const wager = document.createElement('div');
+  wager.className = 'rail-spot';
+  const wagerChips = document.createElement('span');
+  wagerChips.className = 'chips';
+  wagerChips.setAttribute('aria-hidden', 'true');
+  wagerChips.replaceChildren(...chipNodes(stack.wager, 6));
+  const wagerFigure = document.createElement('span');
+  wagerFigure.className = 'rail-value';
+  wagerFigure.textContent = stack.wager > 0 ? stack.wager : '—';
+  const wagerLabel = document.createElement('span');
+  wagerLabel.className = 'rail-label';
+  wagerLabel.textContent = T('ui.wager');
+  wager.append(wagerChips, wagerFigure, wagerLabel);
+
+  const bank = document.createElement('div');
+  bank.className = 'rail-spot rail-bank';
+  const bankChips = document.createElement('span');
+  bankChips.className = 'chips';
+  bankChips.setAttribute('aria-hidden', 'true');
+  bankChips.replaceChildren(...chipNodes(stack.balance, 8));
+  const bankFigure = document.createElement('span');
+  bankFigure.className = 'rail-value';
+  bankFigure.textContent = stack.balance.toFixed(stack.balance % 1 === 0 ? 0 : 1);
+  const bankLabel = document.createElement('span');
+  bankLabel.className = 'rail-label';
+  bankLabel.textContent = T('ui.stack');
+  bank.append(bankChips, bankFigure, bankLabel);
+
+  // The swing from the last hand, and only once the grade is out — §3.1 keeps
+  // the result behind the decision, and money is the most distracting result
+  // there is.
+  if (stack.lastNet !== null && stack.lastNet !== undefined && revealComplete()) {
+    const delta = document.createElement('span');
+    delta.className =
+      'rail-delta ' + (stack.lastNet > 0 ? 'win' : stack.lastNet < 0 ? 'loss' : '');
+    delta.textContent = `${stack.lastNet > 0 ? '+' : ''}${stack.lastNet}`;
+    bank.appendChild(delta);
+  }
+
+  box.append(wager, bank);
+}
+
 function renderHands(view) {
   const box = el('player-hands');
   box.replaceChildren();
@@ -133,8 +232,14 @@ function renderHands(view) {
 
     const cards = document.createElement('div');
     cards.className = 'cards';
-    cards.replaceChildren(...hand.cards.map(cardNode));
+    cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i)));
     wrap.appendChild(cards);
+
+    const wager = document.createElement('div');
+    wager.className = 'hand-wager';
+    wager.setAttribute('aria-hidden', 'true');
+    wager.replaceChildren(...chipNodes(hand.bet, 4));
+    wrap.appendChild(wager);
 
     const meta = document.createElement('div');
     meta.className = 'hand-meta';
@@ -553,6 +658,7 @@ function render() {
 
   renderDealer(view);
   renderHands(view);
+  renderRail(view);
   renderQuickCard(view);
   renderFeedback(view);
   renderActions(view);
