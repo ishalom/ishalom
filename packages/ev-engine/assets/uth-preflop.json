@@ -781,6 +781,26 @@
       "margin": 0.0896406726142551,
       "flopRaiseFrequency": 0.4931122448979592,
       "riverFoldFrequency": 0.1525769789877098
+    },
+    "J8o": {
+      "label": "J8o",
+      "ev4x": -0.2721453064027481,
+      "ev3x": -0.3019485665899074,
+      "evCheck": -0.1549439939713176,
+      "optimalAction": "check",
+      "margin": 0.11720131243143048,
+      "flopRaiseFrequency": 0.37081632653061225,
+      "riverFoldFrequency": 0.16041835790745532
+    },
+    "J7o": {
+      "label": "J7o",
+      "ev4x": -0.4780516846534657,
+      "ev3x": -0.4716903566706839,
+      "evCheck": -0.26982916265488444,
+      "optimalAction": "check",
+      "margin": 0.20822252199858127,
+      "flopRaiseFrequency": 0.34474489795918367,
+      "riverFoldFrequency": 0.16333657422265854
     }
   }
 }

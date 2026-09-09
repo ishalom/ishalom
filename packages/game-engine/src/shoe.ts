@@ -78,12 +78,18 @@ export class DealingShoe {
 
   /**
    * Force the next cards to be dealt, for Drill mode (spec §8): the engine has to
-   * be able to deal "player has A,7 versus a nine" on demand, because naturally
-   * dealt pairs of eights against a six turn up about once in 350 hands and
-   * drilling cannot wait for them.
+   * be able to deal "player has A,7 versus a nine" on demand, because waiting for
+   * the shoe to produce a given spot is hopeless.
+   *
+   * Spec §8 puts a pair of eights against a six at "roughly once in 350 hands".
+   * That is the figure for a pair of eights against *any* upcard, which comes out
+   * at one hand in 175. Against a six specifically it is one in 2,271 — so the
+   * argument for this method is about six times stronger than the spec makes it.
    *
    * The named cards are moved to the front of the undealt portion; everything
-   * else keeps its shuffled order, so the rest of the shoe stays honest.
+   * else keeps its shuffled order, so the rest of the shoe stays honest. The
+   * dealer's hole card is still drawn naturally, which is what keeps a forced
+   * spot a real hand rather than a rigged one.
    */
   stack(cards: readonly Card[]): void {
     const wanted = [...cards];
