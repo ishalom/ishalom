@@ -905,3 +905,25 @@ hr.brass {
 }
 .action { border-radius: 12px; }
 .card { border-radius: 9px; }
+
+/* ===========================================================================
+ * Centre the table.
+ *
+ * The shell centres the page, but inside the felt everything was still packed
+ * against the left edge, so the cards sat in a corner of a wide green field
+ * instead of on a table. A real table deals to the middle; so does this one.
+ * ======================================================================== */
+
+.felt .seat { text-align: center; }
+.felt .cards { justify-content: center; }
+.felt .hand-row { justify-content: center; }
+.felt .hand-meta { text-align: center; }
+.felt .seat-title { text-align: center; }
+
+/* The dealer keeps her speech bubble left-aligned — it is prose, and centred
+   prose is harder to read than the tidiness is worth. */
+.felt .dealer-zone { justify-content: center; }
+.felt .speech { text-align: left; max-width: 400px; }
+
+/* Give the felt a little more room to breathe around the cards. */
+.felt .seat { padding: 14px 16px; }

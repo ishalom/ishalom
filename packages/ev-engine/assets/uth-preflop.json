@@ -22,6 +22,16 @@
       "flopRaiseFrequency": 0.33948979591836737,
       "riverFoldFrequency": 0.04857463799580887
     },
+    "77": {
+      "label": "77",
+      "ev4x": 1.4869482507584562,
+      "ev3x": 1.1622277948501232,
+      "evCheck": 0.8386095612242053,
+      "optimalAction": "raise4x",
+      "margin": 0.6483386895342509,
+      "flopRaiseFrequency": 0.9745918367346939,
+      "riverFoldFrequency": 0.011798410390983406
+    },
     "88": {
       "label": "88",
       "ev4x": 1.8114612859255144,
