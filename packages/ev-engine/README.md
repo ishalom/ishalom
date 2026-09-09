@@ -53,6 +53,8 @@ surrender is exactly `-0.5`.
 | `blackjack/scenario` | §11 | Canonical `scenarioKey`, the join between play and progress |
 | `blackjack/chart` | §6.1, §6.5 | Charts derived from the EV computation, never copied from a website |
 | `blackjack/feedback` | §7.2 | EV cost and severity tier — the pure part of the feedback system |
+| `poker/handValue` | §6.4 | Hand strength as one comparable integer, and its decomposition |
+| `poker/evaluator` | §6.4 | Seven-card evaluator, ~17M hands/second, 64 KB of tables |
 
 It is **dependency-free**: zero runtime dependencies, and no imports outside the
 package. `test/engine-contract.test.ts` enforces that, along with §12's promise
@@ -65,8 +67,8 @@ Requires Node 22.18+, which strips TypeScript types natively. There is no build
 step and no test framework.
 
 ```sh
-npm test           # 86 tests, ~15s — works on a bare checkout
-npm run test:slow  # adds Monte Carlo cross-validation, ~40s
+npm test           # 99 tests, ~15s — works on a bare checkout
+npm run test:slow  # adds Monte Carlo and the exhaustive C(52,7) pass, ~50s
 npm run typecheck  # needs `npm ci` first
 npm run charts     # derives every preset's chart in exact mode into charts/
 ```
@@ -117,8 +119,21 @@ evidence that it computes from the rule set rather than reciting a chart (§6.1,
 `test/golden/`. A change to one fails the suite and needs explicit sign-off.
 Regenerate deliberately with `npm run charts:golden`.
 
-**Hand-evaluator verification** — the third bullet of §14.1 — belongs to the
-poker evaluator, which is Phase 3 work and is not in this commit. See below.
+**Hand-evaluator verification (§14.1, third bullet)** enumerates all
+C(52,7) = 133,784,560 seven-card hands, classifies every one, and checks the
+resulting category histogram against the published seven-card frequencies. Those
+nine numbers sum to exactly 133,784,560, so reproducing all nine from 133 million
+independent classifications is a sharp test of the whole evaluator. It takes
+about six seconds and runs in `npm run test:slow`.
+
+The naive best-of-twenty-one reference it is checked against is itself pinned
+exhaustively, against the published five-card frequencies over all C(52,5)
+hands — it is not merely a second guess.
+
+There is a fourth level available: a value-for-value comparison of all 133.8
+million hands against that reference, behind `EV_ENGINE_EXHAUSTIVE_EVALUATOR=1`.
+It takes over an hour on one core, so it is not part of any routine run; shard it
+by first card to spread it across cores. See below.
 
 ### What still needs a human (§14.2)
 
@@ -161,15 +176,31 @@ deuce); static-dealer mode costs about five milliseconds. Both are far cheaper
 than they were before the split recursion was restructured — that one change took
 the worst case from 47 seconds to 5 milliseconds.
 
+## The evaluator's table budget
+
+§6.5 budgets 10–130 MB for evaluator lookup tables and §17 leaves the scheme open
+pending a benchmark, since it trades app size against speed. The scheme here
+needs neither extreme: the hand is decomposed with bit arithmetic over four
+13-bit suit masks, and the only tables are two of 8192 entries — **64 KB**,
+computed at load in about a millisecond. Nothing to ship as an asset, no first-run
+wait, and §13's 150 MB app budget stays free for everything else.
+
+It evaluates about **17 million hands per second** (60 ns each), or 32 million
+when the caller supplies suit masks directly, which is the path the UTH solvers
+will take as they walk boards incrementally. For scale, the flop decision needs
+roughly 1.8 million showdowns inside a 200 ms budget.
+
+Most of that speed came from one change: dealing each card's bit into its suit's
+mask without branching, which is three times faster than the equivalent `switch`
+and is commented in place.
+
 ## What is not here yet
 
-Phase 3 of the roadmap — the whole Ultimate Texas Hold'em side of §6.3 and §6.4,
-and with it the exhaustive C(52,7) evaluator check that is §14.1's third bullet:
+The rest of Phase 3 — the Ultimate Texas Hold'em solvers of §6.3:
 
-- a fast 7-card poker evaluator, verified against all 133,784,560 seven-card hands
-- the UTH river solver (exact, 990 dealer holdings)
-- the UTH flop solver (exact, ~894k outcomes, under the 200 ms target)
+- the river solver (exact, 990 dealer holdings)
+- the flop solver (exact, ~894k outcomes, under the 200 ms target)
 - the offline pre-flop EV table (169 hole-card classes) and the Trips tables
 
-The `core/cards` module is already shaped for it. Nothing in the Blackjack side
-needs to change to accommodate it.
+The evaluator they depend on is done. Nothing in the Blackjack side needs to
+change to accommodate them.
