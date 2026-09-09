@@ -271,6 +271,14 @@
       let reveal = null;
       const STEP_TITLES = ['Read the dealer', 'Read your hand', 'Put them together'];
 
+      /** Emphasis from the copy, plus figures set in the display face. */
+      function renderRich(target, text) {
+        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        target.innerHTML = escaped
+          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+          .replace(/(?<![\w>])([+−-]?\d+(?:[.,]\d+)?%?\+?)(?![\w<])/g, '<span class="num">$1</span>');
+      }
+
       function showFeedback(action) {
         reveal = { action, shown: 1 };
         renderFeedback();
@@ -324,7 +332,7 @@
           head.className = 'step-head';
           head.textContent = STEP_TITLES[i];
           const text = document.createElement('p');
-          text.textContent = live.steps[i];
+          renderRich(text, live.steps[i]);
           body.append(head, text);
           step.append(n, body);
           list.appendChild(step);

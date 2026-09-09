@@ -156,6 +156,26 @@ function renderHands(view) {
   el('empty-state').hidden = view.hands.length > 0;
 }
 
+/**
+ * Render a step's text: emphasis where the copy asks for it, and figures set in
+ * the display face so they read as numbers rather than as more prose.
+ *
+ * The copy is authored in explain.ts with ** around the words that carry the
+ * point; numbers are picked out here so nobody has to mark up every one. All of
+ * it is engine-generated — no user text reaches this — but it is escaped first
+ * regardless, because "the input is trusted" is how that stops being true.
+ */
+function renderRich(target, text) {
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  target.innerHTML = escaped
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    // Percentages, signed EVs and bare figures, including 17+ and A,A.
+    .replace(/(?<![\w>])([+−-]?\d+(?:[.,]\d+)?%?\+?)(?![\w<])/g, '<span class="num">$1</span>');
+}
+
 const SEVERITY_WORD = {
   optimal: 'Correct',
   negligible: 'Negligible',
@@ -239,7 +259,7 @@ function renderFeedback(view) {
     head.className = 'step-head';
     head.textContent = STEP_TITLES[i];
     const text = document.createElement('p');
-    text.textContent = revealed ? state.reveal.steps[i] : '';
+    if (revealed) renderRich(text, state.reveal.steps[i]);
     body.append(head, text);
     step.append(n, body);
     reveal.appendChild(step);

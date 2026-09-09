@@ -114,11 +114,11 @@ var CANNED = {
     ],
     "headline": "16 vs 10 → Surrender",
     "steps": [
-      "Dealer shows a ten. They break just 23% of the time and finish with 17 or better the other 77%. You need a real hand.",
-      "16 — a stiff. You cannot win it by standing, and you break 62% of the time if you draw. There is no comfortable answer, only a cheaper one.",
-      "Surrender, and it is a narrow call: -0.500 against -0.535 for hitting. Drawing breaks this hand 62% of the time on the very next card, and even played out perfectly it only reaches -0.535 — against the guaranteed -0.500 of giving half of it back."
+      "A ten — **strong**. Breaks 23%, makes 17+ 77%.",
+      "16 — a **stiff**. Standing never wins it; drawing breaks it 62%. No good answer, only a **cheaper** one.",
+      "**Surrender** — a **narrow** call. −0.500 against −0.535 to hit. Drawing breaks it 62% on the very next card."
     ],
-    "reason": "Surrender, and it is a narrow call: -0.500 against -0.535 for hitting. Drawing breaks this hand 62% of the time on the very next card, and even played out perfectly it only reaches -0.535 — against the guaranteed -0.500 of giving half of it back.",
+    "reason": "**Surrender** — a **narrow** call. −0.500 against −0.535 to hit. Drawing breaks it 62% on the very next card.",
     "sensitivity": [
       {
         "label": "without late surrender",
@@ -170,7 +170,7 @@ var CANNED = {
           "ev": -1.0702
         }
       ],
-      "reason": "Split, and it is a narrow call: -0.475 against -0.500 for surrendering. Two hands are worth 0.025 more here than one, which is what surrendering it as a single total gives away.",
+      "reason": "**Split** — a **narrow** call. −0.475 against −0.500 to surrender. Two hands are worth 0.025 more than one.",
       "sensitivity": [
         {
           "label": "in a no-hole-card game",
@@ -210,7 +210,7 @@ var CANNED = {
           "ev": -0.5
         }
       ],
-      "reason": "Hit, and it is the right play, though closer than it looks: -0.099 against -0.183 for standing. Drawing cannot break a soft hand — the ace simply drops to one — so the draw costs nothing but the total you already had, and a 9 is strong enough that the total you already had is not enough.",
+      "reason": "**Hit** — **right**, but closer than it looks. −0.099 against −0.183 to stand. The draw is free — and against a 9, what you have is not enough.",
       "sensitivity": []
     },
     {
@@ -244,7 +244,7 @@ var CANNED = {
           "ev": -0.5
         }
       ],
-      "reason": "Stand, and it is a coin-flip — either is defensible, this one edges it: -0.209 against -0.213 for hitting. Standing on 12 wins only when the dealer breaks, and a 4 breaks 40% of the time.",
+      "reason": "**Stand** — a **coin-flip**; either is defensible. −0.209 against −0.213 to hit. Standing only wins when I break, and I break 40%.",
       "sensitivity": []
     },
     {
@@ -278,7 +278,7 @@ var CANNED = {
           "ev": -0.5
         }
       ],
-      "reason": "Double, and it is not close: 0.674 against 0.337 for hitting. Doubling takes the same card as hitting, for twice the stake and no second draw. It wins when that one card is usually enough — and against a 6 it usually is.",
+      "reason": "**Double** — **not close**. +0.674 against +0.337 to hit. Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.",
       "sensitivity": []
     },
     {
@@ -312,7 +312,7 @@ var CANNED = {
           "ev": -1.0691
         }
       ],
-      "reason": "Surrender, and it is a narrow call: -0.500 against -0.535 for hitting. Drawing breaks this hand 62% of the time on the very next card, and even played out perfectly it only reaches -0.535 — against the guaranteed -0.500 of giving half of it back.",
+      "reason": "**Surrender** — a **narrow** call. −0.500 against −0.535 to hit. Drawing breaks it 62% on the very next card.",
       "sensitivity": [
         {
           "label": "without late surrender",
@@ -352,7 +352,7 @@ var CANNED = {
           "ev": -0.5
         }
       ],
-      "reason": "Double, and it is a coin-flip — either is defensible, this one edges it: 0.139 against 0.138 for hitting. Drawing cannot break a soft hand — the ace simply drops to one — so the draw costs nothing but the total you already had, and a 5 is strong enough that the total you already had is not enough.",
+      "reason": "**Double** — a **coin-flip**; either is defensible. +0.139 against +0.138 to hit. The draw is free — and against a 5, what you have is not enough.",
       "sensitivity": []
     },
     {
@@ -390,7 +390,7 @@ var CANNED = {
           "ev": -1.6988
         }
       ],
-      "reason": "Stand, and it is not close: 0.756 against -0.214 for splitting. Splitting it costs 0.970 against simply standing — breaking up this pair turns one good total into two worse ones.",
+      "reason": "**Stand** — **not close**. +0.756 against −0.214 to split. Splitting costs 0.970 — one good total becomes two worse ones.",
       "sensitivity": []
     },
     {
@@ -424,7 +424,7 @@ var CANNED = {
           "ev": -0.6992
         }
       ],
-      "reason": "Stand, and it is the right play, though closer than it looks: -0.251 against -0.350 for hitting. Standing on 14 wins only when the dealer breaks, and a 3 breaks 37% of the time.",
+      "reason": "**Stand** — **right**, but closer than it looks. −0.251 against −0.350 to hit. Standing only wins when I break, and I break 37%.",
       "sensitivity": []
     }
   ],
@@ -487,7 +487,7 @@ var CANNED = {
     }
   ],
   "uth": {
-    "solvedClasses": 103,
+    "solvedClasses": 140,
     "totalClasses": 169,
     "hole": [
       {

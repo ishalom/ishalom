@@ -102,6 +102,14 @@ export function dealerOdds(upcard: BjRank, rules: BlackjackRules): DealerOdds {
 
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
+/**
+ * A signed EV, with a real minus sign rather than a hyphen.
+ *
+ * The client renders numeric runs in the display face, so these read as figures
+ * rather than as more prose.
+ */
+const units = (value: number): string => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
+
 export interface StandOutcome {
   win: number;
   push: number;
@@ -235,22 +243,13 @@ export function readDealer(upcard: BjRank, rules: BlackjackRules): string {
   const up = upcardPhrase(upcard);
 
   if (upcard >= 1 && upcard <= 5) {
-    const worst = upcard === 4 || upcard === 5 ? ', about their worst' : '';
-    return (
-      `Dealer shows ${up} — a bust card${worst}. They break ${percent(odds.bust)} of the ` +
-      `time and have to keep drawing until they do or reach 17.`
-    );
+    const worst = upcard === 4 || upcard === 5 ? ', their worst' : '';
+    return `${sentenceCase(up)}${worst} — a **bust card**. Breaks ${percent(odds.bust)}.`;
   }
   if (upcard === 0) {
-    return (
-      `Dealer shows ${up}. They have already looked and have no blackjack, and from ` +
-      `here they break only ${percent(odds.bust)} of the time — the strongest card on the table.`
-    );
+    return `An ace, and **no blackjack** behind it. Still breaks only ${percent(odds.bust)}.`;
   }
-  return (
-    `Dealer shows ${up}. They break just ${percent(odds.bust)} of the time and finish ` +
-    `with 17 or better the other ${percent(odds.madeHand)}. You need a real hand.`
-  );
+  return `${sentenceCase(up)} — **strong**. Breaks ${percent(odds.bust)}, makes 17+ ${percent(odds.madeHand)}.`;
 }
 
 // --- Step 2: read your hand -------------------------------------------------
@@ -276,91 +275,56 @@ export function readHand(
 
   switch (kind) {
     case 'insurance':
-      return (
-        'Insurance is a side bet on the hole card being a ten, and barely three cards ' +
-        'in thirteen are. Your own hand has nothing to do with it.'
-      );
+      return `Insurance rides on **my hole card**, not your hand. Barely three cards in thirteen are tens.`;
 
     case 'split-always': {
       const rank = scenario.pairRank!;
       if (rank === 0) {
-        const hit = evaluation.evByAction.hit;
-        const held = hit === undefined ? '' : ` Held together it draws for ${hit.toFixed(3)} —`;
-        return (
-          `${pairName(rank)} — the best pair in the deck, and the one that gains most ` +
-          `from being taken apart.${held} fine, but the second ace is dead weight. Split, ` +
-          `each one starts a hand from the strongest card there is.`
-        );
+        return `A,A — the **best pair in the deck**. Held together the second ace is dead weight.`;
       }
-      return (
-        `${pairName(rank)} — sixteen, the worst total in blackjack. Split and you are not ` +
-        `attacking, you are escaping: two hands starting from eight beat one hand starting ` +
-        `from sixteen against anything.`
-      );
+      return `8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.`;
     }
 
     case 'split-das':
       return (
-        `${pairName(scenario.pairRank!)} — a small pair that is worth taking apart only ` +
-        `because of what happens next. Each half wants to draw and then double, so the ` +
-        `value of splitting rides on being allowed to double after it.`
+        `${pairName(scenario.pairRank!)} — a small pair. Each half wants to draw then ` +
+        `**double**, so this one rides on the double-after-split rule.`
       );
 
     case 'split-offensive':
-      return (
-        `${pairName(scenario.pairRank!)} — held together this is a decent total on its own. ` +
-        `Splitting it is an attack: two live hands into a dealer who is in trouble.`
-      );
+      return `${pairName(scenario.pairRank!)} — fine as one hand. Splitting is an **attack**.`;
 
     case 'split-defensive':
       return (
-        `${pairName(scenario.pairRank!)} — as one hand this total wins only when the dealer ` +
-        `breaks. Split, each card starts again somewhere better than where it was.`
+        `${pairName(scenario.pairRank!)} — as one hand it wins only when the dealer breaks. ` +
+        `Apart, each card **starts again** somewhere better.`
       );
 
     case 'pair-never':
-      return (
-        `${pairName(scenario.pairRank!)} — a pair, but not one to break up. Together they ` +
-        `already make a total worth keeping; apart they make two weaker hands.`
-      );
+      return `${pairName(scenario.pairRank!)} — a pair worth **keeping**. Apart it is two weaker hands.`;
 
     case 'stiff': {
       const bust = bustOnNextCard(scenario, rules);
       return (
-        `${total} — a stiff. You cannot win it by standing, and you break ${percent(bust)} ` +
-        `of the time if you draw. There is no comfortable answer, only a cheaper one.`
+        `${total} — a **stiff**. Standing never wins it; drawing breaks it ${percent(bust)}. ` +
+        `No good answer, only a **cheaper** one.`
       );
     }
 
     case 'doubling':
-      return (
-        `${total} — the range that wants money on the table. Every ten and every face card ` +
-        `turns it into a hand the dealer has to beat, and it cannot break on one card.`
-      );
+      return `${total} — **cannot break** on one card, and every ten makes it a real hand.`;
 
     case 'soft-draw':
-      return (
-        `Soft ${total} — the ace is doing the work. Nothing you draw can break this hand, ` +
-        `so drawing costs you nothing except the total you already had.`
-      );
+      return `Soft ${total} — the ace protects you. **Nothing you draw can break it**.`;
 
     case 'soft-made':
-      return (
-        `Soft ${total} — already a real hand, and one of the few that can be improved ` +
-        `without risk. The question is whether improving it is worth giving up what it is.`
-      );
+      return `Soft ${total} — already good, and **free to improve**. The question is whether it is worth it.`;
 
     case 'pat':
-      return (
-        `${total} — pat. It cannot be improved without breaking, so it wins what it wins. ` +
-        `Whether that is enough is the dealer's business, not yours.`
-      );
+      return `${total} — **pat**. It wins what it wins; the rest is the dealer's business.`;
 
     default:
-      return (
-        `${total} — too small to stand on and too small to double. Whatever comes next, ` +
-        `this hand is not finished.`
-      );
+      return `${total} — too small to stand, too small to double. **Not finished.**`;
   }
 }
 
@@ -384,11 +348,11 @@ export function contest(evaluation: DecisionEvaluation): Contest {
 
 /** How decisive the call is, said honestly rather than by vibes. */
 export function describeGap(gap: number): string {
-  if (gap === Infinity) return 'the only legal play';
-  if (gap > 0.2) return 'not close';
-  if (gap >= 0.05) return 'the right play, though closer than it looks';
-  if (gap >= 0.01) return 'a narrow call';
-  return 'a coin-flip — either is defensible, this one edges it';
+  if (gap === Infinity) return 'the only play';
+  if (gap > 0.2) return '**not close**';
+  if (gap >= 0.05) return '**right**, but closer than it looks';
+  if (gap >= 0.01) return 'a **narrow** call';
+  return 'a **coin-flip**; either is defensible';
 }
 
 /**
@@ -411,11 +375,7 @@ function supportingStat(
   // Drawing a soft hand is free, which is the whole argument and one no
   // dealer-outcome figure expresses.
   if (pair.has('hit') && scenario.kind === 'soft') {
-    return (
-      `Drawing cannot break a soft hand — the ace simply drops to one — so the draw ` +
-      `costs nothing but the total you already had, and ${up} is strong enough that ` +
-      `the total you already had is not enough.`
-    );
+    return `The draw is free — and against ${up}, what you have is not enough.`;
   }
 
   // Standing is in contention: the dealer's own outcomes are the argument, but
@@ -426,60 +386,37 @@ function supportingStat(
     // loses two hands in three against a ten, so "very little beats it" would be
     // nonsense for exactly the hand players most need talking out of.
     if (outcome.win > outcome.lose) {
-      return (
-        `Standing on ${scenario.total} wins ${percent(outcome.win)} against ${up} and ` +
-        `loses ${percent(outcome.lose)} — there is not much the dealer can make that beats it.`
-      );
+      return `Standing wins ${percent(outcome.win)}, loses ${percent(outcome.lose)}. Little beats it.`;
     }
     if (scenario.total >= 17) {
-      return (
-        `Standing on ${scenario.total} still loses ${percent(outcome.lose)} of the time ` +
-        `against ${up}. It is a bad hand; it is just less bad than the alternatives.`
-      );
+      return `Standing still loses ${percent(outcome.lose)} — **bad, just less bad** than the rest.`;
     }
-    return (
-      `Standing on ${scenario.total} wins only when the dealer breaks, and ${up} breaks ` +
-      `${percent(odds.bust)} of the time.`
-    );
+    return `Standing only wins when I break, and I break ${percent(odds.bust)}.`;
   }
 
   // Hitting against surrender: what the draw actually does to you.
   if (pair.has('hit') && pair.has('surrender')) {
+    // The two EVs are already in the sentence above; repeating them here just
+    // makes the line longer without adding anything.
     const bust = bustOnNextCard(scenario, rules);
-    return (
-      `Drawing breaks this hand ${percent(bust)} of the time on the very next card, and ` +
-      `even played out perfectly it only reaches ${
-        (pair.has('hit') ? (best.action === 'hit' ? best.ev : runnerUp.ev) : 0).toFixed(3)
-      } — against the guaranteed ${(-0.5).toFixed(3)} of giving half of it back.`
-    );
+    return `Drawing breaks it ${percent(bust)} on the very next card.`;
   }
 
   // Doubling against hitting: same card, twice the money, no second draw.
   if (pair.has('double') && pair.has('hit')) {
-    return (
-      `Doubling takes the same card as hitting, for twice the stake and no second draw. ` +
-      `It wins when that one card is usually enough — and against ${up} it usually is.`
-    );
+    return `Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.`;
   }
 
   // Splitting against playing it as one hand. Which way round matters: the same
   // sentence cannot serve both "split gains" and "split gives away".
   if (pair.has('split')) {
     const gap = Math.abs(best.ev - runnerUp.ev).toFixed(3);
-    if (best.action === 'split') {
-      return (
-        `Two hands are worth ${gap} more here than one, which is what ` +
-        `${NAMES[runnerUp.action]} it as a single total gives away.`
-      );
-    }
-    return (
-      `Splitting it costs ${gap} against simply ${NAMES[best.action]} — breaking up this ` +
-      `pair turns one good total into two worse ones.`
-    );
+    if (best.action === 'split') return `Two hands are worth ${gap} more than one.`;
+    return `Splitting costs ${gap} — one good total becomes two worse ones.`;
   }
 
   if (pair.has('surrender')) {
-    return `Giving half of it back is a guaranteed ${(-0.5).toFixed(3)}; this hand is worth less than that played out.`;
+    return `Half back is a guaranteed ${units(-0.5)}; played out, this is worth less.`;
   }
   return '';
 }
@@ -497,10 +434,10 @@ export function readCombined(
 
   const numbers =
     c.runnerUp === null
-      ? `${c.best.ev.toFixed(3)}`
-      : `${c.best.ev.toFixed(3)} against ${c.runnerUp.ev.toFixed(3)} for ${NAMES[c.runnerUp.action]}`;
+      ? units(c.best.ev)
+      : `${units(c.best.ev)} against ${units(c.runnerUp.ev)} to ${VERBS[c.runnerUp.action].toLowerCase()}`;
 
-  return `${verdict}, and it is ${shape}: ${numbers}. ${stat}`.trim();
+  return `**${verdict}** — ${shape}. ${numbers}. ${stat}`.trim();
 }
 
 // --- The whole reveal -------------------------------------------------------

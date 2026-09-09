@@ -927,3 +927,27 @@ hr.brass {
 
 /* Give the felt a little more room to breathe around the cards. */
 .felt .seat { padding: 14px 16px; }
+
+/* --- Step text: shorter lines, figures that read as figures ---------------- */
+
+.step p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(230, 233, 238, 0.88);
+}
+/* The words the copy leans on. */
+.step p b {
+  color: var(--ink);
+  font-weight: 650;
+}
+/* Figures in the display face: a number set in the body font disappears into
+   the sentence, which is the opposite of what these sentences are for. */
+.num {
+  font-family: var(--display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.06em;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.step p b .num, .step p .num { color: #f4f7fa; }
