@@ -419,6 +419,70 @@ function renderLog(view) {
   }
 }
 
+/**
+ * The dealer's voice.
+ *
+ * Before the decision she names the spot and answers factual questions; after
+ * it, she delivers the verdict. She never names the best play early — §3.1 puts
+ * feedback after the decision, and a helpful dealer who blurts the answer is
+ * just a chart with a face.
+ */
+async function renderCoach(view) {
+  const say = el('say');
+  const answer = el('answer');
+  const asks = el('asks');
+
+  if (view.feedback && revealComplete()) {
+    const f = view.feedback;
+    say.textContent = f.correct
+      ? `${f.optimalLabel}. That's the play.`
+      : `${f.optimalLabel} was the play — that one cost you ${f.evCost.toFixed(3)}.`;
+  } else if (view.feedback) {
+    say.textContent = 'Take a moment. What is my card telling you?';
+  }
+
+  if (view.phase !== 'player' && view.phase !== 'insurance') {
+    if (!view.feedback) say.textContent = 'Deal when you are ready.';
+    asks.replaceChildren();
+    answer.hidden = true;
+    return;
+  }
+
+  const coach = await api('/api/coach');
+  if (coach.prompt && !view.feedback) say.textContent = coach.prompt;
+
+  asks.replaceChildren();
+  answer.hidden = true;
+  for (const ask of coach.asks) {
+    const button = document.createElement('button');
+    button.className = 'ask';
+    button.type = 'button';
+    button.textContent = ask.question;
+    button.setAttribute('aria-pressed', 'false');
+    button.addEventListener('click', () => {
+      for (const b of asks.children) b.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-pressed', 'true');
+      answer.hidden = false;
+      answer.textContent = ask.answer;
+    });
+    asks.appendChild(button);
+  }
+
+  // After the decision the answer is already out, so the reasoning can be asked
+  // for in full without giving anything away.
+  if (view.feedback && revealComplete()) {
+    const why = document.createElement('button');
+    why.className = 'ask';
+    why.type = 'button';
+    why.textContent = 'Why?';
+    why.addEventListener('click', () => {
+      answer.hidden = false;
+      answer.textContent = view.feedback.steps.join(' ');
+    });
+    asks.appendChild(why);
+  }
+}
+
 function render() {
   const view = state.view;
   if (!view) return;
@@ -435,6 +499,7 @@ function render() {
   renderActions(view);
   renderStats(view);
   renderLog(view);
+  renderCoach(view).catch(() => {});
 }
 
 // --- Settings and the reference chart --------------------------------------

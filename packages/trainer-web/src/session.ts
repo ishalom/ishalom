@@ -16,7 +16,9 @@ import {
   formatCard,
   getPreset,
   houseEdge,
+  bjRankOfCard,
   parseScenarioKey,
+  scenarioKeyForHand,
   RULE_PRESETS,
   rankOf,
   suitOf,
@@ -27,7 +29,19 @@ import {
 } from '@evtrainer/ev-engine';
 import { BlackjackTable, type DecisionRecord } from '@evtrainer/game-engine';
 
-import { actionName, explain } from './explain.ts';
+import {
+  actionName,
+  bustOnNextCard,
+  dealerOdds,
+  explain,
+} from './explain.ts';
+import {
+  difficultyTable,
+  newRating,
+  updateRating,
+  type DifficultyMode,
+  type Rating,
+} from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 
 const RANKS = '23456789TJQKA';
@@ -140,6 +154,7 @@ export class TrainerSession {
     significant: 0,
     blunder: 0,
   };
+  private playerName = 'Player';
   private lastFeedback: unknown = null;
   private countedHand = -1;
   /** Finished hands, newest first. */
@@ -148,6 +163,8 @@ export class TrainerSession {
   private pending: PlayedHand['decisions'] = [];
   private scenarioStats = new Map<string, ScenarioStat>();
   private clock = 0;
+  private rating: Rating = newRating('basic');
+  private lastRatingDelta: number | null = null;
 
   constructor(presetId = 'vegas-strip-6d-s17', seed = Date.now() % 2147483647) {
     this.presetId = presetId;
@@ -182,6 +199,7 @@ export class TrainerSession {
   deal(): void {
     this.table.startHand(1);
     this.lastFeedback = null;
+    this.lastRatingDelta = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -249,6 +267,15 @@ export class TrainerSession {
       scenario.kind === 'insurance'
         ? []
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
+
+    // Rate it — unless the spot is off the 311-cell grid. Hard 18 through 21
+    // have no chart cell but turn up constantly, and standing on 19 is trivially
+    // correct, so rating them would be a stream of free points.
+    const chart = chartFor(this.rules);
+    const difficulty = difficultyTable(this.rules, chart).get(record.scenarioKey);
+    this.lastRatingDelta = difficulty
+      ? updateRating(this.rating, difficulty[this.rating.mode], record.severityTier)
+      : null;
 
     this.pending.push({
       scenarioKey: record.scenarioKey,
@@ -395,6 +422,7 @@ export class TrainerSession {
       insuranceOffered: view.phase === 'insurance',
       netUnits: view.netUnits,
       feedback: this.lastFeedback,
+      rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       history: this.history.slice(0, 40),
       stats: this.stats,
       ruleSet: this.ruleSet,
@@ -437,6 +465,148 @@ export class TrainerSession {
       .slice(0, 10);
   }
 
+  /**
+   * What the dealer can be asked, and what she answers.
+   *
+   * §3.1 constrains this: before the decision she may state facts — how often
+   * she breaks, how often you break, what the two candidate plays are worth —
+   * but not name the best one. "Why?" and the rule-sensitivity flag give the
+   * answer away, so they are held back until the decision is made. Guided mode
+   * (§8) is where the answer comes early, and this is not it.
+   */
+  get coach(): unknown {
+    const view = this.table.view;
+    const asks: Array<{ id: string; question: string; answer: string }> = [];
+
+    if (view.phase === 'player') {
+      const upcard = bjRankOfCard(view.dealerVisible[0]!);
+      const hand = view.hands[view.activeHandIndex]!;
+      const scenario = parseScenarioKey(
+        scenarioKeyForHand(
+          hand.cards.map(bjRankOfCard),
+          upcard,
+          view.legalActions.includes('split'),
+        ),
+      );
+      const odds = dealerOdds(upcard, this.rules);
+      const bust = bustOnNextCard(scenario, this.rules);
+      const evaluation = this.table.currentEvaluation();
+      const ranked = view.legalActions
+        .map((action) => ({ action, ev: evaluation.evByAction[action] ?? 0 }))
+        .sort((a, b) => b.ev - a.ev);
+
+      asks.push({
+        id: 'odds',
+        question: 'My odds?',
+        answer:
+          `I break ${Math.round(odds.bust * 100)}% of the time showing this, and finish with ` +
+          `17 or better the other ${Math.round(odds.madeHand * 100)}%. ` +
+          (bust > 0
+            ? `You break ${Math.round(bust * 100)}% of the time if you take a card.`
+            : `You cannot break at all on the next card — that ace protects you.`),
+      });
+
+      // The spread between the two candidates, without naming which is which:
+      // a fact about the hand, not the answer to it.
+      if (ranked.length >= 2) {
+        const spread = Math.abs(ranked[0]!.ev - ranked[1]!.ev);
+        asks.push({
+          id: 'close',
+          question: 'Is this close?',
+          answer:
+            spread < 0.01
+              ? 'Very. The two best plays here are within a hundredth of a unit — this one is nearly a coin-flip.'
+              : spread < 0.05
+                ? `Closer than it looks. About ${spread.toFixed(3)} of a unit between the top two.`
+                : `Not really. There is ${spread.toFixed(3)} of a unit between the best play and the next one.`,
+        });
+      }
+      return { phase: 'player', asks, prompt: this.prompt(scenario, view.legalActions.length) };
+    }
+
+    if (view.phase === 'insurance') {
+      return {
+        phase: 'insurance',
+        prompt: 'Ace up. Insurance is open — but it is a bet on my hole card, not on your hand.',
+        asks: [
+          {
+            id: 'odds',
+            question: 'My odds?',
+            answer:
+              'Barely three cards in thirteen are tens, so the bet loses money every ' +
+              'time it is made. Your own cards have nothing to do with it.',
+          },
+        ],
+      };
+    }
+
+    return { phase: view.phase, prompt: null, asks: [] };
+  }
+
+  /** A line naming the spot, without hinting at the answer. */
+  private prompt(scenario: ReturnType<typeof parseScenarioKey>, choices: number): string {
+    const label =
+      scenario.kind === 'pair'
+        ? 'A pair'
+        : scenario.kind === 'soft'
+          ? `Soft ${scenario.total}`
+          : `${scenario.total}`;
+    if (scenario.kind === 'pair') return `${label}. You can break that up if you want it.`;
+    if (choices <= 2) return `${label}. Not much to choose from — what'll it be?`;
+    return `${label} against my card. Your call.`;
+  }
+
+  /** Everything the home screen needs. */
+  get profile(): unknown {
+    const chart = chartFor(this.rules);
+    const table = difficultyTable(this.rules, chart);
+    const ladderKeys = [
+      'bj:pairT:vs9',
+      'bj:hard12:vs10',
+      'bj:pair8:vs6',
+      'bj:hard16:vs10',
+      'bj:soft18:vs9',
+      'bj:hard15:vs10',
+      'bj:soft13:vs5',
+    ];
+    const ladder = ladderKeys
+      .map((key) => {
+        const d = table.get(key);
+        const cell = chart.cells.get(key);
+        if (!d || !cell) return null;
+        return {
+          scenarioKey: key,
+          label: describeScenarioKey(key),
+          difficulty: d[this.rating.mode],
+          margin: d.margin,
+          optimal: cell.optimalAction,
+          oneIn: Math.round(1000 / Math.max(d.perThousand, 0.01)),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null)
+      .sort((a, b) => a.difficulty - b.difficulty);
+
+    return {
+      player: { name: this.playerName, initial: this.playerName.charAt(0).toUpperCase() },
+      rating: { ...this.rating, lastDelta: this.lastRatingDelta },
+      stats: this.stats,
+      ruleSet: this.ruleSet,
+      ladder,
+    };
+  }
+
+  setPlayerName(name: string): void {
+    const trimmed = name.trim();
+    if (trimmed.length > 0) this.playerName = trimmed.slice(0, 24);
+  }
+
+  setMode(mode: DifficultyMode): void {
+    if (mode === this.rating.mode) return;
+    // Each mode is its own ladder, so it gets its own rating rather than
+    // carrying a number earned against a different set of hands.
+    this.rating = newRating(mode);
+  }
+
   /** The derived chart for the Reference screen (spec §10, screen 7). */
   get chart(): unknown {
     const chart = chartFor(this.rules);
@@ -472,4 +642,18 @@ function totalOf(cards: readonly number[]): number {
     aces--;
   }
   return total;
+}
+
+/** A scenario key as it reads on the difficulty ladder: "8,8 vs 6". */
+function describeScenarioKey(key: string): string {
+  if (key === 'bj:insurance') return 'Insurance';
+  const scenario = parseScenarioKey(key);
+  const up = key.slice(key.indexOf(':vs') + 3);
+  if (scenario.kind === 'pair') {
+    const rank = scenario.pairRank!;
+    const label = rank === 0 ? 'A' : rank === 9 ? '10' : String(rank + 1);
+    return `${label},${label} vs ${up}`;
+  }
+  if (scenario.kind === 'soft') return `A,${(scenario.total ?? 0) - 11} vs ${up}`;
+  return `${scenario.total} vs ${up}`;
 }

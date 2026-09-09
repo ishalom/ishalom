@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <section class="crest">
+        <div class="who">
+          <div class="initial" id="initial">P</div>
+          <div>
+            <input class="who-name" id="name" value="Player" aria-label="Your name" />
+            <div class="who-since" id="since">no hands yet</div>
+          </div>
+        </div>
+
+        <div class="rating-block">
+          <div class="rating-value" id="rating">1200</div>
+          <div class="rating-label" id="rating-label">Blackjack rating · basic</div>
+          <div class="rating-side">
+            <span id="session-delta"></span>
+            <span>peak <b id="peak">1200</b></span>
+          </div>
+        </div>
+      </section>
+
+      <hr class="brass" />
+
+      <!--
+        §9.2 and §3.1: accuracy first, units last and quiet. Leading with the
+        bankroll teaches exactly the confusion this app exists to break.
+      -->
+      <section class="stats" aria-label="Statistics">
+        <div class="stat">
+          <span class="stat-value" id="accuracy">—</span>
+          <span class="stat-label">accuracy</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="evlost">—</span>
+          <span class="stat-label">EV lost /100</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="edge">—</span>
+          <span class="stat-label">your edge</span>
+        </div>
+        <div class="stat quiet">
+          <span class="stat-value" id="units">—</span>
+          <span class="stat-label">units</span>
+        </div>
+      </section>
+
+      <section class="games">
+        <a class="game" href="/table.html">
+          <span class="pip">♠</span>
+          <div class="game-title">Blackjack</div>
+          <div class="game-sub" id="bj-rules">—</div>
+          <div class="game-foot">
+            <span>rating <b id="bj-rating">—</b></span>
+            <span>hands <b id="bj-hands">0</b></span>
+          </div>
+          <div class="modes" role="group" aria-label="Difficulty mode">
+            <button class="mode" type="button" data-mode="basic" aria-pressed="true">
+              Basic<small>costly hands</small>
+            </button>
+            <button class="mode" type="button" data-mode="recall" aria-pressed="false">
+              Recall<small>thin &amp; rare</small>
+            </button>
+            <button class="mode" type="button" data-mode="value" aria-pressed="false">
+              Value<small>your leaks</small>
+            </button>
+          </div>
+        </a>
+
+        <a class="game" href="/ultimate.html">
+          <span class="pip">♦</span>
+          <div class="game-title">Ultimate Texas Hold'em<span class="tag">preview</span></div>
+          <div class="game-sub">Solvers ready · no table yet</div>
+          <div class="game-foot">
+            <span>rating <b>—</b></span>
+            <span id="uth-classes">pre-flop table —</span>
+          </div>
+        </a>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">What the rating means</h2>
+          <span class="panel-note" id="ladder-mode">basic</span>
+        </div>
+        <div class="panel-body" id="ladder"></div>
+      </section>
+
+      <p class="footer">
+        Perfect basic strategy still loses <b id="house-edge">—</b> of every unit bet
+        under these rules. This app teaches you to lose less, not to win.
+      </p>
+    </div>
+
+    <script src="/home.js"></script>
+  </body>
+</html>

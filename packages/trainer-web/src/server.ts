@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
 import { TrainerSession } from './session.ts';
+import { uthPreview } from './uth.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const PORT = Number(process.env.PORT ?? 5173);
@@ -101,13 +102,28 @@ const server = createServer(async (request, response) => {
         case '/api/weak-spots':
           return json(session.weakSpots);
 
+        case '/api/profile':
+          return json(session.profile);
+
+        case '/api/coach':
+          return json(session.coach);
+
+        case '/api/uth/preview':
+          return json(uthPreview());
+
+        case '/api/player': {
+          if (typeof body.name === 'string') session.setPlayerName(body.name);
+          if (typeof body.mode === 'string') session.setMode(body.mode as never);
+          return json(session.profile);
+        }
+
         default:
           return json({ error: 'no such endpoint' }, 404);
       }
     }
 
     // Static files. `normalize` plus the prefix check keeps `..` from escaping.
-    const requested = url.pathname === '/' ? '/index.html' : url.pathname;
+    const requested = url.pathname === '/' ? '/home.html' : url.pathname;
     const path = normalize(join(ROOT, requested));
     if (!path.startsWith(ROOT)) return json({ error: 'forbidden' }, 403);
 
