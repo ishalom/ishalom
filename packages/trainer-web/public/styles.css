@@ -1222,3 +1222,56 @@ body { font-family: var(--body); }
 .howto { margin: 0; padding-inline-start: 22px; }
 .howto li { font-size: 14.5px; line-height: 1.6; margin-bottom: 9px; color: rgba(230, 233, 238, 0.88); }
 .howto li b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * The verdict, pinned between the dealer and the cards.
+ *
+ * The reasoning below is what teaches, but it is long, and drilling quickly
+ * meant scrolling past the felt to find out what a hand cost. So the parts that
+ * are a verdict rather than an argument sit here, where the eye already is: the
+ * spot, the grade, what was played, and every action's EV.
+ *
+ * It reads as a note laid on the table rather than another panel — no card
+ * chrome competing with the felt, just a rule down its leading edge in the
+ * severity colour, which is the one thing worth seeing from across the screen.
+ * ======================================================================== */
+
+.quickcard {
+  align-self: center;
+  width: 100%;
+  max-width: 440px;
+  margin: 2px 0 14px;
+  padding: 11px 15px;
+  border-radius: 12px;
+  background: rgba(12, 18, 15, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-inline-start: 3px solid var(--line);
+  backdrop-filter: blur(2px);
+  text-align: start;
+}
+.quickcard.optimal { border-inline-start-color: var(--optimal); }
+.quickcard.negligible { border-inline-start-color: var(--negligible); }
+.quickcard.minor { border-inline-start-color: var(--minor); }
+.quickcard.significant { border-inline-start-color: var(--significant); }
+.quickcard.blunder { border-inline-start-color: var(--blunder); }
+.quickcard.thinking { border-inline-start-color: var(--brass-dim); }
+
+.quickcard .anchor {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 17px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.quickcard .anchor b { color: var(--ink); font-weight: var(--display-weight); }
+.quickcard .verdict { margin: 3px 0 0; }
+.quickcard.optimal .verdict { color: var(--optimal); }
+.quickcard.minor .verdict { color: var(--minor); }
+.quickcard.significant .verdict { color: var(--significant); }
+.quickcard.blunder .verdict { color: var(--blunder); }
+.quickcard .did { margin: 2px 0 0; }
+.quickcard .evs { margin: 10px 0 0; }
+
+/* The feedback card below is now reasoning only, so it starts with a step
+   rather than a heading and needs no top padding of its own. */
+.feedback .reveal { margin-top: 0; }

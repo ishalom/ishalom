@@ -87,6 +87,13 @@
         </div>
       </div>
 
+      <!--
+        The verdict and the numbers, pinned between the dealer and the cards.
+        A player moving fast reads the whole answer here without scrolling past
+        the table; the reasoning is still below, for anyone who wants it.
+      -->
+      <section class="quickcard" id="quickcard" hidden aria-live="polite"></section>
+
       <section class="seat" data-i18n-attr="aria-label:ui.dealer">
         <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span> <span class="seat-total" id="dealer-total"></span></h2>
         <div class="cards" id="dealer-cards"></div>

@@ -199,6 +199,82 @@ function revealComplete() {
 
 const stepTitles = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
 
+/**
+ * The answer, pinned above the cards.
+ *
+ * The three-step reveal is the teaching, but it is long, and a player drilling
+ * quickly was having to scroll past the felt to find out what a hand cost. So
+ * the parts that are a verdict rather than an argument — the spot, the grade,
+ * what was played, and the EV of every legal action — sit between the dealer
+ * and the cards, where the eye already is.
+ *
+ * It obeys the same gate as the rest: nothing here appears until the reveal is
+ * complete, so stepping through the reasoning still means reasoning before
+ * seeing the answer (§3.4). A player who has chosen to skip the walkthrough
+ * gets it immediately, which is the point of that setting.
+ */
+function renderQuickCard(view) {
+  const box = el('quickcard');
+  if (!box) return;
+  const feedback = view.feedback;
+  const done = revealComplete();
+
+  if (!feedback || !state.reveal) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  box.className = done ? `quickcard ${feedback.severity}` : 'quickcard thinking';
+  box.replaceChildren();
+
+  // After a split the board no longer shows what was actually decided, so the
+  // spot is named here whether or not the rest is revealed yet.
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  if (done) {
+    anchor.innerHTML = `<b>${feedback.headline}</b>`;
+  } else {
+    anchor.innerHTML =
+      `<b>${feedback.headline.split(' \u2192 ')[0]}</b> \u2014 ${T('fb.thinking')}`;
+    return void box.appendChild(anchor);
+  }
+  box.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = feedback.correct
+    ? T('fb.correct', { action: feedback.optimalLabel })
+    : T('fb.wrong', {
+        severity: severityWord(feedback.severity),
+        cost: feedback.evCost.toFixed(3),
+      });
+  box.appendChild(verdict);
+
+  if (!feedback.correct) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent =
+      T('fb.youChose', {
+        chosen: feedback.chosenLabel.toLowerCase(),
+        best: feedback.optimalLabel.toLowerCase(),
+      }) + (feedback.closeCall ? ' ' + T('fb.closeCall') : '');
+    box.appendChild(did);
+  }
+
+  // §7.1 item 3: the EV of every legal action, sorted, in units.
+  const evs = document.createElement('div');
+  evs.className = 'evs';
+  feedback.ranked.forEach((entry, index) => {
+    const chip = document.createElement('span');
+    chip.className =
+      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
+    const sign = entry.ev >= 0 ? '+' : '';
+    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(3)}`;
+    evs.appendChild(chip);
+  });
+  box.appendChild(evs);
+}
+
 function renderFeedback(view) {
   const box = el('feedback');
   const feedback = view.feedback;
@@ -210,38 +286,6 @@ function renderFeedback(view) {
   const done = revealComplete();
   box.className = done ? `feedback ${feedback.severity}` : 'feedback';
   box.replaceChildren();
-
-  // The evaluated hand, always. After a split the board no longer shows what was
-  // actually decided, so without this the steps have nothing to refer to.
-  const anchor = document.createElement('p');
-  anchor.className = 'anchor';
-  anchor.innerHTML = done
-    ? `<b>${feedback.headline}</b>`
-    : `<b>${feedback.headline.split(' → ')[0]}</b> — thinking it through`;
-  box.appendChild(anchor);
-
-  if (done) {
-    const verdict = document.createElement('p');
-    verdict.className = 'verdict';
-    verdict.textContent = feedback.correct
-      ? T('fb.correct', { action: feedback.optimalLabel })
-      : T('fb.wrong', {
-          severity: severityWord(feedback.severity),
-          cost: feedback.evCost.toFixed(3),
-        });
-    box.appendChild(verdict);
-
-    if (!feedback.correct) {
-      const did = document.createElement('p');
-      did.className = 'did';
-      did.textContent =
-        T('fb.youChose', {
-          chosen: feedback.chosenLabel.toLowerCase(),
-          best: feedback.optimalLabel.toLowerCase(),
-        }) + (feedback.closeCall ? ' ' + T('fb.closeCall') : '');
-      box.appendChild(did);
-    }
-  }
 
   // All three slots are always laid out. Only their text arrives a step at a
   // time, so the card keeps its size and nothing under the cursor moves.
@@ -287,19 +331,6 @@ function renderFeedback(view) {
     box.appendChild(controls);
     return;
   }
-
-  // §7.1 item 3: the EV of every legal action, sorted, in units.
-  const evs = document.createElement('div');
-  evs.className = 'evs';
-  feedback.ranked.forEach((entry, index) => {
-    const chip = document.createElement('span');
-    chip.className =
-      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    const sign = entry.ev >= 0 ? '+' : '';
-    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(3)}`;
-    evs.appendChild(chip);
-  });
-  box.appendChild(evs);
 
   // The preference is reversible from where it took effect, rather than buried
   // in a settings screen the player has no reason to open.
@@ -522,6 +553,7 @@ function render() {
 
   renderDealer(view);
   renderHands(view);
+  renderQuickCard(view);
   renderFeedback(view);
   renderActions(view);
   renderStats(view);

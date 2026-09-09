@@ -106,10 +106,10 @@ const EN: Catalogue = {
 
   // --- How decisive the call is ---
   'gap.only': 'the only play',
-  'gap.notClose': '**not close**',
-  'gap.right': '**right**, but closer than it looks',
-  'gap.narrow': 'a **narrow** call',
-  'gap.coinflip': 'a **coin-flip**; either is defensible',
+  'gap.notClose': '**well clear** of the next best',
+  'gap.right': '**closer to the next best** than it looks',
+  'gap.narrow': 'a **narrow** win over the next best',
+  'gap.coinflip': 'a **coin-flip** with the next best; either is defensible',
 
   // --- Step 3: the supporting figure ---
   'stat.softDraw': 'The draw is free — and against {up}, what you have is not enough.',
@@ -337,6 +337,30 @@ const EN: Catalogue = {
   'fb.accuracyCount': '**{right} of {total}** decisions right so far.',
   'fb.accuracyExcluded': '{n} close calls set aside — spots where the best two plays differ by under 0.01 units, which is inside the noise.',
   'fb.accuracyExcludedOne': '1 close call set aside — a spot where the best two plays differ by under 0.01 units, which is inside the noise.',
+
+  // --- The shared build: other people ---
+  'social.table': 'Table',
+  'social.feed': 'Feed',
+  'social.connecting': 'Looking for the others…',
+  'social.offline': 'Playing on your own here — the shared table needs a connection this page could not get. Everything else works.',
+  'social.noPlayers': 'Nobody has played a rated hand yet. Be first.',
+  'social.noFeed': 'Nothing on the feed yet. Hands land here when someone drops a big one or holds a hard spot.',
+  'social.playerLine': '{accuracy}% over {hands} hands',
+  'social.you': 'You',
+  'social.held': 'Held it — **{action}** was right.',
+  'social.missed': 'Played {chosen}; **{optimal}** was right. Cost {cost}.',
+  'social.justNow': 'just now',
+  'social.minutes': '{n} min ago',
+  'social.hours': '{n} h ago',
+  'social.days': '{n} d ago',
+
+  'welcome.line': 'Real hands, dealt properly. You decide, then you find out what the maths says — and why.',
+  'welcome.nameLabel': 'What should we call you?',
+  'welcome.placeholder': 'Your name',
+  'welcome.start': 'Sit down',
+  'welcome.fine': 'No account, no password. The name is so the others can see you at the table.',
+
+  'fb.thinking': 'thinking it through',
 };
 
 const HE: Catalogue = {
@@ -387,10 +411,10 @@ const HE: Catalogue = {
 
   // --- How decisive the call is ---
   'gap.only': 'המהלך היחיד',
-  'gap.notClose': '**לא צמוד בכלל**',
-  'gap.right': '**נכון**, אבל צמוד יותר משנדמה',
-  'gap.narrow': 'הכרעה **צמודה**',
-  'gap.coinflip': '**הטלת מטבע**; שתי האפשרויות סבירות',
+  'gap.notClose': '**בפער ברור** מהאפשרות הבאה',
+  'gap.narrow': 'ניצחון **צמוד** על האפשרות הבאה',
+  'gap.right': '**צמוד לאפשרות הבאה** יותר משנדמה',
+  'gap.coinflip': '**הטלת מטבע** מול האפשרות הבאה; שתיהן סבירות',
 
   // --- Step 3: the supporting figure ---
   'stat.softDraw': 'הקלף הנוסף לא עולה כלום — ומול {up}, מה שיש לך לא מספיק.',
@@ -618,6 +642,30 @@ const HE: Catalogue = {
   'fb.accuracyCount': '**{right} מתוך {total}** החלטות נכונות עד כה.',
   'fb.accuracyExcluded': '{n} מקרים צמודים הוצאו — מצבים שבהם שתי האפשרויות הטובות נבדלות בפחות מ-0.01 יחידות, וזה בתוך הרעש.',
   'fb.accuracyExcludedOne': 'מקרה צמוד אחד הוצא — מצב שבו שתי האפשרויות הטובות נבדלות בפחות מ-0.01 יחידות, וזה בתוך הרעש.',
+
+  // --- The shared build: other people ---
+  'social.table': 'השולחן',
+  'social.feed': 'פיד',
+  'social.connecting': 'מחפש את האחרים…',
+  'social.offline': 'כאן אתה משחק לבד — השולחן המשותף דורש חיבור שהדף הזה לא הצליח לקבל. כל השאר עובד.',
+  'social.noPlayers': 'אף אחד עוד לא שיחק יד מדורגת. תהיה הראשון.',
+  'social.noFeed': 'עוד אין כלום בפיד. ידיים מגיעות לכאן כשמישהו עושה טעות גדולה או מחזיק מצב קשה.',
+  'social.playerLine': '{accuracy}% על פני {hands} ידיים',
+  'social.you': 'אתה',
+  'social.held': 'החזיק — **{action}** היה נכון.',
+  'social.missed': 'שיחק {chosen}; **{optimal}** היה נכון. עלות {cost}.',
+  'social.justNow': 'ממש עכשיו',
+  'social.minutes': 'לפני {n} דק׳',
+  'social.hours': 'לפני {n} שע׳',
+  'social.days': 'לפני {n} ימים',
+
+  'welcome.line': 'ידיים אמיתיות, מחולקות כמו שצריך. אתה מחליט, ואז מגלה מה המתמטיקה אומרת — ולמה.',
+  'welcome.nameLabel': 'איך לקרוא לך?',
+  'welcome.placeholder': 'השם שלך',
+  'welcome.start': 'שב לשולחן',
+  'welcome.fine': 'בלי חשבון ובלי סיסמה. השם הוא כדי שהאחרים יראו אותך בשולחן.',
+
+  'fb.thinking': 'חושבים על זה',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

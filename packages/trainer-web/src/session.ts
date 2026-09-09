@@ -183,6 +183,10 @@ export class TrainerSession {
      headline would read as a bug, not a mixture. */
   private locale: Locale = 'en';
   private lastFeedback: unknown = null;
+  /* The decision the card on screen describes. Kept because the card is
+     *composed*, not stored: switching language has to build it again from the
+     same numbers, or the player is left reading two languages at once. */
+  private lastRecord: DecisionRecord | null = null;
   private countedHand = -1;
   /** Finished hands, newest first. */
   private history: PlayedHand[] = [];
@@ -284,6 +288,7 @@ export class TrainerSession {
 
   /** Turn one graded decision into the feedback card §7.1 describes. */
   private absorb(record: DecisionRecord): void {
+    this.lastRecord = record;
     const scenario =
       record.scenarioKey === 'bj:insurance'
         ? ({ kind: 'insurance' } as const)
@@ -318,7 +323,11 @@ export class TrainerSession {
     }
 
     const ranked = record.legalActions
-      .map((action) => ({ action, label: action, ev: record.evByAction[action] ?? 0 }))
+      .map((action) => ({
+        action,
+        label: prettyAction(action, this.locale),
+        ev: record.evByAction[action] ?? 0,
+      }))
       .sort((a, b) => b.ev - a.ev);
 
     const sensitivity: SensitivityNote[] =
@@ -385,7 +394,7 @@ export class TrainerSession {
       optimalLabel: prettyAction(record.optimalAction, this.locale),
       optimalVerb:
         record.scenarioKey === 'bj:insurance'
-          ? prettyAction(record.optimalAction)
+          ? prettyAction(record.optimalAction, this.locale)
           : actionName(record.optimalAction as BlackjackAction, this.locale),
       evCost: record.evCost,
       ranked,
@@ -665,7 +674,57 @@ export class TrainerSession {
   }
 
   setLocale(locale: Locale): void {
-    if (locale === 'en' || locale === 'he') this.locale = locale;
+    if (locale !== 'en' && locale !== 'he') return;
+    if (locale === this.locale) return;
+    this.locale = locale;
+    // The card on screen was composed in the old language. Compose it again
+    // rather than leaving a Hebrew explanation under an English verdict — the
+    // numbers are unchanged, so this is a re-render, not a re-grade.
+    if (this.lastRecord) this.recompose(this.lastRecord);
+  }
+
+  /**
+   * Rebuild the visible feedback card in the current language.
+   *
+   * Only the prose is rebuilt. Nothing here touches the running totals, the
+   * rating or the history — a language change is not a decision, and grading it
+   * twice would be a quiet way to corrupt a session.
+   */
+  private recompose(record: DecisionRecord): void {
+    const scenario =
+      record.scenarioKey === 'bj:insurance'
+        ? ({ kind: 'insurance' } as const)
+        : parseScenarioKey(record.scenarioKey);
+    const evaluation = {
+      legalActions: record.legalActions as BlackjackAction[],
+      evByAction: record.evByAction as Partial<Record<BlackjackAction, number>>,
+      optimalAction: record.optimalAction as BlackjackAction,
+      optimalEv: record.evByAction[record.optimalAction] ?? 0,
+    };
+    const explanation = explain(
+      scenario,
+      evaluation,
+      this.rules,
+      this.locale,
+      record.chosenAction as BlackjackAction,
+    );
+    const previous = this.lastFeedback as Record<string, unknown> | null;
+    if (!previous) return;
+    this.lastFeedback = {
+      ...previous,
+      headline: explanation.headline,
+      steps: [...explanation.steps],
+      chosenLabel: prettyAction(record.chosenAction, this.locale),
+      optimalLabel: prettyAction(record.optimalAction, this.locale),
+      optimalVerb:
+        record.scenarioKey === 'bj:insurance'
+          ? prettyAction(record.optimalAction, this.locale)
+          : actionName(record.optimalAction as BlackjackAction, this.locale),
+      ranked: (previous.ranked as Array<Record<string, unknown>>).map((entry) => ({
+        ...entry,
+        label: prettyAction(entry.action as string, this.locale),
+      })),
+    };
   }
 
   setMode(mode: DifficultyMode): void {

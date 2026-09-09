@@ -1,0 +1,149 @@
+
+/* ===========================================================================
+ * The shared build only.
+ *
+ * Same palette, same faces, same restraint as the rest of the app — these are
+ * three surfaces the local single-player app has no use for: the door someone
+ * comes through the first time, the table everyone is ranked on, and the feed
+ * of hands worth showing other people.
+ * ======================================================================== */
+
+/* Rubik carries both scripts here too, but it comes from Google rather than
+   from public/fonts — a published page has no server of its own to fetch the
+   woff2 from, and it is the one host the sandbox will load a stylesheet from. */
+:root {
+  --body: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Rubik', system-ui, sans-serif;
+  --display-weight: 700;
+  --display-tracking: -0.005em;
+}
+
+body { background: var(--bg); }
+#app { min-height: 100dvh; display: flex; flex-direction: column; }
+#app > .shell { flex: 1; }
+
+/* --- First run ------------------------------------------------------------ */
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 48px 22px;
+  min-height: 78dvh;
+}
+.welcome-title {
+  font-family: var(--display);
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--ink);
+}
+.welcome-line {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 34ch;
+  margin: 6px 0 26px;
+}
+.welcome-form { display: flex; flex-direction: column; gap: 11px; max-width: 340px; }
+.welcome-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--voice);
+  font-weight: 700;
+}
+.welcome-input {
+  font: inherit;
+  font-size: 20px;
+  font-family: var(--display);
+  padding: 12px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+}
+.welcome-input:focus {
+  outline: none;
+  border-color: var(--brass-dim);
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.13);
+}
+.welcome-form .action { align-self: flex-start; padding-inline: 26px; }
+.welcome-fine {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 36ch;
+  margin-top: 22px;
+}
+
+/* --- The table everyone is on --------------------------------------------- */
+
+.board { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.board-row {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  grid-template-areas: 'place name score' '. detail detail';
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 11px 13px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+/* One row is lifted, and only one: the player reading it. Everything else stays
+   flat, so finding yourself in the list takes no searching. */
+.board-row.is-me {
+  border-color: var(--brass-dim);
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.09), transparent 70%), var(--panel);
+}
+.board-place {
+  grid-area: place;
+  font-family: var(--display);
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.board-name { grid-area: name; font-size: 16px; font-weight: 600; }
+.board-row .ladder-score {
+  grid-area: score;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+}
+.board-row .ladder-score.provisional { color: var(--muted); }
+.board-detail { grid-area: detail; font-size: 12.5px; color: var(--muted); }
+
+/* --- The feed ------------------------------------------------------------- */
+
+.feed-item {
+  padding: 12px 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 7px;
+}
+/* The stripe is the only place severity is spent, so a feed of mixed results
+   reads at a glance without turning into a set of coloured cards. */
+.feed-item.good { border-inline-start-color: var(--optimal); }
+.feed-item.minor { border-inline-start-color: var(--minor); }
+.feed-item.significant { border-inline-start-color: var(--significant); }
+.feed-item.blunder { border-inline-start-color: var(--blunder); }
+
+.feed-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.feed-head strong { font-size: 14px; font-weight: 650; }
+.feed-when { font-size: 11.5px; color: var(--muted); flex: none; }
+.feed-line {
+  margin: 5px 0 3px;
+  font-family: var(--display);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.feed-verdict { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* --- A door that is not open yet ------------------------------------------ */
+
+.door-locked { opacity: 0.5; cursor: default; }
+.door-locked:hover { border-color: var(--line); }
