@@ -16,11 +16,24 @@ and says so in-product rather than burying it.
 
 | Package | Status |
 | --- | --- |
-| [`packages/ev-engine`](packages/ev-engine) | Blackjack exact EV solver, derived charts, decision grading. Standalone and dependency-free. |
+| [`packages/ev-engine`](packages/ev-engine) | Exact EV solvers for Blackjack and Ultimate Texas Hold'em, derived charts, decision grading. Standalone and dependency-free. |
+| [`packages/game-engine`](packages/game-engine) | The Blackjack state machine: dealing, rules, settlement, and the §14.3 simulation. |
+| [`packages/trainer-web`](packages/trainer-web) | A local web client for playing Blackjack against the engines. |
+
+## Playing it
+
+```sh
+npm install
+npm start --workspace @evtrainer/trainer-web
+# http://localhost:5173
+```
+
+Requires Node 22.18 or newer, which strips TypeScript types natively. There is
+no build step anywhere in the repo.
 
 The EV engine is the core of the product: if it is wrong, the app actively
 teaches errors. It is built and validated in isolation, ahead of the game loop
 and the UI, and it ships as a library with no dependency on either.
 
-Ultimate Texas Hold'em — the 7-card evaluator, the river and flop solvers, and
-the precomputed pre-flop table — is Phase 3 and not built yet.
+Ultimate Texas Hold'em's solvers are built — evaluator, river, flop, Trips, and
+the offline pre-flop table — but it has no client yet.

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Blackjack</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->
+    <header class="rules" id="rules-bar">
+      <div class="rules-main">
+        <span class="rules-name" id="rules-name">—</span>
+        <span class="rules-badge" id="rules-badge"></span>
+      </div>
+      <button class="link" id="open-settings" aria-label="Change rule set">Rules</button>
+    </header>
+
+    <!--
+      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV
+      lost. Units won is present but last, and deliberately quiet.
+    -->
+    <section class="stats" id="stats" aria-label="Session statistics">
+      <div class="stat">
+        <span class="stat-value" id="stat-accuracy">—</span>
+        <span class="stat-label">decision accuracy</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-evlost">—</span>
+        <span class="stat-label">EV lost / 100 hands</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-edge">—</span>
+        <span class="stat-label">your effective edge</span>
+      </div>
+      <div class="stat stat-quiet">
+        <span class="stat-value" id="stat-units">—</span>
+        <span class="stat-label">units</span>
+      </div>
+    </section>
+
+    <main class="table" id="table">
+      <section class="seat" aria-label="Dealer">
+        <h2 class="seat-title">Dealer <span class="seat-total" id="dealer-total"></span></h2>
+        <div class="cards" id="dealer-cards"></div>
+      </section>
+
+      <section class="seat" aria-label="Your hand">
+        <h2 class="seat-title">You <span class="seat-total" id="player-total"></span></h2>
+        <div id="player-hands"></div>
+      </section>
+
+      <p class="empty" id="empty-state">Press Deal to start.</p>
+    </main>
+
+    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->
+    <section class="feedback" id="feedback" hidden aria-live="polite"></section>
+
+    <!-- Spec §10.1: primary actions along the bottom edge, reachable one-handed. -->
+    <nav class="actions" id="actions" aria-label="Actions"></nav>
+
+    <dialog id="settings">
+      <form method="dialog">
+        <h2>Rule set</h2>
+        <p class="muted">
+          Changing the rules starts a new session. The correct play changes with
+          them, which is the point.
+        </p>
+        <div id="preset-list"></div>
+        <menu>
+          <button value="cancel">Close</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog id="reference">
+      <form method="dialog">
+        <h2>Basic strategy for these rules</h2>
+        <p class="muted">
+          Derived from the EV computation, not copied from a chart.
+          <span class="legend">H hit · S stand · D double · P split · R surrender</span>
+        </p>
+        <div id="chart-container"></div>
+        <menu>
+          <button value="cancel">Close</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <footer class="footer">
+      <button class="link" id="open-reference">Strategy chart</button>
+      <span class="footer-note" id="edge-note"></span>
+    </footer>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

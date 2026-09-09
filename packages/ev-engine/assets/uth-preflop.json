@@ -351,6 +351,96 @@
       "margin": 0.21566344003351484,
       "flopRaiseFrequency": 0.5608673469387755,
       "riverFoldFrequency": 0.03420680020389284
+    },
+    "A3s": {
+      "label": "A3s",
+      "ev4x": 0.4967138545487403,
+      "ev3x": 0.3323074426411495,
+      "evCheck": 0.22137183255271425,
+      "optimalAction": "raise4x",
+      "margin": 0.27534202199602603,
+      "flopRaiseFrequency": 0.6044897959183674,
+      "riverFoldFrequency": 0.04297466442636259
+    },
+    "A3o": {
+      "label": "A3o",
+      "ev4x": 0.14744684498315902,
+      "ev3x": 0.030554798250342317,
+      "evCheck": -0.023205877565894928,
+      "optimalAction": "raise4x",
+      "margin": 0.17065272254905395,
+      "flopRaiseFrequency": 0.5451530612244898,
+      "riverFoldFrequency": 0.04299779116086768
+    },
+    "A2s": {
+      "label": "A2s",
+      "ev4x": 0.39985491943019935,
+      "ev3x": 0.25227696216839646,
+      "evCheck": 0.16651751667785053,
+      "optimalAction": "raise4x",
+      "margin": 0.23333740275234882,
+      "flopRaiseFrequency": 0.5760204081632653,
+      "riverFoldFrequency": 0.049367554607411886
+    },
+    "KK": {
+      "label": "KK",
+      "ev4x": 3.289359145863713,
+      "ev3x": 2.6414455500972274,
+      "evCheck": 1.9935319543678462,
+      "optimalAction": "raise4x",
+      "margin": 1.2958271914958666,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "KQs": {
+      "label": "KQs",
+      "ev4x": 1.3126203140823205,
+      "ev3x": 1.0446122481851658,
+      "evCheck": 0.8164077785348363,
+      "optimalAction": "raise4x",
+      "margin": 0.49621253554748423,
+      "flopRaiseFrequency": 0.6882142857142857,
+      "riverFoldFrequency": 0.05664964413147312
+    },
+    "KQo": {
+      "label": "KQo",
+      "ev4x": 0.7829415058560011,
+      "ev3x": 0.5538255049020482,
+      "evCheck": 0.3704903968034687,
+      "optimalAction": "raise4x",
+      "margin": 0.4124511090525324,
+      "flopRaiseFrequency": 0.6341326530612245,
+      "riverFoldFrequency": 0.05562593214899281
+    },
+    "KJs": {
+      "label": "KJs",
+      "ev4x": 1.2275003751925122,
+      "ev3x": 0.9761535725771194,
+      "evCheck": 0.7675870945860992,
+      "optimalAction": "raise4x",
+      "margin": 0.459913280606413,
+      "flopRaiseFrequency": 0.6687755102040817,
+      "riverFoldFrequency": 0.05330665106005399
+    },
+    "KJo": {
+      "label": "KJo",
+      "ev4x": 0.69199111696901,
+      "ev3x": 0.4806174137283753,
+      "evCheck": 0.31864897674092285,
+      "optimalAction": "raise4x",
+      "margin": 0.3733421402280871,
+      "flopRaiseFrequency": 0.6165306122448979,
+      "riverFoldFrequency": 0.053097094526987486
+    },
+    "KTs": {
+      "label": "KTs",
+      "ev4x": 1.1484691353184733,
+      "ev3x": 0.9126979719491383,
+      "evCheck": 0.7212971193747544,
+      "optimalAction": "raise4x",
+      "margin": 0.4271720159437189,
+      "flopRaiseFrequency": 0.6606632653061224,
+      "riverFoldFrequency": 0.04816543638732088
     }
   }
 }
