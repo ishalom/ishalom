@@ -1,0 +1,78 @@
+# CI for packages/ev-engine.
+#
+# Spec §14 is blunt about why this matters: a bug in the EV engine does not crash
+# the app, it silently teaches the user to play badly. The validation suite only
+# does its job if something fails when it drifts — in particular the §14.4 golden
+# charts, which are a manual promise until a machine enforces them.
+#
+# The slow suite runs here too. It is under a minute, its sampling is seeded and
+# therefore deterministic, and it is the only thing that exercises the Monte
+# Carlo cross-checks of the dealer distributions and the spot-check EVs.
+
+name: ev-engine
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: packages/ev-engine
+
+jobs:
+  test:
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22.18 is the floor: below it Node will not strip TypeScript types and
+        # the package has no build step to fall back on. 24 guards against a
+        # future runtime changing how stripping behaves.
+        node: ['22', '24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: packages/ev-engine/package-lock.json
+
+      - name: Install build-time dependencies
+        run: npm ci
+
+      - name: Assert the engine ships with no runtime dependencies
+        # This is a shipping requirement, not a preference: the engine has to
+        # build as a standalone library on any platform (spec §12, §6.5).
+        # test/engine-contract.test.ts checks the imports; this checks the
+        # manifest, so neither can drift without the other noticing.
+        run: |
+          node --eval '
+            const pkg = require("./package.json");
+            const deps = Object.keys(pkg.dependencies ?? {});
+            if (deps.length > 0) {
+              console.error("ev-engine gained runtime dependencies: " + deps.join(", "));
+              process.exit(1);
+            }
+            console.log("runtime dependencies: none");
+          '
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Test with sampling cross-validation
+        run: npm run test:slow

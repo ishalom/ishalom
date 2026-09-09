@@ -65,11 +65,19 @@ Requires Node 22.18+, which strips TypeScript types natively. There is no build
 step and no test framework.
 
 ```sh
-npm test           # 86 tests, ~15s
-npm run test:slow  # adds Monte Carlo cross-validation, ~45s
-npm run typecheck  # needs devDependencies installed
+npm test           # 86 tests, ~15s — works on a bare checkout
+npm run test:slow  # adds Monte Carlo cross-validation, ~40s
+npm run typecheck  # needs `npm ci` first
 npm run charts     # derives every preset's chart in exact mode into charts/
 ```
+
+`npm test` needs nothing installed. The only dependencies in `package-lock.json`
+are TypeScript and `@types/node`, both build-time only, for `npm run typecheck`.
+
+CI (`.github/workflows/ev-engine.yml`) runs the typecheck, both suites, and a
+guard asserting the package still declares no runtime dependencies, on Node 22
+and 24. Node 22.18 is the floor — below it types are not stripped and there is no
+build step to fall back on.
 
 ## How it is validated (§14.1)
 
