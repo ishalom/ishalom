@@ -951,3 +951,123 @@ hr.brass {
   letter-spacing: 0.01em;
 }
 .step p b .num, .step p .num { color: #f4f7fa; }
+
+/* ===========================================================================
+ * Typography.
+ *
+ * Bundled rather than linked: §13 requires the app to work offline, and a
+ * webfont from a CDN would make the typography the one part of the product that
+ * stops working on a plane. Four variable fonts, one file each, 152 KB total —
+ * against a 150 MB app budget. Licences in public/fonts/OFL.txt.
+ *
+ * The pairing is chosen by a `data-font` attribute on <html> so the candidates
+ * can be compared on real hands rather than from a description.
+ * ======================================================================== */
+
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/playfair.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Oswald';
+  src: url('/fonts/oswald.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root,
+:root[data-font='warm'] {
+  /* Warm and soft: rounded humanist throughout, figures only a little heavier.
+     Least formal, and the easiest to sit in front of for an hour. */
+  --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Nunito', system-ui, sans-serif;
+  --display-weight: 800;
+  --display-tracking: -0.01em;
+}
+
+:root[data-font='elegant'] {
+  /* The card-room look: engraved figures, quiet body copy. */
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Playfair Display', ui-serif, Georgia, serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
+
+:root[data-font='deco'] {
+  /* Signage on an old table rather than a modern app. */
+  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Oswald', 'Arial Narrow', sans-serif;
+  --display-weight: 500;
+  --display-tracking: 0.02em;
+}
+
+:root[data-font='system'] {
+  /* Nothing downloaded. The floor, kept for comparison. */
+  --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: ui-serif, Georgia, 'Times New Roman', serif;
+  --display-weight: 600;
+  --display-tracking: 0;
+}
+
+body { font-family: var(--body); }
+
+/* Everything set in the display face picks up its weight and tracking, so a
+   condensed deco face and a rounded sans both land right without per-rule
+   overrides. */
+.card-rank,
+.standing-value,
+.rating-value,
+.figure-value,
+.door-title,
+.who-name,
+.hero .who-name,
+.ladder-score,
+.stat-value,
+.num,
+.seat-total {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+}
+
+/* --- The switcher (temporary) --------------------------------------------- */
+
+.fontbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.fontbar button {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fontbar button[aria-pressed='true'] {
+  border-color: var(--brass-dim);
+  background: rgba(201, 162, 39, 0.14);
+  color: var(--ink);
+}
