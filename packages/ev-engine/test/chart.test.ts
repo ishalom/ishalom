@@ -229,3 +229,35 @@ test('golden charts are unchanged', () => {
     );
   }
 });
+
+test('splitting like ranks only changes what is legal, never what is correct', () => {
+  /*
+   * The rule reads as though it should matter and it does not, which is worth
+   * pinning down rather than assuming: splitting tens is never the best play, so
+   * taking the option away cannot change a single answer. It only removes a
+   * wrong move the player can no longer make.
+   *
+   * This is also what licenses the solver's shortcut — inside the split
+   * recursion it has no card identity to work from and assumes unlike tens.
+   * Since the branch is never selected, the assumption costs exactly nothing.
+   */
+  const base = makeRules({ decks: 6, soft17: 'S17', surrender: 'late', das: true });
+  const permissive = deriveChart(base, { cardRemoval: 'static-dealer' });
+  const strict = deriveChart({ ...base, splitUnlikeTens: false }, { cardRemoval: 'static-dealer' });
+
+  const changed: string[] = [];
+  for (const [key, cell] of permissive.cells) {
+    const other = strict.cells.get(key);
+    assert.ok(other, `${key} vanished`);
+    if (other.optimalAction !== cell.optimalAction) changed.push(key);
+    else assert.equal(other.optimalEv, cell.optimalEv, `${key} moved`);
+  }
+  assert.deepEqual(changed, []);
+
+  // Split really is gone from the ten rows, and only from those.
+  for (const up of ['2', '6', '9', '10', 'A']) {
+    assert.ok(permissive.cells.get(`bj:pairT:vs${up}`)!.evByAction.split !== undefined);
+    assert.equal(strict.cells.get(`bj:pairT:vs${up}`)!.evByAction.split, undefined);
+    assert.ok(strict.cells.get(`bj:pair8:vs${up}`)!.evByAction.split !== undefined);
+  }
+});

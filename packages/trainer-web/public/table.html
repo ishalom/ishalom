@@ -27,24 +27,34 @@
       lost. Units won is present but last, and deliberately quiet.
     -->
     <section class="stats" id="stats" data-i18n-attr="aria-label:ui.sessionStats">
-      <div class="stat" id="accuracy-stat" tabindex="0">
+      <button class="stat" id="accuracy-stat" type="button" data-info="accuracy"
+              aria-expanded="false" aria-controls="stat-info">
         <span class="stat-value" id="stat-accuracy">—</span>
         <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
-        <span class="tip" id="accuracy-tip" role="tooltip"></span>
-      </div>
-      <div class="stat">
+        <span class="stat-more" aria-hidden="true">?</span>
+      </button>
+      <button class="stat" type="button" data-info="evLost"
+              aria-expanded="false" aria-controls="stat-info">
         <span class="stat-value" id="stat-evlost">—</span>
         <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
-      </div>
-      <div class="stat">
+        <span class="stat-more" aria-hidden="true">?</span>
+      </button>
+      <button class="stat" type="button" data-info="edge"
+              aria-expanded="false" aria-controls="stat-info">
         <span class="stat-value" id="stat-edge">—</span>
         <span class="stat-label" data-i18n="ui.yourEdge">your effective edge</span>
-      </div>
-      <div class="stat stat-quiet">
+        <span class="stat-more" aria-hidden="true">?</span>
+      </button>
+      <button class="stat stat-quiet" type="button" data-info="units"
+              aria-expanded="false" aria-controls="stat-info">
         <span class="stat-value" id="stat-units">—</span>
         <span class="stat-label" data-i18n="ui.units">units</span>
-      </div>
+        <span class="stat-more" aria-hidden="true">?</span>
+      </button>
     </section>
+
+    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->
+    <section class="stat-info" id="stat-info" hidden aria-live="polite"></section>
 
     <main class="table felt" id="table">
       <!-- The dealer who teaches (§3.4): she prompts before the decision and
@@ -104,6 +114,24 @@
           them, which is the point.
         </p>
         <div id="preset-list"></div>
+
+        <h3 class="sub-title" data-i18n="rules.house">House restrictions</h3>
+        <label class="check">
+          <input type="checkbox" id="opt-no-surrender" />
+          <span>
+            <strong data-i18n="rules.noSurrender">No surrender</strong>
+            <small data-i18n="rules.noSurrenderNote"></small>
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="opt-like-ranks" />
+          <span>
+            <strong data-i18n="rules.likeRanksOnly">Split like ranks only</strong>
+            <small data-i18n="rules.likeRanksOnlyNote"></small>
+          </span>
+        </label>
+        <p class="muted fine" data-i18n="rules.restartsSession"></p>
+
         <menu>
           <button value="cancel" data-i18n="ui.close">Close</button>
         </menu>
@@ -124,7 +152,18 @@
       </form>
     </dialog>
 
+    <dialog id="howto">
+      <form method="dialog">
+        <h2 data-i18n="howto.title">How this works</h2>
+        <ol class="howto" id="howto-list"></ol>
+        <menu>
+          <button value="cancel" data-i18n="ui.close">Close</button>
+        </menu>
+      </form>
+    </dialog>
+
     <footer class="footer">
+      <button class="link" id="open-howto" data-i18n="howto.open">How to play</button>
       <button class="link" id="open-reference" data-i18n="ui.strategyChart">Strategy chart</button>
       <span class="footer-note" id="edge-note"></span>
     </footer>

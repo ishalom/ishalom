@@ -303,6 +303,40 @@ const EN: Catalogue = {
   'uth.fold': 'Fold',
   'uth.threeXNever': 'The 3× raise loses to both alternatives here — as it does everywhere.',
   'uth.stillComputing': 'This class is still being computed by the offline job. The flop and river below are exact.',
+
+  // --- House restrictions (real rules, not display filters) ---
+  'rules.house': 'House restrictions',
+  'rules.noSurrender': 'No surrender',
+  'rules.noSurrenderNote': 'Most tables do not offer it. Turning it off changes the right play on 15 and 16.',
+  'rules.likeRanksOnly': 'Split like ranks only',
+  'rules.likeRanksOnlyNote': 'A jack beside a queen becomes a hard twenty. It takes away a move that was never correct anyway, so no other answer changes.',
+  'rules.restartsSession': 'Either one restarts the session — they are part of the rule set the chart is solved from.',
+
+  // --- What the four figures mean (§9.2) ---
+  'info.accuracy.title': 'Decision accuracy',
+  'info.accuracy.body': 'The share of your decisions that were the best play available. Coin-flips — spots where the top two plays are within a hundredth of a unit — are left out, because getting those "wrong" is not a mistake worth counting. It is scored on the decision, never on whether the hand won.',
+  'info.evLost.title': 'EV lost per 100 hands',
+  'info.evLost.body': 'What your mistakes cost, in units of your bet, over a hundred hands. A perfect player scores zero here no matter how badly the cards ran. This is the number to watch: it is the only one that is entirely yours.',
+  'info.edge.title': 'Your effective edge',
+  'info.edge.body': 'The house edge you are actually playing against — what these rules take from a perfect player, plus what your own errors add on top. The gap between this and the rules’ own edge is the part you can close.',
+  'info.units.title': 'Units',
+  'info.units.body': 'What the cards did. Kept last, and kept quiet, on purpose: over a session this short it is almost entirely luck, and reading it as a score is the habit this trainer exists to break.',
+  'info.more': 'What does this mean?',
+
+  // --- Instructions ---
+  'howto.title': 'How this works',
+  'howto.open': 'How to play',
+  'howto.1': 'Press **Deal**, then choose the play you think is best. Keyboard: **H** hit, **S** stand, **D** double, **P** split, **R** surrender.',
+  'howto.2': 'The dealer reads the spot back to you in three steps — her card, your hand, then the two together. **Space** moves through them, or skip straight to the answer.',
+  'howto.3': 'You are graded on the **decision**, not the result. A correct play that loses is still correct, and that is the whole idea.',
+  'howto.4': 'Ask **Why?** at any point before you act; she will answer from the same numbers she grades you with.',
+
+  // --- The value of doubling ---
+  'stat.doubleMissed': 'The same card either way, on **half the money** — what you gave up is **the raise**, not the hand.',
+
+  'fb.accuracyCount': '**{right} of {total}** decisions right so far.',
+  'fb.accuracyExcluded': '{n} close calls set aside — spots where the best two plays differ by under 0.01 units, which is inside the noise.',
+  'fb.accuracyExcludedOne': '1 close call set aside — a spot where the best two plays differ by under 0.01 units, which is inside the noise.',
 };
 
 const HE: Catalogue = {
@@ -550,6 +584,40 @@ const HE: Catalogue = {
   'uth.fold': 'פרישה',
   'uth.threeXNever': 'ההעלאה של 3× מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
+
+  // --- House restrictions (real rules, not display filters) ---
+  'rules.house': 'הגבלות של הקזינו',
+  'rules.noSurrender': 'בלי ויתור',
+  'rules.noSurrenderNote': 'ברוב השולחנות אין ויתור. ביטול האפשרות משנה את המהלך הנכון ב-15 וב-16.',
+  'rules.likeRanksOnly': 'פיצול רק לקלפים זהים',
+  'rules.likeRanksOnlyNote': 'נסיך לצד מלכה הופך ליד קשה של עשרים. זה מוריד מהלך שממילא אף פעם לא היה נכון, ולכן שום תשובה אחרת לא משתנה.',
+  'rules.restartsSession': 'כל אחת מהן מתחילה מושב חדש — הן חלק ממערכת החוקים שממנה נפתרת הטבלה.',
+
+  // --- What the four figures mean (§9.2) ---
+  'info.accuracy.title': 'דיוק ההחלטות',
+  'info.accuracy.body': 'שיעור ההחלטות שלך שהיו המהלך הטוב ביותר שהיה זמין. הטלות מטבע — מצבים שבהם שתי האפשרויות המובילות במרחק של פחות ממאית יחידה — לא נספרות, כי “לטעות” בהן זו לא באמת טעות. הציון ניתן על ההחלטה, לעולם לא על השאלה אם היד ניצחה.',
+  'info.evLost.title': 'EV שאבד ל-100 ידיים',
+  'info.evLost.body': 'מה שהטעויות שלך עולות, ביחידות של ההימור, לאורך מאה ידיים. שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר שכדאי לעקוב אחריו: הוא היחיד ששלך לגמרי.',
+  'info.edge.title': 'היתרון שאתה באמת משחק מולו',
+  'info.edge.body': 'יתרון הקזינו שאתה באמת משחק מולו — מה שהחוקים לוקחים משחקן מושלם, ועוד מה שהטעויות שלך מוסיפות מעל. הפער בין זה לבין היתרון של החוקים עצמם הוא החלק שאתה יכול לסגור.',
+  'info.units.title': 'יחידות',
+  'info.units.body': 'מה שהקלפים עשו. נשמר לסוף, ובשקט, בכוונה: לאורך מושב קצר כזה זה כמעט הכול מזל, וההרגל לקרוא את זה כציון הוא בדיוק מה שהמאמן הזה קיים כדי לשבור.',
+  'info.more': 'מה זה אומר?',
+
+  // --- Instructions ---
+  'howto.title': 'איך זה עובד',
+  'howto.open': 'איך משחקים',
+  'howto.1': 'לחץ **חלק**, ואז בחר את המהלך שנראה לך הכי טוב. מקלדת: **H** קלף, **S** עצירה, **D** הכפלה, **P** פיצול, **R** ויתור.',
+  'howto.2': 'הדילרית קוראת לך את המצב בשלושה שלבים — הקלף שלה, היד שלך, ואז השניים יחד. **רווח** מתקדם ביניהם, או אפשר לדלג ישר לתשובה.',
+  'howto.3': 'הציון הוא על **ההחלטה**, לא על התוצאה. מהלך נכון שהפסיד הוא עדיין נכון, וזה כל הרעיון.',
+  'howto.4': 'שאל **למה?** בכל רגע לפני שאתה פועל; היא תענה מאותם מספרים שלפיהם היא מדרגת אותך.',
+
+  // --- The value of doubling ---
+  'stat.doubleMissed': 'אותו קלף בדיוק, על **חצי מהכסף** — מה שוויתרת עליו הוא **ההעלאה**, לא היד.',
+
+  'fb.accuracyCount': '**{right} מתוך {total}** החלטות נכונות עד כה.',
+  'fb.accuracyExcluded': '{n} מקרים צמודים הוצאו — מצבים שבהם שתי האפשרויות הטובות נבדלות בפחות מ-0.01 יחידות, וזה בתוך הרעש.',
+  'fb.accuracyExcludedOne': 'מקרה צמוד אחד הוצא — מצב שבו שתי האפשרויות הטובות נבדלות בפחות מ-0.01 יחידות, וזה בתוך הרעש.',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

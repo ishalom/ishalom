@@ -1,4 +1,4 @@
-# 6|S17|9-11|nodas|none|sp4|norsa|nohsa|3:2|enhc
+# 6|S17|9-11|nodas|none|sp4|sput|norsa|nohsa|3:2|enhc
 # card removal: static-dealer
 
 hard

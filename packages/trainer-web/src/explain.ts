@@ -432,6 +432,7 @@ export function readCombined(
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
   locale: Locale = 'en',
+  chosen?: BlackjackAction,
 ): string {
   const c = contest(evaluation);
   const numbers =
@@ -443,11 +444,32 @@ export function readCombined(
           runnerUpVerb: verbAfterTo(c.runnerUp.action, locale),
         });
 
+  /*
+   * A missed double is not a missed hand, and saying so is the point.
+   *
+   * Both lines draw the same next card, so the hand the player ends up holding
+   * is very often identical either way — what separates them is the size of the
+   * bet on it. A player who hits a correct double has not misread the spot; he
+   * has declined a raise the numbers told him to make, and the cost sits
+   * entirely in the stake. That is a different lesson from "you played the wrong
+   * card", and it only lands when he actually declined, so it is appended only
+   * then rather than being folded into the standing double sentence.
+   */
+  let stat = supportingStat(scenario, c, rules, locale);
+  if (c.best.action === 'double' && chosen !== undefined && chosen !== 'double') {
+    const missed = t(locale, 'stat.doubleMissed');
+    // Against hitting, the standing double sentence makes the same point in the
+    // abstract, so it gives way rather than saying it twice. Against any other
+    // runner-up it is a separate argument and both are worth having.
+    const sameGround = c.runnerUp !== null && c.runnerUp.action === 'hit';
+    stat = sameGround ? missed : `${stat} ${missed}`.trim();
+  }
+
   return t(locale, 'combined', {
     verdict: verb(c.best.action, locale),
     shape: describeGap(c.gap, locale),
     numbers,
-    stat: supportingStat(scenario, c, rules, locale),
+    stat,
   }).trim();
 }
 
@@ -473,6 +495,8 @@ export function explain(
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
   locale: Locale = 'en',
+  /** What the player actually did, when the explanation follows a decision. */
+  chosen?: BlackjackAction,
 ): Explanation {
   const c = contest(evaluation);
   const verdict = verb(c.best.action, locale);
@@ -483,7 +507,7 @@ export function explain(
       steps: [
         t(locale, 'insurance.step1'),
         readHand(scenario, evaluation, rules, locale),
-        readCombined(scenario, evaluation, rules, locale),
+        readCombined(scenario, evaluation, rules, locale, chosen),
       ],
       gap: c.gap,
     };
@@ -498,7 +522,7 @@ export function explain(
     steps: [
       readDealer(scenario.upcard, rules, locale),
       readHand(scenario, evaluation, rules, locale),
-      readCombined(scenario, evaluation, rules, locale),
+      readCombined(scenario, evaluation, rules, locale, chosen),
     ],
     gap: c.gap,
   };

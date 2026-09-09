@@ -369,25 +369,80 @@ function renderStats(view) {
   const stats = view.stats;
   el('stat-accuracy').textContent =
     stats.decisions === 0 ? '—' : `${(stats.accuracy * 100).toFixed(1)}%`;
-
-  // The definition is surfaced rather than left mysterious: a metric nobody can
-  // explain is a metric nobody should trust.
-  const excluded = stats.closeCallsExcluded;
-  el('accuracy-tip').textContent =
-    stats.decisions === 0
-      ? T('fb.accuracyTip')
-      : `${stats.correct - 0} of ${stats.decisions} decisions right. ` +
-        (excluded > 0
-          ? `${excluded} close call${excluded === 1 ? '' : 's'} excluded — spots where the ` +
-            `best two plays differ by under 0.01 units, which is inside the noise. ` +
-            T('fb.accuracyAll', { pct: (stats.accuracyIncludingCloseCalls * 100).toFixed(1) })
-          : T('fb.noCloseCalls'));
   el('stat-evlost').textContent = stats.hands === 0 ? '—' : stats.evLostPer100.toFixed(2);
   el('stat-edge').textContent =
     stats.hands === 0
       ? `${view.ruleSet.edgePercent.toFixed(2)}%`
       : `${stats.effectiveHouseEdgePercent.toFixed(2)}%`;
   el('stat-units').textContent = `${stats.netUnits > 0 ? '+' : ''}${stats.netUnits}`;
+  if (openInfo) showInfo(openInfo);
+}
+
+/*
+ * What each figure means (§9.2).
+ *
+ * A metric nobody can explain is a metric nobody should trust, and three of
+ * these four are easy to misread in the direction that flatters the player.
+ * The definition opens where the number is rather than in a glossary, and the
+ * accuracy panel also shows its own working — how many decisions, how many
+ * close calls set aside — because that is the one people query.
+ */
+let openInfo = null;
+
+function accuracyDetail(stats) {
+  if (stats.decisions === 0) return '';
+  const excluded = stats.closeCallsExcluded;
+  const parts = [T('fb.accuracyCount', { right: stats.correct, total: stats.decisions })];
+  if (excluded > 0) {
+    parts.push(T(excluded === 1 ? 'fb.accuracyExcludedOne' : 'fb.accuracyExcluded', { n: excluded }));
+    parts.push(T('fb.accuracyAll', { pct: (stats.accuracyIncludingCloseCalls * 100).toFixed(1) }));
+  } else {
+    parts.push(T('fb.noCloseCalls'));
+  }
+  return parts.join(' ');
+}
+
+function showInfo(which) {
+  const box = el('stat-info');
+  box.replaceChildren();
+  box.hidden = false;
+  openInfo = which;
+
+  const head = document.createElement('div');
+  head.className = 'stat-info-head';
+  head.textContent = T(`info.${which}.title`);
+  const body = document.createElement('p');
+  renderRich(body, T(`info.${which}.body`));
+  box.append(head, body);
+
+  if (which === 'accuracy' && state.view) {
+    const detail = accuracyDetail(state.view.stats);
+    if (detail) {
+      const p = document.createElement('p');
+      p.className = 'stat-info-detail';
+      renderRich(p, detail);
+      box.appendChild(p);
+    }
+  }
+
+  for (const button of document.querySelectorAll('.stat[data-info]')) {
+    button.setAttribute('aria-expanded', String(button.dataset.info === which));
+  }
+}
+
+function hideInfo() {
+  openInfo = null;
+  el('stat-info').hidden = true;
+  for (const button of document.querySelectorAll('.stat[data-info]')) {
+    button.setAttribute('aria-expanded', 'false');
+  }
+}
+
+for (const button of document.querySelectorAll('.stat[data-info]')) {
+  button.addEventListener('click', () => {
+    if (openInfo === button.dataset.info) hideInfo();
+    else showInfo(button.dataset.info);
+  });
 }
 
 /**
@@ -494,11 +549,44 @@ async function openSettings() {
     }
     button.addEventListener('click', async () => {
       el('settings').close();
-      await send('/api/session', { presetId: preset.id });
+      await send('/api/session', { presetId: preset.id, ...restrictions() });
     });
     list.appendChild(button);
   }
+
+  const current = state.view.ruleSet.restrictions;
+  el('opt-no-surrender').checked = current.noSurrender;
+  el('opt-like-ranks').checked = current.likeRanksOnly;
   el('settings').showModal();
+}
+
+const restrictions = () => ({
+  noSurrender: el('opt-no-surrender').checked,
+  likeRanksOnly: el('opt-like-ranks').checked,
+});
+
+/*
+ * A restriction is part of the rule set, not a filter over it, so changing one
+ * restarts the session exactly as changing the preset does. The chart is
+ * re-solved, the house edge is recomputed, and every graded answer from here on
+ * is the answer for the game actually being dealt.
+ */
+for (const id of ['opt-no-surrender', 'opt-like-ranks']) {
+  el(id).addEventListener('change', async () => {
+    el('settings').close();
+    await send('/api/session', { presetId: state.view.ruleSet.id, ...restrictions() });
+  });
+}
+
+function openHowTo() {
+  const list = el('howto-list');
+  list.replaceChildren();
+  for (const n of [1, 2, 3, 4]) {
+    const item = document.createElement('li');
+    renderRich(item, T(`howto.${n}`));
+    list.appendChild(item);
+  }
+  el('howto').showModal();
 }
 
 const HARD = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -588,6 +676,7 @@ document.addEventListener('keydown', (event) => {
 
 el('open-settings').addEventListener('click', openSettings);
 el('open-reference').addEventListener('click', openReference);
+el('open-howto').addEventListener('click', openHowTo);
 
 // After the locale handshake, so the first render is already in the right language.
 Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));

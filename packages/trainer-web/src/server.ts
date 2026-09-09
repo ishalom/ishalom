@@ -19,7 +19,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
-import { TrainerSession } from './session.ts';
+import { TrainerSession, type Restrictions } from './session.ts';
 import { uthPreview } from './uth.ts';
 import { catalogue, LOCALES, type Locale } from './i18n.ts';
 
@@ -81,7 +81,16 @@ const server = createServer(async (request, response) => {
 
         case '/api/session': {
           const presetId = typeof body.presetId === 'string' ? body.presetId : undefined;
-          session = new TrainerSession(presetId);
+          // Restrictions are part of the rule set, so changing one starts a new
+          // session the same way changing the preset does — the chart, the house
+          // edge and every graded answer are derived from them.
+          const restrictions: Restrictions = {
+            noSurrender: Boolean(body.noSurrender),
+            likeRanksOnly: Boolean(body.likeRanksOnly),
+          };
+          const keptLocale = session.localeCode;
+          session = new TrainerSession(presetId, undefined, restrictions);
+          session.setLocale(keptLocale);
           return json(session.view);
         }
 

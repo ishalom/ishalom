@@ -22,6 +22,16 @@
       "flopRaiseFrequency": 0.33948979591836737,
       "riverFoldFrequency": 0.04857463799580887
     },
+    "44": {
+      "label": "44",
+      "ev4x": 0.46156950244178907,
+      "ev3x": 0.3211130786258267,
+      "evCheck": 0.2106180341617795,
+      "optimalAction": "raise4x",
+      "margin": 0.2509514682800096,
+      "flopRaiseFrequency": 0.5747959183673469,
+      "riverFoldFrequency": 0.036004077856859676
+    },
     "55": {
       "label": "55",
       "ev4x": 0.8316433516145525,
@@ -1611,6 +1621,76 @@
       "margin": 1.0770776378456115,
       "flopRaiseFrequency": 0.31785714285714284,
       "riverFoldFrequency": 0.420223621363439
+    },
+    "52o": {
+      "label": "52o",
+      "ev4x": -2.1213968907570653,
+      "ev3x": -1.8070898008093457,
+      "evCheck": -0.8233239267450384,
+      "optimalAction": "check",
+      "margin": 1.298072964012027,
+      "flopRaiseFrequency": 0.3143367346938776,
+      "riverFoldFrequency": 0.4491740451962469
+    },
+    "43s": {
+      "label": "43s",
+      "ev4x": -1.5118550694593986,
+      "ev3x": -1.2846940370208837,
+      "evCheck": -0.4726585564340974,
+      "optimalAction": "check",
+      "margin": 1.0391965130253014,
+      "flopRaiseFrequency": 0.3265816326530612,
+      "riverFoldFrequency": 0.4102215446770753
+    },
+    "43o": {
+      "label": "43o",
+      "ev4x": -2.0169258324496737,
+      "ev3x": -1.7198437002696798,
+      "evCheck": -0.760050744708503,
+      "optimalAction": "check",
+      "margin": 1.2568750877411707,
+      "flopRaiseFrequency": 0.32316326530612244,
+      "riverFoldFrequency": 0.43888123241896204
+    },
+    "42s": {
+      "label": "42s",
+      "ev4x": -1.7444967408501526,
+      "ev3x": -1.4810770352913558,
+      "evCheck": -0.599060723339038,
+      "optimalAction": "check",
+      "margin": 1.1454360175111145,
+      "flopRaiseFrequency": 0.31326530612244896,
+      "riverFoldFrequency": 0.42611669089467424
+    },
+    "42o": {
+      "label": "42o",
+      "ev4x": -2.243692522124829,
+      "ev3x": -1.9076875246377816,
+      "evCheck": -0.8725602011163013,
+      "optimalAction": "check",
+      "margin": 1.3711323210085276,
+      "flopRaiseFrequency": 0.3103061224489796,
+      "riverFoldFrequency": 0.45493401801053446
+    },
+    "32s": {
+      "label": "32s",
+      "ev4x": -1.8428056097114673,
+      "ev3x": -1.5624942216530042,
+      "evCheck": -0.6492684543332066,
+      "optimalAction": "check",
+      "margin": 1.1935371553782608,
+      "flopRaiseFrequency": 0.30607142857142855,
+      "riverFoldFrequency": 0.4306731295663501
+    },
+    "32o": {
+      "label": "32o",
+      "ev4x": -2.348116416621728,
+      "ev3x": -1.9941809791647884,
+      "evCheck": -0.9258374060413875,
+      "optimalAction": "check",
+      "margin": 1.4222790105803402,
+      "flopRaiseFrequency": 0.30428571428571427,
+      "riverFoldFrequency": 0.45900715512847134
     }
   }
 }

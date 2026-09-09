@@ -97,3 +97,18 @@ test('surrender disappears when the house does not offer it', () => {
   assert.ok(!legalActions(ctx('T 6'), makeRules({ surrender: 'none' })).includes('surrender'));
   assert.ok(legalActions(ctx('T 6'), makeRules({ surrender: 'early' })).includes('surrender'));
 });
+
+test('a house that splits like ranks only sees a jack and a queen as a hard twenty', () => {
+  const strict = makeRules({ splitUnlikeTens: false });
+
+  // The solver works in ten-buckets, so it cannot tell a jack from a queen. The
+  // table that dealt the cards has to say, and an unstated ten-pair is assumed
+  // unlike — which is what it is twelve times in sixteen.
+  assert.ok(!legalActions(ctx('K Q'), strict).includes('split'));
+  assert.ok(!legalActions(ctx('K Q', { unlikeTens: true }), strict).includes('split'));
+  assert.ok(legalActions(ctx('K Q', { unlikeTens: false }), strict).includes('split'));
+
+  // The restriction is about ten-values and nothing else.
+  assert.ok(legalActions(ctx('8 8'), strict).includes('split'));
+  assert.ok(legalActions(ctx('K Q'), makeRules({ splitUnlikeTens: true })).includes('split'));
+});

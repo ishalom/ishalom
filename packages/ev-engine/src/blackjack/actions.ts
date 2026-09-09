@@ -7,7 +7,7 @@
 
 import { isPair } from './hand.ts';
 import type { BlackjackRules } from './rules.ts';
-import { ACE, type BjRank } from './shoe.ts';
+import { ACE, TEN, type BjRank } from './shoe.ts';
 
 export type BlackjackAction = 'stand' | 'hit' | 'double' | 'split' | 'surrender';
 
@@ -32,6 +32,16 @@ export interface HandContext {
   handCount: number;
   /** True for a split-ace hand that has already received its one card. */
   splitAcesResolved?: boolean;
+  /**
+   * Set when this hand is two ten-valued cards of *different* rank — a jack and
+   * a king rather than two kings. Only the dealer of the cards knows this; by
+   * the time a hand reaches the solver it is a pair of tens and nothing more.
+   *
+   * Left undefined, a ten-pair is assumed to be unlike, which is what it is 12
+   * times in 16. Under `splitUnlikeTens` that assumption costs nothing, because
+   * splitting tens is never the best play in the first place.
+   */
+  unlikeTens?: boolean;
 }
 
 function doubleTotalAllowed(total: number, rules: BlackjackRules): boolean {
@@ -62,7 +72,11 @@ export function legalActions(ctx: HandContext, rules: BlackjackRules): Blackjack
 
   if (isPair(ctx.cards) && ctx.handCount < rules.maxSplitHands) {
     const resplittingAces = ctx.fromSplit && ctx.cards[0] === ACE;
-    if (!resplittingAces || rules.resplitAces) actions.push('split');
+    // A house that splits only identical ranks does not see a jack and a king
+    // as a pair at all, so the hand is a hard twenty and nothing else.
+    const unsplittableTens =
+      !rules.splitUnlikeTens && ctx.cards[0] === TEN && ctx.unlikeTens !== false;
+    if ((!resplittingAces || rules.resplitAces) && !unsplittableTens) actions.push('split');
   }
 
   if (isInitial && !ctx.fromSplit && rules.surrender !== 'none') actions.push('surrender');

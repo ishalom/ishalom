@@ -27,6 +27,16 @@ export interface BlackjackRules {
   surrender: SurrenderRule;
   /** Maximum number of hands a player may reach by splitting (2, 3 or 4). */
   maxSplitHands: number;
+  /**
+   * Whether two ten-valued cards of different rank — a ten and a queen — count
+   * as a splittable pair. Most houses say yes; some require identical ranks.
+   *
+   * This is the one rule the solver cannot see for itself. Everything downstream
+   * of the deal works in ten-buckets, where a king and a jack are the same card,
+   * so the identity of a particular ten-pair has to be carried in from the table
+   * that dealt it. See `HandContext.unlikeTens`.
+   */
+  splitUnlikeTens: boolean;
   resplitAces: boolean;
   hitSplitAces: boolean;
   blackjackPayout: BlackjackPayout;
@@ -45,6 +55,7 @@ export const DEFAULT_RULES: BlackjackRules = {
   das: true,
   surrender: 'late',
   maxSplitHands: 4,
+  splitUnlikeTens: true,
   resplitAces: false,
   hitSplitAces: false,
   blackjackPayout: '3:2',
@@ -142,6 +153,7 @@ export function rulesKey(rules: BlackjackRules): string {
     rules.das ? 'das' : 'nodas',
     rules.surrender,
     `sp${rules.maxSplitHands}`,
+    rules.splitUnlikeTens ? 'sput' : 'nosput',
     rules.resplitAces ? 'rsa' : 'norsa',
     rules.hitSplitAces ? 'hsa' : 'nohsa',
     rules.blackjackPayout,

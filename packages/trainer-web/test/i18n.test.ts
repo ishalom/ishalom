@@ -103,6 +103,11 @@ test('keys the pages build at runtime resolve for every value', () => {
     ['ui.mode.', ['basic', 'recall', 'value']],
     ['action.', ['hit', 'stand', 'double', 'split', 'surrender', 'takeInsurance', 'declineInsurance']],
     ['verbTo.', ['hit', 'stand', 'double', 'split', 'surrender']],
+    ['howto.', ['1', '2', '3', '4']],
+    ['info.accuracy.', ['title', 'body']],
+    ['info.evLost.', ['title', 'body']],
+    ['info.edge.', ['title', 'body']],
+    ['info.units.', ['title', 'body']],
   ];
   for (const info of LOCALES) {
     const table = catalogue(info.code);

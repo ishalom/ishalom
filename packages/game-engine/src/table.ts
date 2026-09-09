@@ -38,6 +38,8 @@ import {
   severityForCost,
   Shoe as Composition,
   bjRankOfCard,
+  rankOf,
+  TEN,
   INSURANCE_SCENARIO_KEY,
   type BlackjackAction,
   type BlackjackRules,
@@ -71,6 +73,21 @@ export interface TableOptions {
   grading?: 'chart' | 'exact-shoe';
   /** A pre-derived chart, to avoid paying for one per table. */
   chart?: StrategyChart;
+}
+
+/**
+ * Two ten-valued cards of different rank — a jack beside a queen.
+ *
+ * The solver cannot work this out for itself: it sees ten-buckets, in which
+ * every court card is the same card. Only the table holds the real ones, so
+ * under a house that splits identical ranks only, this is the one fact that has
+ * to travel from the felt to the rule check.
+ */
+function unlikeTens(cards: readonly Card[]): boolean | undefined {
+  if (cards.length !== 2) return undefined;
+  const [a, b] = cards as [Card, Card];
+  if (bjRankOfCard(a) !== TEN || bjRankOfCard(b) !== TEN) return undefined;
+  return rankOf(a) !== rankOf(b);
 }
 
 export class BlackjackTable {
@@ -132,6 +149,7 @@ export class BlackjackTable {
         soft,
         fromSplit: hand.fromSplit,
         handCount: this.hands.length,
+        unlikeTens: unlikeTens(hand.cards),
       },
       this.rules,
     );

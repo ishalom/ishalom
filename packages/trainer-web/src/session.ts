@@ -45,6 +45,25 @@ import {
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 import { t, type Locale } from './i18n.ts';
 
+/** House restrictions layered over a preset. See `TrainerSession.restrictions`. */
+export interface Restrictions {
+  /** The table does not offer late surrender. */
+  noSurrender: boolean;
+  /** A jack beside a queen is a hard twenty, not a splittable pair. */
+  likeRanksOnly: boolean;
+}
+
+export function applyRestrictions(
+  rules: BlackjackRules,
+  restrictions: Restrictions,
+): BlackjackRules {
+  return {
+    ...rules,
+    surrender: restrictions.noSurrender ? 'none' : rules.surrender,
+    splitUnlikeTens: !restrictions.likeRanksOnly,
+  };
+}
+
 const RANKS = '23456789TJQKA';
 const SUITS = 'cdhs';
 const SUIT_SYMBOLS = ['♣', '♦', '♥', '♠'];
@@ -174,15 +193,38 @@ export class TrainerSession {
   private rating: Rating = newRating('basic');
   private lastRatingDelta: number | null = null;
 
-  constructor(presetId = 'vegas-strip-6d-s17', seed = Date.now() % 2147483647) {
+  /**
+   * Two house restrictions the player can switch on over any preset.
+   *
+   * They are rules, not display filters: they go into the rule set the solver
+   * memoises on, so the chart is re-derived, the house edge is recomputed, and
+   * every recursive sub-decision inside a split or a double is answered under
+   * the same restriction. Hiding a button would have graded the player against
+   * a game nobody was playing.
+   */
+  private restrictions: Restrictions = { noSurrender: false, likeRanksOnly: false };
+
+  constructor(
+    presetId = 'vegas-strip-6d-s17',
+    seed = Date.now() % 2147483647,
+    restrictions: Restrictions = { noSurrender: false, likeRanksOnly: false },
+  ) {
     this.presetId = presetId;
-    this.rules = getPreset(presetId).rules;
+    this.restrictions = restrictions;
+    this.rules = applyRestrictions(getPreset(presetId).rules, restrictions);
     this.baseEdgePercent = houseEdge(this.rules).percent;
     chartFor(this.rules); // derive once, up front, so the first decision is not slow
     this.table = new BlackjackTable({ rules: this.rules, seed, grading: 'chart' });
   }
 
-  get ruleSet(): { id: string; name: string; badge: string; note: string | null; edgePercent: number } {
+  get ruleSet(): {
+    id: string;
+    name: string;
+    badge: string;
+    note: string | null;
+    edgePercent: number;
+    restrictions: Restrictions;
+  } {
     const preset = RULE_PRESETS.find((p) => p.id === this.presetId)!;
     const rules = this.rules;
     const badge = [
@@ -190,6 +232,7 @@ export class TrainerSession {
       rules.soft17,
       rules.das ? 'DAS' : 'no DAS',
       rules.surrender === 'none' ? 'no surrender' : `${rules.surrender} surrender`,
+      rules.splitUnlikeTens ? '' : 'like ranks only',
       rules.blackjackPayout,
       rules.peek ? '' : 'no hole card',
     ]
@@ -201,6 +244,7 @@ export class TrainerSession {
       badge,
       note: preset.note ?? null,
       edgePercent: this.baseEdgePercent,
+      restrictions: this.restrictions,
     };
   }
 
@@ -255,7 +299,13 @@ export class TrainerSession {
       optimalEv: record.evByAction[record.optimalAction] ?? 0,
     };
 
-    const explanation = explain(scenario, evaluation, this.rules, this.locale);
+    const explanation = explain(
+      scenario,
+      evaluation,
+      this.rules,
+      this.locale,
+      record.chosenAction as BlackjackAction,
+    );
     const closeCall = explanation.gap < TrainerSession.CLOSE_CALL;
 
     this.decisions++;
@@ -607,6 +657,11 @@ export class TrainerSession {
   setPlayerName(name: string): void {
     const trimmed = name.trim();
     if (trimmed.length > 0) this.playerName = trimmed.slice(0, 24);
+  }
+
+  /** The language in force, so a new session can carry it over. */
+  get localeCode(): Locale {
+    return this.locale;
   }
 
   setLocale(locale: Locale): void {
