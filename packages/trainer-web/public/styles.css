@@ -9,12 +9,15 @@
 
 :root {
   color-scheme: dark;
-  --bg: #10151b;
-  --panel: #182029;
-  --panel-2: #1f2833;
-  --line: #2b3744;
-  --ink: #e8edf2;
-  --muted: #93a1b0;
+  /* Warmed a step and softened: the first version read as an instrument panel.
+     Same family, less glare — lower contrast on the lines, a touch of warmth in
+     the greys, and ink that is not quite white. */
+  --bg: #12161c;
+  --panel: #1b2129;
+  --panel-2: #222a33;
+  --line: #2c3540;
+  --ink: #e6e9ee;
+  --muted: #8e9aa8;
   --felt: #14532d;
 
   --optimal: #34d399;
@@ -442,9 +445,11 @@ td.R { background: #4a3d21; }
 }
 
 .shell {
-  max-width: 480px;
+  max-width: 540px;
   margin: 0 auto;
   min-height: 100dvh;
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -722,3 +727,181 @@ hr.brass {
 
 .back { color: var(--brass); text-decoration: none; font-size: 13px; white-space: nowrap; }
 .topbar-title { display: flex; flex-direction: column; min-width: 0; }
+
+/* ===========================================================================
+ * Home: a greeting and two doors, with everything measured behind a tab.
+ *
+ * The first version put four figures across the top of the front page, which
+ * read as an instrument panel rather than an invitation. Numbers are not the
+ * welcome; they are what you look up when you want them.
+ * ======================================================================== */
+
+.hero {
+  padding: 34px 22px 26px;
+  text-align: center;
+  background:
+    radial-gradient(130% 90% at 50% -10%, rgba(201, 162, 39, 0.13) 0%, transparent 62%),
+    linear-gradient(180deg, #1d2530 0%, var(--bg) 100%);
+}
+.hero-top { display: flex; align-items: center; justify-content: center; gap: 13px; }
+.hero .initial {
+  width: 42px;
+  height: 42px;
+  font-size: 19px;
+}
+.hero .who-name {
+  font-family: var(--display);
+  font-size: 30px;
+  letter-spacing: 0.01em;
+  width: auto;
+  max-width: 240px;
+  text-align: left;
+}
+.hero-line {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- The two doors -------------------------------------------------------- */
+
+.doors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 18px 20px; }
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 22px 18px 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--ink);
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  background:
+    radial-gradient(140% 120% at 20% 0%, rgba(28, 106, 64, 0.55) 0%, transparent 70%),
+    linear-gradient(180deg, #1f2731 0%, #171d25 100%);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+}
+.door:hover { transform: translateY(-2px); border-color: var(--brass); }
+.door.secondary {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #1e242c 0%, #171c23 100%);
+}
+.door-title { font-family: var(--display); font-size: 23px; line-height: 1.15; }
+.door-sub { font-size: 12.5px; color: var(--muted); }
+.door-pip {
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
+  font-size: 54px;
+  line-height: 1;
+  opacity: 0.13;
+}
+
+/* --- Tabs ----------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 11px 6px 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brass); }
+.tab-body { padding: 18px; }
+
+/* --- Standing ------------------------------------------------------------- */
+
+.standing { text-align: center; padding: 6px 0 18px; }
+.standing-value {
+  font-family: var(--display);
+  font-size: 54px;
+  line-height: 1;
+  color: var(--brass);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 18px rgba(201, 162, 39, 0.22);
+}
+.standing-value.provisional { opacity: 0.5; }
+.standing-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.standing-note { margin: 12px auto 0; max-width: 34ch; font-size: 13px; color: var(--muted); }
+
+.ladder { margin-top: 20px; }
+.ladder-head {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* --- Stats, written rather than tabulated --------------------------------- */
+
+.figure { padding: 15px 0; border-top: 1px solid var(--line); }
+.figure:first-child { border-top: none; padding-top: 4px; }
+.figure-value { font-family: var(--display); font-size: 27px; color: var(--ink); }
+.figure-value.quiet { color: var(--muted); font-size: 22px; }
+.figure-label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.figure-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; max-width: 42ch; }
+
+.empty-note { color: var(--muted); font-size: 13.5px; text-align: center; padding: 26px 10px; }
+
+/* --- Reveal: a card that does not move under the cursor ------------------- */
+
+.step.pending { opacity: 0.35; }
+/* Unrevealed steps keep their slot so the card's height never changes. Two
+   lines is the median step length; a rule stands in for the text. */
+.step.pending p::after {
+  content: "";
+  display: block;
+  height: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--line) 0 60px,
+    transparent 60px 72px
+  );
+}
+.step.pending p { min-height: 2.9em; }
+.step p { min-height: 2.9em; }
+
+.reveal-skip.pref {
+  display: block;
+  margin: 4px auto 0;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--line);
+}
+
+/* --- Softer surfaces ------------------------------------------------------ */
+
+.feedback {
+  border-radius: 14px;
+  padding: 15px 16px;
+}
+.step {
+  border-radius: 12px;
+  padding: 12px 13px;
+}
+.ev {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+.action { border-radius: 12px; }
+.card { border-radius: 9px; }

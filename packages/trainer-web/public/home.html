@@ -8,95 +8,67 @@
   </head>
   <body>
     <div class="shell">
-      <section class="crest">
-        <div class="who">
-          <div class="initial" id="initial">P</div>
-          <div>
-            <input class="who-name" id="name" value="Player" aria-label="Your name" />
-            <div class="who-since" id="since">no hands yet</div>
-          </div>
-        </div>
-
-        <div class="rating-block">
-          <div class="rating-value" id="rating">1200</div>
-          <div class="rating-label" id="rating-label">Blackjack rating · basic</div>
-          <div class="rating-side">
-            <span id="session-delta"></span>
-            <span>peak <b id="peak">1200</b></span>
-          </div>
-        </div>
-      </section>
-
-      <hr class="brass" />
-
       <!--
-        §9.2 and §3.1: accuracy first, units last and quiet. Leading with the
-        bankroll teaches exactly the confusion this app exists to break.
+        The front of the app is a greeting and two doors. Everything measured
+        lives behind a tab, because a wall of figures is not a welcome — and
+        §3.1 would rather you came here to play than to check a scoreboard.
       -->
-      <section class="stats" aria-label="Statistics">
-        <div class="stat">
-          <span class="stat-value" id="accuracy">—</span>
-          <span class="stat-label">accuracy</span>
+      <section class="hero">
+        <div class="hero-top">
+          <div class="initial" id="initial">P</div>
+          <input class="who-name" id="name" value="Player" aria-label="Your name" spellcheck="false" />
         </div>
-        <div class="stat">
-          <span class="stat-value" id="evlost">—</span>
-          <span class="stat-label">EV lost /100</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value" id="edge">—</span>
-          <span class="stat-label">your edge</span>
-        </div>
-        <div class="stat quiet">
-          <span class="stat-value" id="units">—</span>
-          <span class="stat-label">units</span>
-        </div>
+        <p class="hero-line" id="greeting">Good to see you.</p>
       </section>
 
-      <section class="games">
-        <a class="game" href="/table.html">
-          <span class="pip">♠</span>
-          <div class="game-title">Blackjack</div>
-          <div class="game-sub" id="bj-rules">—</div>
-          <div class="game-foot">
-            <span>rating <b id="bj-rating">—</b></span>
-            <span>hands <b id="bj-hands">0</b></span>
-          </div>
-          <div class="modes" role="group" aria-label="Difficulty mode">
-            <button class="mode" type="button" data-mode="basic" aria-pressed="true">
-              Basic<small>costly hands</small>
-            </button>
-            <button class="mode" type="button" data-mode="recall" aria-pressed="false">
-              Recall<small>thin &amp; rare</small>
-            </button>
-            <button class="mode" type="button" data-mode="value" aria-pressed="false">
-              Value<small>your leaks</small>
-            </button>
-          </div>
+      <section class="doors">
+        <a class="door" href="/table.html">
+          <span class="door-pip">♠</span>
+          <span class="door-title">Blackjack</span>
+          <span class="door-sub" id="bj-sub">Play a hand</span>
         </a>
-
-        <a class="game" href="/ultimate.html">
-          <span class="pip">♦</span>
-          <div class="game-title">Ultimate Texas Hold'em<span class="tag">preview</span></div>
-          <div class="game-sub">Solvers ready · no table yet</div>
-          <div class="game-foot">
-            <span>rating <b>—</b></span>
-            <span id="uth-classes">pre-flop table —</span>
-          </div>
+        <a class="door secondary" href="/ultimate.html">
+          <span class="door-pip">♦</span>
+          <span class="door-title">Ultimate</span>
+          <span class="door-sub">Look around <span class="tag">preview</span></span>
         </a>
       </section>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title">What the rating means</h2>
-          <span class="panel-note" id="ladder-mode">basic</span>
+      <nav class="tabs" role="tablist" aria-label="Your play">
+        <button class="tab" role="tab" data-tab="standing" aria-selected="true">Standing</button>
+        <button class="tab" role="tab" data-tab="hands" aria-selected="false">Hands</button>
+        <button class="tab" role="tab" data-tab="stats" aria-selected="false">Stats</button>
+      </nav>
+
+      <section class="tab-body" id="panel-standing" role="tabpanel">
+        <div class="standing">
+          <div class="standing-value" id="rating">—</div>
+          <div class="standing-label" id="rating-label">rating</div>
+          <p class="standing-note" id="rating-note"></p>
         </div>
-        <div class="panel-body" id="ladder"></div>
+        <div class="modes" role="group" aria-label="What you are drilled on">
+          <button class="mode" type="button" data-mode="basic" aria-pressed="true">
+            Basic<small>the costly hands</small>
+          </button>
+          <button class="mode" type="button" data-mode="recall" aria-pressed="false">
+            Recall<small>thin and rare</small>
+          </button>
+          <button class="mode" type="button" data-mode="value" aria-pressed="false">
+            Value<small>your own leaks</small>
+          </button>
+        </div>
+        <div id="ladder" class="ladder"></div>
       </section>
 
-      <p class="footer">
-        Perfect basic strategy still loses <b id="house-edge">—</b> of every unit bet
-        under these rules. This app teaches you to lose less, not to win.
-      </p>
+      <section class="tab-body" id="panel-hands" role="tabpanel" hidden>
+        <div id="hands"></div>
+      </section>
+
+      <section class="tab-body" id="panel-stats" role="tabpanel" hidden>
+        <div id="stats"></div>
+      </section>
+
+      <p class="footer" id="footer"></p>
     </div>
 
     <script src="/home.js"></script>

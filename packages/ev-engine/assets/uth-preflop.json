@@ -1241,6 +1241,116 @@
       "margin": 0.4219314540950674,
       "flopRaiseFrequency": 0.37479591836734694,
       "riverFoldFrequency": 0.3806122448979592
+    },
+    "87o": {
+      "label": "87o",
+      "ev4x": -0.932875595615095,
+      "ev3x": -0.8338918408729035,
+      "evCheck": -0.34019656680264937,
+      "optimalAction": "check",
+      "margin": 0.5926790288124457,
+      "flopRaiseFrequency": 0.33846938775510205,
+      "riverFoldFrequency": 0.40994496781136136
+    },
+    "86s": {
+      "label": "86s",
+      "ev4x": -0.688214740763462,
+      "ev3x": -0.6130801261017461,
+      "evCheck": -0.17497693638608075,
+      "optimalAction": "check",
+      "margin": 0.5132378043773813,
+      "flopRaiseFrequency": 0.3601020408163265,
+      "riverFoldFrequency": 0.3889959221431403
+    },
+    "86o": {
+      "label": "86o",
+      "ev4x": -1.1382643359521551,
+      "ev3x": -1.0030823732235639,
+      "evCheck": -0.4462643042976721,
+      "optimalAction": "check",
+      "margin": 0.692000031654483,
+      "flopRaiseFrequency": 0.3339795918367347,
+      "riverFoldFrequency": 0.4188728312786724
+    },
+    "85s": {
+      "label": "85s",
+      "ev4x": -0.9030024050647704,
+      "ev3x": -0.7939022591074936,
+      "evCheck": -0.3007403171876209,
+      "optimalAction": "check",
+      "margin": 0.6022620878771494,
+      "flopRaiseFrequency": 0.34494897959183674,
+      "riverFoldFrequency": 0.39735552870546925
+    },
+    "85o": {
+      "label": "85o",
+      "ev4x": -1.3446777279323523,
+      "ev3x": -1.1732282475685387,
+      "evCheck": -0.5561678847414234,
+      "optimalAction": "check",
+      "margin": 0.7885098431909289,
+      "flopRaiseFrequency": 0.3273469387755102,
+      "riverFoldFrequency": 0.4276222885083728
+    },
+    "84s": {
+      "label": "84s",
+      "ev4x": -1.1382902251676656,
+      "ev3x": -0.9923227710750963,
+      "evCheck": -0.42952482498339745,
+      "optimalAction": "check",
+      "margin": 0.7087654001842683,
+      "flopRaiseFrequency": 0.3323979591836735,
+      "riverFoldFrequency": 0.4095565330665106
+    },
+    "84o": {
+      "label": "84o",
+      "ev4x": -1.5743882184985456,
+      "ev3x": -1.363324047835709,
+      "evCheck": -0.670508026373726,
+      "optimalAction": "check",
+      "margin": 0.9038801921248196,
+      "flopRaiseFrequency": 0.3223979591836735,
+      "riverFoldFrequency": 0.4403231135192282
+    },
+    "83s": {
+      "label": "83s",
+      "ev4x": -1.372776024086824,
+      "ev3x": -1.190246106162782,
+      "evCheck": -0.557778002609107,
+      "optimalAction": "check",
+      "margin": 0.814998021477717,
+      "flopRaiseFrequency": 0.3218367346938775,
+      "riverFoldFrequency": 0.4249830089297514
+    },
+    "83o": {
+      "label": "83o",
+      "ev4x": -1.8031279740381074,
+      "ev3x": -1.552804225969284,
+      "evCheck": -0.7849046073928113,
+      "optimalAction": "check",
+      "margin": 1.0182233666452962,
+      "flopRaiseFrequency": 0.31316326530612243,
+      "riverFoldFrequency": 0.45608044327814384
+    },
+    "82s": {
+      "label": "82s",
+      "ev4x": -1.44033225098722,
+      "ev3x": -1.2457649397446462,
+      "evCheck": -0.5887118262521076,
+      "optimalAction": "check",
+      "margin": 0.8516204247351125,
+      "flopRaiseFrequency": 0.31801020408163266,
+      "riverFoldFrequency": 0.4261015877211199
+    },
+    "82o": {
+      "label": "82o",
+      "ev4x": -1.8782139469917414,
+      "ev3x": -1.6147674290060452,
+      "evCheck": -0.8200607105146929,
+      "optimalAction": "check",
+      "margin": 1.0581532364770485,
+      "flopRaiseFrequency": 0.30887755102040815,
+      "riverFoldFrequency": 0.45690828597859123
     }
   }
 }

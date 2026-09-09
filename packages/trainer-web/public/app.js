@@ -222,11 +222,15 @@ function renderFeedback(view) {
     }
   }
 
+  // All three slots are always laid out. Only their text arrives a step at a
+  // time, so the card keeps its size and nothing under the cursor moves.
   const reveal = document.createElement('div');
   reveal.className = 'reveal';
-  for (let i = 0; i < state.reveal.shown && i < 3; i++) {
+  for (let i = 0; i < 3; i++) {
+    const revealed = i < state.reveal.shown;
     const step = document.createElement('div');
-    step.className = 'step' + (i === state.reveal.shown - 1 ? ' latest' : '');
+    step.className =
+      'step' + (revealed ? '' : ' pending') + (i === state.reveal.shown - 1 ? ' latest' : '');
     const n = document.createElement('div');
     n.className = 'step-n';
     n.textContent = String(i + 1);
@@ -235,7 +239,7 @@ function renderFeedback(view) {
     head.className = 'step-head';
     head.textContent = STEP_TITLES[i];
     const text = document.createElement('p');
-    text.textContent = state.reveal.steps[i];
+    text.textContent = revealed ? state.reveal.steps[i] : '';
     body.append(head, text);
     step.append(n, body);
     reveal.appendChild(step);
@@ -251,7 +255,8 @@ function renderFeedback(view) {
     next.addEventListener('click', advanceReveal);
     const skip = document.createElement('button');
     skip.className = 'reveal-skip';
-    skip.textContent = 'Show all';
+    skip.textContent = 'Skip to the answer, always';
+    skip.title = 'Remembered for every hand from now on. Change it back below the card.';
     skip.addEventListener('click', () => {
       setShowAllPreferred(true);
       state.reveal.shown = 3;
@@ -274,6 +279,19 @@ function renderFeedback(view) {
     evs.appendChild(chip);
   });
   box.appendChild(evs);
+
+  // The preference is reversible from where it took effect, rather than buried
+  // in a settings screen the player has no reason to open.
+  const pref = document.createElement('button');
+  pref.className = 'reveal-skip pref';
+  pref.textContent = showAllPreferred()
+    ? 'Walk me through it next time'
+    : 'Skip to the answer next time';
+  pref.addEventListener('click', () => {
+    setShowAllPreferred(!showAllPreferred());
+    render();
+  });
+  box.appendChild(pref);
 
   // §7.1 item 6: flag answers that flip under another common rule set.
   if (feedback.sensitivity.length > 0) {
@@ -355,71 +373,6 @@ function renderStats(view) {
 }
 
 /**
- * The session's finished hands.
- *
- * Tapping one reopens its reasoning — the same three steps the feedback card
- * showed, which is what makes this a review surface rather than a receipt.
- */
-function renderLog(view) {
-  const panel = el('log-panel');
-  const log = el('log');
-  const hands = view.history ?? [];
-  panel.hidden = hands.length === 0;
-  log.replaceChildren();
-
-  for (const hand of hands) {
-    // A hand's grade is its worst decision; a natural has none at all.
-    const worst = hand.decisions.reduce(
-      (acc, d) => (acc === null || d.evCost > acc.evCost ? d : acc),
-      null,
-    );
-    const row = document.createElement('div');
-    row.className = 'log-row';
-
-    const tier = document.createElement('div');
-    tier.className = `log-tier ${worst ? worst.severity : 'optimal'}`;
-
-    const body = document.createElement('div');
-    const title = document.createElement('div');
-    title.className = 'log-hand';
-    title.textContent =
-      hand.playerHands.map((h) => h.map((c) => c.rank + c.suit).join(' ')).join('  |  ') +
-      '  vs  ' +
-      hand.dealerCards.map((c) => c.rank + c.suit).join(' ');
-    const detail = document.createElement('div');
-    detail.className = 'log-detail';
-    detail.textContent = worst
-      ? worst.correct
-        ? `${worst.headline} · played correctly`
-        : `${worst.headline} · played ${worst.chosen.toLowerCase()} · cost ${worst.evCost.toFixed(3)}`
-      : 'natural — nothing to decide';
-    body.append(title, detail);
-
-    const net = document.createElement('div');
-    net.className = 'log-net ' + (hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : '');
-    net.textContent = `${hand.netUnits > 0 ? '+' : ''}${hand.netUnits}`;
-
-    row.append(tier, body, net);
-
-    const steps = document.createElement('div');
-    steps.className = 'log-steps';
-    steps.hidden = true;
-    for (const decision of hand.decisions) {
-      for (const line of decision.steps) {
-        const p = document.createElement('p');
-        p.textContent = line;
-        steps.appendChild(p);
-      }
-    }
-    row.addEventListener('click', () => {
-      steps.hidden = !steps.hidden;
-    });
-
-    log.append(row, steps);
-  }
-}
-
-/**
  * The dealer's voice.
  *
  * Before the decision she names the spot and answers factual questions; after
@@ -431,6 +384,7 @@ async function renderCoach(view) {
   const say = el('say');
   const answer = el('answer');
   const asks = el('asks');
+  if (!say || !asks) return;
 
   if (view.feedback && revealComplete()) {
     const f = view.feedback;
@@ -468,8 +422,8 @@ async function renderCoach(view) {
     asks.appendChild(button);
   }
 
-  // After the decision the answer is already out, so the reasoning can be asked
-  // for in full without giving anything away.
+  // Once the decision is made the answer is already out, so the full reasoning
+  // can be asked for without giving anything away.
   if (view.feedback && revealComplete()) {
     const why = document.createElement('button');
     why.className = 'ask';
@@ -498,7 +452,6 @@ function render() {
   renderFeedback(view);
   renderActions(view);
   renderStats(view);
-  renderLog(view);
   renderCoach(view).catch(() => {});
 }
 
