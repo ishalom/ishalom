@@ -61,8 +61,15 @@ export interface SessionStats {
   hands: number;
   decisions: number;
   correct: number;
-  /** Decision accuracy, the number §9.2 leads with. */
+  /**
+   * Decision accuracy, the number §9.2 leads with — measured over decisions
+   * where the top two actions differ by more than a hundredth of a unit.
+   */
   accuracy: number;
+  /** Decisions left out of that denominator because they were coin-flips. */
+  closeCallsExcluded: number;
+  /** Accuracy counting everything, for anyone who wants the harsher number. */
+  accuracyIncludingCloseCalls: number;
   evLost: number;
   evLostPer100: number;
   bySeverity: Record<SeverityTier, number>;
@@ -83,6 +90,8 @@ export class TrainerSession {
   private correct = 0;
   private evLost = 0;
   private netUnits = 0;
+  private closeCalls = 0;
+  private closeCallsCorrect = 0;
   private bySeverity: Record<SeverityTier, number> = {
     optimal: 0,
     negligible: 0,
@@ -143,38 +152,64 @@ export class TrainerSession {
     return this.lastFeedback;
   }
 
+  /**
+   * The gap below which a decision is treated as a coin-flip.
+   *
+   * Two actions this close are within the noise of what basic strategy even
+   * claims, and counting a miss on one as a full error makes a player who nails
+   * every expensive decision look worse than one who gets the trivia right —
+   * backwards for a trainer. They are excluded from the accuracy denominator
+   * only: they still count toward mastery, the drill queue and the rating, since
+   * those are exactly the cells a serious player most wants to own.
+   */
+  private static readonly CLOSE_CALL = 0.01;
+
   /** Turn one graded decision into the feedback card §7.1 describes. */
   private absorb(record: DecisionRecord): void {
-    this.decisions++;
-    if (record.evCost === 0) this.correct++;
-    this.evLost += record.evCost;
-    this.bySeverity[record.severityTier]++;
-
     const scenario =
       record.scenarioKey === 'bj:insurance'
         ? ({ kind: 'insurance' } as const)
         : parseScenarioKey(record.scenarioKey);
 
+    // The explanation layer needs the whole EV vector, not just the winner: the
+    // statistic it quotes has to speak to the contest between the top two
+    // actions, and it cannot find the runner-up without them.
+    const evaluation = {
+      legalActions: record.legalActions as BlackjackAction[],
+      evByAction: record.evByAction as Partial<Record<BlackjackAction, number>>,
+      optimalAction: record.optimalAction as BlackjackAction,
+      optimalEv: record.evByAction[record.optimalAction] ?? 0,
+    };
+
+    const explanation = explain(scenario, evaluation, this.rules);
+    const closeCall = explanation.gap < TrainerSession.CLOSE_CALL;
+
+    this.decisions++;
+    if (record.evCost === 0) this.correct++;
+    this.evLost += record.evCost;
+    this.bySeverity[record.severityTier]++;
+    if (closeCall) {
+      this.closeCalls++;
+      if (record.evCost === 0) this.closeCallsCorrect++;
+    }
+
     const ranked = record.legalActions
-      .map((action) => ({
-        action,
-        label: action,
-        ev: record.evByAction[action] ?? 0,
-      }))
+      .map((action) => ({ action, label: action, ev: record.evByAction[action] ?? 0 }))
       .sort((a, b) => b.ev - a.ev);
 
-    let sensitivity: SensitivityNote[] = [];
-    let reason: string;
-    if (scenario.kind === 'insurance') {
-      reason = explain(scenario, 'stand', this.rules);
-    } else {
-      const optimal = record.optimalAction as BlackjackAction;
-      reason = explain(scenario, optimal, this.rules);
-      sensitivity = ruleSensitivity(record.scenarioKey, this.rules, optimal);
-    }
+    const sensitivity: SensitivityNote[] =
+      scenario.kind === 'insurance'
+        ? []
+        : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
     this.lastFeedback = {
       scenarioKey: record.scenarioKey,
+      // Anchors every step of the reveal to what was actually decided, which
+      // matters once a split has replaced the hand on the board with two others.
+      headline: explanation.headline,
+      steps: explanation.steps,
+      gap: explanation.gap,
+      closeCall,
       correct: record.evCost === 0,
       severity: record.severityTier,
       chosen: record.chosenAction,
@@ -187,7 +222,6 @@ export class TrainerSession {
           : actionName(record.optimalAction as BlackjackAction),
       evCost: record.evCost,
       ranked,
-      reason,
       sensitivity,
     };
   }
@@ -203,13 +237,19 @@ export class TrainerSession {
   }
 
   get stats(): SessionStats {
-    const accuracy = this.decisions === 0 ? 1 : this.correct / this.decisions;
+    // Close calls leave the denominator with their outcomes, so a player is
+    // neither rewarded nor punished for guessing them.
+    const graded = this.decisions - this.closeCalls;
+    const gradedCorrect = this.correct - this.closeCallsCorrect;
+    const accuracy = graded === 0 ? 1 : gradedCorrect / graded;
     const evLostPer100 = this.hands === 0 ? 0 : (this.evLost / this.hands) * 100;
     return {
       hands: this.hands,
       decisions: this.decisions,
       correct: this.correct,
       accuracy,
+      closeCallsExcluded: this.closeCalls,
+      accuracyIncludingCloseCalls: this.decisions === 0 ? 1 : this.correct / this.decisions,
       evLost: this.evLost,
       evLostPer100,
       bySeverity: { ...this.bySeverity },
@@ -241,6 +281,15 @@ export class TrainerSession {
         cards: view.dealerVisible.map(cardView),
         hidden: !view.dealerRevealed,
         total: view.dealerRevealed ? totalOf(view.dealerVisible) : null,
+        // The dealer only plays out when a hand is still live. Showing a bare
+        // "DEALER · 12" after the player busts reads as "I would have won by
+        // standing", when in fact a twelve is forced to draw and reaches 17 or
+        // better most of the time. Say so rather than letting the total imply it.
+        didNotDraw:
+          settled &&
+          view.hands.every(
+            (hand) => hand.surrendered || totalOf(hand.cards) > 21,
+          ),
       },
       legalActions: view.legalActions,
       insuranceOffered: view.phase === 'insurance',

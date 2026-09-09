@@ -164,7 +164,15 @@ function decision(key, chosenAction) {
     severity,
     margin: Number(cell.margin.toFixed(4)),
     ranked,
-    reason: explain(scenario, cell.optimalAction, rules),
+    ...(() => {
+      const ex = explain(scenario, {
+        legalActions: Object.keys(cell.evByAction),
+        evByAction: cell.evByAction,
+        optimalAction: cell.optimalAction,
+        optimalEv: cell.optimalEv,
+      }, rules);
+      return { headline: ex.headline, steps: ex.steps, reason: ex.steps[2] };
+    })(),
     sensitivity: ruleSensitivity(key, rules, cell.optimalAction),
     difficulty: difficulty(key),
     frequency: frequency.get(key) ?? null,

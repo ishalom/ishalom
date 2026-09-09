@@ -14,7 +14,26 @@
 
 const el = (id) => document.getElementById(id);
 
-const state = { view: null, busy: false };
+const state = { view: null, busy: false, reveal: null };
+
+/**
+ * Step through the reasoning, or show it all at once. Persisted, because being
+ * asked to click three times on every hand of a drilling session is a tax.
+ */
+function showAllPreferred() {
+  try {
+    return localStorage.getItem('ev:showAll') === '1';
+  } catch {
+    return false;
+  }
+}
+function setShowAllPreferred(value) {
+  try {
+    localStorage.setItem('ev:showAll', value ? '1' : '0');
+  } catch {
+    // A browser with storage disabled just loses the preference; not fatal.
+  }
+}
 
 async function api(path, body) {
   const response = await fetch(path, {
@@ -33,6 +52,10 @@ async function send(path, body) {
   state.busy = true;
   try {
     state.view = await api(path, body ?? {});
+    const feedback = state.view.feedback;
+    state.reveal = feedback
+      ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
+      : null;
     render();
   } catch (error) {
     console.error(error);
@@ -69,12 +92,32 @@ function faceDownNode() {
 
 function renderDealer(view) {
   const box = el('dealer-cards');
-  box.replaceChildren(...view.dealer.cards.map(cardNode));
-  if (view.dealer.hidden) box.appendChild(faceDownNode());
+  // While the reveal is running the outcome stays under wraps: §3.1 wants the
+  // grade independent of the result, and a result shown two clicks before the
+  // grade would break that far more thoroughly than an early EV chip.
+  const withhold = !revealComplete();
+  const cards = withhold ? view.dealer.cards.slice(0, 1) : view.dealer.cards;
+  box.replaceChildren(...cards.map(cardNode));
+  if (view.dealer.hidden || withhold) box.appendChild(faceDownNode());
   el('dealer-total').textContent =
-    view.dealer.total === null
+    view.dealer.total === null || withhold
       ? ''
       : `· ${view.dealer.total}${view.dealer.total > 21 ? ' bust' : ''}`;
+
+  // §3.1 again: a bare total after the player busts reads as "you would have won
+  // by standing", which is the opposite of true.
+  let note = document.getElementById('dealer-note');
+  if (view.dealer.didNotDraw && !withhold) {
+    if (!note) {
+      note = document.createElement('div');
+      note.id = 'dealer-note';
+      note.className = 'dealer-note';
+      box.parentElement.appendChild(note);
+    }
+    note.textContent = 'Did not draw — you busted first. A dealer must keep drawing to 17.';
+  } else if (note) {
+    note.remove();
+  }
 }
 
 function renderHands(view) {
@@ -98,8 +141,9 @@ function renderHands(view) {
     if (hand.bet !== 1) bits.push(`${hand.bet} units`);
     meta.textContent = bits.join(' · ');
 
-    // §3.1: the result is shown, but afterwards and de-emphasised.
-    if (hand.net !== null && hand.net !== undefined) {
+    // §3.1: the result is shown, but afterwards and de-emphasised — and never
+    // before the grade it might otherwise colour.
+    if (hand.net !== null && hand.net !== undefined && revealComplete()) {
       const net = document.createElement('span');
       net.className = 'hand-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
       net.textContent = `  ${hand.net > 0 ? '+' : ''}${hand.net}`;
@@ -120,31 +164,102 @@ const SEVERITY_WORD = {
   blunder: 'Blunder',
 };
 
+/**
+ * The guided reveal (§3.4, §7.1).
+ *
+ * Steps one and two show only the readings; the verdict, its cost and the EV
+ * chips all arrive together at step three. Hiding the chips alone would have
+ * been theatre — the verdict names the best action, so the answer was already
+ * out. Hiding both means the player genuinely reasons before seeing the answer.
+ *
+ * The hand's *outcome* is gated on the same switch. §3.1 requires the grade to
+ * be independent of the result, and a result visible two clicks before the grade
+ * would break that far more thoroughly than showing the chips early.
+ */
+function revealComplete() {
+  return !state.reveal || state.reveal.shown >= 3;
+}
+
+const STEP_TITLES = ['Read the dealer', 'Read your hand', 'Put them together'];
+
 function renderFeedback(view) {
   const box = el('feedback');
   const feedback = view.feedback;
-  if (!feedback) {
+  if (!feedback || !state.reveal) {
     box.hidden = true;
     return;
   }
   box.hidden = false;
-  box.className = `feedback ${feedback.severity}`;
+  const done = revealComplete();
+  box.className = done ? `feedback ${feedback.severity}` : 'feedback';
   box.replaceChildren();
 
-  const verdict = document.createElement('p');
-  verdict.className = 'verdict';
-  verdict.textContent = feedback.correct
-    ? `Correct — ${feedback.optimalLabel}`
-    : `${SEVERITY_WORD[feedback.severity]} — cost ${feedback.evCost.toFixed(3)} units`;
-  box.appendChild(verdict);
+  // The evaluated hand, always. After a split the board no longer shows what was
+  // actually decided, so without this the steps have nothing to refer to.
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  anchor.innerHTML = done
+    ? `<b>${feedback.headline}</b>`
+    : `<b>${feedback.headline.split(' → ')[0]}</b> — thinking it through`;
+  box.appendChild(anchor);
 
-  if (!feedback.correct) {
-    const did = document.createElement('p');
-    did.className = 'did';
-    did.textContent =
-      `You chose ${feedback.chosenLabel.toLowerCase()}. ` +
-      `Best is ${feedback.optimalLabel.toLowerCase()}.`;
-    box.appendChild(did);
+  if (done) {
+    const verdict = document.createElement('p');
+    verdict.className = 'verdict';
+    verdict.textContent = feedback.correct
+      ? `Correct — ${feedback.optimalLabel}`
+      : `${SEVERITY_WORD[feedback.severity]} — cost ${feedback.evCost.toFixed(3)} units`;
+    box.appendChild(verdict);
+
+    if (!feedback.correct) {
+      const did = document.createElement('p');
+      did.className = 'did';
+      did.textContent =
+        `You chose ${feedback.chosenLabel.toLowerCase()}. ` +
+        `Best is ${feedback.optimalLabel.toLowerCase()}.` +
+        (feedback.closeCall ? ' The top two are within a hundredth of a unit.' : '');
+      box.appendChild(did);
+    }
+  }
+
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal';
+  for (let i = 0; i < state.reveal.shown && i < 3; i++) {
+    const step = document.createElement('div');
+    step.className = 'step' + (i === state.reveal.shown - 1 ? ' latest' : '');
+    const n = document.createElement('div');
+    n.className = 'step-n';
+    n.textContent = String(i + 1);
+    const body = document.createElement('div');
+    const head = document.createElement('div');
+    head.className = 'step-head';
+    head.textContent = STEP_TITLES[i];
+    const text = document.createElement('p');
+    text.textContent = state.reveal.steps[i];
+    body.append(head, text);
+    step.append(n, body);
+    reveal.appendChild(step);
+  }
+  box.appendChild(reveal);
+
+  if (!done) {
+    const controls = document.createElement('div');
+    controls.className = 'reveal-controls';
+    const next = document.createElement('button');
+    next.className = 'reveal-next';
+    next.innerHTML = `Next<span class="key">SPACE</span>`;
+    next.addEventListener('click', advanceReveal);
+    const skip = document.createElement('button');
+    skip.className = 'reveal-skip';
+    skip.textContent = 'Show all';
+    skip.addEventListener('click', () => {
+      setShowAllPreferred(true);
+      state.reveal.shown = 3;
+      render();
+    });
+    controls.append(next, skip);
+    box.appendChild(controls);
+    return;
   }
 
   // §7.1 item 3: the EV of every legal action, sorted, in units.
@@ -160,11 +275,6 @@ function renderFeedback(view) {
   });
   box.appendChild(evs);
 
-  const reason = document.createElement('p');
-  reason.className = 'reason';
-  reason.textContent = feedback.reason;
-  box.appendChild(reason);
-
   // §7.1 item 6: flag answers that flip under another common rule set.
   if (feedback.sensitivity.length > 0) {
     const note = document.createElement('p');
@@ -175,6 +285,14 @@ function renderFeedback(view) {
       '.';
     box.appendChild(note);
   }
+}
+
+function advanceReveal() {
+  if (!state.reveal || revealComplete()) return false;
+  state.reveal.shown++;
+  if (state.reveal.shown >= 3) setShowAllPreferred(false);
+  render();
+  return true;
 }
 
 const LABELS = {
@@ -215,6 +333,19 @@ function renderStats(view) {
   const stats = view.stats;
   el('stat-accuracy').textContent =
     stats.decisions === 0 ? '—' : `${(stats.accuracy * 100).toFixed(1)}%`;
+
+  // The definition is surfaced rather than left mysterious: a metric nobody can
+  // explain is a metric nobody should trust.
+  const excluded = stats.closeCallsExcluded;
+  el('accuracy-tip').textContent =
+    stats.decisions === 0
+      ? 'Share of decisions played correctly, once coin-flips are set aside.'
+      : `${stats.correct - 0} of ${stats.decisions} decisions right. ` +
+        (excluded > 0
+          ? `${excluded} close call${excluded === 1 ? '' : 's'} excluded — spots where the ` +
+            `best two plays differ by under 0.01 units, which is inside the noise. ` +
+            `Counting everything: ${(stats.accuracyIncludingCloseCalls * 100).toFixed(1)}%.`
+          : 'No close calls yet.');
   el('stat-evlost').textContent = stats.hands === 0 ? '—' : stats.evLostPer100.toFixed(2);
   el('stat-edge').textContent =
     stats.hands === 0
@@ -328,6 +459,14 @@ document.addEventListener('keydown', (event) => {
   const view = state.view;
   if (!view) return;
   const key = event.key.toLowerCase();
+
+  // Space and Enter step the reasoning while a reveal is open, so the whole
+  // thing is reachable without a mouse.
+  if ((key === ' ' || key === 'enter') && !revealComplete()) {
+    event.preventDefault();
+    advanceReveal();
+    return;
+  }
 
   if (view.phase === 'insurance') {
     if (key === 'y') send('/api/insurance', { take: true });

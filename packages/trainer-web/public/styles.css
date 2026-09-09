@@ -275,3 +275,101 @@ td.R { background: #4a3d21; }
   .card { width: 46px; height: 66px; }
   .stat-value { font-size: 16px; }
 }
+
+
+/* --- Guided reveal (§3.4) -------------------------------------------------
+ * The reasoning arrives a step at a time, in the order a competent player
+ * thinks: read the dealer, read your hand, then combine them. Steps stack
+ * rather than replace, so by the third the whole chain is on screen.
+ */
+.reveal { margin: 12px 14px; }
+.step {
+  display: flex;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  margin-bottom: 7px;
+}
+.step-n {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #101820;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.step.latest .step-n { border-color: #3f7d5c; color: var(--optimal); }
+.step p { margin: 0; font-size: 13.5px; }
+.step-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.reveal-controls { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.reveal-next {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #2f9e6c;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reveal-next .key { font-size: 10px; color: var(--muted); margin-left: 7px; letter-spacing: 0.08em; }
+.reveal-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 6px;
+}
+
+/* The evaluated hand, so every step has a referent even after a split has
+ * replaced it on the board with two others. */
+.anchor {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.anchor b { color: var(--ink); font-weight: 600; }
+
+.dealer-note { color: var(--minor); font-size: 12px; margin-top: 4px; }
+
+/* Accuracy tooltip, so the number is not mysterious. */
+.stat { position: relative; }
+.tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 6px);
+  width: 210px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0b1016;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  z-index: 20;
+}
+.stat:hover .tip, .stat:focus .tip, .stat:focus-within .tip { display: block; }
