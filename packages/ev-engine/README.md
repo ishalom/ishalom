@@ -53,7 +53,8 @@ surrender is exactly `-0.5`.
 | `blackjack/scenario` | §11 | Canonical `scenarioKey`, the join between play and progress |
 | `blackjack/chart` | §6.1, §6.5 | Charts derived from the EV computation, never copied from a website |
 | `blackjack/feedback` | §7.2 | EV cost and severity tier — the pure part of the feedback system |
-| `poker/evaluator` | §6.4 | Seven-card hand evaluator: no tables, no five-card subsets, 60 ns a hand |
+| `poker/handValue` | §6.4 | Hand strength as one comparable integer, and its decomposition |
+| `poker/evaluator` | §6.4 | Seven-card evaluator, ~17M hands/second, 64 KB of tables |
 | `uth/rules` | §5.2.2 | Blind and Trips paytables, raise sizes, the 3x trap |
 | `uth/showdown` | §5.2.1 | Settling one hand: three bets, three different rules |
 | `uth/river` | §6.3 | The river decision, exact over all 990 dealer holdings |
@@ -72,19 +73,28 @@ Requires Node 22.18+, which strips TypeScript types natively. There is no build
 step and no test framework.
 
 ```sh
-npm test           # 86 tests, ~15s
-npm run test:slow  # adds Monte Carlo cross-validation, ~35s
-npm run typecheck  # needs devDependencies installed (npm install)
+npm test           # 99 tests, ~15s — works on a bare checkout
+npm run test:slow  # adds Monte Carlo and the exhaustive C(52,7) pass, ~50s
+npm run typecheck  # needs `npm ci` first
 npm run charts     # derives every preset's chart in exact mode into charts/
 ```
 
+`npm test` needs nothing installed. The only dependencies in the workspace's
+root `package-lock.json` are TypeScript and `@types/node`, both build-time only,
+for `npm run typecheck`.
+
+CI (`.github/workflows/ev-engine.yml`) runs the typecheck, every suite in the
+workspace, and a guard asserting this package still declares no runtime
+dependencies, on Node 22 and 24. Node 22.18 is the floor — below it types are not stripped and there is no
+build step to fall back on.
+
 Verified on Linux/Node 22 and Windows/Node 26; the golden charts come out byte
-identical on both. The scripts go through `scripts/test.ts` rather than putting
-a glob and an environment variable straight into an npm script, because npm runs
+identical on both. The scripts go through `scripts/test.ts` rather than putting a
+glob and an environment variable straight into an npm script, because npm runs
 scripts under `cmd.exe` on Windows and neither POSIX quoting nor `VAR=1 cmd`
 survives that. The runner also refuses to report success when it matched no test
-files — an empty suite exits 0 and looks exactly like a passing one, which is
-how that bug went unnoticed in the first place.
+files — an empty suite exits 0 and looks exactly like a passing one, which is how
+that bug went unnoticed in the first place.
 
 ## How it is validated (§14.1)
 
@@ -124,23 +134,21 @@ evidence that it computes from the rule set rather than reciting a chart (§6.1,
 `test/golden/`. A change to one fails the suite and needs explicit sign-off.
 Regenerate deliberately with `npm run charts:golden`.
 
-**Hand evaluator (§14.1's third bullet)** is verified against an exhaustive
-enumeration of all C(52,7) = 133,784,560 seven-card hands, in three layers.
+**Hand-evaluator verification (§14.1, third bullet)** enumerates all
+C(52,7) = 133,784,560 seven-card hands, classifies every one, and checks the
+resulting category histogram against the published seven-card frequencies. Those
+nine numbers sum to exactly 133,784,560, so reproducing all nine from 133 million
+independent classifications is a sharp test of the whole evaluator. It takes
+about six seconds and runs in `npm run test:slow`.
 
-Every hand is categorised and the nine totals are compared against the published
-seven-card frequencies — straight flush 41,584 through high card 23,294,460, and
-they match exactly. That runs in the default suite in about eight seconds. An
-off-by-one at any category boundary moves at least two of those counts, so nine
-numbers turn out to be a sharp test.
+The naive best-of-twenty-one reference it is checked against is itself pinned
+exhaustively, against the published five-card frequencies over all C(52,5)
+hands — it is not merely a second guess.
 
-A tally cannot see kickers, so the slow suite adds two more. All 2,598,960
-five-card hands are scored by both the fast evaluator and a naive independent one
-(sort, group, branch through the categories, return a comparable array), and the
-two orderings are checked to be isomorphic: same order, same ties, no exceptions.
-That yields exactly 7,462 distinct hand values, the long-published figure. Then
-every seven-card hand is checked to score as the best of its 21 five-card
-subsets — 0 disagreements across all 133,784,560, which pins the seven-card path
-to the five-card path already proven correct.
+There is a fourth level available: a value-for-value comparison of all 133.8
+million hands against that reference, behind `EV_ENGINE_EXHAUSTIVE_EVALUATOR=1`.
+It takes over an hour on one core, so it is not part of any routine run; shard it
+by first card to spread it across cores. See below.
 
 **Pre-flop** is the one decision that cannot be solved at runtime, so it is an
 offline job whose output ships as a lookup asset (§6.3, §6.5). Two things make
@@ -207,6 +215,24 @@ second on the worst hand in the game (a resplittable pair of deuces against a
 deuce); static-dealer mode costs about five milliseconds. Both are far cheaper
 than they were before the split recursion was restructured — that one change took
 the worst case from 47 seconds to 5 milliseconds.
+
+## The evaluator's table budget
+
+§6.5 budgets 10–130 MB for evaluator lookup tables and §17 leaves the scheme open
+pending a benchmark, since it trades app size against speed. The scheme here
+needs neither extreme: the hand is decomposed with bit arithmetic over four
+13-bit suit masks, and the only tables are two of 8192 entries — **64 KB**,
+computed at load in about a millisecond. Nothing to ship as an asset, no first-run
+wait, and §13's 150 MB app budget stays free for everything else.
+
+It evaluates about **17 million hands per second** (60 ns each), or 32 million
+when the caller supplies suit masks directly, which is the path the UTH solvers
+will take as they walk boards incrementally. For scale, the flop decision needs
+roughly 1.8 million showdowns inside a 200 ms budget.
+
+Most of that speed came from one change: dealing each card's bit into its suit's
+mask without branching, which is three times faster than the equivalent `switch`
+and is commented in place.
 
 ## What is not here yet
 

@@ -14,50 +14,46 @@ import assert from 'node:assert/strict';
 import { NUM_CARDS, parseCards, type Card } from '../src/core/cards.ts';
 import { DEFAULT_BLIND_PAYTABLE } from '../src/uth/rules.ts';
 import { solveRiver } from '../src/uth/river.ts';
-import { compareReference, referenceEvaluate7 } from './helpers/poker-reference.ts';
+import { naiveEvaluate7 } from './helpers/naive-evaluator.ts';
+import { categoryOf, PAIR, STRAIGHT, STRAIGHT_FLUSH, FOUR_OF_A_KIND, FULL_HOUSE, FLUSH } from '../src/poker/handValue.ts';
 
 const paytable = DEFAULT_BLIND_PAYTABLE;
 
-/** Categories in the reference score, matching the evaluator's numbering. */
-const REF_STRAIGHT = 4;
-const REF_STRAIGHT_FLUSH = 8;
-const REF_FOUR = 7;
-const REF_FULL_HOUSE = 6;
-const REF_FLUSH = 5;
-const REF_PAIR = 1;
-
-/** Blind payout, re-derived from the reference score rather than from src. */
-function referenceBlindPayout(score: number[]): number {
-  const category = score[0]!;
-  if (category === REF_STRAIGHT_FLUSH) return score[1] === 12 ? 500 : 50;
-  if (category === REF_FOUR) return 10;
-  if (category === REF_FULL_HOUSE) return 3;
-  if (category === REF_FLUSH) return 1.5;
-  if (category === REF_STRAIGHT) return 1;
+/**
+ * Blind payout, re-derived here from the naive evaluator's value rather than
+ * imported from `src/uth`, so the reference enumeration below shares no
+ * settlement code with the solver it checks.
+ */
+function referenceBlindPayout(value: number): number {
+  const category = categoryOf(value);
+  if (category === STRAIGHT_FLUSH) return ((value >>> 16) & 0xf) === 12 ? 500 : 50;
+  if (category === FOUR_OF_A_KIND) return 10;
+  if (category === FULL_HOUSE) return 3;
+  if (category === FLUSH) return 1.5;
+  if (category === STRAIGHT) return 1;
   return 0;
 }
 
 /**
- * An independent river enumeration: naive evaluator, settlement written out
- * again from §5.2.1, no shared code with the solver under test.
+ * An independent river enumeration: the naive best-of-21 evaluator, settlement
+ * written out again from §5.2.1, and no shared code with the solver under test.
  */
 function referenceSolveRiver(playerHole: readonly Card[], board: readonly Card[]): number {
   const used = new Set<Card>([...playerHole, ...board]);
   const unseen: Card[] = [];
   for (let c = 0; c < NUM_CARDS; c++) if (!used.has(c)) unseen.push(c);
 
-  const playerScore = referenceEvaluate7([...playerHole, ...board]);
-  const blind = referenceBlindPayout(playerScore);
+  const playerValue = naiveEvaluate7([...playerHole, ...board]);
+  const blind = referenceBlindPayout(playerValue);
 
   let total = 0;
   let count = 0;
   for (let i = 0; i < unseen.length; i++) {
     for (let j = i + 1; j < unseen.length; j++) {
-      const dealerScore = referenceEvaluate7([unseen[i]!, unseen[j]!, ...board]);
-      const cmp = compareReference(playerScore, dealerScore);
-      const qualified = dealerScore[0]! >= REF_PAIR;
-      if (cmp > 0) total += 1 + (qualified ? 1 : 0) + blind;
-      else if (cmp < 0) total += -1 - (qualified ? 1 : 0) - 1;
+      const dealerValue = naiveEvaluate7([unseen[i]!, unseen[j]!, ...board]);
+      const qualified = categoryOf(dealerValue) >= PAIR;
+      if (playerValue > dealerValue) total += 1 + (qualified ? 1 : 0) + blind;
+      else if (playerValue < dealerValue) total += -1 - (qualified ? 1 : 0) - 1;
       count++;
     }
   }

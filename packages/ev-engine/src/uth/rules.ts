@@ -18,7 +18,7 @@ import {
   FULL_HOUSE,
   STRAIGHT,
   STRAIGHT_FLUSH,
-} from '../poker/evaluator.ts';
+} from '../poker/handValue.ts';
 
 /** The Play bet multiple available at each decision point. */
 export const PREFLOP_RAISE = 4;

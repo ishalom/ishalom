@@ -25,7 +25,7 @@
  * times rather than 1,070,190; the dealer's is the inner loop.
  */
 
-import { evaluate } from '../poker/evaluator.ts';
+import { evaluate7 } from '../poker/evaluator.ts';
 import { unseenCards, type Card } from '../core/cards.ts';
 import { blindPayout, FLOP_RAISE, FOLD_RESULT, RIVER_RAISE, type BlindPaytable } from './rules.ts';
 import { dealerQualifies } from './showdown.ts';
@@ -86,7 +86,7 @@ export function solveFlop(
 
       playerCards[5] = turn;
       playerCards[6] = river;
-      const playerScore = evaluate(playerCards);
+      const playerScore = evaluate7(playerCards);
       const blind = blindPayout(playerScore, paytable);
 
       dealerCards[3] = turn;
@@ -109,7 +109,7 @@ export function solveFlop(
         dealerCards[5] = remaining[a]!;
         for (let b = a + 1; b < n; b++) {
           dealerCards[6] = remaining[b]!;
-          const dealerScore = evaluate(dealerCards);
+          const dealerScore = evaluate7(dealerCards);
           if (playerScore > dealerScore) {
             anteAndBlind += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
             net += 1;

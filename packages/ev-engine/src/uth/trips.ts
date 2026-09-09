@@ -24,7 +24,7 @@ import {
   STRAIGHT,
   STRAIGHT_FLUSH,
   THREE_OF_A_KIND,
-} from '../poker/evaluator.ts';
+} from '../poker/handValue.ts';
 import type { TripsPaytable } from './rules.ts';
 
 /** Every seven-card hand there is. */

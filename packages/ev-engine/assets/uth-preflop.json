@@ -301,6 +301,56 @@
       "margin": 0.3635752548997495,
       "flopRaiseFrequency": 0.637704081632653,
       "riverFoldFrequency": 0.01956380146878363
+    },
+    "A6o": {
+      "label": "A6o",
+      "ev4x": 0.33976286134470407,
+      "ev3x": 0.18611381542741756,
+      "evCheck": 0.07090996596827769,
+      "optimalAction": "raise4x",
+      "margin": 0.26885289537642637,
+      "flopRaiseFrequency": 0.5222448979591837,
+      "riverFoldFrequency": 0.017431894126753385
+    },
+    "A5s": {
+      "label": "A5s",
+      "ev4x": 0.6902166761918456,
+      "ev3x": 0.4917581638663082,
+      "evCheck": 0.3297471682979829,
+      "optimalAction": "raise4x",
+      "margin": 0.3604695078938627,
+      "flopRaiseFrequency": 0.645969387755102,
+      "riverFoldFrequency": 0.026453680454605524
+    },
+    "A5o": {
+      "label": "A5o",
+      "ev4x": 0.35854077766290077,
+      "ev3x": 0.20461009045524642,
+      "evCheck": 0.09355643962515924,
+      "optimalAction": "raise4x",
+      "margin": 0.2649843380377415,
+      "flopRaiseFrequency": 0.5764795918367347,
+      "riverFoldFrequency": 0.025149615813022712
+    },
+    "A4s": {
+      "label": "A4s",
+      "ev4x": 0.5901045086688835,
+      "ev3x": 0.4094317891001081,
+      "evCheck": 0.27410500028509305,
+      "optimalAction": "raise4x",
+      "margin": 0.3159995083837905,
+      "flopRaiseFrequency": 0.6246938775510205,
+      "riverFoldFrequency": 0.03478638448904076
+    },
+    "A4o": {
+      "label": "A4o",
+      "ev4x": 0.2493951648597956,
+      "ev3x": 0.11480161232940987,
+      "evCheck": 0.03373172482628076,
+      "optimalAction": "raise4x",
+      "margin": 0.21566344003351484,
+      "flopRaiseFrequency": 0.5608673469387755,
+      "riverFoldFrequency": 0.03420680020389284
     }
   }
 }

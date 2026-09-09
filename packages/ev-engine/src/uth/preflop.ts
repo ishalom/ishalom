@@ -25,7 +25,7 @@
  * the same enumeration instead of a second, far larger one.
  */
 
-import { evaluateWithTwo } from '../poker/evaluator.ts';
+import { evaluateSuitMasks } from '../poker/evaluator.ts';
 import { RANK_CHARS, makeCard, unseenCards, type Card } from '../core/cards.ts';
 import {
   blindPayout,
@@ -156,6 +156,40 @@ export function boardIndex(a: number, b: number, c: number, d: number, e: number
   return choose(a, 1) + choose(b, 2) + choose(c, 3) + choose(d, 4) + choose(e, 5);
 }
 
+/**
+ * Score a board's four suit masks plus two more cards, without disturbing the
+ * masks.
+ *
+ * The board is fixed across the dealer's 990 holdings, so its masks are built
+ * once per board and each hand costs two ORs and a score. The player's seven
+ * cards are the same board plus the two hole cards, so this one helper serves
+ * both sides of every showdown.
+ */
+function scoreWithTwo(masks: Int32Array, a: Card, b: Card): number {
+  let s0 = masks[0]!;
+  let s1 = masks[1]!;
+  let s2 = masks[2]!;
+  let s3 = masks[3]!;
+
+  const bitA = 1 << ((a / 4) | 0);
+  switch (a % 4) {
+    case 0: s0 |= bitA; break;
+    case 1: s1 |= bitA; break;
+    case 2: s2 |= bitA; break;
+    default: s3 |= bitA;
+  }
+
+  const bitB = 1 << ((b / 4) | 0);
+  switch (b % 4) {
+    case 0: s0 |= bitB; break;
+    case 1: s1 |= bitB; break;
+    case 2: s2 |= bitB; break;
+    default: s3 |= bitB;
+  }
+
+  return evaluateSuitMasks(s0, s1, s2, s3);
+}
+
 export interface SolvePreflopOptions {
   /** Called with a fraction in [0,1] as the board enumeration proceeds. */
   onProgress?: (fraction: number) => void;
@@ -223,7 +257,7 @@ export function solvePreflop(
 
             // The player's seven cards are this board plus the two hole cards —
             // exactly the operation the dealer's hand needs.
-            const playerScore = evaluateWithTwo(board, holeA, holeB);
+            const playerScore = scoreWithTwo(board, holeA, holeB);
             const blind = blindPayout(playerScore, paytable);
 
             let n = 0;
@@ -237,7 +271,7 @@ export function solvePreflop(
             for (let a = 0; a < 45; a++) {
               const cardA = dealerPool[a]!;
               for (let b = a + 1; b < 45; b++) {
-                const dealerScore = evaluateWithTwo(board, cardA, dealerPool[b]!);
+                const dealerScore = scoreWithTwo(board, cardA, dealerPool[b]!);
                 if (playerScore > dealerScore) {
                   ab += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
                   sign++;

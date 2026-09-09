@@ -11,7 +11,7 @@
  * well under a millisecond.
  */
 
-import { evaluate } from '../poker/evaluator.ts';
+import { evaluate7 } from '../poker/evaluator.ts';
 import { unseenCards, type Card } from '../core/cards.ts';
 import { FOLD_RESULT, RIVER_RAISE, type BlindPaytable } from './rules.ts';
 import { settle } from './showdown.ts';
@@ -48,7 +48,7 @@ export function solveRiver(
   if (unseen.length !== 45) throw new Error(`Expected 45 unseen cards, found ${unseen.length}`);
 
   // The player's hand is fixed now, so it is scored once rather than 990 times.
-  const playerScore = evaluate([...playerHole, ...board]);
+  const playerScore = evaluate7([...playerHole, ...board]);
 
   // Reused buffer: the dealer's seven cards are the board plus two unseen cards,
   // and only the last two change.
@@ -72,7 +72,7 @@ export function solveRiver(
     dealerCards[5] = unseen[i]!;
     for (let j = i + 1; j < unseen.length; j++) {
       dealerCards[6] = unseen[j]!;
-      const dealerScore = evaluate(dealerCards);
+      const dealerScore = evaluate7(dealerCards);
       if (playerScore > dealerScore) wins++;
       else if (playerScore === dealerScore) ties++;
       else losses++;

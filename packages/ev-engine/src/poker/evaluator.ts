@@ -1,275 +1,255 @@
 /**
  * Seven-card poker hand evaluator (spec §6.4).
  *
- * Both UTH modules depend on this, and it sits in the innermost loop of the flop
- * solver — nearly two million evaluations for a single decision — so the spec is
- * explicit that a naive implementation will dominate runtime.
+ * Both UTH modules lean on this. The flop decision alone enumerates
+ * C(45,2) × C(43,2) ≈ 894,000 outcomes, two showdowns each, inside a 200 ms
+ * budget — so this runs a couple of million times per decision and its cost
+ * dominates everything above it.
  *
- * The naive approach is to enumerate all 21 five-card subsets of a seven-card
- * hand and take the best. This does not do that. It reads the hand as four
- * 13-bit rank masks, one per suit, and derives everything — how many of each
- * rank, whether a flush is present, whether a straight is present — with bitwise
- * operations over those four words. After the masks are built there are no loops
- * over cards, no per-call allocation, and no lookup table.
+ * Scheme
+ * ------
+ * The spec calls for "a standard perfect-hash or lookup-table evaluator" and
+ * §6.5 budgets 10–130 MB for its tables, which §17 leaves open pending a
+ * benchmark. What is implemented here needs neither: the hand is decomposed with
+ * bit arithmetic over four 13-bit suit masks, and the only tables are two of 8192
+ * entries each (64 KB total, computed at load in about a millisecond). No asset
+ * to ship, no first-run wait, and the §13 app-size budget stays free for
+ * everything else. `test/poker-evaluator.bench.ts` reports the throughput this
+ * buys.
  *
- * That also answers spec §17's open question 5 — evaluator table size trading app
- * size against speed — in the cheapest possible direction: this scheme ships zero
- * table bytes. A 130 MB two-plus-two style table stays available if benchmarking
- * on low-end devices ever demands it, but it should not be needed.
+ * The trick that makes it work is computing rank multiplicities without ever
+ * touching a counter array: a rank appears at least twice exactly when two suit
+ * masks share its bit, at least three times when three do, and so on. Six ANDs
+ * and a few ORs replace a thirteen-element histogram, and the function stays
+ * pure — no scratch buffer, no module state, nothing to reset between calls.
  *
- * The result is a plain integer: bigger is better, and two hands compare equal
- * exactly when they tie under poker rules. Nothing else about the value is
- * meaningful and callers should not depend on its magnitude.
+ * Two facts about seven-card hands keep the branching short, and both are
+ * asserted in the test suite rather than merely believed:
+ *
+ *   - A flush and a full house cannot coexist. A flush uses five cards of one
+ *     suit with five distinct ranks; trips would need both remaining cards to
+ *     match one of them, and then nothing is left to make the pair.
+ *   - A flush and four of a kind cannot coexist either: quads take one card of
+ *     each suit, leaving at most four cards in any single suit.
+ *
+ * So once a flush is found, the answer is a straight flush or that flush, and
+ * the rank-based path never has to run.
  */
 
-import { NUM_SUITS, type Card } from '../core/cards.ts';
+import type { Card } from '../core/cards.ts';
+import {
+  CATEGORY_SHIFT,
+  FLUSH,
+  FOUR_OF_A_KIND,
+  FULL_HOUSE,
+  HIGH_CARD,
+  PAIR,
+  STRAIGHT,
+  STRAIGHT_FLUSH,
+  THREE_OF_A_KIND,
+  TWO_PAIR,
+} from './handValue.ts';
 
-/** Hand categories, ordered so a larger value always beats a smaller one. */
-export const HIGH_CARD = 0;
-export const PAIR = 1;
-export const TWO_PAIR = 2;
-export const THREE_OF_A_KIND = 3;
-export const STRAIGHT = 4;
-export const FLUSH = 5;
-export const FULL_HOUSE = 6;
-export const FOUR_OF_A_KIND = 7;
-export const STRAIGHT_FLUSH = 8;
-
-export type HandCategory = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-
-export const CATEGORY_NAMES: readonly string[] = [
-  'high card',
-  'pair',
-  'two pair',
-  'three of a kind',
-  'straight',
-  'flush',
-  'full house',
-  'four of a kind',
-  'straight flush',
-];
+const MASK_COUNT = 1 << 13;
 
 /**
- * Five ranks at four bits each fill the low 20 bits of a score and the category
- * sits above them, so comparing categories and comparing kickers is a single
- * integer comparison.
+ * For each 13-bit rank mask, the rank of the highest straight's top card, or -1.
+ *
+ * The wheel is the awkward case: A-2-3-4-5 is a straight whose top card is the
+ * five, so it maps to rank 3 and sorts below every other straight, which is
+ * exactly right.
  */
-const CATEGORY_SHIFT = 20;
+const straightHigh = new Int8Array(MASK_COUNT).fill(-1);
 
-export function categoryOf(score: number): HandCategory {
-  return ((score >>> CATEGORY_SHIFT) & 0xf) as HandCategory;
-}
+/**
+ * For each 13-bit rank mask, its top five ranks packed into the significant-rank
+ * slots of a hand value: `r1<<16 | r2<<12 | r3<<8 | r4<<4 | r5`. Masks with fewer
+ * than five bits pack what they have and leave the rest zero.
+ *
+ * Packing them in place means kickers can be taken by shifting: the top three
+ * ranks of a mask, positioned for a pair's kicker slots, are one shift and one
+ * mask away.
+ */
+const topFive = new Int32Array(MASK_COUNT);
 
-/** Highest rank index of a straight in `mask`, or -1. Rank 12 is an ace. */
-function straightHigh(mask: number): number {
-  // Shift the ranks up one place and hang the ace below the deuce, so the wheel
-  // (A,2,3,4,5) becomes five adjacent bits like any other straight.
-  const m = ((mask << 1) | ((mask >>> 12) & 1)) >>> 0;
-  const runs = m & (m >>> 1) & (m >>> 2) & (m >>> 3) & (m >>> 4);
-  if (runs === 0) return -1;
-  // The highest set bit starts the highest run. Its top card is four places
-  // above it, less the one place everything was shifted by.
-  return 31 - Math.clz32(runs) + 3;
-}
+(function buildTables(): void {
+  const WHEEL = (1 << 12) | (1 << 3) | (1 << 2) | (1 << 1) | 1; // A,5,4,3,2
 
-/** The `n` highest ranks in `mask`, packed four bits each, highest first. */
-function topRanks(mask: number, n: number): number {
-  let packed = 0;
-  let remaining = mask;
-  for (let i = 0; i < n; i++) {
-    if (remaining === 0) {
-      packed <<= 4;
-      continue;
+  for (let mask = 0; mask < MASK_COUNT; mask++) {
+    for (let high = 12; high >= 4; high--) {
+      const run = 0b11111 << (high - 4);
+      if ((mask & run) === run) {
+        straightHigh[mask] = high;
+        break;
+      }
     }
-    const rank = 31 - Math.clz32(remaining);
-    packed = (packed << 4) | rank;
-    remaining &= ~(1 << rank);
-  }
-  return packed;
-}
+    if (straightHigh[mask] === -1 && (mask & WHEEL) === WHEEL) {
+      straightHigh[mask] = 3; // five-high
+    }
 
-/** Index of the highest rank in `mask`. Meaningless for an empty mask. */
+    let packed = 0;
+    let taken = 0;
+    for (let rank = 12; rank >= 0 && taken < 5; rank--) {
+      if (mask & (1 << rank)) {
+        packed |= rank << (16 - 4 * taken);
+        taken++;
+      }
+    }
+    topFive[mask] = packed;
+  }
+})();
+
 function highestRank(mask: number): number {
   return 31 - Math.clz32(mask);
 }
 
-function popcount(x: number): number {
-  let n = x - ((x >>> 1) & 0x55555555);
-  n = (n & 0x33333333) + ((n >>> 2) & 0x33333333);
-  n = (n + (n >>> 4)) & 0x0f0f0f0f;
-  return (n * 0x01010101) >>> 24;
+/** Top three ranks of `mask`, positioned as a pair's three kickers. */
+function threeKickers(mask: number): number {
+  return (topFive[mask]! >>> 4) & 0x0fff0;
+}
+
+/** Top two ranks of `mask`, positioned as a trips hand's two kickers. */
+function twoKickers(mask: number): number {
+  return (topFive[mask]! >>> 4) & 0x0ff00;
+}
+
+/** Top rank of `mask`, positioned as a quads hand's single kicker. */
+function oneKicker(mask: number): number {
+  return (topFive[mask]! >>> 4) & 0x0f000;
+}
+
+/** Top rank of `mask`, positioned as a two-pair hand's single kicker. */
+function twoPairKicker(mask: number): number {
+  return (topFive[mask]! >>> 8) & 0x00f00;
 }
 
 /**
- * Score a hand of five, six or seven cards. Larger is better, and equal scores
- * are genuine ties.
+ * Evaluate seven cards into a comparable integer (see `handValue.ts`).
  *
- * Cards are the 52-card indices from `core/cards`. Duplicates are not rejected:
- * every caller enumerates from a deck and cannot produce them, and the check
- * would cost more than it is worth in the flop solver's inner loop.
+ * `cards` must hold at least seven cards starting at `offset`. Callers in a hot
+ * loop are expected to reuse one array rather than allocate per showdown; this
+ * function neither reads nor writes anything outside its arguments.
  */
-/**
- * Score a hand from its four suit masks.
- *
- * Everything the evaluator decides is a function of these four words, so the
- * card count never enters: five, six and seven card hands all take this path.
- */
-function scoreFromMasks(s0: number, s1: number, s2: number, s3: number): number {
-  // A flush needs five cards of one suit, and seven cards can only manage that
-  // in one suit, so the first match is the only match.
-  let flushRanks = -1;
-  if (popcount(s0) >= 5) flushRanks = s0;
-  else if (popcount(s1) >= 5) flushRanks = s1;
-  else if (popcount(s2) >= 5) flushRanks = s2;
-  else if (popcount(s3) >= 5) flushRanks = s3;
-
-  if (flushRanks >= 0) {
-    const high = straightHigh(flushRanks);
-    if (high >= 0) return (STRAIGHT_FLUSH << CATEGORY_SHIFT) | (high << 16);
-  }
-
-  // How many suits hold each rank, as four bitmasks. This is why the hand never
-  // has to be sorted or grouped: "appears at least twice" is the pairwise ANDs
-  // of the suit masks, and so on upward.
-  const atLeast1 = s0 | s1 | s2 | s3;
-  const atLeast2 = (s0 & s1) | (s0 & s2) | (s0 & s3) | (s1 & s2) | (s1 & s3) | (s2 & s3);
-  const atLeast3 = (s0 & s1 & s2) | (s0 & s1 & s3) | (s0 & s2 & s3) | (s1 & s2 & s3);
-  const atLeast4 = s0 & s1 & s2 & s3;
-
-  const quads = atLeast4;
-  const trips = atLeast3 & ~atLeast4;
-  const pairs = atLeast2 & ~atLeast3;
-
-  if (quads !== 0) {
-    const quadRank = highestRank(quads);
-    const kicker = highestRank(atLeast1 & ~(1 << quadRank));
-    return (FOUR_OF_A_KIND << CATEGORY_SHIFT) | (quadRank << 16) | (kicker << 12);
-  }
-
-  if (trips !== 0) {
-    const tripRank = highestRank(trips);
-    // Seven cards can hold two sets. The spare set plays as the pair whenever it
-    // outranks any actual pair.
-    const otherTrips = trips & ~(1 << tripRank);
-    const pairCandidates = pairs | otherTrips;
-    if (pairCandidates !== 0) {
-      const pairRank = highestRank(pairCandidates);
-      return (FULL_HOUSE << CATEGORY_SHIFT) | (tripRank << 16) | (pairRank << 12);
-    }
-  }
-
-  if (flushRanks >= 0) {
-    return (FLUSH << CATEGORY_SHIFT) | (topRanks(flushRanks, 5) & 0xfffff);
-  }
-
-  const straight = straightHigh(atLeast1);
-  if (straight >= 0) return (STRAIGHT << CATEGORY_SHIFT) | (straight << 16);
-
-  if (trips !== 0) {
-    const tripRank = highestRank(trips);
-    const kickers = topRanks(atLeast1 & ~(1 << tripRank), 2);
-    return (THREE_OF_A_KIND << CATEGORY_SHIFT) | (tripRank << 16) | (kickers << 8);
-  }
-
-  const pairCount = popcount(pairs);
-  if (pairCount >= 2) {
-    const high = highestRank(pairs);
-    const low = highestRank(pairs & ~(1 << high));
-    const kicker = highestRank(atLeast1 & ~(1 << high) & ~(1 << low));
-    return (TWO_PAIR << CATEGORY_SHIFT) | (high << 16) | (low << 12) | (kicker << 8);
-  }
-
-  if (pairCount === 1) {
-    const pairRank = highestRank(pairs);
-    const kickers = topRanks(atLeast1 & ~(1 << pairRank), 3);
-    return (PAIR << CATEGORY_SHIFT) | (pairRank << 16) | (kickers << 4);
-  }
-
-  return (HIGH_CARD << CATEGORY_SHIFT) | (topRanks(atLeast1, 5) & 0xfffff);
-}
-
-/**
- * The four suit masks for a set of cards, for callers that hold part of a hand
- * fixed while the rest varies.
- *
- * The UTH solvers deal one board and then evaluate hundreds or billions of hands
- * against it. Rebuilding the whole hand's masks each time re-reads cards that
- * have not changed; this lets a caller pay for the board once.
- */
-export function suitMasksOf(cards: readonly Card[]): Int32Array {
-  const masks = new Int32Array(NUM_SUITS);
-  for (let i = 0; i < cards.length; i++) {
-    const card = cards[i]!;
-    masks[card % NUM_SUITS]! |= 1 << ((card / NUM_SUITS) | 0);
-  }
-  return masks;
-}
-
-/**
- * Score `masks` plus two more cards, without touching `masks`.
- *
- * The two cards must not already be in the masks. As with `evaluate`, that is
- * not checked: the callers enumerate from a deck and this sits in the innermost
- * loop of the pre-flop job, where the check would cost more than the work.
- */
-export function evaluateWithTwo(masks: Int32Array, a: Card, b: Card): number {
-  let s0 = masks[0]!;
-  let s1 = masks[1]!;
-  let s2 = masks[2]!;
-  let s3 = masks[3]!;
-
-  const bitA = 1 << ((a / NUM_SUITS) | 0);
-  switch (a % NUM_SUITS) {
-    case 0: s0 |= bitA; break;
-    case 1: s1 |= bitA; break;
-    case 2: s2 |= bitA; break;
-    default: s3 |= bitA;
-  }
-
-  const bitB = 1 << ((b / NUM_SUITS) | 0);
-  switch (b % NUM_SUITS) {
-    case 0: s0 |= bitB; break;
-    case 1: s1 |= bitB; break;
-    case 2: s2 |= bitB; break;
-    default: s3 |= bitB;
-  }
-
-  return scoreFromMasks(s0, s1, s2, s3);
-}
-
-export function evaluate(cards: readonly Card[]): number {
-  const n = cards.length;
-  if (n < 5 || n > 7) {
-    throw new Error(`Cannot evaluate a ${n}-card hand; poker hands here are 5 to 7 cards`);
-  }
-
-  // One 13-bit rank mask per suit. Everything below is derived from these four.
+export function evaluate7(cards: readonly Card[], offset = 0): number {
   let s0 = 0;
   let s1 = 0;
   let s2 = 0;
   let s3 = 0;
-  for (let i = 0; i < n; i++) {
-    const card = cards[i]!;
-    const bit = 1 << ((card / NUM_SUITS) | 0);
-    switch (card % NUM_SUITS) {
-      case 0:
-        s0 |= bit;
-        break;
-      case 1:
-        s1 |= bit;
-        break;
-      case 2:
-        s2 |= bit;
-        break;
-      default:
-        s3 |= bit;
+
+  for (let i = 0; i < 7; i++) {
+    const card = cards[offset + i]!;
+    const bit = 1 << (card >> 2); // rankOf, inlined
+    const suit = card & 3; // suitOf, inlined
+
+    // Deal each card's bit into its suit's mask without branching.
+    //
+    // `(x - 1) >> 31` is −1 when x is zero and 0 otherwise — the borrow out of
+    // the subtraction, smeared across all 32 bits by the arithmetic shift. Xor
+    // the suit against each candidate first and the expression becomes an
+    // all-ones mask exactly for the matching suit, so the bit ORs into that
+    // accumulator and vanishes from the other three.
+    //
+    // This is three times faster than the equivalent switch, and mask building
+    // is most of what this function costs — §6.4 warns that the evaluator
+    // dominates runtime, and it is not wrong.
+    s0 |= bit & ((suit - 1) >> 31);
+    s1 |= bit & (((suit ^ 1) - 1) >> 31);
+    s2 |= bit & (((suit ^ 2) - 1) >> 31);
+    s3 |= bit & (((suit ^ 3) - 1) >> 31);
+  }
+
+  return evaluateSuitMasks(s0, s1, s2, s3);
+}
+
+/**
+ * The evaluator proper, over four 13-bit rank masks — one per suit.
+ *
+ * Exposed because the UTH solvers build these masks incrementally as they walk
+ * boards, which saves re-reading seven cards for every dealer holding.
+ */
+export function evaluateSuitMasks(s0: number, s1: number, s2: number, s3: number): number {
+  // --- Flush, and with it straight flush -----------------------------------
+  // Only one suit can hold five of seven cards, so at most one of these fires.
+  let flushMask = 0;
+  if (popcount(s0) >= 5) flushMask = s0;
+  else if (popcount(s1) >= 5) flushMask = s1;
+  else if (popcount(s2) >= 5) flushMask = s2;
+  else if (popcount(s3) >= 5) flushMask = s3;
+
+  if (flushMask !== 0) {
+    const high = straightHigh[flushMask]!;
+    if (high >= 0) return (STRAIGHT_FLUSH << CATEGORY_SHIFT) | (high << 16);
+    // Neither a full house nor quads can share seven cards with a flush, so this
+    // flush is the whole answer.
+    return (FLUSH << CATEGORY_SHIFT) | topFive[flushMask]!;
+  }
+
+  // --- Rank multiplicities, without a histogram -----------------------------
+  const atLeast1 = s0 | s1 | s2 | s3;
+  const atLeast2 =
+    (s0 & s1) | (s0 & s2) | (s0 & s3) | (s1 & s2) | (s1 & s3) | (s2 & s3);
+  const atLeast3 =
+    (s0 & s1 & s2) | (s0 & s1 & s3) | (s0 & s2 & s3) | (s1 & s2 & s3);
+  const quads = s0 & s1 & s2 & s3;
+
+  if (quads !== 0) {
+    const q = highestRank(quads);
+    return (
+      (FOUR_OF_A_KIND << CATEGORY_SHIFT) |
+      (q << 16) |
+      oneKicker(atLeast1 & ~(1 << q))
+    );
+  }
+
+  const trips = atLeast3;
+  const pairs = atLeast2 & ~atLeast3;
+
+  if (trips !== 0) {
+    const t = highestRank(trips);
+    // The pair of a full house may be a second set of trips, played as a pair.
+    const paired = (trips & ~(1 << t)) | pairs;
+    if (paired !== 0) {
+      return (FULL_HOUSE << CATEGORY_SHIFT) | (t << 16) | (highestRank(paired) << 12);
     }
   }
 
-  return scoreFromMasks(s0, s1, s2, s3);
+  const straight = straightHigh[atLeast1]!;
+  if (straight >= 0) return (STRAIGHT << CATEGORY_SHIFT) | (straight << 16);
+
+  if (trips !== 0) {
+    const t = highestRank(trips);
+    return (
+      (THREE_OF_A_KIND << CATEGORY_SHIFT) |
+      (t << 16) |
+      twoKickers(atLeast1 & ~(1 << t))
+    );
+  }
+
+  if (pairs !== 0) {
+    const high = highestRank(pairs);
+    const rest = pairs & ~(1 << high);
+    if (rest !== 0) {
+      const low = highestRank(rest);
+      return (
+        (TWO_PAIR << CATEGORY_SHIFT) |
+        (high << 16) |
+        (low << 12) |
+        twoPairKicker(atLeast1 & ~(1 << high) & ~(1 << low))
+      );
+    }
+    return (PAIR << CATEGORY_SHIFT) | (high << 16) | threeKickers(atLeast1 & ~(1 << high));
+  }
+
+  return (HIGH_CARD << CATEGORY_SHIFT) | topFive[atLeast1]!;
 }
 
-/** Human-readable category, for feedback text and test failure messages. */
-export function describeScore(score: number): string {
-  return CATEGORY_NAMES[categoryOf(score)]!;
+/** Population count for a 13-bit mask. */
+function popcount(x: number): number {
+  let n = x - ((x >> 1) & 0x5555);
+  n = (n & 0x3333) + ((n >> 2) & 0x3333);
+  n = (n + (n >> 4)) & 0x0f0f;
+  return (n + (n >> 8)) & 0x1f;
 }
+
+/** Exposed for the table-integrity tests; not part of the hot path. */
+export const internals = { straightHigh, topFive, popcount };

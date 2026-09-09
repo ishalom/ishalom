@@ -1,399 +1,373 @@
 /**
- * Spec §14.1, third bullet: the hand evaluator, verified against an exhaustive
+ * Spec §14.1, third bullet: "Hand evaluator verified against an exhaustive
  * enumeration of all C(52,7) = 133,784,560 seven-card hands, checking rank
- * ordering consistency.
+ * ordering consistency."
  *
- * The evaluator is checked in three layers, each pinning down something the
- * others cannot:
+ * The evaluator is checked at four levels, each catching what the one above it
+ * cannot:
  *
- *   1. Every one of the 133,784,560 seven-card hands is categorised and the nine
- *      totals are compared against the published frequencies. An off-by-one at
- *      any category boundary moves at least two of those counts, so this is a
- *      sharp test despite being only nine numbers. It runs in the default suite.
- *   2. Every one of the 2,598,960 five-card hands is scored by both the fast
- *      evaluator and a naive independent one, and the two orderings are checked
- *      to be isomorphic: same ties, same comparisons, no exceptions. This is
- *      what validates the kickers, which a category tally cannot see.
- *   3. Every seven-card hand is checked to score as the best of its 21 five-card
- *      subsets. Layer 2 proves the five-card scores right, so this transitively
- *      proves the seven-card path across the whole space.
- *
- * Layers 2 and 3 need EV_ENGINE_SLOW_TESTS=1 (npm run test:slow); layer 3 is the
- * long one at a few minutes. A deterministic sample of both runs by default, so
- * an ordinary npm test still exercises those paths.
+ *   1. Named hands, written out by hand, for every category and every awkward
+ *      edge — the wheel, the steel wheel, a deuce in the last kicker slot.
+ *   2. The naive best-of-twenty-one reference (`test/helpers/naive-evaluator`),
+ *      on a large seeded sample. That reference is itself pinned exhaustively
+ *      against the published five-card frequencies, so it is not merely a second
+ *      guess.
+ *   3. The full C(52,7) enumeration, under `EV_ENGINE_SLOW_TESTS`: every hand
+ *      evaluated, categories tallied, and the tally compared against the
+ *      published seven-card frequencies. Those nine numbers sum to exactly
+ *      133,784,560, and reproducing all nine from 133 million independent
+ *      classifications is a very sharp test of the whole thing.
+ *   4. The full C(52,7) enumeration compared value-for-value against the naive
+ *      reference, under `EV_ENGINE_EXHAUSTIVE_EVALUATOR`. That one takes over an
+ *      hour, so it is not part of any routine run.
  */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { parseCards, type Card } from '../src/core/cards.ts';
+import { formatCards, parseCards, type Card } from '../src/core/cards.ts';
+import { evaluate7, evaluateSuitMasks, internals } from '../src/poker/evaluator.ts';
 import {
-  CATEGORY_NAMES,
   categoryOf,
-  evaluate,
+  CATEGORY_NAMES,
+  describeHandValue,
   FLUSH,
   FOUR_OF_A_KIND,
   FULL_HOUSE,
   HIGH_CARD,
+  makeHandValue,
+  MAX_HAND_VALUE,
   PAIR,
+  significantRanks,
   STRAIGHT,
   STRAIGHT_FLUSH,
   THREE_OF_A_KIND,
   TWO_PAIR,
-} from '../src/poker/evaluator.ts';
-import {
-  compareReference,
-  referenceEvaluate5,
-  referenceEvaluate7,
-} from './helpers/poker-reference.ts';
-import { SEVEN_CARD_FREQUENCIES } from '../src/uth/trips.ts';
+} from '../src/poker/handValue.ts';
+import { naiveEvaluate5, naiveEvaluate7 } from './helpers/naive-evaluator.ts';
+import { makeRng } from './helpers/simulate.ts';
 
 const slow = process.env.EV_ENGINE_SLOW_TESTS ? false : 'set EV_ENGINE_SLOW_TESTS=1';
-
-const score = (text: string) => evaluate(parseCards(text));
-const category = (text: string) => categoryOf(score(text));
+const exhaustive = process.env.EV_ENGINE_EXHAUSTIVE_EVALUATOR
+  ? false
+  : 'set EV_ENGINE_EXHAUSTIVE_EVALUATOR=1 (takes over an hour)';
 
 /**
- * Published frequencies of each category among all C(52,7) seven-card hands.
- * They sum to exactly 133,784,560, which is itself a check on the transcription.
+ * Published frequencies of each category among all C(52,7) seven-card hands,
+ * classified by the best five-card hand they contain. These nine numbers sum to
+ * exactly 133,784,560.
  */
-const PUBLISHED_SEVEN_CARD_FREQUENCIES: Readonly<Record<number, number>> = {
-  [HIGH_CARD]: 23_294_460,
-  [PAIR]: 58_627_800,
-  [TWO_PAIR]: 31_433_400,
-  [THREE_OF_A_KIND]: 6_461_620,
-  [STRAIGHT]: 6_180_020,
-  [FLUSH]: 4_047_644,
-  [FULL_HOUSE]: 3_473_184,
-  [FOUR_OF_A_KIND]: 224_848,
-  [STRAIGHT_FLUSH]: 41_584,
-};
+const SEVEN_CARD_FREQUENCIES: readonly number[] = [
+  23_294_460, // high card
+  58_627_800, // pair
+  31_433_400, // two pair
+  6_461_620, // three of a kind
+  6_180_020, // straight
+  4_047_644, // flush
+  3_473_184, // full house
+  224_848, // four of a kind
+  41_584, // straight flush
+];
 
-const TOTAL_SEVEN_CARD_HANDS = 133_784_560;
+/** The same, for all C(52,5) five-card hands. Sums to exactly 2,598,960. */
+const FIVE_CARD_FREQUENCIES: readonly number[] = [
+  1_302_540, // high card
+  1_098_240, // pair
+  123_552, // two pair
+  54_912, // three of a kind
+  10_200, // straight
+  5_108, // flush
+  3_744, // full house
+  624, // four of a kind
+  40, // straight flush
+];
 
-/** Distinct five-card hand values, a long-published property of the game. */
-const DISTINCT_FIVE_CARD_VALUES = 7462;
+const C_52_7 = 133_784_560;
+const C_52_5 = 2_598_960;
 
-test('the published frequencies used below sum to the size of the space', () => {
-  const sum = Object.values(PUBLISHED_SEVEN_CARD_FREQUENCIES).reduce((a, b) => a + b, 0);
-  assert.equal(sum, TOTAL_SEVEN_CARD_HANDS);
+const ev = (text: string) => evaluate7(parseCards(text));
+
+test('the published frequency tables are internally consistent', () => {
+  // If these sums are wrong the tables are wrong, and every test below is
+  // measuring against fiction.
+  assert.equal(SEVEN_CARD_FREQUENCIES.reduce((a, b) => a + b, 0), C_52_7);
+  assert.equal(FIVE_CARD_FREQUENCIES.reduce((a, b) => a + b, 0), C_52_5);
 });
 
 test('each category is recognised', () => {
-  assert.equal(category('As Ks Qs Js Ts 2c 3d'), STRAIGHT_FLUSH);
-  assert.equal(category('Ac Ad Ah As Kc 2d 3h'), FOUR_OF_A_KIND);
-  assert.equal(category('Ac Ad Ah Kc Kd 2s 3h'), FULL_HOUSE);
-  assert.equal(category('As Ks Qs 9s 2s 3h 4d'), FLUSH);
-  assert.equal(category('Ac Kd Qh Js Tc 2d 3h'), STRAIGHT);
-  assert.equal(category('Ac Ad Ah Kc Qd 2s 3h'), THREE_OF_A_KIND);
-  assert.equal(category('Ac Ad Kh Ks Jc 9d 8h'), TWO_PAIR);
-  assert.equal(category('Ac Ad Kh Qs Jc 9d 8h'), PAIR);
-  assert.equal(category('Ac Kd Qh 9s 7c 5d 3h'), HIGH_CARD);
-});
-
-test('the categories are ordered the way poker orders them', () => {
-  const ascending = [
-    'Ac Kd Qh 9s 7c 5d 3h',
-    'Ac Ad Kh Qs Jc 9d 8h',
-    'Ac Ad Kh Ks Jc 9d 8h',
-    'Ac Ad Ah Kc Qd 2s 3h',
-    'Ac Kd Qh Js Tc 2d 3h',
-    'As Ks Qs 9s 2s 3h 4d',
-    'Ac Ad Ah Kc Kd 2s 3h',
-    'Ac Ad Ah As Kc 2d 3h',
-    'As Ks Qs Js Ts 2c 3d',
-  ].map(score);
-
-  for (let i = 1; i < ascending.length; i++) {
-    const better = CATEGORY_NAMES[categoryOf(ascending[i]!)];
-    const worse = CATEGORY_NAMES[categoryOf(ascending[i - 1]!)];
-    assert.ok(ascending[i]! > ascending[i - 1]!, `${better} did not beat ${worse}`);
+  const cases: Array<[string, number, string]> = [
+    ['As Ks Qs Js Ts 2c 3d', STRAIGHT_FLUSH, 'royal'],
+    ['5s 4s 3s 2s As Kc Qd', STRAIGHT_FLUSH, 'steel wheel'],
+    ['Ac Ad Ah As Kc 2d 3h', FOUR_OF_A_KIND, 'quads'],
+    ['Ac Ad Ah Kc Kd 2s 3h', FULL_HOUSE, 'full house'],
+    ['As Ks 9s 5s 2s Ad Kd', FLUSH, 'flush beats the two pair alongside it'],
+    ['Ah Kd Qc Js Th 2c 3d', STRAIGHT, 'broadway'],
+    ['5h 4d 3c 2s Ah Kc Qd', STRAIGHT, 'the wheel'],
+    ['7c 7d 7h 2s 3c 4d 9h', THREE_OF_A_KIND, 'trips'],
+    ['Ac Ad Kc Kd 2s 3h 7c', TWO_PAIR, 'two pair'],
+    ['Ac Ad 2s 3h 4c 7d 9h', PAIR, 'pair'],
+    ['Ac Kd 9s 7h 5c 3d 2h', HIGH_CARD, 'high card'],
+  ];
+  for (const [hand, category, why] of cases) {
+    assert.equal(
+      categoryOf(ev(hand)),
+      category,
+      `${hand} (${why}) read as ${CATEGORY_NAMES[categoryOf(ev(hand))]}`,
+    );
   }
 });
 
-test('the wheel is the lowest straight, and its ace does not play high', () => {
-  const wheel = score('5c 4d 3h 2s Ac 9d 8h');
-  const sixHigh = score('6c 5d 4h 3s 2c 9d 8h');
-  const broadway = score('Ac Kd Qh Js Tc 2d 3h');
-
-  assert.equal(categoryOf(wheel), STRAIGHT);
-  assert.ok(wheel < sixHigh, 'a five-high straight is the weakest straight there is');
-  assert.ok(wheel < broadway);
-
-  const steelWheel = score('5s 4s 3s 2s As 9h 9d');
-  assert.equal(categoryOf(steelWheel), STRAIGHT_FLUSH);
-  assert.ok(steelWheel < score('6s 5s 4s 3s 2s 9h 9d'));
+test('exact values for hands written out by hand', () => {
+  assert.equal(ev('As Ks Qs Js Ts 2c 3d'), makeHandValue(STRAIGHT_FLUSH, 12));
+  assert.equal(ev('5s 4s 3s 2s As Kc Qd'), makeHandValue(STRAIGHT_FLUSH, 3), 'five-high');
+  assert.equal(ev('Ac Ad Ah As Kc 2d 3h'), makeHandValue(FOUR_OF_A_KIND, 12, 11));
+  assert.equal(ev('Ac Ad Ah Kc Kd 2s 3h'), makeHandValue(FULL_HOUSE, 12, 11));
+  assert.equal(ev('As Ks 9s 5s 2s Ad Kd'), makeHandValue(FLUSH, 12, 11, 7, 3, 0));
+  assert.equal(ev('Ah Kd Qc Js Th 2c 3d'), makeHandValue(STRAIGHT, 12));
+  assert.equal(ev('5h 4d 3c 2s Ah Kc Qd'), makeHandValue(STRAIGHT, 3));
+  assert.equal(ev('7c 7d 7h 2s 3c 4d 9h'), makeHandValue(THREE_OF_A_KIND, 5, 7, 2));
+  assert.equal(ev('Ac Ad Kc Kd 2s 3h 7c'), makeHandValue(TWO_PAIR, 12, 11, 5));
+  assert.equal(ev('Ac Ad 2s 3h 4c 7d 9h'), makeHandValue(PAIR, 12, 7, 5, 2));
+  assert.equal(ev('Ac Kd 9s 7h 5c 3d 2h'), makeHandValue(HIGH_CARD, 12, 11, 7, 5, 3));
 });
 
-test('an ace-high gap is not a straight', () => {
-  // A,K,Q,J,9 is the classic false positive for a careless straight check.
-  assert.equal(category('Ac Kd Qh Js 9c 4d 3h'), HIGH_CARD);
-  // Nor does the ace bridge the two ends of the rank order.
-  assert.equal(category('Ac Kd Qh 3s 2c 9d 7h'), HIGH_CARD);
+test('a deuce in the last slot is not mistaken for an empty slot', () => {
+  // Rank 0 is the deuce, so an unused rank slot and a deuce have the same bits.
+  // The decomposition has to know how many slots its category uses.
+  const flush = ev('As Ks 9s 5s 2s Ad Kd');
+  assert.deepEqual(significantRanks(flush), [12, 11, 7, 3, 0]);
+  assert.equal(describeHandValue(flush), 'flush (AK952)');
+
+  const wheelStraight = ev('5h 4d 3c 2s Ah Kc Qd');
+  assert.deepEqual(significantRanks(wheelStraight), [3]);
+
+  // And the ordering still works: a flush ending in a deuce beats one ending in
+  // nothing higher, and loses to the same flush with a trey.
+  assert.ok(ev('As Ks 9s 5s 3s Ad Kd') > flush);
 });
 
-test('seven cards can make a full house out of two sets', () => {
-  const twoSets = score('Ac Ad Ah Kc Kd Ks 2h');
-  assert.equal(categoryOf(twoSets), FULL_HOUSE);
-  // Aces full of kings, identical to the hand that gets there the ordinary way.
-  assert.equal(twoSets, score('Ac Ad Ah Kc Kd 2s 3h'));
+test('the wheel is the lowest straight, not the highest', () => {
+  assert.ok(ev('5h 4d 3c 2s Ah Kc Qd') < ev('6h 5d 4c 3s 2h Kc Qd'));
+  assert.ok(ev('5s 4s 3s 2s As Kc Qd') < ev('6s 5s 4s 3s 2s Kc Qd'));
+  // An ace-high straight is the highest, and a wheel does not wrap around it.
+  assert.ok(ev('Ah Kd Qc Js Th 2c 3d') > ev('5h 4d 3c 2s Ah Kc Qd'));
 });
 
-test('three pairs play as the best two, with the right kicker', () => {
-  const threePair = score('Ac Ad Kh Ks 7c 7d 9h');
-  assert.equal(categoryOf(threePair), TWO_PAIR);
-  // Aces and kings with a nine: the spare sevens do not become the kicker.
-  assert.equal(threePair, score('Ac Ad Kh Ks 9h 4c 3d'));
+test('categories rank in the right order', () => {
+  const ladder = [
+    'Ac Kd 9s 7h 5c 3d 2h', // high card
+    'Ac Ad 2s 3h 5c 7d 9h', // pair
+    'Ac Ad Kc Kd 2s 3h 7c', // two pair
+    '7c 7d 7h 2s 3c 5d 9h', // trips
+    '5h 4d 3c 2s 6h Kc Qd', // straight
+    'As Ks 9s 5s 2s Ad Kd', // flush
+    'Ac Ad Ah Kc Kd 2s 3h', // full house
+    'Ac Ad Ah As Kc 2d 3h', // quads
+    'As Ks Qs Js Ts 2c 3d', // straight flush
+  ];
+  for (let i = 1; i < ladder.length; i++) {
+    assert.ok(
+      ev(ladder[i]!) > ev(ladder[i - 1]!),
+      `${ladder[i]} (${describeHandValue(ev(ladder[i]!))}) should beat ` +
+        `${ladder[i - 1]} (${describeHandValue(ev(ladder[i - 1]!))})`,
+    );
+  }
 });
 
-test('a six-card flush keeps its five best cards', () => {
-  // The deuce of hearts must not displace the seven of hearts.
-  const sixHearts = score('Ah Kh Qh 7h 5h 2h 3c');
-  assert.equal(categoryOf(sixHearts), FLUSH);
-  assert.equal(sixHearts, score('Ah Kh Qh 7h 5h 2c 3c'));
+test('kickers decide hands inside a category', () => {
+  assert.ok(ev('Ac Ad Kc 9h 7s 5d 3h') > ev('Ac Ad Qc 9h 7s 5d 3h'), 'pair, first kicker');
+  assert.ok(ev('Ac Ad Kc Qh 7s 5d 3h') > ev('Ac Ad Kc Qh 6s 5d 3h'), 'pair, third kicker');
+  assert.ok(ev('Ac Ad Kc Kd Qs 5d 3h') > ev('Ac Ad Kc Kd Js 5d 3h'), 'two pair kicker');
+  assert.ok(ev('Ac Ad Kc Kd 2s 3h 4c') > ev('Qc Qd Jc Jd 2s 3h 4c'), 'higher two pair');
+  assert.ok(ev('Ac Ad Ah Kc Kd 2s 3h') > ev('Kc Kd Kh Ac Ad 2s 3h'), 'full house: trips first');
+  assert.ok(ev('Ac Ad Ah As Kc 2d 3h') > ev('Ac Ad Ah As Qc 2d 3h'), 'quads kicker');
 });
 
-test('kickers decide within a category', () => {
-  assert.ok(score('Ac Ad Kh Qs Jc 2d 3h') > score('Ac Ad Qh Js 9c 2d 3h'), 'pair kickers');
-  assert.ok(score('Ac Ad Kh Ks Qc 2d 3h') > score('Ac Ad Kh Ks Jc 2d 3h'), 'two-pair kicker');
-  assert.ok(score('Ac Ad Ah As Kc 2d 3h') > score('Ac Ad Ah As Qc 2d 3h'), 'quads kicker');
-  assert.ok(score('Ac Ad Ah Kc Kd 2s 3h') > score('Kc Kd Kh Ac Ad 2s 3h'), 'aces full beats kings full');
+test('identical hands in different suits tie exactly', () => {
+  assert.equal(ev('Ac Kd 9s 7h 5c 3d 2h'), ev('Ah Ks 9d 7c 5h 3s 2d'));
+  assert.equal(ev('As Ks Qs Js Ts 2c 3d'), ev('Ah Kh Qh Jh Th 2c 3d'));
 });
 
-test('suits never break a tie', () => {
-  // Poker has no suit ranking. Hands identical up to suit must score equal.
-  assert.equal(score('Ac Kc Qc Jc 9c 2d 3h'), score('Ah Kh Qh Jh 9h 2d 3s'));
-  assert.equal(score('Ac Ad Kh Qs Jc 9d 8h'), score('Ah As Kc Qd Jh 9s 8c'));
+test('two pair plus a third pair plays the best two', () => {
+  // Seven cards can hold three pairs; the smallest is not part of the hand, and
+  // the kicker comes from the whole hand, not just the leftovers.
+  const value = ev('Ac Ad Kc Kd 5s 5h 9c');
+  assert.equal(value, makeHandValue(TWO_PAIR, 12, 11, 7), 'nine kicks, not the five');
 });
 
-test('hands outside five to seven cards are rejected', () => {
-  assert.throws(() => evaluate(parseCards('Ac Kd Qh Js')), /5 to 7/);
-  assert.throws(() => evaluate(parseCards('Ac Kd Qh Js Tc 9d 8h 7s')), /5 to 7/);
+test('two sets of trips make a full house', () => {
+  const value = ev('Ac Ad Ah Kc Kd Kh 2s');
+  assert.equal(value, makeHandValue(FULL_HOUSE, 12, 11), 'aces full of kings');
 });
 
-test('five- and six-card hands evaluate too', () => {
-  assert.equal(category('As Ks Qs Js Ts'), STRAIGHT_FLUSH);
-  assert.equal(category('As Ks Qs Js Ts 2c'), STRAIGHT_FLUSH);
-  assert.equal(score('As Ks Qs Js Ts 2c'), score('As Ks Qs Js Ts'));
+test('a flush uses the best five of six or seven suited cards', () => {
+  assert.equal(ev('As Ks Qs Js 9s 8s 2c'), makeHandValue(FLUSH, 12, 11, 10, 9, 7));
+  assert.equal(ev('As Ks Qs Js 9s 8s 7s'), makeHandValue(FLUSH, 12, 11, 10, 9, 7));
 });
 
-/**
- * A deterministic pseudo-random deal, so the sampled tests cover a wide spread
- * of hands while failing identically on every machine and every run.
- */
-function sampleHands(count: number, cardsPerHand: number, seed: number): Card[][] {
-  let s = seed >>> 0 || 1;
-  const next = () => {
-    s ^= s << 13;
-    s >>>= 0;
-    s ^= s >>> 17;
-    s ^= s << 5;
-    s >>>= 0;
-    return s;
-  };
-  const deck: Card[] = Array.from({ length: 52 }, (_, i) => i);
-  const out: Card[][] = [];
-  for (let i = 0; i < count; i++) {
-    for (let j = 51; j > 0; j--) {
-      const k = next() % (j + 1);
-      const t = deck[j]!;
-      deck[j] = deck[k]!;
-      deck[k] = t;
+test('a straight flush is found inside six or seven suited cards', () => {
+  assert.equal(ev('9s 8s 7s 6s 5s 4s 2c'), makeHandValue(STRAIGHT_FLUSH, 7), 'nine-high');
+  assert.equal(ev('As Ks 9s 8s 7s 6s 5s'), makeHandValue(STRAIGHT_FLUSH, 7));
+});
+
+test('the lookup tables say what they claim to', () => {
+  const { straightHigh, topFive, popcount } = internals;
+
+  assert.equal(straightHigh.length, 8192);
+  assert.equal(topFive.length, 8192);
+
+  // Broadway, the wheel, and a mask one card short of each.
+  const maskOf = (ranks: number[]) => ranks.reduce((m, r) => m | (1 << r), 0);
+  assert.equal(straightHigh[maskOf([12, 11, 10, 9, 8])], 12);
+  assert.equal(straightHigh[maskOf([12, 3, 2, 1, 0])], 3, 'the wheel is five-high');
+  assert.equal(straightHigh[maskOf([12, 11, 10, 9])], -1);
+  assert.equal(straightHigh[maskOf([12, 3, 2, 1])], -1);
+  assert.equal(straightHigh[maskOf([12, 11, 10, 9, 8, 7, 6])], 12, 'takes the highest run');
+
+  // Independently recompute both tables the slow, obvious way.
+  for (let mask = 0; mask < 8192; mask++) {
+    const ranks: number[] = [];
+    for (let r = 12; r >= 0; r--) if (mask & (1 << r)) ranks.push(r);
+
+    assert.equal(popcount(mask), ranks.length, `popcount(${mask})`);
+
+    let expectedHigh = -1;
+    for (const high of ranks) {
+      if (high < 4) break;
+      if ([0, 1, 2, 3, 4].every((d) => mask & (1 << (high - d)))) {
+        expectedHigh = high;
+        break;
+      }
     }
-    out.push(deck.slice(0, cardsPerHand));
-  }
-  return out;
-}
+    if (expectedHigh === -1 && [12, 3, 2, 1, 0].every((r) => mask & (1 << r))) expectedHigh = 3;
+    assert.equal(straightHigh[mask], expectedHigh, `straightHigh(${mask})`);
 
-test('sampled seven-card hands order the same way as the naive reference', () => {
-  // The exhaustive version of this is below, behind the slow flag. This keeps
-  // the path covered on an ordinary test run.
-  const hands = sampleHands(20_000, 7, 0x5eed1234);
-  for (let i = 1; i < hands.length; i++) {
-    const a = hands[i - 1]!;
-    const b = hands[i]!;
-    const fast = Math.sign(evaluate(a) - evaluate(b));
-    const reference = compareReference(referenceEvaluate7(a), referenceEvaluate7(b));
-    assert.equal(fast, reference, `disagreed comparing [${a}] and [${b}]`);
+    let expectedPacked = 0;
+    ranks.slice(0, 5).forEach((r, i) => {
+      expectedPacked |= r << (16 - 4 * i);
+    });
+    assert.equal(topFive[mask], expectedPacked, `topFive(${mask})`);
   }
 });
 
-test('every seven-card hand is categorised, and the totals match the published frequencies', () => {
-  // The full C(52,7) enumeration from §14.1. Around eight seconds.
-  const counts = new Float64Array(9);
-  const hand: Card[] = new Array<Card>(7);
-  let total = 0;
-  let royals = 0;
+test('the array and suit-mask entry points agree', () => {
+  const rng = makeRng(0x5eed);
+  const deck = Array.from({ length: 52 }, (_, i) => i);
+  for (let trial = 0; trial < 20_000; trial++) {
+    for (let i = 51; i > 44; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+    }
+    const hand = deck.slice(45, 52);
+    let s0 = 0;
+    let s1 = 0;
+    let s2 = 0;
+    let s3 = 0;
+    for (const card of hand) {
+      const bit = 1 << Math.floor(card / 4);
+      const suit = card % 4;
+      if (suit === 0) s0 |= bit;
+      else if (suit === 1) s1 |= bit;
+      else if (suit === 2) s2 |= bit;
+      else s3 |= bit;
+    }
+    assert.equal(evaluate7(hand), evaluateSuitMasks(s0, s1, s2, s3), formatCards(hand));
+  }
+});
 
-  for (let a = 0; a < 46; a++) {
+test('the naive reference reproduces the published five-card frequencies', () => {
+  // Everything below leans on this reference, so it is pinned exhaustively over
+  // all 2,598,960 five-card hands before it is trusted to judge anything.
+  const counts = new Array<number>(9).fill(0);
+  const hand: Card[] = [0, 0, 0, 0, 0];
+  let total = 0;
+  for (let a = 0; a < 52; a++) {
     hand[0] = a;
-    for (let b = a + 1; b < 47; b++) {
+    for (let b = a + 1; b < 52; b++) {
       hand[1] = b;
-      for (let c = b + 1; c < 48; c++) {
+      for (let c = b + 1; c < 52; c++) {
         hand[2] = c;
-        for (let d = c + 1; d < 49; d++) {
+        for (let d = c + 1; d < 52; d++) {
           hand[3] = d;
-          for (let e = d + 1; e < 50; e++) {
+          for (let e = d + 1; e < 52; e++) {
             hand[4] = e;
-            for (let f = e + 1; f < 51; f++) {
-              hand[5] = f;
-              for (let g = f + 1; g < 52; g++) {
-                hand[6] = g;
-                const value = evaluate(hand);
-                const cat = categoryOf(value);
-                counts[cat]! += 1;
-                // A royal flush is a straight flush to the ace. The Trips bet
-                // pays the two differently, so the split is counted here too and
-                // checked against the frequencies that module embeds.
-                if (cat === STRAIGHT_FLUSH && ((value >>> 16) & 0xf) === 12) royals++;
-                total++;
-              }
-            }
+            counts[categoryOf(naiveEvaluate5(hand))]!++;
+            total++;
           }
         }
       }
     }
   }
+  assert.equal(total, C_52_5);
+  assert.deepEqual(counts, [...FIVE_CARD_FREQUENCIES]);
+});
 
-  assert.equal(total, TOTAL_SEVEN_CARD_HANDS);
-  for (const [key, expected] of Object.entries(PUBLISHED_SEVEN_CARD_FREQUENCIES)) {
-    const index = Number(key);
+test('agrees with the naive reference on a large random sample', () => {
+  const rng = makeRng(0xc0ffee);
+  const deck = Array.from({ length: 52 }, (_, i) => i);
+  const trials = 40_000;
+
+  for (let trial = 0; trial < trials; trial++) {
+    for (let i = 51; i > 44; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+    }
+    const hand = deck.slice(45, 52);
+    const fast = evaluate7(hand);
+    const slowValue = naiveEvaluate7(hand);
     assert.equal(
-      counts[index],
-      expected,
-      `${CATEGORY_NAMES[index]}: got ${counts[index]}, published ${expected}`,
+      fast,
+      slowValue,
+      `${formatCards(hand)}: fast ${describeHandValue(fast)}, naive ${describeHandValue(slowValue)}`,
     );
   }
+});
 
-  // The Trips module embeds this same distribution, with the royal split out.
-  // Checking it here is what stops the two drifting apart silently.
-  assert.equal(royals, SEVEN_CARD_FREQUENCIES.royalFlush, 'royal flushes');
-  assert.equal(
-    counts[STRAIGHT_FLUSH]! - royals,
-    SEVEN_CARD_FREQUENCIES.straightFlush,
-    'straight flushes below a royal',
-  );
-  assert.equal(counts[FOUR_OF_A_KIND], SEVEN_CARD_FREQUENCIES.fourOfAKind);
-  assert.equal(counts[FULL_HOUSE], SEVEN_CARD_FREQUENCIES.fullHouse);
-  assert.equal(counts[FLUSH], SEVEN_CARD_FREQUENCIES.flush);
-  assert.equal(counts[STRAIGHT], SEVEN_CARD_FREQUENCIES.straight);
-  assert.equal(counts[THREE_OF_A_KIND], SEVEN_CARD_FREQUENCIES.threeOfAKind);
-  assert.equal(
-    counts[HIGH_CARD]! + counts[PAIR]! + counts[TWO_PAIR]!,
-    SEVEN_CARD_FREQUENCIES.losing,
-    'hands below trips, which lose the Trips bet',
-  );
+test('every value stays inside the documented layout', () => {
+  const rng = makeRng(0xd15ea5e);
+  const deck = Array.from({ length: 52 }, (_, i) => i);
+  for (let trial = 0; trial < 50_000; trial++) {
+    for (let i = 51; i > 44; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+    }
+    const value = evaluate7(deck.slice(45, 52));
+    assert.ok(value >= 0 && value < MAX_HAND_VALUE, `value ${value} out of range`);
+    for (const rank of significantRanks(value)) {
+      assert.ok(rank >= 0 && rank <= 12, `rank slot ${rank} out of range`);
+    }
+  }
 });
 
 test(
-  'the fast and naive evaluators order all 2,598,960 five-card hands identically',
+  'exhaustive C(52,7): every hand classified, against the published frequencies',
   { skip: slow },
   () => {
-    // A category tally cannot see kickers. This can: it checks the two
-    // evaluators induce the same order and the same ties, with no exceptions.
-    const representative = new Map<number, number[]>();
-    const hand: Card[] = new Array<Card>(5);
+    const counts = new Array<number>(9).fill(0);
+    const hand: Card[] = [0, 0, 0, 0, 0, 0, 0];
     let total = 0;
+    let min = Infinity;
+    let max = -Infinity;
 
-    for (let a = 0; a < 48; a++) {
+    for (let a = 0; a < 52; a++) {
       hand[0] = a;
-      for (let b = a + 1; b < 49; b++) {
+      for (let b = a + 1; b < 52; b++) {
         hand[1] = b;
-        for (let c = b + 1; c < 50; c++) {
+        for (let c = b + 1; c < 52; c++) {
           hand[2] = c;
-          for (let d = c + 1; d < 51; d++) {
+          for (let d = c + 1; d < 52; d++) {
             hand[3] = d;
             for (let e = d + 1; e < 52; e++) {
               hand[4] = e;
-              const fast = evaluate(hand);
-              const reference = referenceEvaluate5(hand);
-              const seen = representative.get(fast);
-              if (seen === undefined) representative.set(fast, reference);
-              else {
-                assert.equal(
-                  compareReference(seen, reference),
-                  0,
-                  `two different hand values both scored ${fast}`,
-                );
-              }
-              total++;
-            }
-          }
-        }
-      }
-    }
-
-    assert.equal(total, 2_598_960);
-    assert.equal(
-      representative.size,
-      DISTINCT_FIVE_CARD_VALUES,
-      'five-card poker has exactly 7,462 distinct hand values',
-    );
-
-    // Sorting by the fast score must sort by real hand value too, strictly.
-    const entries = [...representative.entries()].sort((x, y) => x[0] - y[0]);
-    for (let i = 1; i < entries.length; i++) {
-      assert.ok(
-        compareReference(entries[i - 1]![1], entries[i]![1]) < 0,
-        `score order disagrees with hand value near ${entries[i]![0]}`,
-      );
-    }
-  },
-);
-
-test(
-  'every seven-card hand scores as the best of its 21 five-card subsets',
-  { skip: slow },
-  () => {
-    // The five-card scores are proven correct by the test above, so this pins
-    // the seven-card path to them across the entire space. A few minutes.
-    const subsets: number[][] = [];
-    for (let a = 0; a < 3; a++)
-      for (let b = a + 1; b < 4; b++)
-        for (let c = b + 1; c < 5; c++)
-          for (let d = c + 1; d < 6; d++)
-            for (let e = d + 1; e < 7; e++) subsets.push([a, b, c, d, e]);
-    assert.equal(subsets.length, 21);
-
-    const hand: Card[] = new Array<Card>(7);
-    const five: Card[] = new Array<Card>(5);
-    let total = 0;
-    let disagreements = 0;
-    let firstDisagreement = '';
-
-    for (let a = 0; a < 46; a++) {
-      hand[0] = a;
-      for (let b = a + 1; b < 47; b++) {
-        hand[1] = b;
-        for (let c = b + 1; c < 48; c++) {
-          hand[2] = c;
-          for (let d = c + 1; d < 49; d++) {
-            hand[3] = d;
-            for (let e = d + 1; e < 50; e++) {
-              hand[4] = e;
-              for (let f = e + 1; f < 51; f++) {
+              for (let f = e + 1; f < 52; f++) {
                 hand[5] = f;
                 for (let g = f + 1; g < 52; g++) {
                   hand[6] = g;
-                  const got = evaluate(hand);
-                  let best = -1;
-                  for (let i = 0; i < 21; i++) {
-                    const s = subsets[i]!;
-                    five[0] = hand[s[0]!]!;
-                    five[1] = hand[s[1]!]!;
-                    five[2] = hand[s[2]!]!;
-                    five[3] = hand[s[3]!]!;
-                    five[4] = hand[s[4]!]!;
-                    const v = evaluate(five);
-                    if (v > best) best = v;
-                  }
-                  if (got !== best) {
-                    disagreements++;
-                    if (firstDisagreement === '') {
-                      firstDisagreement = `[${hand.join(',')}] scored ${got}, best subset ${best}`;
-                    }
-                  }
+                  const value = evaluate7(hand);
+                  counts[value >>> 20]!++;
                   total++;
+                  if (value < min) min = value;
+                  if (value > max) max = value;
                 }
               }
             }
@@ -402,7 +376,57 @@ test(
       }
     }
 
-    assert.equal(total, TOTAL_SEVEN_CARD_HANDS);
-    assert.equal(disagreements, 0, firstDisagreement);
+    assert.equal(total, C_52_7, 'the enumeration itself is wrong');
+    assert.deepEqual(
+      counts,
+      [...SEVEN_CARD_FREQUENCIES],
+      counts
+        .map((n, i) => `${CATEGORY_NAMES[i]}: ${n} vs ${SEVEN_CARD_FREQUENCIES[i]}`)
+        .join('\n'),
+    );
+    assert.ok(min >= 0 && max < MAX_HAND_VALUE);
+    assert.equal(categoryOf(min), HIGH_CARD);
+    assert.equal(categoryOf(max), STRAIGHT_FLUSH);
+  },
+);
+
+test(
+  'exhaustive C(52,7): value-for-value against the naive reference',
+  { skip: exhaustive },
+  () => {
+    const hand: Card[] = [0, 0, 0, 0, 0, 0, 0];
+    let checked = 0;
+
+    for (let a = 0; a < 52; a++) {
+      hand[0] = a;
+      for (let b = a + 1; b < 52; b++) {
+        hand[1] = b;
+        for (let c = b + 1; c < 52; c++) {
+          hand[2] = c;
+          for (let d = c + 1; d < 52; d++) {
+            hand[3] = d;
+            for (let e = d + 1; e < 52; e++) {
+              hand[4] = e;
+              for (let f = e + 1; f < 52; f++) {
+                hand[5] = f;
+                for (let g = f + 1; g < 52; g++) {
+                  hand[6] = g;
+                  const fast = evaluate7(hand);
+                  const slowValue = naiveEvaluate7(hand);
+                  if (fast !== slowValue) {
+                    assert.fail(
+                      `${formatCards(hand)}: fast ${describeHandValue(fast)} (${fast}), ` +
+                        `naive ${describeHandValue(slowValue)} (${slowValue})`,
+                    );
+                  }
+                  checked++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    assert.equal(checked, C_52_7);
   },
 );

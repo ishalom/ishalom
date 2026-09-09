@@ -18,7 +18,8 @@
  * three rules side by side rather than spread across the solvers.
  */
 
-import { evaluate, PAIR, categoryOf } from '../poker/evaluator.ts';
+import { evaluate7 } from '../poker/evaluator.ts';
+import { PAIR, categoryOf } from '../poker/handValue.ts';
 import type { Card } from '../core/cards.ts';
 import { blindPayout, FOLD_RESULT, type BlindPaytable, type TripsPaytable } from './rules.ts';
 import {
@@ -28,7 +29,7 @@ import {
   STRAIGHT,
   STRAIGHT_FLUSH,
   THREE_OF_A_KIND,
-} from '../poker/evaluator.ts';
+} from '../poker/handValue.ts';
 
 /** The dealer qualifies with a pair or better, board cards included. */
 export function dealerQualifies(dealerScore: number): boolean {
@@ -103,8 +104,8 @@ export function settleHands(
   paytable: BlindPaytable,
 ): number {
   return settle(
-    evaluate([...playerHole, ...board]),
-    evaluate([...dealerHole, ...board]),
+    evaluate7([...playerHole, ...board]),
+    evaluate7([...dealerHole, ...board]),
     playBet,
     paytable,
   );

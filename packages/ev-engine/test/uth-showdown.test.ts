@@ -19,7 +19,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { parseCards } from '../src/core/cards.ts';
-import { evaluate, categoryOf, PAIR } from '../src/poker/evaluator.ts';
+import { evaluate7 } from '../src/poker/evaluator.ts';
+import { categoryOf, PAIR } from '../src/poker/handValue.ts';
 import {
   blindPayout,
   DEFAULT_BLIND_PAYTABLE,
@@ -30,7 +31,7 @@ import {
 import { dealerQualifies, settle, settleHands, tripsResult } from '../src/uth/showdown.ts';
 
 const paytable = DEFAULT_BLIND_PAYTABLE;
-const score = (text: string) => evaluate(parseCards(text));
+const score = (text: string) => evaluate7(parseCards(text));
 
 test('folding costs the ante and the blind, and nothing else', () => {
   assert.equal(FOLD_RESULT, -2);
