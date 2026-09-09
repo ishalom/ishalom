@@ -2,9 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="i18n-title" content="ui.ultimateTitle" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>EV Trainer — Ultimate Texas Hold'em</title>
     <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
     <style>
       .preview-note {
@@ -50,10 +53,10 @@
   <body>
     <div class="shell">
       <header class="rules">
-        <a class="back" href="/home.html">‹ Home</a>
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
         <div class="rules-main" style="text-align: right">
-          <span class="rules-name">Ultimate Texas Hold'em</span>
-          <span class="rules-badge">Blind pays straight or better</span>
+          <span class="rules-name" data-i18n="ui.ultimateTitle">Ultimate Texas Hold’em</span>
+          <span class="rules-badge" data-i18n="uth.blindPays">Blind pays straight or better</span>
         </div>
       </header>
 
@@ -65,7 +68,7 @@
       <main class="felt">
         <section class="street">
           <div class="street-head">
-            <span class="street-name">Your hand</span>
+            <span class="street-name" data-i18n="uth.yourHand">Your hand</span>
             <span class="street-stake" id="hole-class">—</span>
           </div>
           <div class="cards" id="hole"></div>
@@ -73,7 +76,7 @@
 
         <section class="street">
           <div class="street-head">
-            <span class="street-name">Pre-flop · raise 4× or check</span>
+            <span class="street-name" data-i18n="uth.preflopStreet">Pre-flop · raise 4× or check</span>
             <span class="street-stake">looked up, not solved</span>
           </div>
           <div class="verdict-row"><span class="verdict-pill" id="pf-verdict">—</span></div>
@@ -83,7 +86,7 @@
 
         <section class="street">
           <div class="street-head">
-            <span class="street-name">Flop · raise 2× or check</span>
+            <span class="street-name" data-i18n="uth.flopStreet">Flop · raise 2× or check</span>
             <span class="street-stake" id="fl-count">—</span>
           </div>
           <div class="cards" id="flop"></div>
@@ -93,7 +96,7 @@
 
         <section class="street">
           <div class="street-head">
-            <span class="street-name">River · raise 1× or fold</span>
+            <span class="street-name" data-i18n="uth.riverStreet">River · raise 1× or fold</span>
             <span class="street-stake" id="rv-count">—</span>
           </div>
           <div class="cards" id="river"></div>
@@ -104,7 +107,7 @@
 
       <section class="panel">
         <div class="panel-head">
-          <h2 class="panel-title">Trips side bet</h2>
+          <h2 class="panel-title" data-i18n="uth.tripsPanel">Trips side bet</h2>
           <span class="panel-note" id="trips-hit">—</span>
         </div>
         <div class="panel-body"><p style="margin: 0; font-size: 13.5px" id="trips"></p></div>
@@ -112,14 +115,14 @@
 
       <section class="panel">
         <div class="panel-head">
-          <h2 class="panel-title">Pre-flop table</h2>
+          <h2 class="panel-title" data-i18n="uth.preflopPanel">Pre-flop table</h2>
           <span class="panel-note" id="table-count">—</span>
         </div>
         <div class="panel-body"><div class="progress"><i id="table-bar" style="width: 0%"></i></div></div>
       </section>
 
       <nav class="actions">
-        <button class="action primary" id="redeal">Deal another</button>
+        <button class="action primary" id="redeal" data-i18n="uth.dealAnother">Deal another</button>
       </nav>
     </div>
 

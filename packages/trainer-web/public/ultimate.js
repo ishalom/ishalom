@@ -7,6 +7,8 @@
  * that one live is 2.1 billion outcomes per hole-card class.
  */
 
+const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
 const el = (id) => document.getElementById(id);
 
 function cardNode(card) {
@@ -44,7 +46,7 @@ function pill(id, text, fold) {
 async function deal() {
   const button = el('redeal');
   button.disabled = true;
-  button.textContent = 'Solving…';
+  button.textContent = T('uth.solving');
 
   const data = await (await fetch('/api/uth/preview')).json();
 
@@ -55,36 +57,36 @@ async function deal() {
 
   if (data.preflop) {
     const raise = data.preflop.optimalAction === 'raise4x';
-    pill('pf-verdict', raise ? 'Raise 4×' : 'Check', !raise);
+    pill('pf-verdict', T(raise ? 'uth.raise4' : 'uth.check'), !raise);
     bars(el('pf-bars'), [
-      { label: 'Raise 4×', ev: data.preflop.ev4x },
-      { label: 'Raise 3×', ev: data.preflop.ev3x },
-      { label: 'Check', ev: data.preflop.evCheck },
+      { label: T('uth.raise4'), ev: data.preflop.ev4x },
+      { label: T('uth.raise3'), ev: data.preflop.ev3x },
+      { label: T('uth.check'), ev: data.preflop.evCheck },
     ]);
     // §5.2.3: any hand strong enough to raise is strong enough to raise the max.
     el('pf-note').textContent =
       data.preflop.ev3x < Math.max(data.preflop.ev4x, data.preflop.evCheck)
-        ? 'The 3× raise loses to both alternatives here — as it does everywhere.'
+        ? T('uth.threeXNever')
         : '';
   } else {
     pill('pf-verdict', `${data.holeClass} not solved yet`, true);
     el('pf-bars').replaceChildren();
     el('pf-note').textContent =
-      'This class is still being computed by the offline job. The flop and river below are exact.';
+      T('uth.stillComputing');
   }
 
   const flopRaise = data.flop.optimalAction === 'play';
-  pill('fl-verdict', flopRaise ? 'Raise 2×' : 'Check', !flopRaise);
+  pill('fl-verdict', T(flopRaise ? 'uth.raise2' : 'uth.check'), !flopRaise);
   bars(el('fl-bars'), [
-    { label: 'Raise 2×', ev: data.flop.evPlay },
-    { label: 'Check', ev: data.flop.evCheck },
+    { label: T('uth.raise2'), ev: data.flop.evPlay },
+    { label: T('uth.check'), ev: data.flop.evCheck },
   ]);
   el('fl-count').textContent = `${data.flop.outcomes.toLocaleString()} outcomes, exact`;
 
   const riverRaise = data.river.optimalAction === 'play';
-  pill('rv-verdict', riverRaise ? 'Raise 1×' : 'Fold', !riverRaise);
+  pill('rv-verdict', T(riverRaise ? 'uth.raise1' : 'uth.fold'), !riverRaise);
   bars(el('rv-bars'), [
-    { label: 'Raise 1×', ev: data.river.evPlay },
+    { label: T('uth.raise1'), ev: data.river.evPlay },
     { label: 'Fold', ev: data.river.evFold },
   ]);
   el('rv-count').textContent = `beats ${data.river.wins} of 990 dealer hands`;
@@ -95,7 +97,7 @@ async function deal() {
   el('table-bar').style.width = `${(data.solvedClasses / data.totalClasses) * 100}%`;
 
   button.disabled = false;
-  button.textContent = 'Deal another';
+  button.textContent = T('uth.dealAnother');
 }
 
 el('redeal').addEventListener('click', deal);

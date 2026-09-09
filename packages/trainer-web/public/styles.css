@@ -138,13 +138,13 @@ body {
   padding: 14px;
   border-radius: 12px;
   background: var(--panel-2);
-  border-left: 4px solid var(--negligible);
+  border-inline-start: 4px solid var(--negligible);
 }
-.feedback.optimal { border-left-color: var(--optimal); }
-.feedback.negligible { border-left-color: var(--negligible); }
-.feedback.minor { border-left-color: var(--minor); }
-.feedback.significant { border-left-color: var(--significant); }
-.feedback.blunder { border-left-color: var(--blunder); }
+.feedback.optimal { border-inline-start-color: var(--optimal); }
+.feedback.negligible { border-inline-start-color: var(--negligible); }
+.feedback.minor { border-inline-start-color: var(--minor); }
+.feedback.significant { border-inline-start-color: var(--significant); }
+.feedback.blunder { border-inline-start-color: var(--blunder); }
 
 .verdict { font-weight: 700; font-size: 15px; margin: 0 0 2px; }
 .feedback.optimal .verdict { color: var(--optimal); }
@@ -221,7 +221,7 @@ button.action.primary:hover { background: #248055; }
   border-top: 1px solid var(--line);
   background: var(--bg);
 }
-.footer-note { color: var(--muted); font-size: 11.5px; text-align: right; }
+.footer-note { color: var(--muted); font-size: 11.5px; text-align: end; }
 .muted { color: var(--muted); font-size: 13px; }
 .legend { display: block; margin-top: 4px; font-size: 12px; }
 
@@ -250,7 +250,7 @@ dialog menu button {
 .preset {
   display: block;
   width: 100%;
-  text-align: left;
+  text-align: start;
   margin-top: 8px;
   padding: 11px 12px;
   border-radius: 9px;
@@ -331,7 +331,7 @@ td.R { background: #4a3d21; }
   font-weight: 600;
   cursor: pointer;
 }
-.reveal-next .key { font-size: 10px; color: var(--muted); margin-left: 7px; letter-spacing: 0.08em; }
+.reveal-next .key { font-size: 10px; color: var(--muted); margin-inline-start: 7px; letter-spacing: 0.08em; }
 .reveal-skip {
   background: none;
   border: none;
@@ -419,7 +419,7 @@ td.R { background: #4a3d21; }
 .log-tier.blunder { background: var(--blunder); }
 .log-hand { font-size: 13px; }
 .log-detail { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
-.log-net { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+.log-net { text-align: end; font-variant-numeric: tabular-nums; font-size: 13px; }
 .log-net.win { color: var(--optimal); }
 .log-net.loss { color: var(--blunder); }
 .log-steps { padding: 2px 13px 12px 26px; }
@@ -448,8 +448,7 @@ td.R { background: #4a3d21; }
   max-width: 540px;
   margin: 0 auto;
   min-height: 100dvh;
-  border-left: 1px solid rgba(255, 255, 255, 0.04);
-  border-right: 1px solid rgba(255, 255, 255, 0.04);
+  border-inline: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -527,19 +526,19 @@ hr.brass {
   min-width: 0;
   background: var(--panel-2);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--voice);
+  border-inline-start: 3px solid var(--voice);
   border-radius: 10px;
   padding: 10px 12px;
 }
 .speech::before {
   content: "";
   position: absolute;
-  left: -7px;
+  inset-inline-start: -7px;
   top: 18px;
   width: 10px;
   height: 10px;
   background: var(--panel-2);
-  border-left: 1px solid var(--line);
+  border-inline-start: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   transform: rotate(45deg);
 }
@@ -610,7 +609,7 @@ hr.brass {
   background: none;
   border: none;
   color: var(--ink);
-  text-align: left;
+  text-align: start;
   padding: 0;
   width: 100%;
 }
@@ -683,7 +682,7 @@ hr.brass {
   border: 1px solid var(--brass-dim);
   color: var(--voice);
   vertical-align: 2px;
-  margin-left: 7px;
+  margin-inline-start: 7px;
 }
 
 .modes { display: flex; gap: 6px; margin-top: 11px; }
@@ -755,7 +754,7 @@ hr.brass {
   letter-spacing: 0.01em;
   width: auto;
   max-width: 240px;
-  text-align: left;
+  text-align: start;
 }
 .hero-line {
   margin: 12px 0 0;
@@ -791,7 +790,7 @@ hr.brass {
 .door-sub { font-size: 12.5px; color: var(--muted); }
 .door-pip {
   position: absolute;
-  right: 12px;
+  inset-inline-end: 12px;
   bottom: 4px;
   font-size: 54px;
   line-height: 1;
@@ -923,7 +922,7 @@ hr.brass {
 /* The dealer keeps her speech bubble left-aligned — it is prose, and centred
    prose is harder to read than the tidiness is worth. */
 .felt .dealer-zone { justify-content: center; }
-.felt .speech { text-align: left; max-width: 400px; }
+.felt .speech { text-align: start; max-width: 400px; }
 
 /* Give the felt a little more room to breathe around the cards. */
 .felt .seat { padding: 14px 16px; }
@@ -989,28 +988,48 @@ hr.brass {
   font-display: swap;
 }
 
+/* Rubik carries both scripts in one warm, slightly rounded family, so Hebrew
+   does not land in a different voice from the English it sits beside. Split by
+   unicode-range: an English player never downloads the Hebrew subset, and a
+   Hebrew player gets the Latin one anyway because card ranks (A, K, T) and the
+   figures stay Latin in both languages. */
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-latin.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-hebrew.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+200F, U+20AA;
+}
+
 :root,
 :root[data-font='warm'] {
   /* Warm and soft: rounded humanist throughout, figures only a little heavier.
      Least formal, and the easiest to sit in front of for an hour. */
-  --body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --display: 'Nunito', system-ui, sans-serif;
+  --body: 'Nunito', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Nunito', 'Rubik', system-ui, sans-serif;
   --display-weight: 800;
   --display-tracking: -0.01em;
 }
 
 :root[data-font='elegant'] {
   /* The card-room look: engraved figures, quiet body copy. */
-  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --display: 'Playfair Display', ui-serif, Georgia, serif;
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Playfair Display', 'Rubik', ui-serif, Georgia, serif;
   --display-weight: 700;
   --display-tracking: 0;
 }
 
 :root[data-font='deco'] {
   /* Signage on an old table rather than a modern app. */
-  --body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --display: 'Oswald', 'Arial Narrow', sans-serif;
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Oswald', 'Rubik', 'Arial Narrow', sans-serif;
   --display-weight: 500;
   --display-tracking: 0.02em;
 }
@@ -1024,6 +1043,19 @@ hr.brass {
 }
 
 body { font-family: var(--body); }
+
+/* The one shape logical properties cannot mirror: the speech tail is a rotated
+   square whose two lit borders make the point. Flipping which borders are lit
+   would need a second rule anyway, so rotating the same square the other way is
+   fewer moving parts. */
+:root[dir='rtl'] .speech::before { transform: rotate(-135deg); }
+
+:root[lang='he'] {
+  --body: 'Rubik', system-ui, 'Segoe UI', sans-serif;
+  --display: 'Rubik', system-ui, sans-serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
 
 /* Everything set in the display face picks up its weight and tracking, so a
    condensed deco face and a rounded sans both land right without per-rule
@@ -1070,4 +1102,9 @@ body { font-family: var(--body); }
   border-color: var(--brass-dim);
   background: rgba(201, 162, 39, 0.14);
   color: var(--ink);
+}
+.fontbar-sep {
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--line);
+  margin-inline-start: 2px;
 }

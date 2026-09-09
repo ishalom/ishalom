@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
 import { TrainerSession } from './session.ts';
 import { uthPreview } from './uth.ts';
+import { catalogue, LOCALES, type Locale } from './i18n.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 const PORT = Number(process.env.PORT ?? 5173);
@@ -116,12 +117,31 @@ const server = createServer(async (request, response) => {
         case '/api/player': {
           if (typeof body.name === 'string') session.setPlayerName(body.name);
           if (typeof body.mode === 'string') session.setMode(body.mode as never);
+          if (typeof body.locale === 'string') session.setLocale(body.locale as Locale);
           return json(session.profile);
         }
 
         default:
           return json({ error: 'no such endpoint' }, 404);
       }
+    }
+
+    /*
+     * The catalogue, as a classic script the pages can load before anything
+     * else. Generated rather than stored in public/ so that src/i18n.ts stays
+     * the only file a string is ever written in — the browser and the sentence
+     * generator read the same table.
+     */
+    if (url.pathname === '/i18n.js') {
+      const messages = Object.fromEntries(LOCALES.map((l) => [l.code, catalogue(l.code as Locale)]));
+      const body = `window.EV_LOCALES=${JSON.stringify(LOCALES)};
+window.EV_MESSAGES=${JSON.stringify(messages)};
+`;
+      response.writeHead(200, {
+        'content-type': 'application/javascript; charset=utf-8',
+        'cache-control': 'no-store',
+      });
+      return void response.end(body);
     }
 
     // Static files. `normalize` plus the prefix check keeps `..` from escaping.

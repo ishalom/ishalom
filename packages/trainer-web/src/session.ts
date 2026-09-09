@@ -43,6 +43,7 @@ import {
   type Rating,
 } from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
+import { t, type Locale } from './i18n.ts';
 
 const RANKS = '23456789TJQKA';
 const SUITS = 'cdhs';
@@ -154,7 +155,14 @@ export class TrainerSession {
     significant: 0,
     blunder: 0,
   };
-  private playerName = 'Player';
+  /* Null until the player types one. The screen fills in a placeholder in
+     whatever language it is showing, which a fixed 'Player' here could not. */
+  private playerName: string | null = null;
+  /* The language every generated sentence is composed in. It lives on the
+     session rather than on each request because the dealer's prose and the
+     feedback card have to agree — a Hebrew explanation under an English
+     headline would read as a bug, not a mixture. */
+  private locale: Locale = 'en';
   private lastFeedback: unknown = null;
   private countedHand = -1;
   /** Finished hands, newest first. */
@@ -247,7 +255,7 @@ export class TrainerSession {
       optimalEv: record.evByAction[record.optimalAction] ?? 0,
     };
 
-    const explanation = explain(scenario, evaluation, this.rules);
+    const explanation = explain(scenario, evaluation, this.rules, this.locale);
     const closeCall = explanation.gap < TrainerSession.CLOSE_CALL;
 
     this.decisions++;
@@ -280,8 +288,8 @@ export class TrainerSession {
     this.pending.push({
       scenarioKey: record.scenarioKey,
       headline: explanation.headline,
-      chosen: prettyAction(record.chosenAction),
-      optimal: prettyAction(record.optimalAction),
+      chosen: prettyAction(record.chosenAction, this.locale),
+      optimal: prettyAction(record.optimalAction, this.locale),
       correct: record.evCost === 0,
       evCost: record.evCost,
       severity: record.severityTier,
@@ -322,13 +330,13 @@ export class TrainerSession {
       correct: record.evCost === 0,
       severity: record.severityTier,
       chosen: record.chosenAction,
-      chosenLabel: prettyAction(record.chosenAction),
+      chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimal: record.optimalAction,
-      optimalLabel: prettyAction(record.optimalAction),
+      optimalLabel: prettyAction(record.optimalAction, this.locale),
       optimalVerb:
         record.scenarioKey === 'bj:insurance'
           ? prettyAction(record.optimalAction)
-          : actionName(record.optimalAction as BlackjackAction),
+          : actionName(record.optimalAction as BlackjackAction, this.locale),
       evCost: record.evCost,
       ranked,
       sensitivity,
@@ -497,13 +505,16 @@ export class TrainerSession {
 
       asks.push({
         id: 'odds',
-        question: 'My odds?',
+        question: t(this.locale, 'coach.q.odds'),
         answer:
-          `I break ${Math.round(odds.bust * 100)}% of the time showing this, and finish with ` +
-          `17 or better the other ${Math.round(odds.madeHand * 100)}%. ` +
+          t(this.locale, 'coach.a.odds', {
+            bust: Math.round(odds.bust * 100),
+            made: Math.round(odds.madeHand * 100),
+          }) +
+          ' ' +
           (bust > 0
-            ? `You break ${Math.round(bust * 100)}% of the time if you take a card.`
-            : `You cannot break at all on the next card — that ace protects you.`),
+            ? t(this.locale, 'coach.a.oddsYouBreak', { bust: Math.round(bust * 100) })
+            : t(this.locale, 'coach.a.oddsNoBreak')),
       });
 
       // The spread between the two candidates, without naming which is which:
@@ -512,13 +523,13 @@ export class TrainerSession {
         const spread = Math.abs(ranked[0]!.ev - ranked[1]!.ev);
         asks.push({
           id: 'close',
-          question: 'Is this close?',
+          question: t(this.locale, 'coach.q.close'),
           answer:
             spread < 0.01
-              ? 'Very. The two best plays here are within a hundredth of a unit — this one is nearly a coin-flip.'
-              : spread < 0.05
-                ? `Closer than it looks. About ${spread.toFixed(3)} of a unit between the top two.`
-                : `Not really. There is ${spread.toFixed(3)} of a unit between the best play and the next one.`,
+              ? t(this.locale, 'coach.a.closeVery')
+              : t(this.locale, spread < 0.05 ? 'coach.a.closeSome' : 'coach.a.closeNot', {
+                  spread: spread.toFixed(3),
+                }),
         });
       }
       return { phase: 'player', asks, prompt: this.prompt(scenario, view.legalActions.length) };
@@ -527,14 +538,12 @@ export class TrainerSession {
     if (view.phase === 'insurance') {
       return {
         phase: 'insurance',
-        prompt: 'Ace up. Insurance is open — but it is a bet on my hole card, not on your hand.',
+        prompt: t(this.locale, 'coach.insurance.prompt'),
         asks: [
           {
             id: 'odds',
-            question: 'My odds?',
-            answer:
-              'Barely three cards in thirteen are tens, so the bet loses money every ' +
-              'time it is made. Your own cards have nothing to do with it.',
+            question: t(this.locale, 'coach.q.odds'),
+            answer: t(this.locale, 'coach.insurance.odds'),
           },
         ],
       };
@@ -547,13 +556,12 @@ export class TrainerSession {
   private prompt(scenario: ReturnType<typeof parseScenarioKey>, choices: number): string {
     const label =
       scenario.kind === 'pair'
-        ? 'A pair'
+        ? t(this.locale, 'label.pair')
         : scenario.kind === 'soft'
-          ? `Soft ${scenario.total}`
-          : `${scenario.total}`;
-    if (scenario.kind === 'pair') return `${label}. You can break that up if you want it.`;
-    if (choices <= 2) return `${label}. Not much to choose from — what'll it be?`;
-    return `${label} against my card. Your call.`;
+          ? t(this.locale, 'label.soft', { total: scenario.total ?? 0 })
+          : t(this.locale, 'label.hard', { total: scenario.total ?? 0 });
+    if (scenario.kind === 'pair') return t(this.locale, 'coach.prompt.pair');
+    return t(this.locale, choices <= 2 ? 'coach.prompt.few' : 'coach.prompt.open', { label });
   }
 
   /** Everything the home screen needs. */
@@ -576,7 +584,7 @@ export class TrainerSession {
         if (!d || !cell) return null;
         return {
           scenarioKey: key,
-          label: describeScenarioKey(key),
+          label: describeScenarioKey(key, this.locale),
           difficulty: d[this.rating.mode],
           margin: d.margin,
           optimal: cell.optimalAction,
@@ -587,7 +595,8 @@ export class TrainerSession {
       .sort((a, b) => a.difficulty - b.difficulty);
 
     return {
-      player: { name: this.playerName, initial: this.playerName.charAt(0).toUpperCase() },
+      player: { name: this.playerName },
+      locale: this.locale,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       stats: this.stats,
       ruleSet: this.ruleSet,
@@ -598,6 +607,10 @@ export class TrainerSession {
   setPlayerName(name: string): void {
     const trimmed = name.trim();
     if (trimmed.length > 0) this.playerName = trimmed.slice(0, 24);
+  }
+
+  setLocale(locale: Locale): void {
+    if (locale === 'en' || locale === 'he') this.locale = locale;
   }
 
   setMode(mode: DifficultyMode): void {
@@ -616,15 +629,8 @@ export class TrainerSession {
   }
 }
 
-function prettyAction(action: string): string {
-  switch (action) {
-    case 'takeInsurance':
-      return 'Take insurance';
-    case 'declineInsurance':
-      return 'Decline insurance';
-    default:
-      return action.charAt(0).toUpperCase() + action.slice(1);
-  }
+function prettyAction(action: string, locale: Locale = 'en'): string {
+  return t(locale, `action.${action}`);
 }
 
 /** Best total of a hand, for display. */
@@ -645,15 +651,17 @@ function totalOf(cards: readonly number[]): number {
 }
 
 /** A scenario key as it reads on the difficulty ladder: "8,8 vs 6". */
-function describeScenarioKey(key: string): string {
-  if (key === 'bj:insurance') return 'Insurance';
+function describeScenarioKey(key: string, locale: Locale = 'en'): string {
+  if (key === 'bj:insurance') return t(locale, 'label.insurance');
   const scenario = parseScenarioKey(key);
   const up = key.slice(key.indexOf(':vs') + 3);
   if (scenario.kind === 'pair') {
     const rank = scenario.pairRank!;
     const label = rank === 0 ? 'A' : rank === 9 ? '10' : String(rank + 1);
-    return `${label},${label} vs ${up}`;
+    return t(locale, 'label.vs', { hand: `${label},${label}`, up });
   }
-  if (scenario.kind === 'soft') return `A,${(scenario.total ?? 0) - 11} vs ${up}`;
-  return `${scenario.total} vs ${up}`;
+  if (scenario.kind === 'soft') {
+    return t(locale, 'label.vs', { hand: `A,${(scenario.total ?? 0) - 11}`, up });
+  }
+  return t(locale, 'label.vs', { hand: String(scenario.total), up });
 }

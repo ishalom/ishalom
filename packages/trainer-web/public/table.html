@@ -2,44 +2,47 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="i18n-title" content="ui.blackjackTitle" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>EV Trainer — Blackjack</title>
     <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
   </head>
   <body>
     <div class="shell">
     <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->
     <header class="rules" id="rules-bar">
-      <a class="back" href="/home.html">‹ Home</a>
+      <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
       <div class="rules-main">
         <span class="rules-name" id="rules-name">—</span>
         <span class="rules-badge" id="rules-badge"></span>
       </div>
-      <button class="link" id="open-settings" aria-label="Change rule set">Rules</button>
+      <button class="link" id="open-settings" data-i18n-attr="aria-label:ui.changeRuleSet" data-i18n="ui.rules">Rules</button>
     </header>
 
     <!--
       Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV
       lost. Units won is present but last, and deliberately quiet.
     -->
-    <section class="stats" id="stats" aria-label="Session statistics">
+    <section class="stats" id="stats" data-i18n-attr="aria-label:ui.sessionStats">
       <div class="stat" id="accuracy-stat" tabindex="0">
         <span class="stat-value" id="stat-accuracy">—</span>
-        <span class="stat-label">decision accuracy</span>
+        <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
         <span class="tip" id="accuracy-tip" role="tooltip"></span>
       </div>
       <div class="stat">
         <span class="stat-value" id="stat-evlost">—</span>
-        <span class="stat-label">EV lost / 100 hands</span>
+        <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
       </div>
       <div class="stat">
         <span class="stat-value" id="stat-edge">—</span>
-        <span class="stat-label">your effective edge</span>
+        <span class="stat-label" data-i18n="ui.yourEdge">your effective edge</span>
       </div>
       <div class="stat stat-quiet">
         <span class="stat-value" id="stat-units">—</span>
-        <span class="stat-label">units</span>
+        <span class="stat-label" data-i18n="ui.units">units</span>
       </div>
     </section>
 
@@ -67,62 +70,62 @@
           </svg>
         </div>
         <div class="speech">
-          <div class="speech-who">Vera · dealer</div>
-          <p id="say">Take a seat. Deal when you're ready.</p>
+          <div class="speech-who" data-i18n="ui.dealerName">Vera · dealer</div>
+          <p id="say" data-i18n="ui.takeSeat">Take a seat. Deal when you’re ready.</p>
           <p id="answer" hidden class="muted"></p>
           <div class="asks" id="asks"></div>
         </div>
       </div>
 
-      <section class="seat" aria-label="Dealer">
-        <h2 class="seat-title">Dealer <span class="seat-total" id="dealer-total"></span></h2>
+      <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+        <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span> <span class="seat-total" id="dealer-total"></span></h2>
         <div class="cards" id="dealer-cards"></div>
       </section>
 
-      <section class="seat" aria-label="Your hand">
-        <h2 class="seat-title">You <span class="seat-total" id="player-total"></span></h2>
+      <section class="seat" data-i18n-attr="aria-label:ui.yourHand">
+        <h2 class="seat-title"><span data-i18n="ui.you">You</span> <span class="seat-total" id="player-total"></span></h2>
         <div id="player-hands"></div>
       </section>
 
-      <p class="empty" id="empty-state">Press Deal to start.</p>
+      <p class="empty" id="empty-state" data-i18n="ui.pressDeal">Press Deal to start.</p>
     </main>
 
     <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->
     <section class="feedback" id="feedback" hidden aria-live="polite"></section>
 
     <!-- Spec §10.1: primary actions along the bottom edge, reachable one-handed. -->
-    <nav class="actions" id="actions" aria-label="Actions"></nav>
+    <nav class="actions" id="actions" data-i18n-attr="aria-label:ui.actions"></nav>
 
     <dialog id="settings">
       <form method="dialog">
-        <h2>Rule set</h2>
-        <p class="muted">
+        <h2 data-i18n="ui.ruleSet">Rule set</h2>
+        <p class="muted" data-i18n="ui.ruleSetNote">
           Changing the rules starts a new session. The correct play changes with
           them, which is the point.
         </p>
         <div id="preset-list"></div>
         <menu>
-          <button value="cancel">Close</button>
+          <button value="cancel" data-i18n="ui.close">Close</button>
         </menu>
       </form>
     </dialog>
 
     <dialog id="reference">
       <form method="dialog">
-        <h2>Basic strategy for these rules</h2>
+        <h2 data-i18n="ui.basicStrategy">Basic strategy for these rules</h2>
         <p class="muted">
-          Derived from the EV computation, not copied from a chart.
-          <span class="legend">H hit · S stand · D double · P split · R surrender</span>
+          <span data-i18n="ui.chartNote">Derived from the EV computation, not copied from a chart.</span>
+          <span class="legend" data-i18n="ui.legend">H hit · S stand · D double · P split · R surrender</span>
         </p>
         <div id="chart-container"></div>
         <menu>
-          <button value="cancel">Close</button>
+          <button value="cancel" data-i18n="ui.close">Close</button>
         </menu>
       </form>
     </dialog>
 
     <footer class="footer">
-      <button class="link" id="open-reference">Strategy chart</button>
+      <button class="link" id="open-reference" data-i18n="ui.strategyChart">Strategy chart</button>
       <span class="footer-note" id="edge-note"></span>
     </footer>
 

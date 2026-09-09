@@ -10,6 +10,8 @@
  * has none.
  */
 
+const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
 const el = (id) => document.getElementById(id);
 
 async function api(path, body) {
@@ -25,11 +27,12 @@ async function api(path, body) {
 const round10 = (n) => Math.round(n / 10) * 10;
 
 function greet(stats) {
-  if (stats.hands === 0) return 'Nothing played yet. Pick a table.';
-  if (stats.hands < 25) return `${stats.hands} hands in. Early days.`;
-  if (stats.accuracy >= 0.99) return `${stats.hands.toLocaleString()} hands, and playing them well.`;
-  if (stats.accuracy >= 0.95) return `${stats.hands.toLocaleString()} hands. Close to clean.`;
-  return `${stats.hands.toLocaleString()} hands. There is work in here.`;
+  const hands = stats.hands.toLocaleString();
+  if (stats.hands === 0) return T('home.greet.none');
+  if (stats.hands < 25) return T('home.greet.early', { hands });
+  if (stats.accuracy >= 0.99) return T('home.greet.clean', { hands });
+  if (stats.accuracy >= 0.95) return T('home.greet.close', { hands });
+  return T('home.greet.work', { hands });
 }
 
 function renderStanding(profile) {
@@ -38,12 +41,14 @@ function renderStanding(profile) {
 
   el('rating').textContent = rated ? round10(rating.rating) : '—';
   el('rating').className = 'standing-value' + (rating.provisional ? ' provisional' : '');
-  el('rating-label').textContent = rated ? `${rating.mode} rating` : 'unrated';
+  el('rating-label').textContent = rated
+    ? T('home.ratingOf', { mode: T('ui.mode.' + rating.mode) })
+    : T('home.unrated');
   el('rating-note').textContent = !rated
-    ? 'Play a few hands and this settles on a number. It rises when you beat a hard spot and falls when you lose an easy one.'
+    ? T('home.rating.none')
     : rating.provisional
-      ? `Still settling — about ${Math.max(1, 30 - rating.ratedDecisions)} more decisions before it means much.`
-      : `Peak ${round10(rating.peak)}. It moves with every decision, both ways.`;
+      ? T('home.rating.settling', { left: Math.max(1, 30 - rating.ratedDecisions) })
+      : T('home.rating.peak', { peak: round10(rating.peak) });
 
   for (const button of document.querySelectorAll('.mode')) {
     button.setAttribute('aria-pressed', String(button.dataset.mode === rating.mode));
@@ -81,8 +86,7 @@ function renderHands(view) {
   if (hands.length === 0) {
     const note = document.createElement('p');
     note.className = 'empty-note';
-    note.textContent =
-      'No hands yet this session. Every one you play shows up here, with what it cost.';
+    note.textContent = T('home.noHands');
     box.appendChild(note);
     return;
   }
@@ -147,35 +151,31 @@ function renderStats(view, profile) {
   if (s.decisions === 0) {
     const note = document.createElement('p');
     note.className = 'empty-note';
-    note.textContent = 'Nothing to measure yet. Play a hand or two.';
+    note.textContent = T('home.noStats');
     box.appendChild(note);
     return;
   }
 
   const excluded =
     s.closeCallsExcluded > 0
-      ? `${s.closeCallsExcluded} coin-flip${s.closeCallsExcluded === 1 ? '' : 's'} left out — ` +
-        'spots where the best two plays are within a hundredth of a unit. Counting those ' +
-        `too, it is ${(s.accuracyIncludingCloseCalls * 100).toFixed(1)}%.`
-      : 'Every decision so far had a clear best play.';
+      ? T(s.closeCallsExcluded === 1 ? 'home.excludedOne' : 'home.excluded', {
+          n: s.closeCallsExcluded,
+          pct: (s.accuracyIncludingCloseCalls * 100).toFixed(1),
+        })
+      : T('home.noExcluded');
 
   box.append(
-    figure(`${(s.accuracy * 100).toFixed(1)}%`, 'of your decisions were the best play', excluded),
-    figure(
-      s.evLostPer100.toFixed(2),
-      'units given away per hundred hands',
-      'What your mistakes cost, separate from how the cards happened to fall.',
-    ),
+    figure(`${(s.accuracy * 100).toFixed(1)}%`, T('home.fig.accuracy'), excluded),
+    figure(s.evLostPer100.toFixed(2), T('home.fig.evLost'), T('home.fig.evLostNote')),
     figure(
       `${s.effectiveHouseEdgePercent.toFixed(2)}%`,
-      'the edge you are really playing against',
-      `The house takes ${profile.ruleSet.edgePercent.toFixed(2)}% from perfect play under these ` +
-        'rules. The rest of that is yours to close.',
+      T('home.fig.edge'),
+      T('home.fig.edgeNote', { pct: profile.ruleSet.edgePercent.toFixed(2) }),
     ),
     figure(
       `${s.netUnits > 0 ? '+' : ''}${s.netUnits}`,
-      'units, this session',
-      'How the cards fell. Kept last on purpose.',
+      T('home.fig.units'),
+      T('home.fig.unitsNote'),
       true,
     ),
   );
@@ -197,14 +197,19 @@ function selectTab(name) {
 
 async function refresh() {
   const [profile, view] = await Promise.all([api('/api/profile'), api('/api/state')]);
-  el('name').value = profile.player.name;
-  el('initial').textContent = profile.player.initial;
+  // The placeholder is the client's business, because it has to be in the
+  // language on screen; the server only knows a name once one is typed.
+  const name = profile.player.name || T('ui.defaultName');
+  el('name').value = name;
+  el('initial').textContent = name.charAt(0).toUpperCase();
   el('greeting').textContent = greet(view.stats);
   el('bj-sub').textContent =
-    view.stats.hands === 0 ? 'Play a hand' : `${view.stats.hands.toLocaleString()} hands played`;
-  el('footer').textContent =
-    `Under these rules perfect play still loses ${profile.ruleSet.edgePercent.toFixed(2)}% of ` +
-    'every unit bet. This teaches you to lose less, not to win.';
+    view.stats.hands === 0
+      ? T('ui.playAHand')
+      : T('home.handsPlayed', { hands: view.stats.hands.toLocaleString() });
+  el('footer').textContent = T('home.footer', {
+    pct: profile.ruleSet.edgePercent.toFixed(2),
+  });
 
   renderStanding(profile);
   renderHands(view);
@@ -230,4 +235,5 @@ try {
 } catch {
   selectTab('standing');
 }
-refresh();
+// After the locale handshake, so the first render is already in the right language.
+Promise.resolve(window.EV && window.EV.ready).then(refresh);

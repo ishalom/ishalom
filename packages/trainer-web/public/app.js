@@ -12,6 +12,9 @@
  *   §10.1 Actions live along the bottom edge, and Deal needs no confirmation.
  */
 
+const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
+
 const el = (id) => document.getElementById(id);
 
 const state = { view: null, busy: false, reveal: null };
@@ -114,7 +117,7 @@ function renderDealer(view) {
       note.className = 'dealer-note';
       box.parentElement.appendChild(note);
     }
-    note.textContent = 'Did not draw — you busted first. A dealer must keep drawing to 17.';
+    note.textContent = T('fb.didNotDraw');
   } else if (note) {
     note.remove();
   }
@@ -176,13 +179,7 @@ function renderRich(target, text) {
     .replace(/(?<![\w>])([+−-]?\d+(?:[.,]\d+)?%?\+?)(?![\w<])/g, '<span class="num">$1</span>');
 }
 
-const SEVERITY_WORD = {
-  optimal: 'Correct',
-  negligible: 'Negligible',
-  minor: 'Minor error',
-  significant: 'Significant error',
-  blunder: 'Blunder',
-};
+const severityWord = (severity) => T('fb.' + severity);
 
 /**
  * The guided reveal (§3.4, §7.1).
@@ -200,7 +197,7 @@ function revealComplete() {
   return !state.reveal || state.reveal.shown >= 3;
 }
 
-const STEP_TITLES = ['Read the dealer', 'Read your hand', 'Put them together'];
+const stepTitles = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
 
 function renderFeedback(view) {
   const box = el('feedback');
@@ -227,17 +224,21 @@ function renderFeedback(view) {
     const verdict = document.createElement('p');
     verdict.className = 'verdict';
     verdict.textContent = feedback.correct
-      ? `Correct — ${feedback.optimalLabel}`
-      : `${SEVERITY_WORD[feedback.severity]} — cost ${feedback.evCost.toFixed(3)} units`;
+      ? T('fb.correct', { action: feedback.optimalLabel })
+      : T('fb.wrong', {
+          severity: severityWord(feedback.severity),
+          cost: feedback.evCost.toFixed(3),
+        });
     box.appendChild(verdict);
 
     if (!feedback.correct) {
       const did = document.createElement('p');
       did.className = 'did';
       did.textContent =
-        `You chose ${feedback.chosenLabel.toLowerCase()}. ` +
-        `Best is ${feedback.optimalLabel.toLowerCase()}.` +
-        (feedback.closeCall ? ' The top two are within a hundredth of a unit.' : '');
+        T('fb.youChose', {
+          chosen: feedback.chosenLabel.toLowerCase(),
+          best: feedback.optimalLabel.toLowerCase(),
+        }) + (feedback.closeCall ? ' ' + T('fb.closeCall') : '');
       box.appendChild(did);
     }
   }
@@ -257,7 +258,7 @@ function renderFeedback(view) {
     const body = document.createElement('div');
     const head = document.createElement('div');
     head.className = 'step-head';
-    head.textContent = STEP_TITLES[i];
+    head.textContent = stepTitles()[i];
     const text = document.createElement('p');
     if (revealed) renderRich(text, state.reveal.steps[i]);
     body.append(head, text);
@@ -271,12 +272,12 @@ function renderFeedback(view) {
     controls.className = 'reveal-controls';
     const next = document.createElement('button');
     next.className = 'reveal-next';
-    next.innerHTML = `Next<span class="key">SPACE</span>`;
+    next.innerHTML = `${T('ui.next')}<span class="key">SPACE</span>`;
     next.addEventListener('click', advanceReveal);
     const skip = document.createElement('button');
     skip.className = 'reveal-skip';
-    skip.textContent = 'Skip to the answer, always';
-    skip.title = 'Remembered for every hand from now on. Change it back below the card.';
+    skip.textContent = T('fb.skipAlways');
+    skip.title = T('fb.skipAlwaysHint');
     skip.addEventListener('click', () => {
       setShowAllPreferred(true);
       state.reveal.shown = 3;
@@ -304,9 +305,7 @@ function renderFeedback(view) {
   // in a settings screen the player has no reason to open.
   const pref = document.createElement('button');
   pref.className = 'reveal-skip pref';
-  pref.textContent = showAllPreferred()
-    ? 'Walk me through it next time'
-    : 'Skip to the answer next time';
+  pref.textContent = T(showAllPreferred() ? 'fb.walkMe' : 'fb.skipNext');
   pref.addEventListener('click', () => {
     setShowAllPreferred(!showAllPreferred());
     render();
@@ -317,10 +316,9 @@ function renderFeedback(view) {
   if (feedback.sensitivity.length > 0) {
     const note = document.createElement('p');
     note.className = 'sensitivity';
-    note.textContent =
-      'Rule-sensitive: ' +
-      feedback.sensitivity.map((s) => `${s.action} ${s.label}`).join('; ') +
-      '.';
+    note.textContent = T('fb.ruleSensitive', {
+      list: feedback.sensitivity.map((s) => `${s.action} ${s.label}`).join('; '),
+    });
     box.appendChild(note);
   }
 }
@@ -334,11 +332,11 @@ function advanceReveal() {
 }
 
 const LABELS = {
-  hit: 'Hit',
-  stand: 'Stand',
-  double: 'Double',
-  split: 'Split',
-  surrender: 'Surrender',
+  hit: 'action.hit',
+  stand: 'action.stand',
+  double: 'action.double',
+  split: 'action.split',
+  surrender: 'action.surrender',
 };
 
 function renderActions(view) {
@@ -354,17 +352,17 @@ function renderActions(view) {
   };
 
   if (view.phase === 'insurance') {
-    add('Take insurance', () => send('/api/insurance', { take: true }));
-    add('Decline', () => send('/api/insurance', { take: false }), true);
+    add(T('action.takeInsurance'), () => send('/api/insurance', { take: true }));
+    add(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), true);
     return;
   }
   if (view.phase === 'player') {
     for (const action of view.legalActions) {
-      add(LABELS[action] ?? action, () => send('/api/act', { action }));
+      add(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }));
     }
     return;
   }
-  add('Deal', () => send('/api/deal'), true);
+  add(T('ui.deal'), () => send('/api/deal'), true);
 }
 
 function renderStats(view) {
@@ -377,13 +375,13 @@ function renderStats(view) {
   const excluded = stats.closeCallsExcluded;
   el('accuracy-tip').textContent =
     stats.decisions === 0
-      ? 'Share of decisions played correctly, once coin-flips are set aside.'
+      ? T('fb.accuracyTip')
       : `${stats.correct - 0} of ${stats.decisions} decisions right. ` +
         (excluded > 0
           ? `${excluded} close call${excluded === 1 ? '' : 's'} excluded — spots where the ` +
             `best two plays differ by under 0.01 units, which is inside the noise. ` +
-            `Counting everything: ${(stats.accuracyIncludingCloseCalls * 100).toFixed(1)}%.`
-          : 'No close calls yet.');
+            T('fb.accuracyAll', { pct: (stats.accuracyIncludingCloseCalls * 100).toFixed(1) })
+          : T('fb.noCloseCalls'));
   el('stat-evlost').textContent = stats.hands === 0 ? '—' : stats.evLostPer100.toFixed(2);
   el('stat-edge').textContent =
     stats.hands === 0
@@ -412,11 +410,11 @@ async function renderCoach(view) {
       ? `${f.optimalLabel}. That's the play.`
       : `${f.optimalLabel} was the play — that one cost you ${f.evCost.toFixed(3)}.`;
   } else if (view.feedback) {
-    say.textContent = 'Take a moment. What is my card telling you?';
+    say.textContent = T('ui.thinkPrompt');
   }
 
   if (view.phase !== 'player' && view.phase !== 'insurance') {
-    if (!view.feedback) say.textContent = 'Deal when you are ready.';
+    if (!view.feedback) say.textContent = T('ui.dealWhenReady');
     asks.replaceChildren();
     answer.hidden = true;
     return;
@@ -448,7 +446,7 @@ async function renderCoach(view) {
     const why = document.createElement('button');
     why.className = 'ask';
     why.type = 'button';
-    why.textContent = 'Why?';
+    why.textContent = T('ui.why');
     why.addEventListener('click', () => {
       answer.hidden = false;
       answer.textContent = view.feedback.steps.join(' ');
@@ -465,7 +463,7 @@ function render() {
   el('rules-badge').textContent = view.ruleSet.badge;
   // §16: the residual house edge is stated in plain numbers, not buried.
   el('edge-note').textContent =
-    `Perfect play still loses ${view.ruleSet.edgePercent.toFixed(2)}% of every unit bet.`;
+    T('ui.edgeNote', { pct: view.ruleSet.edgePercent.toFixed(2) });
 
   renderDealer(view);
   renderHands(view);
@@ -546,9 +544,9 @@ async function openReference() {
   const grid = document.createElement('div');
   grid.className = 'chart-grid';
   grid.append(
-    chartTable('Hard', HARD.map((t) => ({ label: String(t), key: (up) => `bj:hard${t}:vs${up}` })), cells),
-    chartTable('Soft', SOFT.map((t) => ({ label: `A${t - 11}`, key: (up) => `bj:soft${t}:vs${up}` })), cells),
-    chartTable('Pairs', PAIRS.map((p) => ({ label: `${p},${p}`, key: (up) => `bj:pair${p}:vs${up}` })), cells),
+    chartTable(T('ui.chart.hard'), HARD.map((t) => ({ label: String(t), key: (up) => `bj:hard${t}:vs${up}` })), cells),
+    chartTable(T('ui.chart.soft'), SOFT.map((t) => ({ label: `A${t - 11}`, key: (up) => `bj:soft${t}:vs${up}` })), cells),
+    chartTable(T('ui.chart.pairs'), PAIRS.map((p) => ({ label: `${p},${p}`, key: (up) => `bj:pair${p}:vs${up}` })), cells),
   );
   el('chart-container').replaceChildren(grid);
   el('reference').showModal();
@@ -591,4 +589,5 @@ document.addEventListener('keydown', (event) => {
 el('open-settings').addEventListener('click', openSettings);
 el('open-reference').addEventListener('click', openReference);
 
-send('/api/state');
+// After the locale handshake, so the first render is already in the right language.
+Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));

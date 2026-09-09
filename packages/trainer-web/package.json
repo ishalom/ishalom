@@ -4,10 +4,13 @@
   "private": true,
   "description": "A local web client for the EV Trainer, for playing and testing the engines.",
   "type": "module",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "start": "node src/server.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "node ../ev-engine/scripts/test.ts"
   },
   "dependencies": {
     "@evtrainer/ev-engine": "0.1.0",

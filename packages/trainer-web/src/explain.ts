@@ -28,6 +28,7 @@
  * they need three different sentences.
  */
 
+import { t, type Locale } from './i18n.ts';
 import {
   DEALER_BLACKJACK,
   DEALER_BUST,
@@ -43,25 +44,31 @@ import {
   type Scenario,
 } from '@evtrainer/ev-engine';
 
-const NAMES: Readonly<Record<BlackjackAction, string>> = {
-  hit: 'hitting',
-  stand: 'standing',
-  double: 'doubling',
-  split: 'splitting',
-  surrender: 'surrendering',
+const GERUND: Readonly<Record<BlackjackAction, string>> = {
+  hit: 'action.hitting',
+  stand: 'action.standing',
+  double: 'action.doubling',
+  split: 'action.splitting',
+  surrender: 'action.surrendering',
 };
+
+/** The verb as it appears mid-sentence: "hitting", "לקיחת קלף". */
+function gerund(action: BlackjackAction, locale: Locale): string {
+  return t(locale, GERUND[action]);
+}
+
+/** The form that follows "to" — English wants an infinitive, Hebrew a gerund. */
+function verbAfterTo(action: BlackjackAction, locale: Locale): string {
+  return t(locale, `verbTo.${action}`);
+}
 
 /** The imperative, for headlines and for opening a verdict. */
-const VERBS: Readonly<Record<BlackjackAction, string>> = {
-  hit: 'Hit',
-  stand: 'Stand',
-  double: 'Double',
-  split: 'Split',
-  surrender: 'Surrender',
-};
+function verb(action: BlackjackAction, locale: Locale): string {
+  return t(locale, `action.${action}`);
+}
 
-export function actionName(action: BlackjackAction): string {
-  return NAMES[action];
+export function actionName(action: BlackjackAction, locale: Locale = 'en'): string {
+  return gerund(action, locale);
 }
 
 export interface DealerOdds {
@@ -157,10 +164,10 @@ export function standOutcome(
 }
 
 /** The upcard as it reads mid-sentence: "an ace", "a ten", "a 6". */
-function upcardPhrase(upcard: BjRank): string {
-  if (upcard === 0) return 'an ace';
-  if (upcard === 9) return 'a ten';
-  return `a ${upcardLabel(upcard)}`;
+function upcardPhrase(upcard: BjRank, locale: Locale): string {
+  if (upcard === 0) return t(locale, 'upcard.ace');
+  if (upcard === 9) return t(locale, 'upcard.ten');
+  return t(locale, 'upcard.number', { rank: upcardLabel(upcard) });
 }
 
 function sentenceCase(text: string): string {
@@ -238,18 +245,21 @@ export function archetype(scenario: Scenario, evaluation: DecisionEvaluation): A
 // --- Step 1: read the dealer ------------------------------------------------
 
 /** The upcard alone. No mention of the player's cards. */
-export function readDealer(upcard: BjRank, rules: BlackjackRules): string {
+export function readDealer(upcard: BjRank, rules: BlackjackRules, locale: Locale = 'en'): string {
   const odds = dealerOdds(upcard, rules);
-  const up = upcardPhrase(upcard);
+  const up = upcardPhrase(upcard, locale);
+  const bust = percent(odds.bust);
 
   if (upcard >= 1 && upcard <= 5) {
-    const worst = upcard === 4 || upcard === 5 ? ', their worst' : '';
-    return `${sentenceCase(up)}${worst} — a **bust card**. Breaks ${percent(odds.bust)}.`;
+    const worst = upcard === 4 || upcard === 5 ? t(locale, 'dealer.worst') : '';
+    return t(locale, 'dealer.bust', { up: sentenceCase(up), worst, bust });
   }
-  if (upcard === 0) {
-    return `An ace, and **no blackjack** behind it. Still breaks only ${percent(odds.bust)}.`;
-  }
-  return `${sentenceCase(up)} — **strong**. Breaks ${percent(odds.bust)}, makes 17+ ${percent(odds.madeHand)}.`;
+  if (upcard === 0) return t(locale, 'dealer.ace', { bust });
+  return t(locale, 'dealer.strong', {
+    up: sentenceCase(up),
+    bust,
+    made: percent(odds.madeHand),
+  });
 }
 
 // --- Step 2: read your hand -------------------------------------------------
@@ -269,62 +279,53 @@ export function readHand(
   scenario: Scenario,
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
+  locale: Locale = 'en',
 ): string {
   const kind = archetype(scenario, evaluation);
   const total = scenario.total ?? 0;
 
   switch (kind) {
     case 'insurance':
-      return `Insurance rides on **my hole card**, not your hand. Barely three cards in thirteen are tens.`;
+      return t(locale, 'hand.insurance');
 
     case 'split-always': {
       const rank = scenario.pairRank!;
-      if (rank === 0) {
-        return `A,A — the **best pair in the deck**. Held together the second ace is dead weight.`;
-      }
-      return `8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.`;
+      return t(locale, rank === 0 ? 'hand.aces' : 'hand.eights');
     }
 
     case 'split-das':
-      return (
-        `${pairName(scenario.pairRank!)} — a small pair. Each half wants to draw then ` +
-        `**double**, so this one rides on the double-after-split rule.`
-      );
+      return t(locale, 'hand.splitDas', { pair: pairName(scenario.pairRank!) });
 
     case 'split-offensive':
-      return `${pairName(scenario.pairRank!)} — fine as one hand. Splitting is an **attack**.`;
+      return t(locale, 'hand.splitOffensive', { pair: pairName(scenario.pairRank!) });
 
     case 'split-defensive':
-      return (
-        `${pairName(scenario.pairRank!)} — as one hand it wins only when the dealer breaks. ` +
-        `Apart, each card **starts again** somewhere better.`
-      );
+      return t(locale, 'hand.splitDefensive', { pair: pairName(scenario.pairRank!) });
 
     case 'pair-never':
-      return `${pairName(scenario.pairRank!)} — a pair worth **keeping**. Apart it is two weaker hands.`;
+      return t(locale, 'hand.pairNever', { pair: pairName(scenario.pairRank!) });
 
     case 'stiff': {
-      const bust = bustOnNextCard(scenario, rules);
-      return (
-        `${total} — a **stiff**. Standing never wins it; drawing breaks it ${percent(bust)}. ` +
-        `No good answer, only a **cheaper** one.`
-      );
+      return t(locale, 'hand.stiff', {
+        total,
+        bust: percent(bustOnNextCard(scenario, rules)),
+      });
     }
 
     case 'doubling':
-      return `${total} — **cannot break** on one card, and every ten makes it a real hand.`;
+      return t(locale, 'hand.doubling', { total });
 
     case 'soft-draw':
-      return `Soft ${total} — the ace protects you. **Nothing you draw can break it**.`;
+      return t(locale, 'hand.softDraw', { total });
 
     case 'soft-made':
-      return `Soft ${total} — already good, and **free to improve**. The question is whether it is worth it.`;
+      return t(locale, 'hand.softMade', { total });
 
     case 'pat':
-      return `${total} — **pat**. It wins what it wins; the rest is the dealer's business.`;
+      return t(locale, 'hand.pat', { total });
 
     default:
-      return `${total} — too small to stand, too small to double. **Not finished.**`;
+      return t(locale, 'hand.small', { total });
   }
 }
 
@@ -347,12 +348,12 @@ export function contest(evaluation: DecisionEvaluation): Contest {
 }
 
 /** How decisive the call is, said honestly rather than by vibes. */
-export function describeGap(gap: number): string {
-  if (gap === Infinity) return 'the only play';
-  if (gap > 0.2) return '**not close**';
-  if (gap >= 0.05) return '**right**, but closer than it looks';
-  if (gap >= 0.01) return 'a **narrow** call';
-  return 'a **coin-flip**; either is defensible';
+export function describeGap(gap: number, locale: Locale = 'en'): string {
+  if (gap === Infinity) return t(locale, 'gap.only');
+  if (gap > 0.2) return t(locale, 'gap.notClose');
+  if (gap >= 0.05) return t(locale, 'gap.right');
+  if (gap >= 0.01) return t(locale, 'gap.narrow');
+  return t(locale, 'gap.coinflip');
 }
 
 /**
@@ -366,16 +367,17 @@ function supportingStat(
   scenario: Scenario,
   { best, runnerUp }: Contest,
   rules: BlackjackRules,
+  locale: Locale,
 ): string {
   if (!runnerUp || scenario.upcard === undefined) return '';
   const pair = new Set([best.action, runnerUp.action]);
   const odds = dealerOdds(scenario.upcard, rules);
-  const up = upcardPhrase(scenario.upcard);
+  const up = upcardPhrase(scenario.upcard, locale);
 
   // Drawing a soft hand is free, which is the whole argument and one no
   // dealer-outcome figure expresses.
   if (pair.has('hit') && scenario.kind === 'soft') {
-    return `The draw is free — and against ${up}, what you have is not enough.`;
+    return t(locale, 'stat.softDraw', { up });
   }
 
   // Standing is in contention: the dealer's own outcomes are the argument, but
@@ -386,37 +388,40 @@ function supportingStat(
     // loses two hands in three against a ten, so "very little beats it" would be
     // nonsense for exactly the hand players most need talking out of.
     if (outcome.win > outcome.lose) {
-      return `Standing wins ${percent(outcome.win)}, loses ${percent(outcome.lose)}. Little beats it.`;
+      return t(locale, 'stat.standWins', {
+        win: percent(outcome.win),
+        lose: percent(outcome.lose),
+      });
     }
     if (scenario.total >= 17) {
-      return `Standing still loses ${percent(outcome.lose)} — **bad, just less bad** than the rest.`;
+      return t(locale, 'stat.standBadPat', { lose: percent(outcome.lose) });
     }
-    return `Standing only wins when I break, and I break ${percent(odds.bust)}.`;
+    return t(locale, 'stat.standBreaks', { bust: percent(odds.bust) });
   }
 
   // Hitting against surrender: what the draw actually does to you.
   if (pair.has('hit') && pair.has('surrender')) {
     // The two EVs are already in the sentence above; repeating them here just
     // makes the line longer without adding anything.
-    const bust = bustOnNextCard(scenario, rules);
-    return `Drawing breaks it ${percent(bust)} on the very next card.`;
+    return t(locale, 'stat.hitVsSurrender', {
+      bust: percent(bustOnNextCard(scenario, rules)),
+    });
   }
 
   // Doubling against hitting: same card, twice the money, no second draw.
   if (pair.has('double') && pair.has('hit')) {
-    return `Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.`;
+    return t(locale, 'stat.double');
   }
 
   // Splitting against playing it as one hand. Which way round matters: the same
   // sentence cannot serve both "split gains" and "split gives away".
   if (pair.has('split')) {
     const gap = Math.abs(best.ev - runnerUp.ev).toFixed(3);
-    if (best.action === 'split') return `Two hands are worth ${gap} more than one.`;
-    return `Splitting costs ${gap} — one good total becomes two worse ones.`;
+    return t(locale, best.action === 'split' ? 'stat.splitGains' : 'stat.splitCosts', { gap });
   }
 
   if (pair.has('surrender')) {
-    return `Half back is a guaranteed ${units(-0.5)}; played out, this is worth less.`;
+    return t(locale, 'stat.surrender', { half: units(-0.5) });
   }
   return '';
 }
@@ -426,18 +431,24 @@ export function readCombined(
   scenario: Scenario,
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
+  locale: Locale = 'en',
 ): string {
   const c = contest(evaluation);
-  const verdict = VERBS[c.best.action];
-  const shape = describeGap(c.gap);
-  const stat = supportingStat(scenario, c, rules);
-
   const numbers =
     c.runnerUp === null
-      ? units(c.best.ev)
-      : `${units(c.best.ev)} against ${units(c.runnerUp.ev)} to ${VERBS[c.runnerUp.action].toLowerCase()}`;
+      ? t(locale, 'combined.numbersOnly', { best: units(c.best.ev) })
+      : t(locale, 'combined.numbers', {
+          best: units(c.best.ev),
+          runnerUp: units(c.runnerUp.ev),
+          runnerUpVerb: verbAfterTo(c.runnerUp.action, locale),
+        });
 
-  return `**${verdict}** — ${shape}. ${numbers}. ${stat}`.trim();
+  return t(locale, 'combined', {
+    verdict: verb(c.best.action, locale),
+    shape: describeGap(c.gap, locale),
+    numbers,
+    stat: supportingStat(scenario, c, rules, locale),
+  }).trim();
 }
 
 // --- The whole reveal -------------------------------------------------------
@@ -461,27 +472,33 @@ export function explain(
   scenario: Scenario,
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
+  locale: Locale = 'en',
 ): Explanation {
   const c = contest(evaluation);
+  const verdict = verb(c.best.action, locale);
 
   if (scenario.kind === 'insurance' || scenario.upcard === undefined) {
     return {
-      headline: `Insurance → ${VERBS[c.best.action] ?? 'Decline'}`,
+      headline: t(locale, 'headline.insurance', { verdict }),
       steps: [
-        'Dealer shows an ace, so insurance is on offer. It is a bet on the hole card and nothing else.',
-        readHand(scenario, evaluation, rules),
-        readCombined(scenario, evaluation, rules),
+        t(locale, 'insurance.step1'),
+        readHand(scenario, evaluation, rules, locale),
+        readCombined(scenario, evaluation, rules, locale),
       ],
       gap: c.gap,
     };
   }
 
   return {
-    headline: `${handLabel(scenario)} vs ${upcardLabel(scenario.upcard)} → ${VERBS[c.best.action]}`,
+    headline: t(locale, 'headline', {
+      hand: handLabel(scenario),
+      up: upcardLabel(scenario.upcard),
+      verdict,
+    }),
     steps: [
-      readDealer(scenario.upcard, rules),
-      readHand(scenario, evaluation, rules),
-      readCombined(scenario, evaluation, rules),
+      readDealer(scenario.upcard, rules, locale),
+      readHand(scenario, evaluation, rules, locale),
+      readCombined(scenario, evaluation, rules, locale),
     ],
     gap: c.gap,
   };
