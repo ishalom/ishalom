@@ -1,0 +1,5 @@
+node_modules/
+
+# Generated strategy charts. The committed golden copies live in
+# packages/ev-engine/test/golden; these are scratch output from `npm run charts`.
+charts/

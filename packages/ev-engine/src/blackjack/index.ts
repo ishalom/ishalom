@@ -6,4 +6,5 @@ export * from './dealer.ts';
 export * from './ev.ts';
 export * from './scenario.ts';
 export * from './chart.ts';
+export * from './houseEdge.ts';
 export * from './feedback.ts';

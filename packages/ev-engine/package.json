@@ -20,10 +20,6 @@
     "preflop": "node --max-old-space-size=4096 scripts/generate-preflop.ts"
   },
   "dependencies": {},
-  "devDependencies": {
-    "@types/node": "^22",
-    "typescript": "^5.6"
-  },
   "license": "UNLICENSED",
   "private": true
 }

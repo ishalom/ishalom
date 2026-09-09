@@ -19,10 +19,13 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, relative } from 'node:path';
 
-const PACKAGE_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+// The package under test is the working directory, not this script's own
+// home. The runner is shared between workspaces and npm sets the cwd to
+// whichever one it is running in; resolving from the script's location
+// would make every package run the tests of whoever owns the runner.
+const PACKAGE_ROOT = process.cwd();
 const TEST_DIR = join(PACKAGE_ROOT, 'test');
 
 function findTestFiles(dir: string): string[] {
@@ -50,7 +53,7 @@ if (missing.length > 0) {
 // Guard the failure mode that hid the original bug: running no tests must never
 // look like a passing suite.
 if (files.length === 0) {
-  process.stderr.write('Found no test files — refusing to report success.\n');
+  process.stderr.write(`Found no test files under ${TEST_DIR}; refusing to report success.\n`);
   process.exit(1);
 }
 

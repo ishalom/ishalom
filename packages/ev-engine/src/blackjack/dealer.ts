@@ -53,11 +53,27 @@ export class DealerSolver {
   readonly rules: BlackjackRules;
   private readonly memo = new Map<string, DealerDistribution>();
   private readonly topMemo = new Map<string, DealerDistribution>();
+
+  /**
+   * Cap on cached states.
+   *
+   * A cache keyed on shoe composition is unbounded by nature: every hand dealt
+   * from a shoe leaves a composition nobody has seen before, so a long-running
+   * session accumulates entries forever. A short run never notices; ten million
+   * simulated hands exhausted the heap outright.
+   *
+   * Dropping the whole cache when it gets too big is crude but exactly right
+   * here. The entries that matter are the ones from the shoe in play, they cost
+   * microseconds to rebuild, and the alternative — tracking recency per entry —
+   * would cost more on every lookup than it saves on the rare eviction.
+   */
+  private readonly cacheLimit: number;
   /** Number of distinct states solved; useful for tests and profiling. */
   states = 0;
 
-  constructor(rules: BlackjackRules) {
+  constructor(rules: BlackjackRules, cacheLimit = 400_000) {
     this.rules = rules;
+    this.cacheLimit = cacheLimit;
   }
 
   clearCache(): void {
@@ -101,6 +117,7 @@ export class DealerSolver {
 
       for (let i = 0; i < DEALER_BLACKJACK; i++) out[i]! += p * sub[i]!;
     }
+    if (this.topMemo.size >= this.cacheLimit) this.topMemo.clear();
     this.topMemo.set(topKey, out);
     return out;
   }
@@ -158,6 +175,7 @@ export class DealerSolver {
     }
 
     this.states++;
+    if (this.memo.size >= this.cacheLimit) this.memo.clear();
     this.memo.set(key, out);
     return out;
   }
