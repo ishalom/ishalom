@@ -148,27 +148,40 @@ function renderDealer(view) {
  * hundred — so the stack is readable before the number beside it is.
  */
 const DENOMINATIONS = [
+  { value: 500, name: 'purple' },
   { value: 100, name: 'black' },
   { value: 25, name: 'green' },
   { value: 5, name: 'red' },
   { value: 1, name: 'white' },
 ];
 
+/*
+ * The row has to add up.
+ *
+ * While the chips were blank the count was decoration and a cap that dropped
+ * the last few cost nothing. Now that each one says what it is worth, a player
+ * can add the row up — so it must equal the figure beside it, or the rail is
+ * quietly lying. The cap is therefore generous enough that no reachable balance
+ * is ever truncated, and the row wraps rather than losing a chip.
+ */
 function chipNodes(amount, cap) {
   const chips = [];
   let left = Math.max(0, Math.round(amount * 2) / 2);
   for (const { value, name } of DENOMINATIONS) {
     let count = Math.floor(left / value);
     left -= count * value;
-    while (count-- > 0 && chips.length < cap) chips.push(name);
+    while (count-- > 0 && chips.length < cap) chips.push({ name, value });
   }
   // A half unit is what a surrender leaves behind; it is worth showing rather
   // than rounding away, since it is the whole point of the play.
-  if (left >= 0.5 && chips.length < cap) chips.push('half');
+  if (left >= 0.5 && chips.length < cap) chips.push({ name: 'half', value: '½' });
 
-  return chips.map((name) => {
+  return chips.map(({ name, value }) => {
     const chip = document.createElement('span');
     chip.className = `chip chip-${name}`;
+    // Laid out in a row rather than stacked, so every denomination is legible;
+    // a real stack shows only its top face, which is no use for reading a total.
+    chip.textContent = value;
     return chip;
   });
 }
@@ -185,7 +198,7 @@ function renderRail(view) {
   const wagerChips = document.createElement('span');
   wagerChips.className = 'chips';
   wagerChips.setAttribute('aria-hidden', 'true');
-  wagerChips.replaceChildren(...chipNodes(stack.wager, 6));
+  wagerChips.replaceChildren(...chipNodes(stack.wager, 12));
   const wagerFigure = document.createElement('span');
   wagerFigure.className = 'rail-value';
   wagerFigure.textContent = stack.wager > 0 ? stack.wager : '—';
@@ -199,7 +212,7 @@ function renderRail(view) {
   const bankChips = document.createElement('span');
   bankChips.className = 'chips';
   bankChips.setAttribute('aria-hidden', 'true');
-  bankChips.replaceChildren(...chipNodes(stack.balance, 8));
+  bankChips.replaceChildren(...chipNodes(stack.balance, 24));
   const bankFigure = document.createElement('span');
   bankFigure.className = 'rail-value';
   bankFigure.textContent = stack.balance.toFixed(stack.balance % 1 === 0 ? 0 : 1);
@@ -242,7 +255,7 @@ function renderHands(view) {
       const wager = document.createElement('div');
       wager.className = 'hand-wager';
       wager.setAttribute('aria-hidden', 'true');
-      wager.replaceChildren(...chipNodes(hand.bet, 4));
+      wager.replaceChildren(...chipNodes(hand.bet, 8));
       wrap.appendChild(wager);
     }
 
