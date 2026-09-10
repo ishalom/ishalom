@@ -58,89 +58,64 @@ const me = {
 /* --------------------------------------------------------------------------
  * The shared table
  *
- * `db` is optional by contract — it resolves null when the page is opened
- * somewhere that cannot serve it. Everything below is written so that the game
- * is completely unaffected when that happens: you still play, you still get
- * graded, you simply do not appear on the leaderboard. A trainer that refuses
- * to deal because a database is unreachable would have its priorities backwards.
+ * A backend is optional at every moment. It may be absent because the page was
+ * opened from a file, because the artifact store was declined, or because the
+ * network is down mid-hand. Everything below is written so that none of those
+ * change the game: you still play, you still get graded, your own record is
+ * still kept in the browser — you simply do not appear on the leaderboard.
+ *
+ * A trainer that refuses to deal because a database is unreachable would have
+ * its priorities exactly backwards.
  * ----------------------------------------------------------------------- */
 
-let db = null;
-let dbReady = false;
+let backend = null;
+let backendReady = false;
+let leaderboard = [];
+let feed = [];
+
+/** How many of a player's showable hands ride along with their record. */
+const FEED_KEPT = 5;
 
 async function connect() {
-  try {
-    db = await window.claude?.use?.('db');
-  } catch {
-    db = null;
-  }
-  dbReady = true;
-  if (db) {
+  backend = await openBackend(typeof BACKEND_CONFIG === 'undefined' ? null : BACKEND_CONFIG);
+  backendReady = true;
+
+  if (backend) {
     await restoreMine();
-    watchLeaderboard();
-    watchFeed();
-    saveProfile();
+    backend.watch((rows) => {
+      leaderboard = rows;
+      feed = rows
+        .flatMap((row) =>
+          (row.feed ?? []).map((item) => ({ ...item, playerId: row.id, name: row.name })),
+        )
+        .sort((a, b) => b.at - a.at)
+        .slice(0, 40);
+      renderSocial();
+    });
+    void publish();
+  } else {
+    // No table to join, but the local copy is still worth reading back.
+    const local = readLocalProgress();
+    if (local) session.restore(local);
+    myFeed = readLocalFeed();
+    myHistory = session.view.history;
   }
   renderSocial();
 }
 
-let leaderboard = [];
-let feed = [];
-
-/*
- * The store holds at most five thousand documents for the whole artifact, so
- * nothing here may grow with the number of hands played. Everything is keyed by
- * player instead: one profile, one history, one feed entry each. Fifteen people
- * playing for a year still come to forty-five documents.
+/**
+ * One record, written whole.
  *
- * That is why a player's hands are a rolling window inside their one saved
- * session rather than a document each — the alternative reaches the cap in an
- * evening and then starts refusing to save anything at all.
+ * Summary, saved session and recent hands go together because they describe one
+ * moment and would be misleading apart — a leaderboard row claiming four hundred
+ * hands beside a saved session holding forty is worse than either alone.
  */
-const FEED_KEPT = 5;
-
-function watchLeaderboard() {
-  db.collection('players')
-    .orderBy('rating', 'desc')
-    .limit(60)
-    .onSnapshot(
-      (snap) => {
-        leaderboard = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        renderSocial();
-      },
-      () => {
-        // A dead subscription is not worth a message on screen; the panel simply
-        // goes on saying it has nothing yet.
-      },
-    );
-}
-
-function watchFeed() {
-  // One document per player, each holding that player's few most recent
-  // showable hands. Flattened and re-sorted here, which is cheap for the
-  // handful of documents this can ever be.
-  db.collection('feed').onSnapshot(
-    (snap) => {
-      feed = snap.docs
-        .flatMap((d) => {
-          const body = d.data() ?? {};
-          return (body.items ?? []).map((item) => ({ ...item, playerId: d.id, name: body.name }));
-        })
-        .sort((a, b) => b.at - a.at)
-        .slice(0, 40);
-      renderSocial();
-    },
-    () => {},
-  );
-}
-
-/** The player's standing, written after every settled hand. */
-async function saveProfile() {
-  if (!db || !me.name) return;
+async function publish() {
+  if (!backend || !me.name) return;
   const profile = session.profile;
   const stats = session.view.stats;
   try {
-    await db.doc(`players/${me.id}`).set({
+    await backend.save(me.id, {
       name: me.name,
       rating: profile.rating.ratedDecisions > 0 ? Math.round(profile.rating.rating) : 0,
       peak: Math.round(profile.rating.peak),
@@ -151,95 +126,28 @@ async function saveProfile() {
       accuracy: stats.accuracy,
       evLostPer100: stats.evLostPer100,
       at: Date.now(),
+      progress: session.progress,
+      feed: myFeed,
     });
   } catch {
-    // Offline, or not granted. The session is unaffected.
+    // Offline, refused, or asleep. The browser copy already has everything.
   }
 }
 
-/**
- * What lands on the shared feed.
+/* --------------------------------------------------------------------------
+ * Keeping a player's record
  *
- * Not every hand — a wall of routine twenty-against-six is nobody's idea of a
- * feed. Two things are worth showing other people: an expensive mistake, and a
- * hard spot played correctly. They are the same fact from opposite sides, which
- * is what this trainer is about, so both go up and neither is dressed as the
- * other.
- */
-const HARD_SPOTS = new Set([
-  'bj:hard16:vs10', 'bj:hard15:vs10', 'bj:hard16:vs9', 'bj:hard12:vs3',
-  'bj:soft18:vs9', 'bj:soft18:vs10', 'bj:pair8:vs10', 'bj:pair8:vsA',
-  'bj:hard12:vs2', 'bj:soft17:vs2', 'bj:pair9:vs7', 'bj:hard11:vsA',
-]);
-const hardSpot = (d) => HARD_SPOTS.has(d.scenarioKey);
-
-function showcaseOf(hand) {
-  const worst = hand.decisions.reduce(
-    (acc, d) => (acc === null || d.evCost > acc.evCost ? d : acc),
-    null,
-  );
-  if (worst && (worst.severity === 'blunder' || worst.severity === 'significant')) return worst;
-  const held = hand.decisions.find((d) => d.correct && !d.closeCall && hardSpot(d));
-  return held ?? null;
-}
-
-let myFeed = [];
-
-async function pushToFeed(hand) {
-  if (!db || !me.name) return;
-  const showcase = showcaseOf(hand);
-  if (!showcase) return;
-
-  myFeed = [
-    {
-      at: Date.now(),
-      headline: showcase.headline,
-      scenarioKey: showcase.scenarioKey,
-      chosen: showcase.chosen,
-      optimal: showcase.optimal,
-      correct: showcase.correct,
-      severity: showcase.severity,
-      evCost: showcase.evCost,
-      netUnits: hand.netUnits,
-    },
-    ...myFeed,
-  ].slice(0, FEED_KEPT);
-
-  try {
-    await db.doc(`feed/${me.id}`).set({ name: me.name, at: Date.now(), items: myFeed });
-  } catch {
-    // Same as above: a feed that cannot be written is not a reason to stop.
-  }
-}
-
-/**
- * A player's own hands, kept as one rolling document.
+ * Two copies, on purpose. The browser always gets one, so the app remembers you
+ * whether it was opened from a link, from a file, or on a plane. The backend
+ * gets one when there is a backend, so the same person picks up on another
+ * device and the shared table has something true to rank.
  *
- * Everything the feedback card showed is stored, so a hand can be read back in
- * full later rather than reduced to a win or a loss — which, given §3.1, is the
- * only version of a hand worth keeping.
- */
-let myHistory = [];
-
-/** The session already keeps the rolling window; persisting is all that is left. */
-async function savePlayed() {
-  myHistory = session.view.history;
-  saveProgressLocally();
-  await saveProgressRemotely();
-}
-
-/**
- * Where a player's progress is kept.
- *
- * Two places, on purpose. The browser always gets a copy, so the app remembers
- * you even when it is opened from a file or from anywhere the shared store
- * cannot be reached. The store gets one too when it is available, so the same
- * player picks up on another device and so the table has something true to rank.
- *
- * The browser copy is written first and is never conditional. A rating built
+ * The browser copy is written first and is never conditional: a rating built
  * over three hundred hands should not depend on a network.
- */
+ * ----------------------------------------------------------------------- */
+
 const PROGRESS_KEY = 'ev:progress';
+const FEED_KEY = 'ev:feed';
 
 /** The parts of a saved session that outlive the rules it was played under. */
 function playerOnly(progress) {
@@ -261,8 +169,9 @@ function playerOnly(progress) {
 function saveProgressLocally() {
   try {
     store.set(PROGRESS_KEY, JSON.stringify(session.progress));
+    store.set(FEED_KEY, JSON.stringify(myFeed));
   } catch {
-    // Storage full or disabled. The session in front of the player is unharmed.
+    // Storage full or switched off. The session in front of the player is fine.
   }
 }
 
@@ -276,48 +185,100 @@ function readLocalProgress() {
   }
 }
 
-async function saveProgressRemotely() {
-  if (!db || !me.name) return;
+function readLocalFeed() {
   try {
-    await db.doc(`players/${me.id}/history/recent`).set({
-      at: Date.now(),
-      progress: session.progress,
-    });
+    const raw = store.get(FEED_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
-    // Not fatal; the local copy already has it.
+    return [];
   }
 }
 
 /**
  * Pick up where this player left off.
  *
- * The local copy is applied first so the screen is right immediately, then the
+ * The browser copy is applied first so the screen is right immediately, then the
  * stored one replaces it if it is further along. "Further along" is measured in
- * decisions played, which only ever increases — comparing timestamps would let a
+ * decisions played, which only ever rises — comparing timestamps would let a
  * device with a wrong clock overwrite the real record.
  */
 async function restoreMine() {
   const local = readLocalProgress();
   if (local) session.restore(local);
+  myFeed = readLocalFeed();
 
-  if (!db || !me.name) return;
-  try {
-    const [saved, mine] = await Promise.all([
-      db.doc(`players/${me.id}/history/recent`).get(),
-      db.doc(`feed/${me.id}`).get(),
-    ]);
-    if (saved.exists) {
-      const remote = saved.data()?.progress;
-      if (remote && (!local || remote.decisions > local.decisions)) {
-        session.restore(remote);
+  if (backend && me.name) {
+    try {
+      const remote = await backend.load(me.id);
+      if (remote) {
+        if (remote.progress && (!local || remote.progress.decisions > local.decisions)) {
+          session.restore(remote.progress);
+        }
+        if (remote.feed.length > 0) myFeed = remote.feed;
         saveProgressLocally();
       }
+    } catch {
+      // A first-time player, or an unreachable backend. The local copy stands.
     }
-    if (mine.exists) myFeed = mine.data()?.items ?? [];
-  } catch {
-    // A first-time player, or an unreachable store. The local copy stands.
   }
   myHistory = session.view.history;
+}
+
+/* --------------------------------------------------------------------------
+ * What lands on the shared feed
+ *
+ * Not every hand — a wall of routine twenty-against-six is nobody's idea of a
+ * feed. Two things are worth showing other people: an expensive mistake, and a
+ * hard spot played correctly. They are the same fact from opposite sides, which
+ * is what this trainer is about, so both go up and neither is dressed as the
+ * other.
+ * ----------------------------------------------------------------------- */
+
+const HARD_SPOTS = new Set([
+  'bj:hard16:vs10', 'bj:hard15:vs10', 'bj:hard16:vs9', 'bj:hard12:vs3',
+  'bj:soft18:vs9', 'bj:soft18:vs10', 'bj:pair8:vs10', 'bj:pair8:vsA',
+  'bj:hard12:vs2', 'bj:soft17:vs2', 'bj:pair9:vs7', 'bj:hard11:vsA',
+]);
+const hardSpot = (decision) => HARD_SPOTS.has(decision.scenarioKey);
+
+function showcaseOf(hand) {
+  const worst = hand.decisions.reduce(
+    (acc, d) => (acc === null || d.evCost > acc.evCost ? d : acc),
+    null,
+  );
+  if (worst && (worst.severity === 'blunder' || worst.severity === 'significant')) return worst;
+  return hand.decisions.find((d) => d.correct && !d.closeCall && hardSpot(d)) ?? null;
+}
+
+let myFeed = [];
+let myHistory = [];
+
+function noteForFeed(hand) {
+  const showcase = showcaseOf(hand);
+  if (!showcase) return;
+  myFeed = [
+    {
+      at: Date.now(),
+      headline: showcase.headline,
+      scenarioKey: showcase.scenarioKey,
+      chosen: showcase.chosen,
+      optimal: showcase.optimal,
+      correct: showcase.correct,
+      severity: showcase.severity,
+      evCost: showcase.evCost,
+      netUnits: hand.netUnits,
+    },
+    ...myFeed,
+  ].slice(0, FEED_KEPT);
+}
+
+/** After a hand settles: keep it, and share it if it is worth showing. */
+function keep(hand) {
+  noteForFeed(hand);
+  myHistory = session.view.history;
+  saveProgressLocally();
+  void publish();
 }
 
 /* --------------------------------------------------------------------------
@@ -401,7 +362,7 @@ async function api(path, body) {
         me.name = b.name.trim().slice(0, 24);
         store.set('ev:playerName', me.name);
         saveProgressLocally();
-        saveProfile();
+        void publish();
       }
       if (typeof b.mode === 'string') session.setMode(b.mode);
       if (typeof b.locale === 'string') session.setLocale(b.locale);
@@ -419,9 +380,7 @@ function afterPlay() {
   const newest = view.history[0];
   if (newest && newest.id !== lastSavedHandId) {
     lastSavedHandId = newest.id;
-    savePlayed();
-    pushToFeed(newest);
-    saveProfile();
+    keep(newest);
   }
   return view;
 }

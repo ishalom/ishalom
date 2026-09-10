@@ -60,21 +60,42 @@ const homeHtml = bodyOf(read(PUBLIC, 'home.html'));
 const tableHtml = bodyOf(read(PUBLIC, 'table.html'));
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
+const backends = read(ARTIFACT, 'backends.js');
 const shell = read(ARTIFACT, 'shell.js');
 const ui = read(ARTIFACT, 'ui.js');
 
-const page = `<title>EV Trainer</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300..900&display=swap" />
-<style>
-${styles}
-</style>
+/**
+ * Where the shared table lives, for the copy that is served as a plain page.
+ *
+ * The published artifact ignores this and uses the store the viewer gives it.
+ * A page on any other host has no such thing, so it is built with a project to
+ * talk to — or with none, in which case it plays perfectly and simply has no
+ * leaderboard.
+ *
+ * The key here is the publishable anonymous key. It belongs in the page: it
+ * names the project rather than a person, and the table's own policies decide
+ * what it is allowed to do.
+ */
+interface BackendConfig {
+  url: string;
+  key: string;
+  table?: string;
+}
 
-<div id="app"></div>
+function backendConfig(): BackendConfig | null {
+  try {
+    const raw = read(ARTIFACT, 'backend.json');
+    const parsed = JSON.parse(raw) as BackendConfig;
+    return parsed.url && parsed.key ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
-<script>
+const config = backendConfig();
+
+/** The scripts, in the order they have to run. Shared by both outputs. */
+const scripts = `<script>
 /* The engines, folded into one scope by scripts/bundle.ts. Byte-for-byte the
    logic the test suite runs against — test/bundle.test.ts holds them to it. */
 ${engine}
@@ -89,18 +110,73 @@ const TABLE_HTML = ${jsString(tableHtml)};
 ${homeJs}
 ${tableJs}
 
+${backends}
+
 ${shell}
 
 ${ui}
-</script>
+</script>`;
+
+const head = `<title>EV Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300..900&display=swap" />
+<style>
+${styles}
+</style>`;
+
+/*
+ * Two outputs from one build.
+ *
+ * The artifact is a fragment: claude.ai supplies the document around it, and
+ * emitting our own <html> there would be wrong. The hosted copy is a complete
+ * document and carries a backend configuration, because it has no viewer to
+ * hand it a store.
+ *
+ * Both are produced together, from the same engine and the same screens, so the
+ * two can never quietly become different products.
+ */
+const artifactPage = `${head}
+
+<div id="app"></div>
+
+${scripts}
 `;
 
-const target = join(PKG, 'build', 'artifact.html');
-mkdirSync(dirname(target), { recursive: true });
-writeFileSync(target, page, 'utf8');
+const hostedPage = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
+    <meta name="color-scheme" content="dark" />
+    ${head}
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+    ${config === null ? '/* Built with no shared table: every player keeps their own record. */' : `const BACKEND_CONFIG = ${JSON.stringify(config)};`}
+    </script>
+    ${scripts}
+  </body>
+</html>
+`;
 
 const kb = (n: number) => `${(n / 1024).toFixed(0)} KB`;
+
+const artifactTarget = join(PKG, 'build', 'artifact.html');
+mkdirSync(dirname(artifactTarget), { recursive: true });
+writeFileSync(artifactTarget, artifactPage, 'utf8');
+
+// GitHub Pages serves this directory from the default branch.
+const hostedTarget = join(ROOT, 'docs', 'index.html');
+mkdirSync(dirname(hostedTarget), { recursive: true });
+writeFileSync(hostedTarget, hostedPage, 'utf8');
+
 console.log(
-  `${relative(ROOT, target)}  ${kb(page.length)} total ` +
-    `(engine ${kb(engine.length)}, styles ${kb(styles.length)}, screens ${kb(homeJs.length + tableJs.length)})`,
+  `${relative(ROOT, artifactTarget)}  ${kb(artifactPage.length)}\n` +
+    `${relative(ROOT, hostedTarget)}  ${kb(hostedPage.length)}  ` +
+    `(shared table: ${config === null ? 'not configured' : config.url})\n` +
+    `  engine ${kb(engine.length)}, styles ${kb(styles.length)}, screens ${kb(homeJs.length + tableJs.length)}`,
 );

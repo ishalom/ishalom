@@ -211,8 +211,8 @@ const emptyNote = (text) => {
 
 function renderLeaderboard(box) {
   box.replaceChildren();
-  if (!dbReady) return void box.appendChild(emptyNote(tr('social.connecting')));
-  if (!db) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
+  if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
 
   const rated = leaderboard.filter((p) => p.decisions > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
@@ -251,8 +251,8 @@ function renderLeaderboard(box) {
 
 function renderFeed(box) {
   box.replaceChildren();
-  if (!dbReady) return void box.appendChild(emptyNote(tr('social.connecting')));
-  if (!db) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
+  if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
   if (feed.length === 0) return void box.appendChild(emptyNote(tr('social.noFeed')));
 
   for (const item of feed) {
