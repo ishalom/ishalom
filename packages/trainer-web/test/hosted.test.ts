@@ -72,7 +72,12 @@ before(async () => {
   port = (server.address() as { port: number }).port;
 });
 
-after(() => server.close());
+after(() => {
+  // `fetch` keeps its sockets alive, so a plain close() waits for them and the
+  // process never exits. The connections have to go first.
+  server.closeAllConnections();
+  server.close();
+});
 
 /**
  * The backend module on its own.
@@ -93,9 +98,13 @@ __out.openBackend = openBackend;`)(out);
 /** Load the hosted page's scripts against a DOM stub and a real backend. */
 function loadHosted(config: unknown): Record<string, any> {
   const html = readFileSync(join(ROOT, 'docs', 'index.html'), 'utf8');
+  // The built page carries whatever backend it was built with. The test
+  // supplies its own, so the page's declaration is removed rather than
+  // shadowed — two `const BACKEND_CONFIG` in one scope is a syntax error.
   const code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
     .map((m) => m[1]!)
-    .join('\n');
+    .join('\n')
+    .replace(/^[ \t]*const BACKEND_CONFIG = .*$/m, '');
 
   const el = (): any => ({
     style: {}, dataset: {}, children: [], value: '', textContent: '', innerHTML: '',
@@ -132,8 +141,9 @@ function loadHosted(config: unknown): Record<string, any> {
     '__out',
     '__config',
     `const BACKEND_CONFIG = __config;\n${code}\n` +
-      '__out.api = api; __out.session = () => session; __out.connect = connect;' +
-      '__out.openBackend = openBackend; __out.leaderboard = () => leaderboard;',
+      '__out.api = api; __out.session = () => session; __out.booted = booted;' +
+      '__out.openBackend = openBackend; __out.leaderboard = () => leaderboard;' +
+      '__out.stopWatching = () => stopWatching && stopWatching();',
   )(out, config);
   return out;
 }
@@ -154,7 +164,7 @@ test('the hosted page is a complete document that names itself', () => {
 
 test('with no shared table configured, the page still plays', async () => {
   const app = loadHosted(undefined);
-  await app.connect();
+  await app.booted;
   const view = await app.api('/api/deal');
   assert.ok(['player', 'insurance', 'settled'].includes(view.phase));
   assert.equal(app.leaderboard().length, 0);
@@ -227,4 +237,65 @@ test('the leaderboard query leaves the saved sessions behind', async () => {
   // Every viewer polls this, and a saved session is by far the largest column.
   const read = seen.find((r) => r.method === 'GET' && r.path.includes('order=rating.desc'))!;
   assert.ok(!read.path.includes('progress'), 'the list query is dragging saved sessions along');
+});
+
+test('two writes in flight cannot land out of order', async () => {
+  /*
+   * Caught by running against a real project rather than by any test here:
+   * the table ended a session showing the rating from the hand before last.
+   *
+   * Publishing is fire-and-forget from the caller's side, so a slow request
+   * could be overtaken by the next one. Writes are last-writer-wins, which
+   * makes "out of order" mean "wrong" rather than "briefly behind" — the stale
+   * value stays until the next hand happens to correct it.
+   */
+  rows = [];
+  seen.length = 0;
+
+  // A server slow enough that the second write is issued while the first is
+  // still open, which is the whole condition being tested.
+  const slow = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on('data', (c) => chunks.push(c));
+    request.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || 'null');
+      if (request.method === 'POST') {
+        setTimeout(() => {
+          rows = [...rows.filter((r) => r.id !== body.id), body];
+          response.writeHead(201).end();
+        }, 120);
+        return;
+      }
+      response.writeHead(200, { 'content-type': 'application/json' }).end('[]');
+    });
+  });
+  await new Promise<void>((resolve) => slow.listen(0, '127.0.0.1', resolve));
+  const slowPort = (slow.address() as { port: number }).port;
+
+  const app = loadHosted({ url: `http://127.0.0.1:${slowPort}`, key: 'k' });
+  await app.booted;
+
+  // Play hands back to back, faster than the writes can complete.
+  for (let i = 0; i < 12; i++) {
+    let view = await app.api('/api/deal');
+    if (view.phase === 'insurance') view = await app.api('/api/insurance', { take: false });
+    let guard = 0;
+    while (view.phase === 'player' && guard++ < 20) view = await app.api('/api/act', { action: 'stand' });
+  }
+
+  await new Promise((r) => setTimeout(r, 600));
+  app.stopWatching();
+  slow.closeAllConnections();
+  slow.close();
+
+  const stored = rows.find((r) => r.id);
+  const played = app.session().view;
+  assert.ok(stored, 'nothing was written at all');
+  assert.equal(stored.hands, played.stats.hands, 'the table is behind the session that wrote it');
+  assert.equal(stored.decisions, played.stats.decisions);
+  assert.equal(stored.progress.decisions, played.stats.decisions);
+
+  // Twelve hands during slow writes must not mean twelve queued requests: a
+  // newer state replaces a pending one rather than joining a queue behind it.
+  assert.equal(rows.length, 1, 'more than one player row was created');
 });

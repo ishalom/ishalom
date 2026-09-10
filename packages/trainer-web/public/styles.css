@@ -1224,30 +1224,42 @@ body { font-family: var(--body); }
 .howto li b { color: var(--ink); font-weight: 650; }
 
 /* ===========================================================================
- * The verdict, pinned between the dealer and the cards.
+ * The dock.
  *
- * The reasoning below is what teaches, but it is long, and drilling quickly
- * meant scrolling past the felt to find out what a hand cost. So the parts that
- * are a verdict rather than an argument sit here, where the eye already is: the
- * spot, the grade, what was played, and every action's EV.
+ * The buttons were already pinned to the bottom edge (§10.1). The verdict is
+ * looked at in the same instant and from the same place, so it is pinned with
+ * them rather than sitting up the page where a fast player has to go and find
+ * it. One band, always in view: what the hand cost, what each play was worth,
+ * and what to do next.
  *
- * It reads as a note laid on the table rather than another panel — no card
- * chrome competing with the felt, just a rule down its leading edge in the
- * severity colour, which is the one thing worth seeing from across the screen.
+ * It reads as part of the bar rather than as another card — no radius, no
+ * shadow, just a rule down its leading edge in the severity colour, which is
+ * the one thing worth seeing from across the room.
  * ======================================================================== */
 
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+/* The bar no longer pins itself; the dock around it does. */
+.actions {
+  position: static;
+  border-top: none;
+}
+
 .quickcard {
-  align-self: center;
-  width: 100%;
-  max-width: 440px;
-  margin: 2px 0 14px;
-  padding: 11px 15px;
-  border-radius: 12px;
-  background: rgba(12, 18, 15, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 14px 11px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
   border-inline-start: 3px solid var(--line);
-  backdrop-filter: blur(2px);
   text-align: start;
+  /* A long reveal must never push the buttons off the screen. */
+  max-height: 42dvh;
+  overflow-y: auto;
 }
 .quickcard.optimal { border-inline-start-color: var(--optimal); }
 .quickcard.negligible { border-inline-start-color: var(--negligible); }
@@ -1259,18 +1271,18 @@ body { font-family: var(--body); }
 .quickcard .anchor {
   margin: 0;
   font-family: var(--display);
-  font-size: 17px;
+  font-size: 16px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 .quickcard .anchor b { color: var(--ink); font-weight: var(--display-weight); }
-.quickcard .verdict { margin: 3px 0 0; }
+.quickcard .verdict { margin: 2px 0 0; font-size: 19px; }
 .quickcard.optimal .verdict { color: var(--optimal); }
 .quickcard.minor .verdict { color: var(--minor); }
 .quickcard.significant .verdict { color: var(--significant); }
 .quickcard.blunder .verdict { color: var(--blunder); }
-.quickcard .did { margin: 2px 0 0; }
-.quickcard .evs { margin: 10px 0 0; }
+.quickcard .did { margin: 1px 0 0; font-size: 14px; }
+.quickcard .evs { margin: 9px 0 0; }
 
 /* The feedback card below is now reasoning only, so it starts with a step
    rather than a heading and needs no top padding of its own. */

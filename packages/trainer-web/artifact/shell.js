@@ -70,6 +70,9 @@ const me = {
 
 let backend = null;
 let backendReady = false;
+/* Held so the poll can be stopped — a browser tab never needs to, but anything
+   that loads this page without being a browser tab does. */
+let stopWatching = null;
 let leaderboard = [];
 let feed = [];
 
@@ -82,7 +85,7 @@ async function connect() {
 
   if (backend) {
     await restoreMine();
-    backend.watch((rows) => {
+    stopWatching = backend.watch((rows) => {
       leaderboard = rows;
       feed = rows
         .flatMap((row) =>
@@ -110,8 +113,41 @@ async function connect() {
  * moment and would be misleading apart — a leaderboard row claiming four hundred
  * hands beside a saved session holding forty is worse than either alone.
  */
+let publishing = false;
+let publishAgain = false;
+
 async function publish() {
   if (!backend || !me.name) return;
+
+  /*
+   * One write at a time, and the last state always wins.
+   *
+   * Publishing is fire-and-forget from the caller's side, so without this two
+   * writes can be in flight at once and land out of order — leaving the table
+   * showing the rating from the hand before last. Writes are last-writer-wins,
+   * so "out of order" means "wrong", not "briefly behind".
+   *
+   * A newer state arriving mid-flight does not queue a second write; it just
+   * marks the current one stale, and the loop re-reads the session when the
+   * first finishes. Ten hands played during one slow request still cost one
+   * extra write, not ten.
+   */
+  if (publishing) {
+    publishAgain = true;
+    return;
+  }
+  publishing = true;
+  try {
+    do {
+      publishAgain = false;
+      await writeRecord();
+    } while (publishAgain);
+  } finally {
+    publishing = false;
+  }
+}
+
+async function writeRecord() {
   const profile = session.profile;
   const stats = session.view.stats;
   try {

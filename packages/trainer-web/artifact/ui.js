@@ -339,4 +339,8 @@ if (me.name) session.setPlayerName(me.name);
 applyLanguage();
 if (me.name) mount('home');
 else askName();
-connect();
+
+/* Connecting happens once, at boot. Kept as a promise so anything driving this
+   page without being a browser — a test, say — can wait for it rather than
+   calling connect again and quietly opening a second subscription. */
+const booted = connect();
