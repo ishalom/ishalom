@@ -33,13 +33,15 @@ const POLL_MS = 20_000;
 function artifactBackend(db) {
   return {
     async load(id) {
-      const [saved, feed] = await Promise.all([
+      const [summary, saved, feed] = await Promise.all([
+        db.doc(`players/${id}`).get(),
         db.doc(`players/${id}/history/recent`).get(),
         db.doc(`feed/${id}`).get(),
       ]);
       return {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
+        mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
       };
     },
 
@@ -82,7 +84,9 @@ function artifactBackend(db) {
         .orderBy('rating', 'desc')
         .limit(60)
         .onSnapshot((snap) => {
-          players = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          players = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((row) => !row.mergedInto);
           merge();
         }, () => {});
 
@@ -166,13 +170,20 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
       const rows = await response.json();
       if (rows.length === 0) return null;
-      return { progress: rows[0].progress ?? null, feed: rows[0].feed ?? [] };
+      return {
+        progress: rows[0].progress ?? null,
+        feed: rows[0].feed ?? [],
+        // A row that points at another has been retired by a merge. The caller
+        // has to know, or it will read a dormant session back and then write to
+        // it — which would put an abandoned rating back on the leaderboard.
+        mergedInto: rows[0].merged_into ?? null,
+      };
     },
 
     async save(id, record) {
@@ -210,8 +221,11 @@ function httpBackend({ url, key, table = 'players' }) {
 
       const tick = async () => {
         try {
+          // Merged rows are excluded here, not filtered afterwards: they are
+          // not people, and one person listed twice under one name is worse
+          // than a short leaderboard.
           const response = await fetch(
-            `${endpoint}?select=${LIST}&order=rating.desc&limit=60`,
+            `${endpoint}?select=${LIST}&merged_into=is.null&order=rating.desc&limit=60`,
             { headers },
           );
           if (response.ok) onRows((await response.json()).map(rowToRecord));

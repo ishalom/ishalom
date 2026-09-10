@@ -6,8 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="e46c407c3c47e585cc5a292ef05d2beb53cf1207" />
-<meta name="ev-build-at" content="2026-09-10T19:28:39.181Z" />
+<meta name="ev-build-commit" content="7d2a2c490dc3a82b4459580822c49b421314df35-dirty" />
+<meta name="ev-build-at" content="2026-09-10T21:28:54.863Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -8715,13 +8715,15 @@ const POLL_MS = 20_000;
 function artifactBackend(db) {
   return {
     async load(id) {
-      const [saved, feed] = await Promise.all([
+      const [summary, saved, feed] = await Promise.all([
+        db.doc(`players/${id}`).get(),
         db.doc(`players/${id}/history/recent`).get(),
         db.doc(`feed/${id}`).get(),
       ]);
       return {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
+        mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
       };
     },
 
@@ -8764,7 +8766,9 @@ function artifactBackend(db) {
         .orderBy('rating', 'desc')
         .limit(60)
         .onSnapshot((snap) => {
-          players = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          players = snap.docs
+            .map((d) => ({ id: d.id, ...d.data() }))
+            .filter((row) => !row.mergedInto);
           merge();
         }, () => {});
 
@@ -8848,13 +8852,20 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
       const rows = await response.json();
       if (rows.length === 0) return null;
-      return { progress: rows[0].progress ?? null, feed: rows[0].feed ?? [] };
+      return {
+        progress: rows[0].progress ?? null,
+        feed: rows[0].feed ?? [],
+        // A row that points at another has been retired by a merge. The caller
+        // has to know, or it will read a dormant session back and then write to
+        // it — which would put an abandoned rating back on the leaderboard.
+        mergedInto: rows[0].merged_into ?? null,
+      };
     },
 
     async save(id, record) {
@@ -8892,8 +8903,11 @@ function httpBackend({ url, key, table = 'players' }) {
 
       const tick = async () => {
         try {
+          // Merged rows are excluded here, not filtered afterwards: they are
+          // not people, and one person listed twice under one name is worse
+          // than a short leaderboard.
           const response = await fetch(
-            `${endpoint}?select=${LIST}&order=rating.desc&limit=60`,
+            `${endpoint}?select=${LIST}&merged_into=is.null&order=rating.desc&limit=60`,
             { headers },
           );
           if (response.ok) onRows((await response.json()).map(rowToRecord));
@@ -9167,6 +9181,18 @@ function readLocalProgress() {
   }
 }
 
+/**
+ * How far a saved copy has got, for comparing two of them.
+ *
+ * Version 1 saves predate the lifetime counter, so their session count is the
+ * best lower bound available — and a lower bound is safe here, because the only
+ * question being asked is which of two copies is further along.
+ */
+function lifetimeOf(progress) {
+  if (!progress) return -1;
+  return progress.lifetimeDecisions ?? progress.decisions ?? 0;
+}
+
 function readLocalFeed() {
   try {
     const raw = store.get(FEED_KEY);
@@ -9192,9 +9218,35 @@ async function restoreMine() {
 
   if (backend && me.name) {
     try {
-      const remote = await backend.load(me.id);
+      let remote = await backend.load(me.id);
+
+      /*
+       * This browser may be holding an id that has since been merged into
+       * another row. Follow the pointer once and adopt the survivor, before
+       * anything is read back or written: reading the retired row would restore
+       * a session the merge put to sleep, and the next save would resurrect it
+       * on the leaderboard under a rating its owner had abandoned.
+       *
+       * One hop only. `merged_into` is set by the migration to a row that is
+       * itself live, so a chain would mean the data is wrong, and following it
+       * blindly would be a way to loop forever.
+       */
+      if (remote?.mergedInto) {
+        me.id = remote.mergedInto;
+        store.set('ev:playerId', me.id);
+        remote = await backend.load(me.id);
+      }
+
       if (remote) {
-        if (remote.progress && (!local || remote.progress.decisions > local.decisions)) {
+        /*
+         * Which copy is further along, decided on a number that only ever
+         * rises. `decisions` is zeroed by a rule change while the rating is
+         * kept, so comparing on it can hand the session to a copy with more
+         * hands this sitting and an older rating.
+         */
+        const here = lifetimeOf(local);
+        const there = lifetimeOf(remote.progress);
+        if (remote.progress && (!local || there > here)) {
           session.restore(remote.progress);
         }
         if (remote.feed.length > 0) myFeed = remote.feed;

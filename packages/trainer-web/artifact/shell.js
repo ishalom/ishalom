@@ -227,6 +227,18 @@ function readLocalProgress() {
   }
 }
 
+/**
+ * How far a saved copy has got, for comparing two of them.
+ *
+ * Version 1 saves predate the lifetime counter, so their session count is the
+ * best lower bound available — and a lower bound is safe here, because the only
+ * question being asked is which of two copies is further along.
+ */
+function lifetimeOf(progress) {
+  if (!progress) return -1;
+  return progress.lifetimeDecisions ?? progress.decisions ?? 0;
+}
+
 function readLocalFeed() {
   try {
     const raw = store.get(FEED_KEY);
@@ -252,9 +264,35 @@ async function restoreMine() {
 
   if (backend && me.name) {
     try {
-      const remote = await backend.load(me.id);
+      let remote = await backend.load(me.id);
+
+      /*
+       * This browser may be holding an id that has since been merged into
+       * another row. Follow the pointer once and adopt the survivor, before
+       * anything is read back or written: reading the retired row would restore
+       * a session the merge put to sleep, and the next save would resurrect it
+       * on the leaderboard under a rating its owner had abandoned.
+       *
+       * One hop only. `merged_into` is set by the migration to a row that is
+       * itself live, so a chain would mean the data is wrong, and following it
+       * blindly would be a way to loop forever.
+       */
+      if (remote?.mergedInto) {
+        me.id = remote.mergedInto;
+        store.set('ev:playerId', me.id);
+        remote = await backend.load(me.id);
+      }
+
       if (remote) {
-        if (remote.progress && (!local || remote.progress.decisions > local.decisions)) {
+        /*
+         * Which copy is further along, decided on a number that only ever
+         * rises. `decisions` is zeroed by a rule change while the rating is
+         * kept, so comparing on it can hand the session to a copy with more
+         * hands this sitting and an older rating.
+         */
+        const here = lifetimeOf(local);
+        const there = lifetimeOf(remote.progress);
+        if (remote.progress && (!local || there > here)) {
           session.restore(remote.progress);
         }
         if (remote.feed.length > 0) myFeed = remote.feed;
