@@ -9,15 +9,16 @@ import type {
   BlackjackAction,
   BlackjackRules,
   Card,
+  GradedAction,
   SeverityTier,
 } from '@evtrainer/ev-engine';
 
 /**
- * Everything the engine grades. Insurance is a decision point in its own right
- * (spec §5.1.3) but not a `BlackjackAction`, so it is named here rather than
- * smuggled in as a hit or a stand.
+ * Everything the engine grades. Defined in the EV engine, beside
+ * `BlackjackAction`, because the strategy chart has to name insurance too.
+ * Re-exported here so this package's own types read as one set.
  */
-export type GradedAction = BlackjackAction | 'takeInsurance' | 'declineInsurance';
+export type { GradedAction };
 
 /** A hand in play, or one of several after a split. */
 export interface PlayerHand {

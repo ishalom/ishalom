@@ -11,6 +11,17 @@ import { ACE, TEN, type BjRank } from './shoe.ts';
 
 export type BlackjackAction = 'stand' | 'hit' | 'double' | 'split' | 'surrender';
 
+/**
+ * Everything the engine grades.
+ *
+ * Insurance is a decision point in its own right (spec §5.1.3) and not a
+ * `BlackjackAction` — the player's own hand never enters it. It is named here
+ * rather than smuggled in as a hit or a stand, because a chart cell that says
+ * "hit" when it means "take insurance" is a cell that reads correctly only to
+ * whoever wrote it.
+ */
+export type GradedAction = BlackjackAction | 'takeInsurance' | 'declineInsurance';
+
 export const ALL_ACTIONS: readonly BlackjackAction[] = [
   'stand',
   'hit',
@@ -18,6 +29,17 @@ export const ALL_ACTIONS: readonly BlackjackAction[] = [
   'split',
   'surrender',
 ];
+
+/**
+ * True for the five actions that are played on a hand.
+ *
+ * `GradedAction` is a wider set than the chart's grid, the letters table, or the
+ * rule-sensitivity comparison can speak about. Rather than each of them casting
+ * and hoping, they ask.
+ */
+export function isHandAction(action: GradedAction): action is BlackjackAction {
+  return (ALL_ACTIONS as readonly string[]).includes(action);
+}
 
 /** Everything about a hand's history that changes which actions are legal. */
 export interface HandContext {

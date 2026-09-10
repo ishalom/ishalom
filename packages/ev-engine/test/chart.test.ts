@@ -25,6 +25,7 @@ import {
 } from '../src/blackjack/chart.ts';
 import { getPreset, makeRules, RULE_PRESETS } from '../src/blackjack/rules.ts';
 import { scenarioKey } from '../src/blackjack/scenario.ts';
+import type { BlackjackAction } from '../src/blackjack/actions.ts';
 import { ACE, TEN, type BjRank } from '../src/blackjack/shoe.ts';
 import {
   KNOWN_MARGINAL,
@@ -60,7 +61,9 @@ function diffAgainstPublished(chart: StrategyChart, published: PublishedChart): 
   const check = (key: string, expected: string, where: string) => {
     const cell = chart.cells.get(key);
     assert.ok(cell, `chart is missing ${key}`);
-    const got = ACTION_LETTERS[cell.optimalAction];
+    // Every key this walks is a hand cell; insurance is checked separately and
+    // is the only cell whose action is outside `BlackjackAction`.
+    const got = ACTION_LETTERS[cell.optimalAction as BlackjackAction];
     if (got === expected) return;
     if (KNOWN_MARGINAL.has(key)) return;
     problems.push(

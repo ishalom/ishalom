@@ -171,6 +171,18 @@ export class BlackjackTable {
   /** EV of taking insurance, in units of the wager. Positive means take it. */
   insuranceEvaluation(): number {
     if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
+    return this.gradedInsuranceEv();
+  }
+
+  /**
+   * What insurance is worth against the cards actually left in the shoe.
+   *
+   * This is the counter's number, not the grader's. It is exposed so the app can
+   * say "a card counter would have insured here" as a remark, without that
+   * remark ever reaching the grade — see `gradedInsuranceEv`.
+   */
+  insuranceLiveEv(): number {
+    if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
     return insuranceEv(this.unseenComposition());
   }
 
@@ -252,7 +264,7 @@ export class BlackjackTable {
   takeInsurance(take: boolean): DecisionRecord {
     if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
 
-    const evTake = insuranceEv(this.unseenComposition());
+    const evTake = this.gradedInsuranceEv();
     const record = this.pushDecision({
       handIndex: 0,
       scenarioKey: INSURANCE_SCENARIO_KEY,
@@ -431,7 +443,7 @@ export class BlackjackTable {
     return this.solver.evaluate(
       hand.cards.map(bjRankOfCard),
       bjRankOfCard(this.dealerCards[0]!),
-      this.unseenComposition(),
+      this.grading === 'chart' ? this.freshComposition() : this.unseenComposition(),
       { fromSplit: hand.fromSplit, handCount: this.hands.length },
     );
   }
@@ -443,6 +455,55 @@ export class BlackjackTable {
   private unseenComposition(): Composition {
     const hole = this.dealerRevealed ? [] : this.dealerCards.slice(1);
     return this.shoe.unseenComposition(hole);
+  }
+
+  /**
+   * A fresh shoe minus only the cards this round has turned face up.
+   *
+   * This is the composition the chart itself is derived from, and it is what
+   * chart-mode grading falls back to when a spot has no cell — a three-card
+   * hand, most often. Handing the solver the *live* shoe instead made the grade
+   * depend on the previous forty hands, so the same 6-4-3 against a 9 could be
+   * marked differently in the first shoe than in the fifth. That difference is
+   * not one basic strategy has, and not one the player can see. Card removal
+   * (this round's visible cards) is part of the chart's own derivation; card
+   * counting (the shoe's history) is not, and belongs to `exact-shoe`.
+   */
+  private freshComposition(): Composition {
+    const shoe = Composition.fresh(this.rules.decks);
+    for (const hand of this.hands) {
+      for (const card of hand.cards) shoe.remove(bjRankOfCard(card));
+    }
+    const dealerVisible = this.dealerRevealed ? this.dealerCards : this.dealerCards.slice(0, 1);
+    for (const card of dealerVisible) shoe.remove(bjRankOfCard(card));
+    return shoe;
+  }
+
+  /**
+   * The EV insurance is graded against.
+   *
+   * In chart mode this is the chart's own insurance cell — a fresh shoe with the
+   * dealer's ace removed — for the same reason every other decision is graded
+   * against a chart: the app teaches basic strategy, and basic strategy says
+   * never insure. Grading against the live shoe meant that a player who
+   * correctly declined was marked wrong, and docked rating, on exactly those
+   * hands where the shoe happened to have run ten-rich — punished for playing
+   * the strategy the app is teaching, on information the app never showed them.
+   * That is the §3.1 error in its purest form.
+   *
+   * `grading: 'exact-shoe'` is the counting mode, and there the live shoe is the
+   * whole point.
+   *
+   * A player natural against an ace reaches this same decision — taking
+   * insurance there is what a casino calls even money — so it is graded here
+   * too, by the same number. It is the same bet.
+   */
+  private gradedInsuranceEv(): number {
+    if (this.grading === 'chart') {
+      const cell = this.chart.cells.get(INSURANCE_SCENARIO_KEY);
+      if (cell) return cell.evByAction.takeInsurance ?? 0;
+    }
+    return insuranceEv(this.unseenComposition());
   }
 
   private pushDecision(input: {

@@ -24,7 +24,7 @@
  * what §14.2 diffs against published sources, and what §14.4 snapshots.
  */
 
-import type { BlackjackAction } from './actions.ts';
+import { isHandAction, type BlackjackAction, type GradedAction } from './actions.ts';
 import { BlackjackSolver, insuranceEv, type CardRemovalMode } from './ev.ts';
 import { handValue } from './hand.ts';
 import { rulesKey, type BlackjackRules } from './rules.ts';
@@ -40,8 +40,8 @@ export interface ChartCell {
   scenarioKey: string;
   scenario: Scenario;
   /** Frequency-weighted EV of each legal action, in units of the wager. */
-  evByAction: Partial<Record<BlackjackAction, number>>;
-  optimalAction: BlackjackAction;
+  evByAction: Partial<Record<GradedAction, number>>;
+  optimalAction: GradedAction;
   optimalEv: number;
   /**
    * Gap between the best and second-best action. Cells with a tiny margin are
@@ -219,8 +219,10 @@ function insuranceCell(rules: BlackjackRules): ChartCell {
   return {
     scenarioKey: INSURANCE_SCENARIO_KEY,
     scenario: { kind: 'insurance' },
-    evByAction: { stand: 0, hit: take },
-    optimalAction: take > 0 ? 'hit' : 'stand',
+    // The real names. Insurance is its own decision, and a cell that called
+    // it a hit forced every reader to know that and translate.
+    evByAction: { declineInsurance: 0, takeInsurance: take },
+    optimalAction: take > 0 ? 'takeInsurance' : 'declineInsurance',
     optimalEv: Math.max(0, take),
     margin: Math.abs(take),
   };
@@ -254,7 +256,10 @@ export function formatChart(chart: StrategyChart): string {
     for (const row of rows) {
       const cells = UPCARDS.map((u) => {
         const cell = chart.cells.get(scenarioKey(row.scenario(u)));
-        return (cell ? ACTION_LETTERS[cell.optimalAction] : '.').padStart(3);
+        // Only hand cells reach the grid; insurance is printed on its own
+        // line below, so this lookup is over BlackjackAction alone.
+        const action = cell && isHandAction(cell.optimalAction) ? cell.optimalAction : null;
+        return (action ? ACTION_LETTERS[action] : '.').padStart(3);
       });
       lines.push(row.label.padEnd(5) + cells.join(''));
     }
@@ -284,6 +289,8 @@ export function formatChart(chart: StrategyChart): string {
 
   const ins = chart.cells.get(INSURANCE_SCENARIO_KEY);
   lines.push('');
-  lines.push(`insurance  ${ins ? (ins.optimalAction === 'hit' ? 'take' : 'decline') : '.'}`);
+  lines.push(
+    `insurance  ${ins ? (ins.optimalAction === 'takeInsurance' ? 'take' : 'decline') : '.'}`,
+  );
   return lines.join('\n') + '\n';
 }
