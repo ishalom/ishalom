@@ -4696,6 +4696,23 @@ const EN            = {
   'hand.doubled': 'doubled',
   'hand.surrendered': 'surrendered',
   'hand.units': '{n} units',
+
+  // --- Table talk (§3.4) ---
+  //
+  // What a dealer says out loud when a hand resolves: what she made, and who
+  // took it. Never whether the play was right — the feedback card is doing
+  // that, and hearing it twice made her sound like a scoreboard rather than
+  // someone dealing cards.
+  'dealer.youBust': 'Too many.',
+  'dealer.iBust': 'And I break. Yours.',
+  'dealer.blackjack': 'Blackjack. Pays three to two.',
+  'dealer.push': 'Push — your bet stays up.',
+  'dealer.surrendered': 'Half back. On to the next.',
+  'dealer.youWin': '{player} against my {dealer}. Yours.',
+  'dealer.iWin': '{dealer} here. That one is mine.',
+  'dealer.youWinPlain': 'Those are good. Paying you.',
+  'dealer.iWinPlain': 'Mine this time.',
+  'dealer.dealerHas': 'I make {dealer}.',
 };
 
 const HE            = {
@@ -5013,6 +5030,18 @@ const HE            = {
   'hand.doubled': 'הוכפל',
   'hand.surrendered': 'ויתור',
   'hand.units': '{n} יחידות',
+
+  // --- Table talk (§3.4) ---
+  'dealer.youBust': 'נשרפת.',
+  'dealer.iBust': 'ואני נשרף. שלך.',
+  'dealer.blackjack': 'בלאק ג׳ק. משלם 3 ל-2.',
+  'dealer.push': 'תיקו — ההימור נשאר.',
+  'dealer.surrendered': 'חצי בחזרה. עוברים לבאה.',
+  'dealer.youWin': '{player} מול {dealer} שלי. שלך.',
+  'dealer.iWin': '{dealer} אצלי. הפעם זה שלי.',
+  'dealer.youWinPlain': 'אלה טובות. משלם לך.',
+  'dealer.iWinPlain': 'הפעם זה שלי.',
+  'dealer.dealerHas': 'יש לי {dealer}.',
 };
 
 const MESSAGES                            = { en: EN, he: HE };
@@ -7546,19 +7575,51 @@ for (const button of document.querySelectorAll('.stat[data-info]')) {
  * feedback after the decision, and a helpful dealer who blurts the answer is
  * just a chart with a face.
  */
+/**
+ * What the dealer says when a hand resolves.
+ *
+ * A real dealer calls the hand, not the play: what she made, who took it, and
+ * whether the bet stays up. She was restating the verdict instead — which the
+ * card above the buttons already gives, in more detail — so she sounded like a
+ * scoreboard reading itself out rather than someone dealing cards.
+ *
+ * Nothing here touches whether the decision was right. That separation is the
+ * point of §3.1: the grade belongs to the decision and the table talk belongs
+ * to the cards, and letting the two speak in one voice is how a player starts
+ * hearing "you played well" in a hand that simply won.
+ */
+function tableTalk(view) {
+  const hands = view.hands;
+  const dealer = view.dealer;
+  const only = hands.length === 1 ? hands[0] : null;
+
+  if (only && only.surrendered) return T('dealer.surrendered');
+  // Two cards to twenty-one, and no split to have made them: a natural.
+  if (only && only.cards.length === 2 && only.total === 21) return T('dealer.blackjack');
+  if (hands.length > 0 && hands.every((hand) => hand.total > 21)) return T('dealer.youBust');
+  if (dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
+
+  const net = view.netUnits;
+  if (net === 0) return T('dealer.push');
+  if (dealer.total === null) return T('dealer.dealerHas', { dealer: '?' });
+  if (net > 0) {
+    return only
+      ? T('dealer.youWin', { player: only.total, dealer: dealer.total })
+      : T('dealer.youWinPlain');
+  }
+  return only ? T('dealer.iWin', { dealer: dealer.total }) : T('dealer.iWinPlain');
+}
+
 async function renderCoach(view) {
   const say = el('say');
   const answer = el('answer');
   const asks = el('asks');
   if (!say || !asks) return;
 
-  if (view.feedback && revealComplete()) {
-    const f = view.feedback;
-    say.textContent = f.correct
-      ? `${f.optimalLabel}. That's the play.`
-      : `${f.optimalLabel} was the play — that one cost you ${f.evCost.toFixed(3)}.`;
-  } else if (view.feedback) {
+  if (view.feedback && !revealComplete()) {
     say.textContent = T('ui.thinkPrompt');
+  } else if (view.feedback && view.phase === 'settled') {
+    say.textContent = tableTalk(view);
   }
 
   if (view.phase !== 'player' && view.phase !== 'insurance') {
@@ -7569,7 +7630,7 @@ async function renderCoach(view) {
   }
 
   const coach = await api('/api/coach');
-  if (coach.prompt && !view.feedback) say.textContent = coach.prompt;
+  if (coach.prompt) say.textContent = coach.prompt;
 
   asks.replaceChildren();
   answer.hidden = true;

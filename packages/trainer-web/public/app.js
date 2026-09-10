@@ -615,19 +615,51 @@ for (const button of document.querySelectorAll('.stat[data-info]')) {
  * feedback after the decision, and a helpful dealer who blurts the answer is
  * just a chart with a face.
  */
+/**
+ * What the dealer says when a hand resolves.
+ *
+ * A real dealer calls the hand, not the play: what she made, who took it, and
+ * whether the bet stays up. She was restating the verdict instead — which the
+ * card above the buttons already gives, in more detail — so she sounded like a
+ * scoreboard reading itself out rather than someone dealing cards.
+ *
+ * Nothing here touches whether the decision was right. That separation is the
+ * point of §3.1: the grade belongs to the decision and the table talk belongs
+ * to the cards, and letting the two speak in one voice is how a player starts
+ * hearing "you played well" in a hand that simply won.
+ */
+function tableTalk(view) {
+  const hands = view.hands;
+  const dealer = view.dealer;
+  const only = hands.length === 1 ? hands[0] : null;
+
+  if (only && only.surrendered) return T('dealer.surrendered');
+  // Two cards to twenty-one, and no split to have made them: a natural.
+  if (only && only.cards.length === 2 && only.total === 21) return T('dealer.blackjack');
+  if (hands.length > 0 && hands.every((hand) => hand.total > 21)) return T('dealer.youBust');
+  if (dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
+
+  const net = view.netUnits;
+  if (net === 0) return T('dealer.push');
+  if (dealer.total === null) return T('dealer.dealerHas', { dealer: '?' });
+  if (net > 0) {
+    return only
+      ? T('dealer.youWin', { player: only.total, dealer: dealer.total })
+      : T('dealer.youWinPlain');
+  }
+  return only ? T('dealer.iWin', { dealer: dealer.total }) : T('dealer.iWinPlain');
+}
+
 async function renderCoach(view) {
   const say = el('say');
   const answer = el('answer');
   const asks = el('asks');
   if (!say || !asks) return;
 
-  if (view.feedback && revealComplete()) {
-    const f = view.feedback;
-    say.textContent = f.correct
-      ? `${f.optimalLabel}. That's the play.`
-      : `${f.optimalLabel} was the play — that one cost you ${f.evCost.toFixed(3)}.`;
-  } else if (view.feedback) {
+  if (view.feedback && !revealComplete()) {
     say.textContent = T('ui.thinkPrompt');
+  } else if (view.feedback && view.phase === 'settled') {
+    say.textContent = tableTalk(view);
   }
 
   if (view.phase !== 'player' && view.phase !== 'insurance') {
@@ -638,7 +670,7 @@ async function renderCoach(view) {
   }
 
   const coach = await api('/api/coach');
-  if (coach.prompt && !view.feedback) say.textContent = coach.prompt;
+  if (coach.prompt) say.textContent = coach.prompt;
 
   asks.replaceChildren();
   answer.hidden = true;

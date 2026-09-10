@@ -373,6 +373,23 @@ const EN: Catalogue = {
   'hand.doubled': 'doubled',
   'hand.surrendered': 'surrendered',
   'hand.units': '{n} units',
+
+  // --- Table talk (§3.4) ---
+  //
+  // What a dealer says out loud when a hand resolves: what she made, and who
+  // took it. Never whether the play was right — the feedback card is doing
+  // that, and hearing it twice made her sound like a scoreboard rather than
+  // someone dealing cards.
+  'dealer.youBust': 'Too many.',
+  'dealer.iBust': 'And I break. Yours.',
+  'dealer.blackjack': 'Blackjack. Pays three to two.',
+  'dealer.push': 'Push — your bet stays up.',
+  'dealer.surrendered': 'Half back. On to the next.',
+  'dealer.youWin': '{player} against my {dealer}. Yours.',
+  'dealer.iWin': '{dealer} here. That one is mine.',
+  'dealer.youWinPlain': 'Those are good. Paying you.',
+  'dealer.iWinPlain': 'Mine this time.',
+  'dealer.dealerHas': 'I make {dealer}.',
 };
 
 const HE: Catalogue = {
@@ -690,6 +707,18 @@ const HE: Catalogue = {
   'hand.doubled': 'הוכפל',
   'hand.surrendered': 'ויתור',
   'hand.units': '{n} יחידות',
+
+  // --- Table talk (§3.4) ---
+  'dealer.youBust': 'נשרפת.',
+  'dealer.iBust': 'ואני נשרף. שלך.',
+  'dealer.blackjack': 'בלאק ג׳ק. משלם 3 ל-2.',
+  'dealer.push': 'תיקו — ההימור נשאר.',
+  'dealer.surrendered': 'חצי בחזרה. עוברים לבאה.',
+  'dealer.youWin': '{player} מול {dealer} שלי. שלך.',
+  'dealer.iWin': '{dealer} אצלי. הפעם זה שלי.',
+  'dealer.youWinPlain': 'אלה טובות. משלם לך.',
+  'dealer.iWinPlain': 'הפעם זה שלי.',
+  'dealer.dealerHas': 'יש לי {dealer}.',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };
