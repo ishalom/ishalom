@@ -25,7 +25,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  * build step and nothing to import from. Slicing them out tests the code that
  * actually ships instead of a copy that could drift from it.
  */
-function loadChipNodes(): (amount: number, cap: number) => Array<{ value: string }> {
+function loadChipNodes(): (amount: number, cap: number) => Array<{ textContent: string }> {
   const source = readFileSync(join(HERE, '..', 'public', 'app.js'), 'utf8');
   const from = source.indexOf('const DENOMINATIONS');
   assert.ok(from > 0, 'DENOMINATIONS is gone from app.js');
@@ -41,7 +41,7 @@ function loadChipNodes(): (amount: number, cap: number) => Array<{ value: string
   );
   return factory({
     createElement: () => ({ className: '', textContent: '' }),
-  }) as (amount: number, cap: number) => Array<{ value: string }>;
+  }) as (amount: number, cap: number) => Array<{ textContent: string }>;
 }
 
 const chipNodes = loadChipNodes();

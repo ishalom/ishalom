@@ -419,6 +419,16 @@ const EN: Catalogue = {
 
   'sound.enable': 'Sound',
   'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
+
+  // --- The door ---
+  'welcome.codeLabel': 'Pick a 4-digit code',
+  'welcome.codeHint': 'So you are the same player on your phone as on here. Four digits, and remember them.',
+  'welcome.badCode': 'Four digits, please.',
+  'welcome.wrongCode': 'That name is taken and the code does not match it. Try the code you used before, or a different name.',
+  'welcome.offline': 'The table is not answering, so you are playing on your own for now. Your record is kept here and will join up later.',
+  'welcome.fineLocal': 'No account, no password. This copy keeps your record in this browser only.',
+  'welcome.switch': 'Not you? Switch player',
+  'welcome.switchNote': 'Forgets this browser and returns to the door. Nothing is deleted — your record stays under its name and code.',
 };
 
 const HE: Catalogue = {
@@ -774,6 +784,16 @@ const HE: Catalogue = {
 
   'sound.enable': 'צליל',
   'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
+
+  // --- The door ---
+  'welcome.codeLabel': 'בחר קוד בן 4 ספרות',
+  'welcome.codeHint': 'כדי שתהיה אותו שחקן בטלפון ובמחשב. ארבע ספרות, ושווה לזכור אותן.',
+  'welcome.badCode': 'ארבע ספרות, בבקשה.',
+  'welcome.wrongCode': 'השם הזה כבר תפוס והקוד לא מתאים לו. נסה את הקוד שהשתמשת בו קודם, או שם אחר.',
+  'welcome.offline': 'השולחן לא עונה, אז בינתיים אתה משחק לבד. הרשומה נשמרת כאן ותתחבר מאוחר יותר.',
+  'welcome.fineLocal': 'בלי חשבון ובלי סיסמה. העותק הזה שומר את הרשומה שלך בדפדפן הזה בלבד.',
+  'welcome.switch': 'לא אתה? החלף שחקן',
+  'welcome.switchNote': 'שוכח את הדפדפן הזה וחוזר לדלת. שום דבר לא נמחק — הרשומה שלך נשארת תחת השם והקוד שלה.',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

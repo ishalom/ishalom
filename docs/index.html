@@ -6,6 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
+<meta name="ev-build-commit" content="da15ad68e3c872291858b9c03e25e5bc0a59ac69-dirty" />
+<meta name="ev-build-at" content="2026-09-10T19:28:31.551Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -1601,6 +1603,23 @@ body { font-family: var(--body); }
   .door { transition: transform 0.12s ease, border-color 0.12s ease; }
   .door:hover { transform: translateY(-2px); }
 }
+
+/* --- The door's code field, and the way back out of it -------------------- */
+
+.welcome-code { max-width: 8ch; letter-spacing: 0.28em; text-align: center; }
+.welcome-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: -4px 0 0; max-width: 36ch; }
+.welcome-error {
+  margin: 4px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--blunder);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 40ch;
+}
+.switch-player { display: block; margin: 18px auto 0; }
 
 /* ===========================================================================
  * The shared build only.
@@ -4851,6 +4870,16 @@ const EN            = {
 
   'sound.enable': 'Sound',
   'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
+
+  // --- The door ---
+  'welcome.codeLabel': 'Pick a 4-digit code',
+  'welcome.codeHint': 'So you are the same player on your phone as on here. Four digits, and remember them.',
+  'welcome.badCode': 'Four digits, please.',
+  'welcome.wrongCode': 'That name is taken and the code does not match it. Try the code you used before, or a different name.',
+  'welcome.offline': 'The table is not answering, so you are playing on your own for now. Your record is kept here and will join up later.',
+  'welcome.fineLocal': 'No account, no password. This copy keeps your record in this browser only.',
+  'welcome.switch': 'Not you? Switch player',
+  'welcome.switchNote': 'Forgets this browser and returns to the door. Nothing is deleted — your record stays under its name and code.',
 };
 
 const HE            = {
@@ -5206,6 +5235,16 @@ const HE            = {
 
   'sound.enable': 'צליל',
   'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
+
+  // --- The door ---
+  'welcome.codeLabel': 'בחר קוד בן 4 ספרות',
+  'welcome.codeHint': 'כדי שתהיה אותו שחקן בטלפון ובמחשב. ארבע ספרות, ושווה לזכור אותן.',
+  'welcome.badCode': 'ארבע ספרות, בבקשה.',
+  'welcome.wrongCode': 'השם הזה כבר תפוס והקוד לא מתאים לו. נסה את הקוד שהשתמשת בו קודם, או שם אחר.',
+  'welcome.offline': 'השולחן לא עונה, אז בינתיים אתה משחק לבד. הרשומה נשמרת כאן ותתחבר מאוחר יותר.',
+  'welcome.fineLocal': 'בלי חשבון ובלי סיסמה. העותק הזה שומר את הרשומה שלך בדפדפן הזה בלבד.',
+  'welcome.switch': 'לא אתה? החלף שחקן',
+  'welcome.switchNote': 'שוכח את הדפדפן הזה וחוזר לדלת. שום דבר לא נמחק — הרשומה שלך נשארת תחת השם והקוד שלה.',
 };
 
 const MESSAGES                            = { en: EN, he: HE };
@@ -6116,8 +6155,34 @@ function cardView(card        )           {
  * this and none of them can exist without it, which is why it is kept from the
  * start even though nothing reads it yet.
  */
-/** A saved session, as `progress` produces it and `restore` consumes it. */
-                                  
+/**
+ * A saved session, as `progress` produces it and `restore` consumes it.
+ *
+ * Version 2 keeps one rating per mode rather than one rating. Version 1 blobs
+ * are still out there — in browsers and in the shared table — and still restore,
+ * with their single rating loaded into the mode it was earned in.
+ */
+                                    
+             
+                      
+                
+                    
+                                                                                
+                            
+                  
+                 
+                   
+                     
+                            
+                                           
+                       
+                                          
+                                
+                        
+ 
+
+/** The shape before ratings were kept per mode. Read, never written. */
+                                    
              
                       
                 
@@ -6132,6 +6197,8 @@ function cardView(card        )           {
                                 
                         
  
+
+                                                                    
 
                                
                       
@@ -6183,6 +6250,9 @@ function bandFor(rating        )           {
 }
 
 const STREAK_MILESTONES                    = [10, 25, 50, 100];
+
+/** Every ladder a player can climb. One rating each, kept for the session. */
+const RATING_MODES                            = ['basic', 'recall', 'value'];
 
 /**
  * The run of correct decisions.
@@ -6296,8 +6366,29 @@ class TrainerSession {
           pending                          = [];
           scenarioStats = new Map                      ();
           clock = 0;
-          rating         = newRating('basic');
+  /*
+   * One rating per mode, and which one is in play.
+   *
+   * Each mode is its own ladder — a number earned against the costly hands
+   * means something different from one earned against the rare ones — but
+   * "its own ladder" has to mean the session keeps all three, not that it
+   * discards the old one on the way past. `docs/elo-difficulty.md` specified
+   * ratings keyed by (player, mode) from the start; this is the code catching
+   * up with it.
+   */
+          ratings                                 = {
+    basic: newRating('basic'),
+    recall: newRating('recall'),
+    value: newRating('value'),
+  };
+          mode                 = 'basic';
           lastRatingDelta                = null;
+  /*
+   * Decisions graded over the life of this player, across every mode and every
+   * rule set. Unlike `decisions`, nothing resets it — which is what makes it
+   * safe to use when deciding which of two saved copies is further along.
+   */
+          lifetimeDecisions = 0;
 
   /**
    * Two house restrictions the player can switch on over any preset.
@@ -6483,8 +6574,9 @@ class TrainerSession {
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
     // Last, because it moves the rating every comparison above had to read.
+    this.lifetimeDecisions++;
     this.lastRatingDelta = cell
-      ? updateRating(this.rating, cell[this.rating.mode], record.severityTier)
+      ? updateRating(this.ratings[this.mode], cell[this.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -6809,7 +6901,7 @@ class TrainerSession {
         return {
           scenarioKey: key,
           label: describeScenarioKey(key, this.locale),
-          difficulty: d[this.rating.mode],
+          difficulty: d[this.mode],
           margin: d.margin,
           optimal: cell.optimalAction,
           oneIn: Math.round(1000 / Math.max(d.perThousand, 0.01)),
@@ -6848,9 +6940,9 @@ class TrainerSession {
    * boundary where resuming is unambiguous — half a split restored into a
    * freshly shuffled shoe would be a different hand wearing the same cards.
    */
-  get progress()                  {
+  get progress()                    {
     return {
-      version: 1,
+      version: 2,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -6859,8 +6951,14 @@ class TrainerSession {
       netUnits: this.netUnits,
       closeCalls: this.closeCalls,
       closeCallsCorrect: this.closeCallsCorrect,
+      lifetimeDecisions: this.lifetimeDecisions,
       bySeverity: { ...this.bySeverity },
-      rating: { ...this.rating },
+      mode: this.mode,
+      ratings: {
+        basic: { ...this.ratings.basic },
+        recall: { ...this.ratings.recall },
+        value: { ...this.ratings.value },
+      },
       scenarioStats: [...this.scenarioStats.values()],
       history: this.history.slice(0, 40),
     };
@@ -6874,7 +6972,7 @@ class TrainerSession {
    * moved, not the ability to open the app.
    */
   restore(saved                                    )       {
-    if (!saved || saved.version !== 1) return;
+    if (!saved || (saved.version !== 1 && saved.version !== 2)) return;
     const n = (value         , fallback = 0)         =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -6891,8 +6989,34 @@ class TrainerSession {
     for (const tier of Object.keys(this.bySeverity)                  ) {
       this.bySeverity[tier] = n(saved.bySeverity?.[tier]);
     }
-    if (saved.rating && typeof saved.rating.rating === 'number') {
-      this.rating = { ...newRating(saved.rating.mode ?? 'basic'), ...saved.rating };
+    /*
+     * A version 1 blob holds one rating and the mode it was earned in. It goes
+     * into that mode's slot, and the other two start fresh — which is the only
+     * reading that loses nothing: the old shape never held the others, so there
+     * is nothing to lose there, and putting the number anywhere else would
+     * credit it to a ladder it was not climbed on.
+     */
+    if (saved.version === 1) {
+      const rating = saved.rating;
+      if (rating && typeof rating.rating === 'number') {
+        const mode = RATING_MODES.includes(rating.mode) ? rating.mode : 'basic';
+        this.ratings[mode] = { ...newRating(mode), ...rating, mode };
+        this.mode = mode;
+      }
+      // v1 had no lifetime counter. The decisions it did record are the best
+      // lower bound available, and a lower bound is safe here: the comparison
+      // it feeds only ever needs to not go backwards.
+      this.lifetimeDecisions = n(saved.decisions);
+    } else {
+      this.lifetimeDecisions = n(saved.lifetimeDecisions, n(saved.decisions));
+      if (RATING_MODES.includes(saved.mode)) this.mode = saved.mode;
+      for (const mode of RATING_MODES) {
+        const rating = saved.ratings?.[mode];
+        this.ratings[mode] =
+          rating && typeof rating.rating === 'number'
+            ? { ...newRating(mode), ...rating, mode }
+            : newRating(mode);
+      }
     }
     this.scenarioStats = new Map(
       (saved.scenarioStats ?? []).map((stat) => [stat.scenarioKey, { ...stat }]),
@@ -6904,6 +7028,11 @@ class TrainerSession {
     this.lastFeedback = null;
     this.lastRecord = null;
     this.countedHand = -1;
+  }
+
+  /** The ladder currently being climbed. */
+          get rating()         {
+    return this.ratings[this.mode];
   }
 
   /** The language in force, so a new session can carry it over. */
@@ -6966,10 +7095,11 @@ class TrainerSession {
   }
 
   setMode(mode                )       {
-    if (mode === this.rating.mode) return;
-    // Each mode is its own ladder, so it gets its own rating rather than
-    // carrying a number earned against a different set of hands.
-    this.rating = newRating(mode);
+    // Nothing is created or destroyed here: all three ladders exist for the
+    // life of the session, and this only says which one is being climbed.
+    // Replacing the rating on the way past is how the Basic rating used to be
+    // lost by visiting Recall and coming back.
+    if (this.ratings[mode]) this.mode = mode;
   }
 
   /** The derived chart for the Reference screen (spec §10, screen 7). */
@@ -8440,6 +8570,117 @@ Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));
 
 
 /*
+ * Who is playing, on more than one device.
+ *
+ * The app used to identify a player by a random id in one browser's storage,
+ * with the name only a label on it. Typing the same name on a second device
+ * therefore created a second player, starting again at 1200 — which is what
+ * Idan hit, and it makes the rating, the one number here that is earned slowly,
+ * worthless the moment anybody opens the link on their phone.
+ *
+ * So a player is now a name and a four-digit code. The name is the handle; the
+ * code is the proof that the person typing it is the same person as last time.
+ *
+ * SAY PLAINLY WHAT THIS IS NOT. It is not authentication. The shared table is
+ * open by design (see docs/decisions.md), so anyone who can read it can read
+ * every `pin_hash` in it, and there are only ten thousand codes to try. Nothing
+ * here would stop somebody who wanted to take a name; it stops two family
+ * members from colliding by accident, and stops the same person from becoming
+ * three players by using three browsers. That is the whole claim, and it is the
+ * trade Idan accepted.
+ *
+ * A forgotten code is not recoverable from inside the app. It is cleared by
+ * hand in the Supabase dashboard — see the README.
+ */
+
+/**
+ * The form of a name that decides whether two people are the same person.
+ *
+ * Case-folded and trimmed, with runs of inner whitespace collapsed, so
+ * "  Idan " and "idan" are one player rather than three. Unicode-normalised
+ * first, because Hebrew can be typed with combining marks that look identical
+ * and compare differently.
+ */
+function nameKey(name) {
+  return String(name ?? '')
+    .normalize('NFC')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLocaleLowerCase();
+}
+
+/** A code is exactly four digits. Nothing else is offered and nothing else is taken. */
+function isValidCode(code) {
+  return /^\d{4}$/.test(String(code ?? ''));
+}
+
+/**
+ * The stored proof: SHA-256 of "<id>:<code>".
+ *
+ * The id is in there so that the same code chosen by two people does not
+ * produce the same hash, which would let one of them recognise the other's.
+ * The code itself is never stored, and never leaves the device in plain form.
+ */
+async function pinHash(id, code) {
+  const bytes = new TextEncoder().encode(`${id}:${code}`);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * What should happen when someone enters a name and a code.
+ *
+ * Pure: it is handed the rows that already exist under that name and returns a
+ * decision, so every branch can be tested without a network or a database. The
+ * caller does the writing.
+ *
+ * Returns one of:
+ *   { action: 'create', id, pinHash }   — nobody has this name yet
+ *   { action: 'claim',  id, pinHash }   — one row, no code on it yet; take it
+ *   { action: 'adopt',  id }            — the code matches; this is them
+ *   { action: 'refuse', reason }        — it does not match, or the code is malformed
+ */
+async function decideIdentity(name, code, rows, newId) {
+  if (nameKey(name).length === 0) return { action: 'refuse', reason: 'no-name' };
+  if (!isValidCode(code)) return { action: 'refuse', reason: 'bad-code' };
+
+  // A row that has been merged into another is not a candidate; the row it
+  // points at is the one that answers for that name.
+  const live = (rows ?? []).filter((row) => !row.mergedInto && !row.merged_into);
+
+  if (live.length === 0) {
+    const id = newId();
+    return { action: 'create', id, pinHash: await pinHash(id, code) };
+  }
+
+  /*
+   * More than one row for a name should be impossible once the unique index is
+   * in place, but the index is added by a migration and old data predates it.
+   * The row with the most decisions behind it is the one worth answering with —
+   * the same rule the migration uses when it merges.
+   */
+  const best = [...live].sort(
+    (a, b) => (b.lifetimeDecisions ?? b.decisions ?? 0) - (a.lifetimeDecisions ?? a.decisions ?? 0),
+  )[0];
+
+  const stored = best.pinHash ?? best.pin_hash ?? null;
+  if (!stored) {
+    // An existing player from before codes existed. The first person to type
+    // the name sets its code and takes the row — which is the only thing that
+    // can be done without asking someone who is not here.
+    return { action: 'claim', id: best.id, pinHash: await pinHash(best.id, code) };
+  }
+
+  const offered = await pinHash(best.id, code);
+  if (offered === stored) return { action: 'adopt', id: best.id };
+
+  // Never create a second player with the same name. A wrong code is a wrong
+  // code, and silently making a new player is how duplicates happen.
+  return { action: 'refuse', reason: 'wrong-code' };
+}
+
+
+/*
  * Where the shared table lives.
  *
  * The app runs in two places and they store things differently: published on
@@ -8451,6 +8692,7 @@ Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));
  *   load(id)                 -> { progress, feed } or null
  *   save(id, record)         -> void
  *   watch(onRows)            -> unsubscribe
+ *   findByName(nameKey)      -> rows already using that name
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -8485,11 +8727,25 @@ function artifactBackend(db) {
 
     async save(id, record) {
       const { progress, feed, ...summary } = record;
+      // nameKey and pinHash ride with the summary, so a name can be looked up
+      // and a returning player recognised without reading anyone's session.
       await Promise.all([
         db.doc(`players/${id}`).set(summary),
         db.doc(`players/${id}/history/recent`).set({ at: record.at, progress }),
         db.doc(`feed/${id}`).set({ name: record.name, at: record.at, items: feed }),
       ]);
+    },
+
+    /*
+     * Who already answers to this name. The document store has no index, so
+     * this reads the collection — fine at the scale this runs at, where the
+     * whole point is that fifteen people share a table.
+     */
+    async findByName(key) {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((row) => (row.nameKey ?? '') === key);
     },
 
     watch(onRows) {
@@ -8558,15 +8814,38 @@ function httpBackend({ url, key, table = 'players' }) {
     decisions: row.decisions,
     accuracy: row.accuracy,
     evLostPer100: row.ev_lost_per_100,
+    lifetimeDecisions: row.lifetime_decisions ?? row.decisions ?? 0,
     at: Date.parse(row.updated_at) || 0,
     feed: row.feed ?? [],
   });
 
   // The leaderboard never needs anyone else's saved session, and it is by far
   // the largest column — so it is left out of the list query on purpose.
-  const LIST = 'id,name,rating,peak,provisional,mode,hands,decisions,accuracy,ev_lost_per_100,feed,updated_at';
+  const LIST =
+    'id,name,rating,peak,provisional,mode,hands,decisions,lifetime_decisions,accuracy,ev_lost_per_100,feed,updated_at';
 
   return {
+    /*
+     * Rows already using this name, merged ones included so the caller can see
+     * why a name is taken. `name_key` is the normalised form and carries the
+     * unique index, so this is a single indexed lookup.
+     */
+    async findByName(key) {
+      const response = await fetch(
+        `${endpoint}?name_key=eq.${encodeURIComponent(key)}` +
+          `&select=id,name,pin_hash,merged_into,lifetime_decisions,decisions`,
+        { headers },
+      );
+      if (!response.ok) throw new Error(`findByName failed: ${response.status}`);
+      return (await response.json()).map((row) => ({
+        id: row.id,
+        name: row.name,
+        pinHash: row.pin_hash,
+        mergedInto: row.merged_into,
+        lifetimeDecisions: row.lifetime_decisions ?? row.decisions ?? 0,
+      }));
+    },
+
     async load(id) {
       const response = await fetch(
         `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed`,
@@ -8591,6 +8870,9 @@ function httpBackend({ url, key, table = 'players' }) {
           mode: record.mode,
           hands: record.hands,
           decisions: record.decisions,
+          lifetime_decisions: record.lifetimeDecisions,
+          name_key: record.nameKey,
+          pin_hash: record.pinHash,
           accuracy: record.accuracy,
           ev_lost_per_100: record.evLostPer100,
           progress: record.progress,
@@ -8711,6 +8993,9 @@ const me = {
     return id;
   })(),
   name: store.get('ev:playerName') || '',
+  /* Set when a player claims or creates a name at the door. Written with the
+     record so the next device can check a code against it. Never the code. */
+  pinHash: store.get('ev:pinHash') || null,
 };
 
 /* --------------------------------------------------------------------------
@@ -8815,6 +9100,9 @@ async function writeRecord() {
       peak: Math.round(profile.rating.peak),
       provisional: Boolean(profile.rating.provisional),
       mode: profile.rating.mode,
+      nameKey: nameKey(me.name),
+      pinHash: me.pinHash,
+      lifetimeDecisions: session.progress.lifetimeDecisions,
       hands: stats.hands,
       decisions: stats.decisions,
       accuracy: stats.accuracy,
@@ -9058,6 +9346,7 @@ async function api(path, body) {
         session.setPlayerName(b.name);
         me.name = b.name.trim().slice(0, 24);
         store.set('ev:playerName', me.name);
+        if (me.pinHash) store.set('ev:pinHash', me.pinHash);
         saveProgressLocally();
         void publish();
       }
@@ -9216,6 +9505,27 @@ function mount(name) {
   }
 
   mountLanguageBar();
+  if (name === 'home') mountSwitchPlayer();
+}
+
+/**
+ * "Not you?" — the way off a shared computer, and the way to test the door.
+ *
+ * Only where there is a table to come back to: with no backend the record lives
+ * in this browser alone, and forgetting it would be the one destructive button
+ * in the app.
+ */
+function mountSwitchPlayer() {
+  if (!backend) return;
+  const footer = app().querySelector('.footer');
+  if (!footer) return;
+  const button = document.createElement('button');
+  button.className = 'link switch-player';
+  button.type = 'button';
+  button.textContent = tr('welcome.switch');
+  button.title = tr('welcome.switchNote');
+  button.addEventListener('click', switchPlayer);
+  footer.parentElement.insertBefore(button, footer);
 }
 
 function mountLanguageBar() {
@@ -9389,8 +9699,18 @@ function ago(at) {
 
 /* --- First run ------------------------------------------------------------ */
 
+/**
+ * The door.
+ *
+ * A name and a four-digit code, so the same person is the same player on any
+ * device. Without a backend there is nothing to match a code against, so the
+ * field is hidden and the name alone is kept — which is exactly the old
+ * behaviour, and the right one for a page opened from a file.
+ */
 function askName() {
   screen = 'welcome';
+  const canMatch = Boolean(backend);
+
   const wrap = document.createElement('div');
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
@@ -9400,27 +9720,107 @@ function askName() {
       <label class="welcome-label" for="welcome-name">${tr('welcome.nameLabel')}</label>
       <input class="welcome-input" id="welcome-name" maxlength="24" autocomplete="off"
              spellcheck="false" placeholder="${tr('welcome.placeholder')}" />
+      ${
+        canMatch
+          ? `<label class="welcome-label" for="welcome-code">${tr('welcome.codeLabel')}</label>
+      <input class="welcome-input welcome-code" id="welcome-code" inputmode="numeric"
+             maxlength="4" autocomplete="off" pattern="[0-9]{4}" placeholder="0000" />
+      <p class="welcome-hint">${tr('welcome.codeHint')}</p>`
+          : ''
+      }
+      <p class="welcome-error" id="welcome-error" hidden></p>
       <button class="action primary" type="submit">${tr('welcome.start')}</button>
     </form>
-    <p class="welcome-fine">${tr('welcome.fine')}</p>`;
+    <p class="welcome-fine">${tr(canMatch ? 'welcome.fine' : 'welcome.fineLocal')}</p>`;
   app().replaceChildren(wrap);
   applyLanguage();
 
-  const input = wrap.querySelector('#welcome-name');
-  input.focus();
-  wrap.querySelector('#welcome-form').addEventListener('submit', (event) => {
+  const nameField = wrap.querySelector('#welcome-name');
+  const codeField = wrap.querySelector('#welcome-code');
+  const error = wrap.querySelector('#welcome-error');
+  const button = wrap.querySelector('button[type="submit"]');
+  nameField.focus();
+
+  const complain = (key) => {
+    error.textContent = tr(key);
+    error.hidden = false;
+  };
+
+  wrap.querySelector('#welcome-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const name = input.value.trim().slice(0, 24);
+    error.hidden = true;
+
+    const name = nameField.value.trim().slice(0, 24);
     if (name.length === 0) return;
-    me.name = name;
-    store.set('ev:playerName', name);
-    session.setPlayerName(name);
-    saveProgressLocally();
-    // Fire-and-forget: joining the table is not worth making anyone wait at the
-    // door for, and the write is retried after the first hand anyway.
-    void publish();
-    mount('home');
+
+    if (!canMatch) {
+      // No table to check against, so there is nothing a code could prove.
+      await enter(name);
+      return;
+    }
+
+    const code = (codeField.value || '').trim();
+    if (!/^\d{4}$/.test(code)) return void complain('welcome.badCode');
+
+    button.disabled = true;
+    try {
+      const rows = await backend.findByName(nameKey(name));
+      const decision = await decideIdentity(name, code, rows, newId);
+
+      if (decision.action === 'refuse') {
+        complain(decision.reason === 'wrong-code' ? 'welcome.wrongCode' : 'welcome.badCode');
+        return;
+      }
+
+      /*
+       * `adopt` and `claim` both mean: this browser is now that player. The id
+       * is taken over so the next save writes to their row rather than making
+       * another one, and their record is pulled down before anything is shown.
+       */
+      me.id = decision.id;
+      store.set('ev:playerId', decision.id);
+      if (decision.pinHash) {
+        me.pinHash = decision.pinHash;
+        store.set('ev:pinHash', decision.pinHash);
+      }
+      await enter(name, decision.action !== 'create');
+    } catch {
+      // The table is unreachable. Rather than trap someone at the door, let
+      // them in locally; the record syncs when it comes back.
+      complain('welcome.offline');
+      await enter(name);
+    } finally {
+      button.disabled = false;
+    }
   });
+}
+
+/** Take the name, pull down whatever belongs to it, and open the app. */
+async function enter(name, restore = false) {
+  me.name = name;
+  store.set('ev:playerName', name);
+  session.setPlayerName(name);
+  if (restore) await restoreMine();
+  saveProgressLocally();
+  // Fire-and-forget: joining the table is not worth waiting at the door for,
+  // and the write is retried after the first hand anyway.
+  void publish();
+  mount('home');
+}
+
+/**
+ * "Not you?" — forget this browser's player and go back to the door.
+ *
+ * It forgets, it never deletes. The record stays in the table under its name
+ * and code, and the same person can walk back in with them.
+ */
+function switchPlayer() {
+  store.set('ev:playerId', '');
+  store.set('ev:playerName', '');
+  store.set('ev:pinHash', '');
+  store.set(PROGRESS_KEY, '');
+  store.set(FEED_KEY, '');
+  location.reload();
 }
 
 /* --- Boot ----------------------------------------------------------------- */
@@ -9428,13 +9828,19 @@ function askName() {
 session.setLocale(locale);
 if (me.name) session.setPlayerName(me.name);
 applyLanguage();
-if (me.name) mount('home');
-else askName();
-
-/* Connecting happens once, at boot. Kept as a promise so anything driving this
-   page without being a browser — a test, say — can wait for it rather than
-   calling connect again and quietly opening a second subscription. */
-const booted = connect();
+/*
+ * Connecting happens once, at boot, and the door waits for it: whether a code
+ * can be checked at all depends on whether there is a table to check against,
+ * and asking for one that cannot be verified would be theatre.
+ *
+ * Kept as a promise so anything driving this page without being a browser — a
+ * test, say — can wait for it rather than calling connect again and quietly
+ * opening a second subscription.
+ */
+const booted = connect().then(() => {
+  if (me.name) mount('home');
+  else askName();
+});
 
 </script>
   </body>

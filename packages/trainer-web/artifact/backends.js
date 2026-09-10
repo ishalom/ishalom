@@ -10,6 +10,7 @@
  *   load(id)                 -> { progress, feed } or null
  *   save(id, record)         -> void
  *   watch(onRows)            -> unsubscribe
+ *   findByName(nameKey)      -> rows already using that name
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -44,11 +45,25 @@ function artifactBackend(db) {
 
     async save(id, record) {
       const { progress, feed, ...summary } = record;
+      // nameKey and pinHash ride with the summary, so a name can be looked up
+      // and a returning player recognised without reading anyone's session.
       await Promise.all([
         db.doc(`players/${id}`).set(summary),
         db.doc(`players/${id}/history/recent`).set({ at: record.at, progress }),
         db.doc(`feed/${id}`).set({ name: record.name, at: record.at, items: feed }),
       ]);
+    },
+
+    /*
+     * Who already answers to this name. The document store has no index, so
+     * this reads the collection — fine at the scale this runs at, where the
+     * whole point is that fifteen people share a table.
+     */
+    async findByName(key) {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((row) => (row.nameKey ?? '') === key);
     },
 
     watch(onRows) {
@@ -117,15 +132,38 @@ function httpBackend({ url, key, table = 'players' }) {
     decisions: row.decisions,
     accuracy: row.accuracy,
     evLostPer100: row.ev_lost_per_100,
+    lifetimeDecisions: row.lifetime_decisions ?? row.decisions ?? 0,
     at: Date.parse(row.updated_at) || 0,
     feed: row.feed ?? [],
   });
 
   // The leaderboard never needs anyone else's saved session, and it is by far
   // the largest column — so it is left out of the list query on purpose.
-  const LIST = 'id,name,rating,peak,provisional,mode,hands,decisions,accuracy,ev_lost_per_100,feed,updated_at';
+  const LIST =
+    'id,name,rating,peak,provisional,mode,hands,decisions,lifetime_decisions,accuracy,ev_lost_per_100,feed,updated_at';
 
   return {
+    /*
+     * Rows already using this name, merged ones included so the caller can see
+     * why a name is taken. `name_key` is the normalised form and carries the
+     * unique index, so this is a single indexed lookup.
+     */
+    async findByName(key) {
+      const response = await fetch(
+        `${endpoint}?name_key=eq.${encodeURIComponent(key)}` +
+          `&select=id,name,pin_hash,merged_into,lifetime_decisions,decisions`,
+        { headers },
+      );
+      if (!response.ok) throw new Error(`findByName failed: ${response.status}`);
+      return (await response.json()).map((row) => ({
+        id: row.id,
+        name: row.name,
+        pinHash: row.pin_hash,
+        mergedInto: row.merged_into,
+        lifetimeDecisions: row.lifetime_decisions ?? row.decisions ?? 0,
+      }));
+    },
+
     async load(id) {
       const response = await fetch(
         `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed`,
@@ -150,6 +188,9 @@ function httpBackend({ url, key, table = 'players' }) {
           mode: record.mode,
           hands: record.hands,
           decisions: record.decisions,
+          lifetime_decisions: record.lifetimeDecisions,
+          name_key: record.nameKey,
+          pin_hash: record.pinHash,
           accuracy: record.accuracy,
           ev_lost_per_100: record.evLostPer100,
           progress: record.progress,

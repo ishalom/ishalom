@@ -124,8 +124,34 @@ export interface PlayedHand {
  * this and none of them can exist without it, which is why it is kept from the
  * start even though nothing reads it yet.
  */
-/** A saved session, as `progress` produces it and `restore` consumes it. */
-export interface SessionProgress {
+/**
+ * A saved session, as `progress` produces it and `restore` consumes it.
+ *
+ * Version 2 keeps one rating per mode rather than one rating. Version 1 blobs
+ * are still out there — in browsers and in the shared table — and still restore,
+ * with their single rating loaded into the mode it was earned in.
+ */
+export interface SessionProgressV2 {
+  version: 2;
+  name: string | null;
+  hands: number;
+  decisions: number;
+  /** Never reset by a rule change or a mode change. See `lifetimeDecisions`. */
+  lifetimeDecisions: number;
+  correct: number;
+  evLost: number;
+  netUnits: number;
+  closeCalls: number;
+  closeCallsCorrect: number;
+  bySeverity: Record<SeverityTier, number>;
+  mode: DifficultyMode;
+  ratings: Record<DifficultyMode, Rating>;
+  scenarioStats: ScenarioStat[];
+  history: PlayedHand[];
+}
+
+/** The shape before ratings were kept per mode. Read, never written. */
+export interface SessionProgressV1 {
   version: 1;
   name: string | null;
   hands: number;
@@ -140,6 +166,8 @@ export interface SessionProgress {
   scenarioStats: ScenarioStat[];
   history: PlayedHand[];
 }
+
+export type SessionProgress = SessionProgressV2 | SessionProgressV1;
 
 export interface ScenarioStat {
   scenarioKey: string;
@@ -191,6 +219,9 @@ export function bandFor(rating: number): SpotBand {
 }
 
 export const STREAK_MILESTONES: readonly number[] = [10, 25, 50, 100];
+
+/** Every ladder a player can climb. One rating each, kept for the session. */
+export const RATING_MODES: readonly DifficultyMode[] = ['basic', 'recall', 'value'];
 
 /**
  * The run of correct decisions.
@@ -304,8 +335,29 @@ export class TrainerSession {
   private pending: PlayedHand['decisions'] = [];
   private scenarioStats = new Map<string, ScenarioStat>();
   private clock = 0;
-  private rating: Rating = newRating('basic');
+  /*
+   * One rating per mode, and which one is in play.
+   *
+   * Each mode is its own ladder — a number earned against the costly hands
+   * means something different from one earned against the rare ones — but
+   * "its own ladder" has to mean the session keeps all three, not that it
+   * discards the old one on the way past. `docs/elo-difficulty.md` specified
+   * ratings keyed by (player, mode) from the start; this is the code catching
+   * up with it.
+   */
+  private ratings: Record<DifficultyMode, Rating> = {
+    basic: newRating('basic'),
+    recall: newRating('recall'),
+    value: newRating('value'),
+  };
+  private mode: DifficultyMode = 'basic';
   private lastRatingDelta: number | null = null;
+  /*
+   * Decisions graded over the life of this player, across every mode and every
+   * rule set. Unlike `decisions`, nothing resets it — which is what makes it
+   * safe to use when deciding which of two saved copies is further along.
+   */
+  private lifetimeDecisions = 0;
 
   /**
    * Two house restrictions the player can switch on over any preset.
@@ -491,8 +543,9 @@ export class TrainerSession {
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
     // Last, because it moves the rating every comparison above had to read.
+    this.lifetimeDecisions++;
     this.lastRatingDelta = cell
-      ? updateRating(this.rating, cell[this.rating.mode], record.severityTier)
+      ? updateRating(this.ratings[this.mode], cell[this.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -817,7 +870,7 @@ export class TrainerSession {
         return {
           scenarioKey: key,
           label: describeScenarioKey(key, this.locale),
-          difficulty: d[this.rating.mode],
+          difficulty: d[this.mode],
           margin: d.margin,
           optimal: cell.optimalAction,
           oneIn: Math.round(1000 / Math.max(d.perThousand, 0.01)),
@@ -856,9 +909,9 @@ export class TrainerSession {
    * boundary where resuming is unambiguous — half a split restored into a
    * freshly shuffled shoe would be a different hand wearing the same cards.
    */
-  get progress(): SessionProgress {
+  get progress(): SessionProgressV2 {
     return {
-      version: 1,
+      version: 2,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -867,8 +920,14 @@ export class TrainerSession {
       netUnits: this.netUnits,
       closeCalls: this.closeCalls,
       closeCallsCorrect: this.closeCallsCorrect,
+      lifetimeDecisions: this.lifetimeDecisions,
       bySeverity: { ...this.bySeverity },
-      rating: { ...this.rating },
+      mode: this.mode,
+      ratings: {
+        basic: { ...this.ratings.basic },
+        recall: { ...this.ratings.recall },
+        value: { ...this.ratings.value },
+      },
       scenarioStats: [...this.scenarioStats.values()],
       history: this.history.slice(0, 40),
     };
@@ -882,7 +941,7 @@ export class TrainerSession {
    * moved, not the ability to open the app.
    */
   restore(saved: SessionProgress | null | undefined): void {
-    if (!saved || saved.version !== 1) return;
+    if (!saved || (saved.version !== 1 && saved.version !== 2)) return;
     const n = (value: unknown, fallback = 0): number =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -899,8 +958,34 @@ export class TrainerSession {
     for (const tier of Object.keys(this.bySeverity) as SeverityTier[]) {
       this.bySeverity[tier] = n(saved.bySeverity?.[tier]);
     }
-    if (saved.rating && typeof saved.rating.rating === 'number') {
-      this.rating = { ...newRating(saved.rating.mode ?? 'basic'), ...saved.rating };
+    /*
+     * A version 1 blob holds one rating and the mode it was earned in. It goes
+     * into that mode's slot, and the other two start fresh — which is the only
+     * reading that loses nothing: the old shape never held the others, so there
+     * is nothing to lose there, and putting the number anywhere else would
+     * credit it to a ladder it was not climbed on.
+     */
+    if (saved.version === 1) {
+      const rating = saved.rating;
+      if (rating && typeof rating.rating === 'number') {
+        const mode = RATING_MODES.includes(rating.mode) ? rating.mode : 'basic';
+        this.ratings[mode] = { ...newRating(mode), ...rating, mode };
+        this.mode = mode;
+      }
+      // v1 had no lifetime counter. The decisions it did record are the best
+      // lower bound available, and a lower bound is safe here: the comparison
+      // it feeds only ever needs to not go backwards.
+      this.lifetimeDecisions = n(saved.decisions);
+    } else {
+      this.lifetimeDecisions = n(saved.lifetimeDecisions, n(saved.decisions));
+      if (RATING_MODES.includes(saved.mode)) this.mode = saved.mode;
+      for (const mode of RATING_MODES) {
+        const rating = saved.ratings?.[mode];
+        this.ratings[mode] =
+          rating && typeof rating.rating === 'number'
+            ? { ...newRating(mode), ...rating, mode }
+            : newRating(mode);
+      }
     }
     this.scenarioStats = new Map(
       (saved.scenarioStats ?? []).map((stat) => [stat.scenarioKey, { ...stat }]),
@@ -912,6 +997,11 @@ export class TrainerSession {
     this.lastFeedback = null;
     this.lastRecord = null;
     this.countedHand = -1;
+  }
+
+  /** The ladder currently being climbed. */
+  private get rating(): Rating {
+    return this.ratings[this.mode];
   }
 
   /** The language in force, so a new session can carry it over. */
@@ -974,10 +1064,11 @@ export class TrainerSession {
   }
 
   setMode(mode: DifficultyMode): void {
-    if (mode === this.rating.mode) return;
-    // Each mode is its own ladder, so it gets its own rating rather than
-    // carrying a number earned against a different set of hands.
-    this.rating = newRating(mode);
+    // Nothing is created or destroyed here: all three ladders exist for the
+    // life of the session, and this only says which one is being climbed.
+    // Replacing the rating on the way past is how the Basic rating used to be
+    // lost by visiting Recall and coming back.
+    if (this.ratings[mode]) this.mode = mode;
   }
 
   /** The derived chart for the Reference screen (spec §10, screen 7). */

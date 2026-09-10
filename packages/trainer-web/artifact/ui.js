@@ -130,6 +130,27 @@ function mount(name) {
   }
 
   mountLanguageBar();
+  if (name === 'home') mountSwitchPlayer();
+}
+
+/**
+ * "Not you?" — the way off a shared computer, and the way to test the door.
+ *
+ * Only where there is a table to come back to: with no backend the record lives
+ * in this browser alone, and forgetting it would be the one destructive button
+ * in the app.
+ */
+function mountSwitchPlayer() {
+  if (!backend) return;
+  const footer = app().querySelector('.footer');
+  if (!footer) return;
+  const button = document.createElement('button');
+  button.className = 'link switch-player';
+  button.type = 'button';
+  button.textContent = tr('welcome.switch');
+  button.title = tr('welcome.switchNote');
+  button.addEventListener('click', switchPlayer);
+  footer.parentElement.insertBefore(button, footer);
 }
 
 function mountLanguageBar() {
@@ -303,8 +324,18 @@ function ago(at) {
 
 /* --- First run ------------------------------------------------------------ */
 
+/**
+ * The door.
+ *
+ * A name and a four-digit code, so the same person is the same player on any
+ * device. Without a backend there is nothing to match a code against, so the
+ * field is hidden and the name alone is kept — which is exactly the old
+ * behaviour, and the right one for a page opened from a file.
+ */
 function askName() {
   screen = 'welcome';
+  const canMatch = Boolean(backend);
+
   const wrap = document.createElement('div');
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
@@ -314,27 +345,107 @@ function askName() {
       <label class="welcome-label" for="welcome-name">${tr('welcome.nameLabel')}</label>
       <input class="welcome-input" id="welcome-name" maxlength="24" autocomplete="off"
              spellcheck="false" placeholder="${tr('welcome.placeholder')}" />
+      ${
+        canMatch
+          ? `<label class="welcome-label" for="welcome-code">${tr('welcome.codeLabel')}</label>
+      <input class="welcome-input welcome-code" id="welcome-code" inputmode="numeric"
+             maxlength="4" autocomplete="off" pattern="[0-9]{4}" placeholder="0000" />
+      <p class="welcome-hint">${tr('welcome.codeHint')}</p>`
+          : ''
+      }
+      <p class="welcome-error" id="welcome-error" hidden></p>
       <button class="action primary" type="submit">${tr('welcome.start')}</button>
     </form>
-    <p class="welcome-fine">${tr('welcome.fine')}</p>`;
+    <p class="welcome-fine">${tr(canMatch ? 'welcome.fine' : 'welcome.fineLocal')}</p>`;
   app().replaceChildren(wrap);
   applyLanguage();
 
-  const input = wrap.querySelector('#welcome-name');
-  input.focus();
-  wrap.querySelector('#welcome-form').addEventListener('submit', (event) => {
+  const nameField = wrap.querySelector('#welcome-name');
+  const codeField = wrap.querySelector('#welcome-code');
+  const error = wrap.querySelector('#welcome-error');
+  const button = wrap.querySelector('button[type="submit"]');
+  nameField.focus();
+
+  const complain = (key) => {
+    error.textContent = tr(key);
+    error.hidden = false;
+  };
+
+  wrap.querySelector('#welcome-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const name = input.value.trim().slice(0, 24);
+    error.hidden = true;
+
+    const name = nameField.value.trim().slice(0, 24);
     if (name.length === 0) return;
-    me.name = name;
-    store.set('ev:playerName', name);
-    session.setPlayerName(name);
-    saveProgressLocally();
-    // Fire-and-forget: joining the table is not worth making anyone wait at the
-    // door for, and the write is retried after the first hand anyway.
-    void publish();
-    mount('home');
+
+    if (!canMatch) {
+      // No table to check against, so there is nothing a code could prove.
+      await enter(name);
+      return;
+    }
+
+    const code = (codeField.value || '').trim();
+    if (!/^\d{4}$/.test(code)) return void complain('welcome.badCode');
+
+    button.disabled = true;
+    try {
+      const rows = await backend.findByName(nameKey(name));
+      const decision = await decideIdentity(name, code, rows, newId);
+
+      if (decision.action === 'refuse') {
+        complain(decision.reason === 'wrong-code' ? 'welcome.wrongCode' : 'welcome.badCode');
+        return;
+      }
+
+      /*
+       * `adopt` and `claim` both mean: this browser is now that player. The id
+       * is taken over so the next save writes to their row rather than making
+       * another one, and their record is pulled down before anything is shown.
+       */
+      me.id = decision.id;
+      store.set('ev:playerId', decision.id);
+      if (decision.pinHash) {
+        me.pinHash = decision.pinHash;
+        store.set('ev:pinHash', decision.pinHash);
+      }
+      await enter(name, decision.action !== 'create');
+    } catch {
+      // The table is unreachable. Rather than trap someone at the door, let
+      // them in locally; the record syncs when it comes back.
+      complain('welcome.offline');
+      await enter(name);
+    } finally {
+      button.disabled = false;
+    }
   });
+}
+
+/** Take the name, pull down whatever belongs to it, and open the app. */
+async function enter(name, restore = false) {
+  me.name = name;
+  store.set('ev:playerName', name);
+  session.setPlayerName(name);
+  if (restore) await restoreMine();
+  saveProgressLocally();
+  // Fire-and-forget: joining the table is not worth waiting at the door for,
+  // and the write is retried after the first hand anyway.
+  void publish();
+  mount('home');
+}
+
+/**
+ * "Not you?" — forget this browser's player and go back to the door.
+ *
+ * It forgets, it never deletes. The record stays in the table under its name
+ * and code, and the same person can walk back in with them.
+ */
+function switchPlayer() {
+  store.set('ev:playerId', '');
+  store.set('ev:playerName', '');
+  store.set('ev:pinHash', '');
+  store.set(PROGRESS_KEY, '');
+  store.set(FEED_KEY, '');
+  location.reload();
 }
 
 /* --- Boot ----------------------------------------------------------------- */
@@ -342,10 +453,16 @@ function askName() {
 session.setLocale(locale);
 if (me.name) session.setPlayerName(me.name);
 applyLanguage();
-if (me.name) mount('home');
-else askName();
-
-/* Connecting happens once, at boot. Kept as a promise so anything driving this
-   page without being a browser — a test, say — can wait for it rather than
-   calling connect again and quietly opening a second subscription. */
-const booted = connect();
+/*
+ * Connecting happens once, at boot, and the door waits for it: whether a code
+ * can be checked at all depends on whether there is a table to check against,
+ * and asking for one that cannot be verified would be theatre.
+ *
+ * Kept as a promise so anything driving this page without being a browser — a
+ * test, say — can wait for it rather than calling connect again and quietly
+ * opening a second subscription.
+ */
+const booted = connect().then(() => {
+  if (me.name) mount('home');
+  else askName();
+});

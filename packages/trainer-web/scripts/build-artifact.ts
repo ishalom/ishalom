@@ -19,6 +19,7 @@
  * and the day the two drifted, one of them would be teaching the wrong play.
  */
 
+import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -60,6 +61,7 @@ const homeHtml = bodyOf(read(PUBLIC, 'home.html'));
 const tableHtml = bodyOf(read(PUBLIC, 'table.html'));
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
+const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 const shell = read(ARTIFACT, 'shell.js');
 const ui = read(ARTIFACT, 'ui.js');
@@ -94,6 +96,32 @@ function backendConfig(): BackendConfig | null {
 
 const config = backendConfig();
 
+/**
+ * Which commit a built page came from.
+ *
+ * Both outputs are committed files served by something else — GitHub Pages for
+ * one, the artifact host for the other — so "is the live page current?" is a
+ * question that gets asked, and answering it by eye means diffing 340 KB of
+ * bundled JavaScript. A meta tag answers it with one fetch and no guessing.
+ *
+ * A dirty tree is stamped as such, because a stamp that quietly claims a clean
+ * commit it does not match is worse than no stamp at all.
+ */
+function buildStamp(): { commit: string; at: string } {
+  const run = (cmd: string) => {
+    try {
+      return execSync(cmd, { cwd: ROOT, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+    } catch {
+      return '';
+    }
+  };
+  const commit = run('git rev-parse HEAD') || 'unknown';
+  const dirty = run('git status --porcelain') !== '';
+  return { commit: dirty ? `${commit}-dirty` : commit, at: new Date().toISOString() };
+}
+
+const stamp = buildStamp();
+
 /** The scripts, in the order they have to run. Shared by both outputs. */
 const scripts = `<script>
 /* The engines, folded into one scope by scripts/bundle.ts. Byte-for-byte the
@@ -110,6 +138,8 @@ const TABLE_HTML = ${jsString(tableHtml)};
 ${homeJs}
 ${tableJs}
 
+${identity}
+
 ${backends}
 
 ${shell}
@@ -118,6 +148,8 @@ ${ui}
 </script>`;
 
 const head = `<title>EV Trainer</title>
+<meta name="ev-build-commit" content="${stamp.commit}" />
+<meta name="ev-build-at" content="${stamp.at}" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"

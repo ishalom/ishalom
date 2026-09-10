@@ -1588,3 +1588,20 @@ body { font-family: var(--body); }
   .door { transition: transform 0.12s ease, border-color 0.12s ease; }
   .door:hover { transform: translateY(-2px); }
 }
+
+/* --- The door's code field, and the way back out of it -------------------- */
+
+.welcome-code { max-width: 8ch; letter-spacing: 0.28em; text-align: center; }
+.welcome-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: -4px 0 0; max-width: 36ch; }
+.welcome-error {
+  margin: 4px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--blunder);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 40ch;
+}
+.switch-player { display: block; margin: 18px auto 0; }

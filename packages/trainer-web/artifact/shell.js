@@ -53,6 +53,9 @@ const me = {
     return id;
   })(),
   name: store.get('ev:playerName') || '',
+  /* Set when a player claims or creates a name at the door. Written with the
+     record so the next device can check a code against it. Never the code. */
+  pinHash: store.get('ev:pinHash') || null,
 };
 
 /* --------------------------------------------------------------------------
@@ -157,6 +160,9 @@ async function writeRecord() {
       peak: Math.round(profile.rating.peak),
       provisional: Boolean(profile.rating.provisional),
       mode: profile.rating.mode,
+      nameKey: nameKey(me.name),
+      pinHash: me.pinHash,
+      lifetimeDecisions: session.progress.lifetimeDecisions,
       hands: stats.hands,
       decisions: stats.decisions,
       accuracy: stats.accuracy,
@@ -400,6 +406,7 @@ async function api(path, body) {
         session.setPlayerName(b.name);
         me.name = b.name.trim().slice(0, 24);
         store.set('ev:playerName', me.name);
+        if (me.pinHash) store.set('ev:pinHash', me.pinHash);
         saveProgressLocally();
         void publish();
       }
