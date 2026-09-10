@@ -24,7 +24,7 @@ import { catalogue, t, type Locale } from '../src/i18n.ts';
 const SPEECH = new Set([
   'dealer.youBust', 'dealer.iBust', 'dealer.blackjack', 'dealer.push',
   'dealer.surrendered', 'dealer.youWin', 'dealer.iWin', 'dealer.youWinPlain',
-  'dealer.iWinPlain', 'dealer.dealerHas',
+  'dealer.iWinPlain', 'dealer.dealerHas', 'dealer.dealerNatural', 'dealer.bothNaturals',
 ]);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -32,14 +32,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 /** Lift `tableTalk` out of the client script, so this tests what ships. */
 function loadTableTalk(locale: Locale): (view: unknown) => string {
   const source = readFileSync(join(HERE, '..', 'public', 'app.js'), 'utf8');
-  const from = source.indexOf('function tableTalk');
-  assert.ok(from > 0, 'tableTalk is gone from app.js');
-  const end = source.indexOf('\n}\n', from);
-  assert.ok(end > from, 'could not find the end of tableTalk');
+  const slice = (name: string) => {
+    const from = source.indexOf(`function ${name}`);
+    assert.ok(from > 0, `${name} is gone from app.js`);
+    const end = source.indexOf('\n}\n', from);
+    assert.ok(end > from, `could not find the end of ${name}`);
+    return source.slice(from, end + 3);
+  };
 
   return new Function(
     'T',
-    `${source.slice(from, end + 3)}\nreturn tableTalk;`,
+    // `tableTalk` leans on `dealerNatural`, so the slice has to carry both or
+    // this would pass against a function the page never runs.
+    `${slice('dealerNatural')}\n${slice('tableTalk')}\nreturn tableTalk;`,
   )((key: string, params?: Record<string, string | number>) => t(locale, key, params ?? {})) as (
     view: unknown,
   ) => string;
@@ -53,6 +58,8 @@ function settled(options: {
   player: number[];
   cards?: number;
   dealer: number | null;
+  /** How many cards the dealer holds. Two of them making 21 is a natural. */
+  dealerCards?: number;
   net: number;
   surrendered?: boolean;
 }) {
@@ -63,7 +70,12 @@ function settled(options: {
       cards: new Array(options.cards ?? (total > 21 ? 3 : 2)).fill({ rank: 'x' }),
       surrendered: Boolean(options.surrendered),
     })),
-    dealer: { total: options.dealer },
+    dealer: {
+      total: options.dealer,
+      hidden: false,
+      // Three by default, so only the cases that ask for it are naturals.
+      cards: new Array(options.dealerCards ?? 3).fill({ rank: 'x' }),
+    },
     netUnits: options.net,
   };
 }
@@ -88,6 +100,26 @@ test('a natural is called as one, and only when it is one', () => {
   // twenty-one on one half of a split.
   assert.equal(say(settled({ player: [21], cards: 3, dealer: 20, net: 1 })), '21 against my 20. Yours.');
   assert.equal(say(settled({ player: [21, 19], cards: 2, dealer: 20, net: 1 })), 'Those are good. Paying you.');
+});
+
+test('a dealer natural is named, because otherwise the hand looks skipped', () => {
+  /*
+   * Idan's report: 5♥ K♣ against A♦ K♣, and his turn appeared to be skipped.
+   * Nothing was skipped — the dealer had blackjack and the hand was over on the
+   * deal. The old line was "21 here. That one is mine.", which is true and
+   * explains nothing.
+   */
+  const view = settled({ player: [15], dealer: 21, dealerCards: 2, net: -1 });
+  assert.match(say(view), /blackjack/i);
+  assert.match(say(view), /nothing was skipped/i);
+  assert.ok(sayHe(view).includes('בלאק ג׳ק'));
+  assert.notEqual(sayHe(view), say(view));
+});
+
+test('two naturals are a push, and are not paid three to two', () => {
+  // The player-natural branch used to run first, so a push announced a payout.
+  const view = settled({ player: [21], cards: 2, dealer: 21, dealerCards: 2, net: 0 });
+  assert.equal(say(view), 'Blackjack here too. Push — your bet stays up.');
 });
 
 test('the totals she names are the ones on the table', () => {

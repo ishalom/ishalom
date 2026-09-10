@@ -747,6 +747,14 @@ function renderFeedback(view) {
   });
   box.appendChild(pref);
 
+  // The count said otherwise, and saying so costs the player nothing.
+  if (feedback.counterNote) {
+    const note = document.createElement('p');
+    note.className = 'sensitivity';
+    note.textContent = feedback.counterNote;
+    box.appendChild(note);
+  }
+
   // §7.1 item 6: flag answers that flip under another common rule set.
   if (feedback.sensitivity.length > 0) {
     const note = document.createElement('p');
@@ -851,7 +859,13 @@ function showInfo(which) {
   head.className = 'stat-info-head';
   head.textContent = T(`info.${which}.title`);
   const body = document.createElement('p');
-  renderRich(body, T(`info.${which}.body`));
+  // The edge of the rules themselves is a live figure, not a constant: it moves
+  // with the preset, with surrender, and with the split rule. Read from the same
+  // place the badge reads it, so the tooltip can never quote a stale number.
+  const rulesEdge = state.view?.ruleSet
+    ? `${state.view.ruleSet.edgePercent.toFixed(2)}%`
+    : '—';
+  renderRich(body, T(`info.${which}.body`, { rulesEdge }));
   box.append(head, body);
 
   if (which === 'accuracy' && state.view) {
@@ -905,14 +919,35 @@ for (const button of document.querySelectorAll('.stat[data-info]')) {
  * to the cards, and letting the two speak in one voice is how a player starts
  * hearing "you played well" in a hand that simply won.
  */
+/** A dealer natural: two cards to twenty-one, face up because the hand is over. */
+function dealerNatural(view) {
+  const dealer = view.dealer;
+  return !dealer.hidden && dealer.cards.length === 2 && dealer.total === 21;
+}
+
 function tableTalk(view) {
   const hands = view.hands;
   const dealer = view.dealer;
   const only = hands.length === 1 ? hands[0] : null;
 
   if (only && only.surrendered) return T('dealer.surrendered');
-  // Two cards to twenty-one, and no split to have made them: a natural.
-  if (only && only.cards.length === 2 && only.total === 21) return T('dealer.blackjack');
+
+  /*
+   * The dealer's own natural, named before anything else.
+   *
+   * It ends the hand where it stands — sometimes before the player has taken a
+   * single decision — and from the seat that is indistinguishable from the app
+   * having skipped their turn. Idan reported exactly that, on 5♥ K♣ against
+   * A♦ K♣. Nothing was skipped; there was nothing left to play. Saying so is
+   * the whole fix.
+   */
+  const playerNatural = Boolean(only && only.cards.length === 2 && only.total === 21);
+  if (dealerNatural(view)) {
+    return playerNatural ? T('dealer.bothNaturals') : T('dealer.dealerNatural');
+  }
+  // Two cards to twenty-one, and no split to have made them: a natural. Checked
+  // after the dealer's, because when both have one it is a push, not a payout.
+  if (playerNatural) return T('dealer.blackjack');
   if (hands.length > 0 && hands.every((hand) => hand.total > 21)) return T('dealer.youBust');
   if (dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
 
@@ -933,14 +968,20 @@ async function renderCoach(view) {
   const asks = el('asks');
   if (!say || !asks) return;
 
+  // A dealer natural can end a hand before the player decides anything, so
+  // there is no feedback card to hang the explanation on. The dealer says it
+  // instead — otherwise the screen goes straight back to "deal when ready" and
+  // the hand looks as though it was never played.
+  const spoken = view.phase === 'settled' && (view.feedback || dealerNatural(view));
+
   if (view.feedback && !revealComplete()) {
     say.textContent = T('ui.thinkPrompt');
-  } else if (view.feedback && view.phase === 'settled') {
+  } else if (spoken) {
     say.textContent = tableTalk(view);
   }
 
   if (view.phase !== 'player' && view.phase !== 'insurance') {
-    if (!view.feedback) say.textContent = T('ui.dealWhenReady');
+    if (!spoken) say.textContent = T('ui.dealWhenReady');
     asks.replaceChildren();
     answer.hidden = true;
     return;
@@ -1135,6 +1176,16 @@ document.addEventListener('keydown', (event) => {
   if (document.querySelector('dialog[open]')) return;
   const view = state.view;
   if (!view) return;
+  /*
+   * A held key must not walk the table.
+   *
+   * Space steps the reveal, and space deals the next hand. Held down, the
+   * auto-repeat ran straight through the end of one reveal and into a fresh
+   * deal — and, when the dealer showed an ace, on into the insurance decision,
+   * which used to take space as "decline". Three actions from one press, the
+   * last of them a bet. Only deliberate presses count.
+   */
+  if (event.repeat) return;
   const key = event.key.toLowerCase();
 
   // Space and Enter step the reasoning while a reveal is open, so the whole
@@ -1146,8 +1197,11 @@ document.addEventListener('keydown', (event) => {
   }
 
   if (view.phase === 'insurance') {
+    // Y and N only. Space belongs to the reveal and to the deal, and a key that
+    // means "carry on" elsewhere must never resolve a bet here.
+    if (key === ' ' || key === 'enter') event.preventDefault();
     if (key === 'y') send('/api/insurance', { take: true });
-    if (key === 'n' || key === ' ') send('/api/insurance', { take: false });
+    if (key === 'n') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {

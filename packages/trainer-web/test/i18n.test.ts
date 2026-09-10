@@ -102,7 +102,7 @@ test('keys the pages build at runtime resolve for every value', () => {
     ['fb.', ['optimal', 'negligible', 'minor', 'significant', 'blunder']],
     ['ui.mode.', ['basic', 'recall', 'value']],
     ['action.', ['hit', 'stand', 'double', 'split', 'surrender', 'takeInsurance', 'declineInsurance']],
-    ['verbTo.', ['hit', 'stand', 'double', 'split', 'surrender']],
+    ['verbTo.', ['hit', 'stand', 'double', 'split', 'surrender', 'takeInsurance', 'declineInsurance']],
     ['howto.', ['1', '2', '3', '4']],
     ['spot.', ['routine', 'ordinary', 'tricky', 'brutal']],
     ['info.accuracy.', ['title', 'body']],

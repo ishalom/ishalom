@@ -77,6 +77,8 @@ const EN: Catalogue = {
   'verbTo.double': 'double',
   'verbTo.split': 'split',
   'verbTo.surrender': 'surrender',
+  'verbTo.takeInsurance': 'take insurance',
+  'verbTo.declineInsurance': 'decline it',
 
   // --- Upcards ---
   'upcard.ace': 'an ace',
@@ -90,7 +92,8 @@ const EN: Catalogue = {
   'dealer.strong': '{up} — **strong**. Breaks {bust} of the time, and makes 17+ the other {made}.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'Insurance rides on **the dealer’s hole card**, not your hand. Barely three cards in thirteen are tens.',
+  'hand.insurance':
+    'Insurance rides on **the dealer’s hole card**, not your hand. Four of the thirteen ranks are worth ten, so the hole card is a ten in about {tens} of cases — and at 2:1 the bet needs {breakEven} just to break even.',
   'hand.aces': 'A,A — the **best pair in the deck**. Held together the second ace is dead weight.',
   'hand.eights': '8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.',
   'hand.splitDas': '{pair} — a small pair. Each half wants to draw then **double**, so this one rides on the double-after-split rule.',
@@ -118,6 +121,8 @@ const EN: Catalogue = {
   'stat.standBreaks': 'Standing only wins when the dealer breaks, and the dealer breaks {bust} of the time.',
   'stat.hitVsSurrender': 'Drawing breaks it {bust} of the time on the very next card.',
   'stat.double': 'Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.',
+  'stat.doubleTooThin':
+    'Doubling buys **one card and no more**. Here that card leaves you under seventeen {stiff} of the time — stuck standing on a hand you would still want to draw to, for twice the money.',
   'stat.splitGains': 'Two hands are worth {gap} more than one.',
   'stat.splitCosts': 'Splitting costs {gap} — one good total becomes two worse ones.',
   'stat.surrender': 'Half back is a guaranteed {half}; played out, this is worth less.',
@@ -129,6 +134,8 @@ const EN: Catalogue = {
   'headline': '{hand} vs {up} → {verdict}',
   'headline.insurance': 'Insurance → {verdict}',
   'insurance.step1': 'Dealer shows an ace, so insurance is on offer. It is a bet on the hole card and nothing else.',
+  'insurance.counterNote':
+    'For the record: the cards already dealt left this shoe ten-rich enough that a card counter would have insured here. You are graded on basic strategy, which never insures, so this changed nothing — it is not a skill the trainer teaches yet.',
 
   // --- Home ---
   'ui.appName': 'EV Trainer',
@@ -201,13 +208,21 @@ const EN: Catalogue = {
   'coach.a.closeSome': 'Closer than it looks. About {spread} of a unit between the top two.',
   'coach.a.closeNot': 'There is {spread} of a unit between the best play and the next one. Not really.',
   'coach.insurance.prompt': 'Ace up. Insurance is open — but it is a bet on my hole card, not on your hand.',
-  'coach.insurance.odds': 'Barely three cards in thirteen are tens, so the bet loses money every time it is made. Your own cards have nothing to do with it.',
+  'coach.insurance.odds':
+    'Four of the thirteen ranks are worth ten, so the hole card is a ten in about {tens} of cases. At 2:1 the bet needs {breakEven} to break even, so it loses money every time it is made. Your own cards have nothing to do with it.',
   'coach.prompt.pair': 'A pair. You can break that up if you want it.',
   'coach.prompt.few': '{label}. Not much to choose from — what’ll it be?',
   'coach.prompt.open': '{label} against my card. Your call.',
   'label.pair': 'A pair',
   'label.soft': 'Soft {total}',
   'label.hard': '{total}',
+  'log.vs': 'vs',
+  'log.right': '{headline} · played it right',
+  'log.played': '{headline} · you played {chosen}',
+  'log.playerNatural': 'blackjack — nothing to decide',
+  'log.dealerNatural': 'dealer blackjack — the hand ended on the deal',
+  'log.bothNaturals': 'blackjack both sides — a push on the deal',
+  'log.noDecisions': 'nothing to decide',
   'label.insurance': 'Insurance',
   'label.vs': '{hand} vs {up}',
 
@@ -217,7 +232,7 @@ const EN: Catalogue = {
   'ui.sessionStats': 'Session statistics',
   'ui.decisionAccuracy': 'decision accuracy',
   'ui.evLostPer100': 'EV lost / 100 hands',
-  'ui.yourEdge': 'your effective edge',
+  'ui.yourEdge': 'house edge you face',
   'ui.units': 'units',
   'ui.dealerName': 'Vera · dealer',
   'ui.takeSeat': 'Take a seat. Deal when you’re ready.',
@@ -314,19 +329,23 @@ const EN: Catalogue = {
 
   // --- What the four figures mean (§9.2) ---
   'info.accuracy.title': 'Decision accuracy',
-  'info.accuracy.body': 'The share of your decisions that were the best play available. Coin-flips — spots where the top two plays are within a hundredth of a unit — are left out, because getting those "wrong" is not a mistake worth counting. It is scored on the decision, never on whether the hand won.',
+  'info.accuracy.body':
+    '**Higher is better.** The target is 99% or more, sustained over 500 hands. This is the share of your decisions that were the best play available. Coin-flips — spots where the top two plays are within a hundredth of a unit — are left out, because getting those "wrong" is not a mistake worth counting. It is scored on the decision, never on whether the hand won.',
   'info.evLost.title': 'EV lost per 100 hands',
-  'info.evLost.body': 'What your mistakes cost, in units of your bet, over a hundred hands. A perfect player scores zero here no matter how badly the cards ran. This is the number to watch: it is the only one that is entirely yours.',
-  'info.edge.title': 'Your effective edge',
-  'info.edge.body': 'The house edge you are actually playing against — what these rules take from a perfect player, plus what your own errors add on top. The gap between this and the rules’ own edge is the part you can close.',
+  'info.evLost.body':
+    '**Lower is better. 0 is perfect** — it cannot go below 0, because nothing beats perfect play. This is what your mistakes cost, in units of your bet, over a hundred hands; a perfect player scores zero no matter how badly the cards ran. It is the number to watch: the only one that is entirely yours.',
+  'info.edge.title': 'House edge you face',
+  'info.edge.body':
+    '**Lower is better.** The floor is the rules’ own edge, {rulesEdge}, and you cannot go below it without counting cards. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes — and that is the part you can close.',
   'info.units.title': 'Units',
-  'info.units.body': 'What the cards did. Kept last, and kept quiet, on purpose: over a session this short it is almost entirely luck, and reading it as a score is the habit this trainer exists to break.',
+  'info.units.body':
+    '**This does not measure how you played.** It can be positive or negative, and over a session this short it is almost entirely luck. A perfect player loses many sessions; it is not a sign of a mistake. Kept last, and kept quiet, because reading it as a score is the habit this trainer exists to break.',
   'info.more': 'What does this mean?',
 
   // --- Instructions ---
   'howto.title': 'How this works',
   'howto.open': 'How to play',
-  'howto.1': 'Press **Deal**, then choose the play you think is best. Keyboard: **H** hit, **S** stand, **D** double, **P** split, **R** surrender.',
+  'howto.1': 'Press **Deal**, then choose the play you think is best. Keyboard: **H** hit, **S** stand, **D** double, **P** split, **R** surrender, and **Y** / **N** for insurance.',
   'howto.2': 'The dealer reads the spot back to you in three steps — her card, your hand, then the two together. **Space** moves through them, or skip straight to the answer.',
   'howto.3': 'You are graded on the **decision**, not the result. A correct play that loses is still correct, and that is the whole idea.',
   'howto.4': 'Ask **Why?** at any point before you act; she will answer from the same numbers she grades you with.',
@@ -383,6 +402,9 @@ const EN: Catalogue = {
   'dealer.youBust': 'Too many.',
   'dealer.iBust': 'And I break. Yours.',
   'dealer.blackjack': 'Blackjack. Pays three to two.',
+  'dealer.dealerNatural':
+    'Ace and a ten — blackjack, so the hand is over before you play it. Nothing was skipped; there was nothing left to decide.',
+  'dealer.bothNaturals': 'Blackjack here too. Push — your bet stays up.',
   'dealer.push': 'Push — your bet stays up.',
   'dealer.surrendered': 'Half back. On to the next.',
   'dealer.youWin': '{player} against my {dealer}. Yours.',
@@ -450,6 +472,8 @@ const HE: Catalogue = {
   'verbTo.double': 'הכפלה',
   'verbTo.split': 'פיצול',
   'verbTo.surrender': 'ויתור',
+  'verbTo.takeInsurance': 'קניית ביטוח',
+  'verbTo.declineInsurance': 'ויתור על הביטוח',
 
   // --- Upcards ---
   'upcard.ace': 'אס',
@@ -463,7 +487,8 @@ const HE: Catalogue = {
   'dealer.strong': 'לדילר {up} — **חזק**. הוא נשרף רק ב-{bust} מהמקרים, ומגיע ל-17 ומעלה ב-{made} הנותרים.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'הביטוח תלוי **בקלף הסמוי של הדילר**, לא ביד שלך. בקושי שלושה קלפים מתוך שלושה־עשר הם עשיריות.',
+  'hand.insurance':
+    'הביטוח תלוי **בקלף הסמוי של הדילר**, לא ביד שלך. ארבעה מתוך שלושה־עשר סוגי הקלפים שווים עשר, ולכן הקלף הסמוי הוא עשירייה בכ־{tens} מהמקרים — ובתשלום 2:1 ההימור צריך {breakEven} רק כדי לצאת בשווה.',
   'hand.aces': 'A,A — **הזוג הכי טוב בחפיסה**. ביד אחת האס השני מיותר.',
   'hand.eights': '8,8 — **שש־עשרה**, הסכום הגרוע ביותר. הפיצול הוא **בריחה**, לא התקפה.',
   'hand.splitDas': '{pair} — זוג קטן. כל חצי רוצה לקחת קלף ואז **להכפיל**, אז הכול תלוי בכלל ההכפלה אחרי פיצול.',
@@ -491,6 +516,8 @@ const HE: Catalogue = {
   'stat.standBreaks': 'עצירה מנצחת רק כשהדילר נשרף, והדילר נשרף ב-{bust} מהמקרים.',
   'stat.hitVsSurrender': 'לקיחת קלף שורפת את היד ב-{bust} מהמקרים כבר בקלף הבא.',
   'stat.double': 'אותו קלף כמו בלקיחה, **בכפול כסף**, בלי קלף שני — וכאן קלף אחד בדרך כלל מספיק.',
+  'stat.doubleTooThin':
+    'הכפלה קונה **קלף אחד וזהו**. כאן הקלף הזה משאיר אותך מתחת ל-17 ב-{stiff} מהמקרים — תקוע עם יד שהיית רוצה להמשיך לקחת אליה, על כפול כסף.',
   'stat.splitGains': 'שתי ידיים שוות כאן {gap} יותר מיד אחת.',
   'stat.splitCosts': 'פיצול עולה {gap} — סכום אחד טוב הופך לשניים גרועים.',
   'stat.surrender': 'חצי בחזרה זה {half} מובטח; במשחק עד הסוף זה שווה פחות.',
@@ -502,6 +529,8 @@ const HE: Catalogue = {
   'headline': '{hand} מול {up} ← {verdict}',
   'headline.insurance': 'ביטוח ← {verdict}',
   'insurance.step1': 'לדילר יש אס, אז הביטוח פתוח. זה הימור על הקלף הסמוי בלבד.',
+  'insurance.counterNote':
+    'לפרוטוקול: הקלפים שכבר יצאו השאירו את החפיסה עשירה בעשיריות מספיק כדי שמי שסופר קלפים היה קונה כאן ביטוח. הציון שלך ניתן לפי אסטרטגיה בסיסית, שלעולם לא קונה ביטוח, ולכן זה לא שינה כלום — זו עדיין לא מיומנות שהמאמן מלמד.',
 
   // --- Home ---
   'ui.appName': 'מאמן EV',
@@ -574,13 +603,21 @@ const HE: Catalogue = {
   'coach.a.closeSome': 'צמוד יותר משזה נראה. בערך {spread} יחידה בין שתי הראשונות.',
   'coach.a.closeNot': 'יש {spread} יחידה בין המהלך הטוב ביותר לבא אחריו. לא ממש.',
   'coach.insurance.prompt': 'אס גלוי. הביטוח פתוח — אבל זה הימור על הקלף הסמוי שלי, לא על היד שלך.',
-  'coach.insurance.odds': 'בקושי שלושה קלפים מתוך שלושה-עשר הם עשיריות, ולכן ההימור מפסיד כסף בכל פעם שעושים אותו. לקלפים שלך אין לזה שום קשר.',
+  'coach.insurance.odds':
+    'ארבעה מתוך שלושה־עשר סוגי הקלפים שווים עשר, ולכן הקלף הסמוי הוא עשירייה בכ־{tens} מהמקרים. בתשלום 2:1 ההימור צריך {breakEven} כדי לצאת בשווה, ולכן הוא מפסיד כסף בכל פעם שעושים אותו. לקלפים שלך אין לזה שום קשר.',
   'coach.prompt.pair': 'זוג. אפשר לפצל אותו אם בא לך.',
   'coach.prompt.few': '{label}. אין הרבה ממה לבחור — מה עושים?',
   'coach.prompt.open': '{label} מול הקלף שלי. ההחלטה שלך.',
   'label.pair': 'זוג',
   'label.soft': 'רך {total}',
   'label.hard': '{total}',
+  'log.vs': 'מול',
+  'log.right': '{headline} · שיחקת נכון',
+  'log.played': '{headline} · שיחקת {chosen}',
+  'log.playerNatural': 'בלאק ג׳ק — לא היה מה להחליט',
+  'log.dealerNatural': 'בלאק ג׳ק לדילר — היד נגמרה כבר בחלוקה',
+  'log.bothNaturals': 'בלאק ג׳ק לשני הצדדים — תיקו בחלוקה',
+  'log.noDecisions': 'לא היה מה להחליט',
   'label.insurance': 'ביטוח',
   'label.vs': '{hand} מול {up}',
 
@@ -590,7 +627,7 @@ const HE: Catalogue = {
   'ui.sessionStats': 'סטטיסטיקת המושב',
   'ui.decisionAccuracy': 'דיוק ההחלטות',
   'ui.evLostPer100': 'EV שאבד ל-100 ידיים',
-  'ui.yourEdge': 'היתרון שלך בפועל',
+  'ui.yourEdge': 'יתרון הקזינו מולך',
   'ui.units': 'יחידות',
   'ui.dealerName': 'ורה · דילרית',
   'ui.takeSeat': 'שב בנוחות. חלק כשאתה מוכן.',
@@ -687,19 +724,23 @@ const HE: Catalogue = {
 
   // --- What the four figures mean (§9.2) ---
   'info.accuracy.title': 'דיוק ההחלטות',
-  'info.accuracy.body': 'שיעור ההחלטות שלך שהיו המהלך הטוב ביותר שהיה זמין. הטלות מטבע — מצבים שבהם שתי האפשרויות המובילות במרחק של פחות ממאית יחידה — לא נספרות, כי “לטעות” בהן זו לא באמת טעות. הציון ניתן על ההחלטה, לעולם לא על השאלה אם היד ניצחה.',
+  'info.accuracy.body':
+    '**כמה שיותר גבוה.** היעד הוא 99% ומעלה לאורך 500 ידיים. זה שיעור ההחלטות שלך שהיו המהלך הטוב ביותר שהיה זמין. הטלות מטבע — מצבים שבהם שתי האפשרויות המובילות במרחק של פחות ממאית יחידה — לא נספרות, כי “לטעות” בהן זו לא באמת טעות. הציון ניתן על ההחלטה, לעולם לא על השאלה אם היד ניצחה.',
   'info.evLost.title': 'EV שאבד ל-100 ידיים',
-  'info.evLost.body': 'מה שהטעויות שלך עולות, ביחידות של ההימור, לאורך מאה ידיים. שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר שכדאי לעקוב אחריו: הוא היחיד ששלך לגמרי.',
-  'info.edge.title': 'היתרון שאתה באמת משחק מולו',
-  'info.edge.body': 'יתרון הקזינו שאתה באמת משחק מולו — מה שהחוקים לוקחים משחקן מושלם, ועוד מה שהטעויות שלך מוסיפות מעל. הפער בין זה לבין היתרון של החוקים עצמם הוא החלק שאתה יכול לסגור.',
+  'info.evLost.body':
+    '**כמה שיותר נמוך. 0 זה מושלם** — אי אפשר לרדת מתחת ל-0, כי אין משחק טוב יותר מהמשחק המושלם. זה מה שהטעויות שלך עולות, ביחידות של ההימור, לאורך מאה ידיים — שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר שכדאי לעקוב אחריו: הוא היחיד ששלך לגמרי.',
+  'info.edge.title': 'יתרון הקזינו מולך',
+  'info.edge.body':
+    '**כמה שיותר נמוך.** הרצפה היא יתרון החוקים עצמם, {rulesEdge}, ומתחתיה אי אפשר לרדת בלי ספירת קלפים. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים — כל מה שמעל {rulesEdge} הוא הטעויות שלך, וזה החלק שאתה יכול לסגור.',
   'info.units.title': 'יחידות',
-  'info.units.body': 'מה שהקלפים עשו. נשמר לסוף, ובשקט, בכוונה: לאורך מושב קצר כזה זה כמעט הכול מזל, וההרגל לקרוא את זה כציון הוא בדיוק מה שהמאמן הזה קיים כדי לשבור.',
+  'info.units.body':
+    '**זה לא מודד איך ששיחקת.** זה יכול להיות חיובי או שלילי, ולאורך מושב קצר כזה זה כמעט הכול מזל. גם שחקן מושלם מפסיד בסשנים רבים — זה לא סימן לטעות. נשמר לסוף, ובשקט, כי ההרגל לקרוא את זה כציון הוא בדיוק מה שהמאמן הזה קיים כדי לשבור.',
   'info.more': 'מה זה אומר?',
 
   // --- Instructions ---
   'howto.title': 'איך זה עובד',
   'howto.open': 'איך משחקים',
-  'howto.1': 'לחץ **חלק**, ואז בחר את המהלך שנראה לך הכי טוב. מקלדת: **H** קלף, **S** עצירה, **D** הכפלה, **P** פיצול, **R** ויתור.',
+  'howto.1': 'לחץ **חלק**, ואז בחר את המהלך שנראה לך הכי טוב. מקלדת: **H** קלף, **S** עצירה, **D** הכפלה, **P** פיצול, **R** ויתור, ו־**Y** / **N** לביטוח.',
   'howto.2': 'הדילרית קוראת לך את המצב בשלושה שלבים — הקלף שלה, היד שלך, ואז השניים יחד. **רווח** מתקדם ביניהם, או אפשר לדלג ישר לתשובה.',
   'howto.3': 'הציון הוא על **ההחלטה**, לא על התוצאה. מהלך נכון שהפסיד הוא עדיין נכון, וזה כל הרעיון.',
   'howto.4': 'שאל **למה?** בכל רגע לפני שאתה פועל; היא תענה מאותם מספרים שלפיהם היא מדרגת אותך.',
@@ -751,6 +792,9 @@ const HE: Catalogue = {
   'dealer.youBust': 'נשרפת.',
   'dealer.iBust': 'ואני נשרף. שלך.',
   'dealer.blackjack': 'בלאק ג׳ק. משלם 3 ל-2.',
+  'dealer.dealerNatural':
+    'אס ועשר — בלאק ג׳ק, ולכן היד נגמרת לפני שמשחקת אותה. שום דבר לא דולג — פשוט לא נשאר מה להחליט.',
+  'dealer.bothNaturals': 'גם לי בלאק ג׳ק. תיקו — ההימור נשאר.',
   'dealer.push': 'תיקו — ההימור נשאר.',
   'dealer.surrendered': 'חצי בחזרה. עוברים לבאה.',
   'dealer.youWin': '{player} מול {dealer} שלי. שלך.',

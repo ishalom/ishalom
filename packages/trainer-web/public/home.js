@@ -93,6 +93,38 @@ function renderStanding(profile) {
   }
 }
 
+/**
+ * Why a hand carried no decision at all.
+ *
+ * It used to say "a natural" for every one of them, which is wrong more often
+ * than it is right: a *dealer* natural ends the hand on the deal too, and that
+ * is the case a player is most likely to come back and check, because from the
+ * seat it looked as though their turn had been skipped.
+ */
+function noDecisionReason(hand) {
+  const value = (cards) => {
+    let total = 0;
+    let aces = 0;
+    for (const card of cards) {
+      if (card.rank === 'A') {
+        aces++;
+        total += 11;
+      } else total += card.rank === '10' || 'JQK'.includes(card.rank) ? 10 : Number(card.rank);
+    }
+    while (total > 21 && aces > 0) {
+      total -= 10;
+      aces--;
+    }
+    return total;
+  };
+  const natural = (cards) => cards.length === 2 && value(cards) === 21;
+  if (natural(hand.dealerCards)) {
+    return natural(hand.playerHands[0] ?? []) ? 'log.bothNaturals' : 'log.dealerNatural';
+  }
+  if (natural(hand.playerHands[0] ?? [])) return 'log.playerNatural';
+  return 'log.noDecisions';
+}
+
 function renderHands(view) {
   const box = el('hands');
   box.replaceChildren();
@@ -113,19 +145,19 @@ function renderHands(view) {
     );
     const cards = hand.playerHands.map((h) => h.map((c) => c.rank + c.suit).join(' ')).join('  |  ');
     const dealer = hand.dealerCards.map((c) => c.rank + c.suit).join(' ');
+    const detail = worst
+      ? T(worst.correct ? 'log.right' : 'log.played', {
+          headline: worst.headline,
+          chosen: worst.chosen.toLowerCase(),
+        })
+      : T(noDecisionReason(hand));
 
     const row = document.createElement('div');
     row.className = 'log-row';
     row.innerHTML =
       `<div class="log-tier ${worst ? worst.severity : 'optimal'}"></div>` +
-      `<div><div class="log-hand">${cards} <span class="muted">vs</span> ${dealer}</div>` +
-      `<div class="log-detail">${
-        worst
-          ? worst.correct
-            ? `${worst.headline} · played it right`
-            : `${worst.headline} · you played ${worst.chosen.toLowerCase()}`
-          : 'a natural — nothing to decide'
-      }</div></div>` +
+      `<div><div class="log-hand">${cards} <span class="muted">${T('log.vs')}</span> ${dealer}</div>` +
+      `<div class="log-detail">${detail}</div></div>` +
       `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
         hand.netUnits > 0 ? '+' : ''
       }${hand.netUnits}</div>`;

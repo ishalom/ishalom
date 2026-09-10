@@ -34,6 +34,7 @@ import {
   bustOnNextCard,
   dealerOdds,
   explain,
+  insuranceOdds,
 } from './explain.ts';
 import {
   difficultyTable,
@@ -425,6 +426,7 @@ export class TrainerSession {
   }
 
   act(action: BlackjackAction): unknown {
+    this.counterFavoured = false;
     const record = this.table.act(action);
     this.absorb(record);
     this.settleIfDone();
@@ -432,6 +434,17 @@ export class TrainerSession {
   }
 
   insurance(take: boolean): unknown {
+    /*
+     * What the shoe actually held, read before the decision closes the phase.
+     *
+     * It never touches the grade, the cost or the rating — those come from the
+     * chart, because the chart is what the app teaches. It exists so that the
+     * one hand in a few hundred where the count really did call for insurance
+     * is not silently contradicted: a player who has read anything about
+     * counting deserves to be told that this was that hand, rather than left to
+     * conclude the app does not know.
+     */
+    this.counterFavoured = this.table.insuranceLiveEv() > 0;
     const record = this.table.takeInsurance(take);
     this.absorb(record);
     this.settleIfDone();
@@ -460,6 +473,12 @@ export class TrainerSession {
    * it visibly without emptying it, which is the only thing the figure has to do.
    */
   private static readonly STARTING_STACK = 200;
+
+  /**
+   * Whether the live shoe favoured insurance on the decision just taken. Text
+   * only — see `insurance()`.
+   */
+  private counterFavoured = false;
 
   /** Turn one graded decision into the feedback card §7.1 describes. */
   private absorb(record: DecisionRecord): void {
@@ -608,9 +627,16 @@ export class TrainerSession {
           ? prettyAction(record.optimalAction, this.locale)
           : actionName(record.optimalAction as BlackjackAction, this.locale),
       evCost: record.evCost,
+      counterNote: this.counterNote(record),
       ranked,
       sensitivity,
     };
+  }
+
+  /** The card-counter remark, or nothing at all. Costs and rating never see it. */
+  private counterNote(record: DecisionRecord): string | null {
+    if (record.scenarioKey !== 'bj:insurance' || !this.counterFavoured) return null;
+    return t(this.locale, 'insurance.counterNote');
   }
 
   /**
@@ -821,6 +847,10 @@ export class TrainerSession {
     }
 
     if (view.phase === 'insurance') {
+      // The same two figures the feedback card quotes, from the same place, so
+      // the coach and the verdict cannot disagree about the odds.
+      const odds = insuranceOdds(this.rules);
+      const pct = (value: number) => `${Math.round(value * 100)}%`;
       return {
         phase: 'insurance',
         prompt: t(this.locale, 'coach.insurance.prompt'),
@@ -828,7 +858,10 @@ export class TrainerSession {
           {
             id: 'odds',
             question: t(this.locale, 'coach.q.odds'),
-            answer: t(this.locale, 'coach.insurance.odds'),
+            answer: t(this.locale, 'coach.insurance.odds', {
+              tens: pct(odds.tens),
+              breakEven: pct(odds.breakEven),
+            }),
           },
         ],
       };
@@ -1050,6 +1083,7 @@ export class TrainerSession {
       ...previous,
       headline: explanation.headline,
       steps: [...explanation.steps],
+      counterNote: this.counterNote(record),
       chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimalLabel: prettyAction(record.optimalAction, this.locale),
       optimalVerb:

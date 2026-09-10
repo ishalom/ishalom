@@ -14,10 +14,12 @@
 import {
   ACTION_LETTERS,
   deriveChart,
+  isHandAction,
   makeRules,
   rulesKey,
   type BlackjackAction,
   type BlackjackRules,
+  type GradedAction,
   type StrategyChart,
 } from '@evtrainer/ev-engine';
 
@@ -76,8 +78,12 @@ export interface SensitivityNote {
 export function ruleSensitivity(
   scenarioKey: string,
   rules: BlackjackRules,
-  optimal: BlackjackAction,
+  optimal: GradedAction,
 ): SensitivityNote[] {
+  // Insurance is the same side bet under every rule set in the list below, so
+  // there is nothing to compare. The caller already skips it; this makes the
+  // answer true rather than merely unreached.
+  if (!isHandAction(optimal)) return [];
   const activeKey = rulesKey(rules);
   const notes: SensitivityNote[] = [];
   const seen = new Set<string>();
@@ -90,6 +96,7 @@ export function ruleSensitivity(
 
     const cell = chartFor(other).cells.get(scenarioKey);
     if (!cell || cell.optimalAction === optimal) continue;
+    if (!isHandAction(cell.optimalAction)) continue;
     notes.push({
       label: variant.label,
       action: cell.optimalAction,

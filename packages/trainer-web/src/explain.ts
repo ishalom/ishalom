@@ -30,10 +30,12 @@
 
 import { t, type Locale } from './i18n.ts';
 import {
+  ACE,
   DEALER_BLACKJACK,
   DEALER_BUST,
   DealerSolver,
   RANK_VALUE,
+  TEN,
   rankLabel,
   Shoe,
   upcardLabel,
@@ -41,6 +43,7 @@ import {
   type BlackjackAction,
   type BlackjackRules,
   type DecisionEvaluation,
+  type GradedAction,
   type Scenario,
 } from '@evtrainer/ev-engine';
 
@@ -57,13 +60,21 @@ function gerund(action: BlackjackAction, locale: Locale): string {
   return t(locale, GERUND[action]);
 }
 
-/** The form that follows "to" — English wants an infinitive, Hebrew a gerund. */
-function verbAfterTo(action: BlackjackAction, locale: Locale): string {
+/**
+ * The form that follows "to" — English wants an infinitive, Hebrew a gerund.
+ *
+ * Insurance is in this family too. It is a `GradedAction` and not a
+ * `BlackjackAction`, and when the type here was the narrower one the Hebrew
+ * template `ל{runnerUpVerb}` rendered the literal `לverbTo.declineInsurance` on
+ * screen: `t()` falls back to the key, so a missing member of a composed key
+ * family is invisible to the compiler and glaring to the player.
+ */
+function verbAfterTo(action: GradedAction, locale: Locale): string {
   return t(locale, `verbTo.${action}`);
 }
 
 /** The imperative, for headlines and for opening a verdict. */
-function verb(action: BlackjackAction, locale: Locale): string {
+function verb(action: GradedAction, locale: Locale): string {
   return t(locale, `action.${action}`);
 }
 
@@ -187,6 +198,36 @@ export function bustOnNextCard(scenario: Scenario, rules: BlackjackRules): numbe
   return busting / shoe.total;
 }
 
+/**
+ * How often one more card leaves this hand still wanting another.
+ *
+ * The whole question behind a double is whether one card finishes the hand.
+ * From hard 8 it usually does not: seven of the thirteen ranks leave a total
+ * under seventeen, a hand you would carry on drawing to and a hand doubling
+ * forbids you to touch. From hard 11 almost every card finishes it, which is
+ * why 11 doubles and 8 does not.
+ *
+ * A card that busts the hand is not counted here: a bust wants nothing, it is
+ * simply over, and `bustOnNextCard` is the figure for that.
+ */
+export function stillStiffAfterOneCard(scenario: Scenario, rules: BlackjackRules): number {
+  if (scenario.total === undefined) return 0;
+  const soft = scenario.kind === 'soft';
+  const shoe = Shoe.fresh(rules.decks);
+  let stiff = 0;
+  for (let rank = 0; rank < 10; rank++) {
+    const value = RANK_VALUE[rank]!;
+    let total = scenario.total + value;
+    let usable = soft || rank === 0; // an ace we could still drop to one
+    if (total > 21 && usable) {
+      total -= 10;
+      usable = false;
+    }
+    if (total <= 21 && total < 17) stiff += shoe.count(rank);
+  }
+  return stiff / shoe.total;
+}
+
 // --- Hand archetypes --------------------------------------------------------
 
 /**
@@ -270,6 +311,26 @@ function pairName(rank: BjRank): string {
 }
 
 /**
+ * How often the hole card is a ten, and how often it would have to be.
+ *
+ * Both figures come from the shoe the chart is derived from — a fresh one with
+ * the dealer's ace gone — rather than from the "barely three cards in thirteen"
+ * that used to sit in the copy. That was simply wrong: four of the thirteen
+ * ranks are worth ten, not three. Insurance is still a losing bet, and it is a
+ * better lesson when the number stating so is right, because a player who checks
+ * it and finds it false has been handed a reason to distrust everything else on
+ * the card.
+ *
+ * The break-even point is a property of the 2:1 payout, not of the shoe: the bet
+ * returns `2p - (1 - p)`, which is zero at exactly one in three.
+ */
+export function insuranceOdds(rules: BlackjackRules): { tens: number; breakEven: number } {
+  const shoe = Shoe.fresh(rules.decks);
+  shoe.remove(ACE); // the ace the player can see
+  return { tens: shoe.probability(TEN), breakEven: 1 / 3 };
+}
+
+/**
  * The player's cards alone, with the dealer out of the picture.
  *
  * Every line says what the hand wants, and none of them names the verdict —
@@ -285,8 +346,13 @@ export function readHand(
   const total = scenario.total ?? 0;
 
   switch (kind) {
-    case 'insurance':
-      return t(locale, 'hand.insurance');
+    case 'insurance': {
+      const odds = insuranceOdds(rules);
+      return t(locale, 'hand.insurance', {
+        tens: percent(odds.tens),
+        breakEven: percent(odds.breakEven),
+      });
+    }
 
     case 'split-always': {
       const rank = scenario.pairRank!;
@@ -408,9 +474,19 @@ function supportingStat(
     });
   }
 
-  // Doubling against hitting: same card, twice the money, no second draw.
+  /*
+   * Doubling against hitting. Which way round matters, and it used not to.
+   *
+   * One sentence served both sides: "one card is usually enough here". On 6♠ 2♣
+   * against a 7 — where hitting is worth +0.084 and doubling −0.181 — the card
+   * therefore argued for the very play it had just called a blunder. The two
+   * cases are opposite arguments and need opposite sentences.
+   */
   if (pair.has('double') && pair.has('hit')) {
-    return t(locale, 'stat.double');
+    if (best.action === 'double') return t(locale, 'stat.double');
+    return t(locale, 'stat.doubleTooThin', {
+      stiff: percent(stillStiffAfterOneCard(scenario, rules)),
+    });
   }
 
   // Splitting against playing it as one hand. Which way round matters: the same
@@ -432,7 +508,7 @@ export function readCombined(
   evaluation: DecisionEvaluation,
   rules: BlackjackRules,
   locale: Locale = 'en',
-  chosen?: BlackjackAction,
+  chosen?: GradedAction,
 ): string {
   const c = contest(evaluation);
   const numbers =
@@ -496,7 +572,7 @@ export function explain(
   rules: BlackjackRules,
   locale: Locale = 'en',
   /** What the player actually did, when the explanation follows a decision. */
-  chosen?: BlackjackAction,
+  chosen?: GradedAction,
 ): Explanation {
   const c = contest(evaluation);
   const verdict = verb(c.best.action, locale);
