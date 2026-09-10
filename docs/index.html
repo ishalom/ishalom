@@ -6,8 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="3cd4b44c6df74874b5123a5cbff565103132ec11" />
-<meta name="ev-build-at" content="2026-09-10T21:30:32.498Z" />
+<meta name="ev-build-commit" content="ba06874f05d82cd35eeb330bc8d045cb7fc425eb-dirty" />
+<meta name="ev-build-at" content="2026-09-10T22:27:47.790Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2286,6 +2286,17 @@ function isPair(ranks                   )          {
  */
 
 
+/**
+ * Everything the engine grades.
+ *
+ * Insurance is a decision point in its own right (spec §5.1.3) and not a
+ * `BlackjackAction` — the player's own hand never enters it. It is named here
+ * rather than smuggled in as a hit or a stand, because a chart cell that says
+ * "hit" when it means "take insurance" is a cell that reads correctly only to
+ * whoever wrote it.
+ */
+                                                                                  
+
 const ALL_ACTIONS                             = [
   'stand',
   'hit',
@@ -2293,6 +2304,17 @@ const ALL_ACTIONS                             = [
   'split',
   'surrender',
 ];
+
+/**
+ * True for the five actions that are played on a hand.
+ *
+ * `GradedAction` is a wider set than the chart's grid, the letters table, or the
+ * rule-sensitivity comparison can speak about. Rather than each of them casting
+ * and hoping, they ask.
+ */
+function isHandAction(action              )                            {
+  return (ALL_ACTIONS                     ).includes(action);
+}
 
 /** Everything about a hand's history that changes which actions are legal. */
                               
@@ -3206,6 +3228,12 @@ function parseScenarioKey(key        )           {
  * cards in front of the player. The chart is what the Reference screen shows,
  * what §14.2 diffs against published sources, and what §14.4 snapshots.
  */
+
+
+
+
+
+
 const HARD_TOTALS                    = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
 /** A2 through A9, i.e. soft 13 through soft 20. */
 const SOFT_TOTALS                    = [13, 14, 15, 16, 17, 18, 19, 20];
@@ -3367,8 +3395,10 @@ function insuranceCell(rules                )            {
   return {
     scenarioKey: INSURANCE_SCENARIO_KEY,
     scenario: { kind: 'insurance' },
-    evByAction: { stand: 0, hit: take },
-    optimalAction: take > 0 ? 'hit' : 'stand',
+    // The real names. Insurance is its own decision, and a cell that called
+    // it a hit forced every reader to know that and translate.
+    evByAction: { declineInsurance: 0, takeInsurance: take },
+    optimalAction: take > 0 ? 'takeInsurance' : 'declineInsurance',
     optimalEv: Math.max(0, take),
     margin: Math.abs(take),
   };
@@ -3402,7 +3432,10 @@ function formatChart(chart               )         {
     for (const row of rows) {
       const cells = UPCARDS.map((u) => {
         const cell = chart.cells.get(scenarioKey(row.scenario(u)));
-        return (cell ? ACTION_LETTERS[cell.optimalAction] : '.').padStart(3);
+        // Only hand cells reach the grid; insurance is printed on its own
+        // line below, so this lookup is over BlackjackAction alone.
+        const action = cell && isHandAction(cell.optimalAction) ? cell.optimalAction : null;
+        return (action ? ACTION_LETTERS[action] : '.').padStart(3);
       });
       lines.push(row.label.padEnd(5) + cells.join(''));
     }
@@ -3432,7 +3465,9 @@ function formatChart(chart               )         {
 
   const ins = chart.cells.get(INSURANCE_SCENARIO_KEY);
   lines.push('');
-  lines.push(`insurance  ${ins ? (ins.optimalAction === 'hit' ? 'take' : 'decline') : '.'}`);
+  lines.push(
+    `insurance  ${ins ? (ins.optimalAction === 'takeInsurance' ? 'take' : 'decline') : '.'}`,
+  );
   return lines.join('\n') + '\n';
 }
 
@@ -3841,14 +3876,15 @@ class DealingShoe {
                  
        
                
+               
                               
 
 /**
- * Everything the engine grades. Insurance is a decision point in its own right
- * (spec §5.1.3) but not a `BlackjackAction`, so it is named here rather than
- * smuggled in as a hit or a stand.
+ * Everything the engine grades. Defined in the EV engine, beside
+ * `BlackjackAction`, because the strategy chart has to name insurance too.
+ * Re-exported here so this package's own types read as one set.
  */
-                                                                                  
+                             
 
 /** A hand in play, or one of several after a split. */
                              
@@ -4051,6 +4087,18 @@ class BlackjackTable {
   /** EV of taking insurance, in units of the wager. Positive means take it. */
   insuranceEvaluation()         {
     if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
+    return this.gradedInsuranceEv();
+  }
+
+  /**
+   * What insurance is worth against the cards actually left in the shoe.
+   *
+   * This is the counter's number, not the grader's. It is exposed so the app can
+   * say "a card counter would have insured here" as a remark, without that
+   * remark ever reaching the grade — see `gradedInsuranceEv`.
+   */
+  insuranceLiveEv()         {
+    if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
     return insuranceEv(this.unseenComposition());
   }
 
@@ -4132,7 +4180,7 @@ class BlackjackTable {
   takeInsurance(take         )                 {
     if (this.phase !== 'insurance') throw new Error('Insurance is not on offer');
 
-    const evTake = insuranceEv(this.unseenComposition());
+    const evTake = this.gradedInsuranceEv();
     const record = this.pushDecision({
       handIndex: 0,
       scenarioKey: INSURANCE_SCENARIO_KEY,
@@ -4311,7 +4359,7 @@ class BlackjackTable {
     return this.solver.evaluate(
       hand.cards.map(bjRankOfCard),
       bjRankOfCard(this.dealerCards[0] ),
-      this.unseenComposition(),
+      this.grading === 'chart' ? this.freshComposition() : this.unseenComposition(),
       { fromSplit: hand.fromSplit, handCount: this.hands.length },
     );
   }
@@ -4323,6 +4371,55 @@ class BlackjackTable {
           unseenComposition()              {
     const hole = this.dealerRevealed ? [] : this.dealerCards.slice(1);
     return this.shoe.unseenComposition(hole);
+  }
+
+  /**
+   * A fresh shoe minus only the cards this round has turned face up.
+   *
+   * This is the composition the chart itself is derived from, and it is what
+   * chart-mode grading falls back to when a spot has no cell — a three-card
+   * hand, most often. Handing the solver the *live* shoe instead made the grade
+   * depend on the previous forty hands, so the same 6-4-3 against a 9 could be
+   * marked differently in the first shoe than in the fifth. That difference is
+   * not one basic strategy has, and not one the player can see. Card removal
+   * (this round's visible cards) is part of the chart's own derivation; card
+   * counting (the shoe's history) is not, and belongs to `exact-shoe`.
+   */
+          freshComposition()              {
+    const shoe = Composition.fresh(this.rules.decks);
+    for (const hand of this.hands) {
+      for (const card of hand.cards) shoe.remove(bjRankOfCard(card));
+    }
+    const dealerVisible = this.dealerRevealed ? this.dealerCards : this.dealerCards.slice(0, 1);
+    for (const card of dealerVisible) shoe.remove(bjRankOfCard(card));
+    return shoe;
+  }
+
+  /**
+   * The EV insurance is graded against.
+   *
+   * In chart mode this is the chart's own insurance cell — a fresh shoe with the
+   * dealer's ace removed — for the same reason every other decision is graded
+   * against a chart: the app teaches basic strategy, and basic strategy says
+   * never insure. Grading against the live shoe meant that a player who
+   * correctly declined was marked wrong, and docked rating, on exactly those
+   * hands where the shoe happened to have run ten-rich — punished for playing
+   * the strategy the app is teaching, on information the app never showed them.
+   * That is the §3.1 error in its purest form.
+   *
+   * `grading: 'exact-shoe'` is the counting mode, and there the live shoe is the
+   * whole point.
+   *
+   * A player natural against an ace reaches this same decision — taking
+   * insurance there is what a casino calls even money — so it is graded here
+   * too, by the same number. It is the same bet.
+   */
+          gradedInsuranceEv()         {
+    if (this.grading === 'chart') {
+      const cell = this.chart.cells.get(INSURANCE_SCENARIO_KEY);
+      if (cell) return cell.evByAction.takeInsurance ?? 0;
+    }
+    return insuranceEv(this.unseenComposition());
   }
 
           pushDecision(input   
@@ -4528,6 +4625,8 @@ const EN            = {
   'verbTo.double': 'double',
   'verbTo.split': 'split',
   'verbTo.surrender': 'surrender',
+  'verbTo.takeInsurance': 'take insurance',
+  'verbTo.declineInsurance': 'decline it',
 
   // --- Upcards ---
   'upcard.ace': 'an ace',
@@ -4541,7 +4640,8 @@ const EN            = {
   'dealer.strong': '{up} — **strong**. Breaks {bust} of the time, and makes 17+ the other {made}.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'Insurance rides on **the dealer’s hole card**, not your hand. Barely three cards in thirteen are tens.',
+  'hand.insurance':
+    'Insurance rides on **the dealer’s hole card**, not your hand. Four of the thirteen ranks are worth ten, so the hole card is a ten in about {tens} of cases — and at 2:1 the bet needs {breakEven} just to break even.',
   'hand.aces': 'A,A — the **best pair in the deck**. Held together the second ace is dead weight.',
   'hand.eights': '8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.',
   'hand.splitDas': '{pair} — a small pair. Each half wants to draw then **double**, so this one rides on the double-after-split rule.',
@@ -4569,6 +4669,8 @@ const EN            = {
   'stat.standBreaks': 'Standing only wins when the dealer breaks, and the dealer breaks {bust} of the time.',
   'stat.hitVsSurrender': 'Drawing breaks it {bust} of the time on the very next card.',
   'stat.double': 'Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.',
+  'stat.doubleTooThin':
+    'Doubling buys **one card and no more**. Here that card leaves you under seventeen {stiff} of the time — stuck standing on a hand you would still want to draw to, for twice the money.',
   'stat.splitGains': 'Two hands are worth {gap} more than one.',
   'stat.splitCosts': 'Splitting costs {gap} — one good total becomes two worse ones.',
   'stat.surrender': 'Half back is a guaranteed {half}; played out, this is worth less.',
@@ -4580,6 +4682,8 @@ const EN            = {
   'headline': '{hand} vs {up} → {verdict}',
   'headline.insurance': 'Insurance → {verdict}',
   'insurance.step1': 'Dealer shows an ace, so insurance is on offer. It is a bet on the hole card and nothing else.',
+  'insurance.counterNote':
+    'For the record: the cards already dealt left this shoe ten-rich enough that a card counter would have insured here. You are graded on basic strategy, which never insures, so this changed nothing — it is not a skill the trainer teaches yet.',
 
   // --- Home ---
   'ui.appName': 'EV Trainer',
@@ -4652,13 +4756,21 @@ const EN            = {
   'coach.a.closeSome': 'Closer than it looks. About {spread} of a unit between the top two.',
   'coach.a.closeNot': 'There is {spread} of a unit between the best play and the next one. Not really.',
   'coach.insurance.prompt': 'Ace up. Insurance is open — but it is a bet on my hole card, not on your hand.',
-  'coach.insurance.odds': 'Barely three cards in thirteen are tens, so the bet loses money every time it is made. Your own cards have nothing to do with it.',
+  'coach.insurance.odds':
+    'Four of the thirteen ranks are worth ten, so the hole card is a ten in about {tens} of cases. At 2:1 the bet needs {breakEven} to break even, so it loses money every time it is made. Your own cards have nothing to do with it.',
   'coach.prompt.pair': 'A pair. You can break that up if you want it.',
   'coach.prompt.few': '{label}. Not much to choose from — what’ll it be?',
   'coach.prompt.open': '{label} against my card. Your call.',
   'label.pair': 'A pair',
   'label.soft': 'Soft {total}',
   'label.hard': '{total}',
+  'log.vs': 'vs',
+  'log.right': '{headline} · played it right',
+  'log.played': '{headline} · you played {chosen}',
+  'log.playerNatural': 'blackjack — nothing to decide',
+  'log.dealerNatural': 'dealer blackjack — the hand ended on the deal',
+  'log.bothNaturals': 'blackjack both sides — a push on the deal',
+  'log.noDecisions': 'nothing to decide',
   'label.insurance': 'Insurance',
   'label.vs': '{hand} vs {up}',
 
@@ -4668,7 +4780,7 @@ const EN            = {
   'ui.sessionStats': 'Session statistics',
   'ui.decisionAccuracy': 'decision accuracy',
   'ui.evLostPer100': 'EV lost / 100 hands',
-  'ui.yourEdge': 'your effective edge',
+  'ui.yourEdge': 'house edge you face',
   'ui.units': 'units',
   'ui.dealerName': 'Vera · dealer',
   'ui.takeSeat': 'Take a seat. Deal when you’re ready.',
@@ -4765,19 +4877,23 @@ const EN            = {
 
   // --- What the four figures mean (§9.2) ---
   'info.accuracy.title': 'Decision accuracy',
-  'info.accuracy.body': 'The share of your decisions that were the best play available. Coin-flips — spots where the top two plays are within a hundredth of a unit — are left out, because getting those "wrong" is not a mistake worth counting. It is scored on the decision, never on whether the hand won.',
+  'info.accuracy.body':
+    '**Higher is better.** The target is 99% or more, sustained over 500 hands. This is the share of your decisions that were the best play available. Coin-flips — spots where the top two plays are within a hundredth of a unit — are left out, because getting those "wrong" is not a mistake worth counting. It is scored on the decision, never on whether the hand won.',
   'info.evLost.title': 'EV lost per 100 hands',
-  'info.evLost.body': 'What your mistakes cost, in units of your bet, over a hundred hands. A perfect player scores zero here no matter how badly the cards ran. This is the number to watch: it is the only one that is entirely yours.',
-  'info.edge.title': 'Your effective edge',
-  'info.edge.body': 'The house edge you are actually playing against — what these rules take from a perfect player, plus what your own errors add on top. The gap between this and the rules’ own edge is the part you can close.',
+  'info.evLost.body':
+    '**Lower is better. 0 is perfect** — it cannot go below 0, because nothing beats perfect play. This is what your mistakes cost, in units of your bet, over a hundred hands; a perfect player scores zero no matter how badly the cards ran. It is the number to watch: the only one that is entirely yours.',
+  'info.edge.title': 'House edge you face',
+  'info.edge.body':
+    '**Lower is better.** The floor is the rules’ own edge, {rulesEdge}, and you cannot go below it without counting cards. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes — and that is the part you can close.',
   'info.units.title': 'Units',
-  'info.units.body': 'What the cards did. Kept last, and kept quiet, on purpose: over a session this short it is almost entirely luck, and reading it as a score is the habit this trainer exists to break.',
+  'info.units.body':
+    '**This does not measure how you played.** It can be positive or negative, and over a session this short it is almost entirely luck. A perfect player loses many sessions; it is not a sign of a mistake. Kept last, and kept quiet, because reading it as a score is the habit this trainer exists to break.',
   'info.more': 'What does this mean?',
 
   // --- Instructions ---
   'howto.title': 'How this works',
   'howto.open': 'How to play',
-  'howto.1': 'Press **Deal**, then choose the play you think is best. Keyboard: **H** hit, **S** stand, **D** double, **P** split, **R** surrender.',
+  'howto.1': 'Press **Deal**, then choose the play you think is best. Keyboard: **H** hit, **S** stand, **D** double, **P** split, **R** surrender, and **Y** / **N** for insurance.',
   'howto.2': 'The dealer reads the spot back to you in three steps — her card, your hand, then the two together. **Space** moves through them, or skip straight to the answer.',
   'howto.3': 'You are graded on the **decision**, not the result. A correct play that loses is still correct, and that is the whole idea.',
   'howto.4': 'Ask **Why?** at any point before you act; she will answer from the same numbers she grades you with.',
@@ -4834,6 +4950,9 @@ const EN            = {
   'dealer.youBust': 'Too many.',
   'dealer.iBust': 'And I break. Yours.',
   'dealer.blackjack': 'Blackjack. Pays three to two.',
+  'dealer.dealerNatural':
+    'Ace and a ten — blackjack, so the hand is over before you play it. Nothing was skipped; there was nothing left to decide.',
+  'dealer.bothNaturals': 'Blackjack here too. Push — your bet stays up.',
   'dealer.push': 'Push — your bet stays up.',
   'dealer.surrendered': 'Half back. On to the next.',
   'dealer.youWin': '{player} against my {dealer}. Yours.',
@@ -4901,6 +5020,8 @@ const HE            = {
   'verbTo.double': 'הכפלה',
   'verbTo.split': 'פיצול',
   'verbTo.surrender': 'ויתור',
+  'verbTo.takeInsurance': 'קניית ביטוח',
+  'verbTo.declineInsurance': 'ויתור על הביטוח',
 
   // --- Upcards ---
   'upcard.ace': 'אס',
@@ -4914,7 +5035,8 @@ const HE            = {
   'dealer.strong': 'לדילר {up} — **חזק**. הוא נשרף רק ב-{bust} מהמקרים, ומגיע ל-17 ומעלה ב-{made} הנותרים.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'הביטוח תלוי **בקלף הסמוי של הדילר**, לא ביד שלך. בקושי שלושה קלפים מתוך שלושה־עשר הם עשיריות.',
+  'hand.insurance':
+    'הביטוח תלוי **בקלף הסמוי של הדילר**, לא ביד שלך. ארבעה מתוך שלושה־עשר סוגי הקלפים שווים עשר, ולכן הקלף הסמוי הוא עשירייה בכ־{tens} מהמקרים — ובתשלום 2:1 ההימור צריך {breakEven} רק כדי לצאת בשווה.',
   'hand.aces': 'A,A — **הזוג הכי טוב בחפיסה**. ביד אחת האס השני מיותר.',
   'hand.eights': '8,8 — **שש־עשרה**, הסכום הגרוע ביותר. הפיצול הוא **בריחה**, לא התקפה.',
   'hand.splitDas': '{pair} — זוג קטן. כל חצי רוצה לקחת קלף ואז **להכפיל**, אז הכול תלוי בכלל ההכפלה אחרי פיצול.',
@@ -4942,6 +5064,8 @@ const HE            = {
   'stat.standBreaks': 'עצירה מנצחת רק כשהדילר נשרף, והדילר נשרף ב-{bust} מהמקרים.',
   'stat.hitVsSurrender': 'לקיחת קלף שורפת את היד ב-{bust} מהמקרים כבר בקלף הבא.',
   'stat.double': 'אותו קלף כמו בלקיחה, **בכפול כסף**, בלי קלף שני — וכאן קלף אחד בדרך כלל מספיק.',
+  'stat.doubleTooThin':
+    'הכפלה קונה **קלף אחד וזהו**. כאן הקלף הזה משאיר אותך מתחת ל-17 ב-{stiff} מהמקרים — תקוע עם יד שהיית רוצה להמשיך לקחת אליה, על כפול כסף.',
   'stat.splitGains': 'שתי ידיים שוות כאן {gap} יותר מיד אחת.',
   'stat.splitCosts': 'פיצול עולה {gap} — סכום אחד טוב הופך לשניים גרועים.',
   'stat.surrender': 'חצי בחזרה זה {half} מובטח; במשחק עד הסוף זה שווה פחות.',
@@ -4953,6 +5077,8 @@ const HE            = {
   'headline': '{hand} מול {up} ← {verdict}',
   'headline.insurance': 'ביטוח ← {verdict}',
   'insurance.step1': 'לדילר יש אס, אז הביטוח פתוח. זה הימור על הקלף הסמוי בלבד.',
+  'insurance.counterNote':
+    'לפרוטוקול: הקלפים שכבר יצאו השאירו את החפיסה עשירה בעשיריות מספיק כדי שמי שסופר קלפים היה קונה כאן ביטוח. הציון שלך ניתן לפי אסטרטגיה בסיסית, שלעולם לא קונה ביטוח, ולכן זה לא שינה כלום — זו עדיין לא מיומנות שהמאמן מלמד.',
 
   // --- Home ---
   'ui.appName': 'מאמן EV',
@@ -5025,13 +5151,21 @@ const HE            = {
   'coach.a.closeSome': 'צמוד יותר משזה נראה. בערך {spread} יחידה בין שתי הראשונות.',
   'coach.a.closeNot': 'יש {spread} יחידה בין המהלך הטוב ביותר לבא אחריו. לא ממש.',
   'coach.insurance.prompt': 'אס גלוי. הביטוח פתוח — אבל זה הימור על הקלף הסמוי שלי, לא על היד שלך.',
-  'coach.insurance.odds': 'בקושי שלושה קלפים מתוך שלושה-עשר הם עשיריות, ולכן ההימור מפסיד כסף בכל פעם שעושים אותו. לקלפים שלך אין לזה שום קשר.',
+  'coach.insurance.odds':
+    'ארבעה מתוך שלושה־עשר סוגי הקלפים שווים עשר, ולכן הקלף הסמוי הוא עשירייה בכ־{tens} מהמקרים. בתשלום 2:1 ההימור צריך {breakEven} כדי לצאת בשווה, ולכן הוא מפסיד כסף בכל פעם שעושים אותו. לקלפים שלך אין לזה שום קשר.',
   'coach.prompt.pair': 'זוג. אפשר לפצל אותו אם בא לך.',
   'coach.prompt.few': '{label}. אין הרבה ממה לבחור — מה עושים?',
   'coach.prompt.open': '{label} מול הקלף שלי. ההחלטה שלך.',
   'label.pair': 'זוג',
   'label.soft': 'רך {total}',
   'label.hard': '{total}',
+  'log.vs': 'מול',
+  'log.right': '{headline} · שיחקת נכון',
+  'log.played': '{headline} · שיחקת {chosen}',
+  'log.playerNatural': 'בלאק ג׳ק — לא היה מה להחליט',
+  'log.dealerNatural': 'בלאק ג׳ק לדילר — היד נגמרה כבר בחלוקה',
+  'log.bothNaturals': 'בלאק ג׳ק לשני הצדדים — תיקו בחלוקה',
+  'log.noDecisions': 'לא היה מה להחליט',
   'label.insurance': 'ביטוח',
   'label.vs': '{hand} מול {up}',
 
@@ -5041,7 +5175,7 @@ const HE            = {
   'ui.sessionStats': 'סטטיסטיקת המושב',
   'ui.decisionAccuracy': 'דיוק ההחלטות',
   'ui.evLostPer100': 'EV שאבד ל-100 ידיים',
-  'ui.yourEdge': 'היתרון שלך בפועל',
+  'ui.yourEdge': 'יתרון הקזינו מולך',
   'ui.units': 'יחידות',
   'ui.dealerName': 'ורה · דילרית',
   'ui.takeSeat': 'שב בנוחות. חלק כשאתה מוכן.',
@@ -5138,19 +5272,23 @@ const HE            = {
 
   // --- What the four figures mean (§9.2) ---
   'info.accuracy.title': 'דיוק ההחלטות',
-  'info.accuracy.body': 'שיעור ההחלטות שלך שהיו המהלך הטוב ביותר שהיה זמין. הטלות מטבע — מצבים שבהם שתי האפשרויות המובילות במרחק של פחות ממאית יחידה — לא נספרות, כי “לטעות” בהן זו לא באמת טעות. הציון ניתן על ההחלטה, לעולם לא על השאלה אם היד ניצחה.',
+  'info.accuracy.body':
+    '**כמה שיותר גבוה.** היעד הוא 99% ומעלה לאורך 500 ידיים. זה שיעור ההחלטות שלך שהיו המהלך הטוב ביותר שהיה זמין. הטלות מטבע — מצבים שבהם שתי האפשרויות המובילות במרחק של פחות ממאית יחידה — לא נספרות, כי “לטעות” בהן זו לא באמת טעות. הציון ניתן על ההחלטה, לעולם לא על השאלה אם היד ניצחה.',
   'info.evLost.title': 'EV שאבד ל-100 ידיים',
-  'info.evLost.body': 'מה שהטעויות שלך עולות, ביחידות של ההימור, לאורך מאה ידיים. שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר שכדאי לעקוב אחריו: הוא היחיד ששלך לגמרי.',
-  'info.edge.title': 'היתרון שאתה באמת משחק מולו',
-  'info.edge.body': 'יתרון הקזינו שאתה באמת משחק מולו — מה שהחוקים לוקחים משחקן מושלם, ועוד מה שהטעויות שלך מוסיפות מעל. הפער בין זה לבין היתרון של החוקים עצמם הוא החלק שאתה יכול לסגור.',
+  'info.evLost.body':
+    '**כמה שיותר נמוך. 0 זה מושלם** — אי אפשר לרדת מתחת ל-0, כי אין משחק טוב יותר מהמשחק המושלם. זה מה שהטעויות שלך עולות, ביחידות של ההימור, לאורך מאה ידיים — שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר שכדאי לעקוב אחריו: הוא היחיד ששלך לגמרי.',
+  'info.edge.title': 'יתרון הקזינו מולך',
+  'info.edge.body':
+    '**כמה שיותר נמוך.** הרצפה היא יתרון החוקים עצמם, {rulesEdge}, ומתחתיה אי אפשר לרדת בלי ספירת קלפים. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים — כל מה שמעל {rulesEdge} הוא הטעויות שלך, וזה החלק שאתה יכול לסגור.',
   'info.units.title': 'יחידות',
-  'info.units.body': 'מה שהקלפים עשו. נשמר לסוף, ובשקט, בכוונה: לאורך מושב קצר כזה זה כמעט הכול מזל, וההרגל לקרוא את זה כציון הוא בדיוק מה שהמאמן הזה קיים כדי לשבור.',
+  'info.units.body':
+    '**זה לא מודד איך ששיחקת.** זה יכול להיות חיובי או שלילי, ולאורך מושב קצר כזה זה כמעט הכול מזל. גם שחקן מושלם מפסיד בסשנים רבים — זה לא סימן לטעות. נשמר לסוף, ובשקט, כי ההרגל לקרוא את זה כציון הוא בדיוק מה שהמאמן הזה קיים כדי לשבור.',
   'info.more': 'מה זה אומר?',
 
   // --- Instructions ---
   'howto.title': 'איך זה עובד',
   'howto.open': 'איך משחקים',
-  'howto.1': 'לחץ **חלק**, ואז בחר את המהלך שנראה לך הכי טוב. מקלדת: **H** קלף, **S** עצירה, **D** הכפלה, **P** פיצול, **R** ויתור.',
+  'howto.1': 'לחץ **חלק**, ואז בחר את המהלך שנראה לך הכי טוב. מקלדת: **H** קלף, **S** עצירה, **D** הכפלה, **P** פיצול, **R** ויתור, ו־**Y** / **N** לביטוח.',
   'howto.2': 'הדילרית קוראת לך את המצב בשלושה שלבים — הקלף שלה, היד שלך, ואז השניים יחד. **רווח** מתקדם ביניהם, או אפשר לדלג ישר לתשובה.',
   'howto.3': 'הציון הוא על **ההחלטה**, לא על התוצאה. מהלך נכון שהפסיד הוא עדיין נכון, וזה כל הרעיון.',
   'howto.4': 'שאל **למה?** בכל רגע לפני שאתה פועל; היא תענה מאותם מספרים שלפיהם היא מדרגת אותך.',
@@ -5202,6 +5340,9 @@ const HE            = {
   'dealer.youBust': 'נשרפת.',
   'dealer.iBust': 'ואני נשרף. שלך.',
   'dealer.blackjack': 'בלאק ג׳ק. משלם 3 ל-2.',
+  'dealer.dealerNatural':
+    'אס ועשר — בלאק ג׳ק, ולכן היד נגמרת לפני שמשחקת אותה. שום דבר לא דולג — פשוט לא נשאר מה להחליט.',
+  'dealer.bothNaturals': 'גם לי בלאק ג׳ק. תיקו — ההימור נשאר.',
   'dealer.push': 'תיקו — ההימור נשאר.',
   'dealer.surrendered': 'חצי בחזרה. עוברים לבאה.',
   'dealer.youWin': '{player} מול {dealer} שלי. שלך.',
@@ -5312,13 +5453,21 @@ function gerund(action                 , locale        )         {
   return t(locale, GERUND[action]);
 }
 
-/** The form that follows "to" — English wants an infinitive, Hebrew a gerund. */
-function verbAfterTo(action                 , locale        )         {
+/**
+ * The form that follows "to" — English wants an infinitive, Hebrew a gerund.
+ *
+ * Insurance is in this family too. It is a `GradedAction` and not a
+ * `BlackjackAction`, and when the type here was the narrower one the Hebrew
+ * template `ל{runnerUpVerb}` rendered the literal `לverbTo.declineInsurance` on
+ * screen: `t()` falls back to the key, so a missing member of a composed key
+ * family is invisible to the compiler and glaring to the player.
+ */
+function verbAfterTo(action              , locale        )         {
   return t(locale, `verbTo.${action}`);
 }
 
 /** The imperative, for headlines and for opening a verdict. */
-function verb(action                 , locale        )         {
+function verb(action              , locale        )         {
   return t(locale, `action.${action}`);
 }
 
@@ -5442,6 +5591,36 @@ function bustOnNextCard(scenario          , rules                )         {
   return busting / shoe.total;
 }
 
+/**
+ * How often one more card leaves this hand still wanting another.
+ *
+ * The whole question behind a double is whether one card finishes the hand.
+ * From hard 8 it usually does not: seven of the thirteen ranks leave a total
+ * under seventeen, a hand you would carry on drawing to and a hand doubling
+ * forbids you to touch. From hard 11 almost every card finishes it, which is
+ * why 11 doubles and 8 does not.
+ *
+ * A card that busts the hand is not counted here: a bust wants nothing, it is
+ * simply over, and `bustOnNextCard` is the figure for that.
+ */
+function stillStiffAfterOneCard(scenario          , rules                )         {
+  if (scenario.total === undefined) return 0;
+  const soft = scenario.kind === 'soft';
+  const shoe = Shoe.fresh(rules.decks);
+  let stiff = 0;
+  for (let rank = 0; rank < 10; rank++) {
+    const value = RANK_VALUE[rank] ;
+    let total = scenario.total + value;
+    let usable = soft || rank === 0; // an ace we could still drop to one
+    if (total > 21 && usable) {
+      total -= 10;
+      usable = false;
+    }
+    if (total <= 21 && total < 17) stiff += shoe.count(rank);
+  }
+  return stiff / shoe.total;
+}
+
 // --- Hand archetypes --------------------------------------------------------
 
 /**
@@ -5525,6 +5704,26 @@ function pairName(rank        )         {
 }
 
 /**
+ * How often the hole card is a ten, and how often it would have to be.
+ *
+ * Both figures come from the shoe the chart is derived from — a fresh one with
+ * the dealer's ace gone — rather than from the "barely three cards in thirteen"
+ * that used to sit in the copy. That was simply wrong: four of the thirteen
+ * ranks are worth ten, not three. Insurance is still a losing bet, and it is a
+ * better lesson when the number stating so is right, because a player who checks
+ * it and finds it false has been handed a reason to distrust everything else on
+ * the card.
+ *
+ * The break-even point is a property of the 2:1 payout, not of the shoe: the bet
+ * returns `2p - (1 - p)`, which is zero at exactly one in three.
+ */
+function insuranceOdds(rules                )                                      {
+  const shoe = Shoe.fresh(rules.decks);
+  shoe.remove(ACE); // the ace the player can see
+  return { tens: shoe.probability(TEN), breakEven: 1 / 3 };
+}
+
+/**
  * The player's cards alone, with the dealer out of the picture.
  *
  * Every line says what the hand wants, and none of them names the verdict —
@@ -5540,8 +5739,13 @@ function readHand(
   const total = scenario.total ?? 0;
 
   switch (kind) {
-    case 'insurance':
-      return t(locale, 'hand.insurance');
+    case 'insurance': {
+      const odds = insuranceOdds(rules);
+      return t(locale, 'hand.insurance', {
+        tens: percent(odds.tens),
+        breakEven: percent(odds.breakEven),
+      });
+    }
 
     case 'split-always': {
       const rank = scenario.pairRank ;
@@ -5663,9 +5867,19 @@ function supportingStat(
     });
   }
 
-  // Doubling against hitting: same card, twice the money, no second draw.
+  /*
+   * Doubling against hitting. Which way round matters, and it used not to.
+   *
+   * One sentence served both sides: "one card is usually enough here". On 6♠ 2♣
+   * against a 7 — where hitting is worth +0.084 and doubling −0.181 — the card
+   * therefore argued for the very play it had just called a blunder. The two
+   * cases are opposite arguments and need opposite sentences.
+   */
   if (pair.has('double') && pair.has('hit')) {
-    return t(locale, 'stat.double');
+    if (best.action === 'double') return t(locale, 'stat.double');
+    return t(locale, 'stat.doubleTooThin', {
+      stiff: percent(stillStiffAfterOneCard(scenario, rules)),
+    });
   }
 
   // Splitting against playing it as one hand. Which way round matters: the same
@@ -5687,7 +5901,7 @@ function readCombined(
   evaluation                    ,
   rules                ,
   locale         = 'en',
-  chosen                  ,
+  chosen               ,
 )         {
   const c = contest(evaluation);
   const numbers =
@@ -5751,7 +5965,7 @@ function explain(
   rules                ,
   locale         = 'en',
   /** What the player actually did, when the explanation follows a decision. */
-  chosen                  ,
+  chosen               ,
 )              {
   const c = contest(evaluation);
   const verdict = verb(c.best.action, locale);
@@ -6035,8 +6249,12 @@ const VARIANTS                                                                  
 function ruleSensitivity(
   scenarioKey        ,
   rules                ,
-  optimal                 ,
+  optimal              ,
 )                    {
+  // Insurance is the same side bet under every rule set in the list below, so
+  // there is nothing to compare. The caller already skips it; this makes the
+  // answer true rather than merely unreached.
+  if (!isHandAction(optimal)) return [];
   const activeKey = rulesKey(rules);
   const notes                    = [];
   const seen = new Set        ();
@@ -6049,6 +6267,7 @@ function ruleSensitivity(
 
     const cell = chartFor(other).cells.get(scenarioKey);
     if (!cell || cell.optimalAction === optimal) continue;
+    if (!isHandAction(cell.optimalAction)) continue;
     notes.push({
       label: variant.label,
       action: cell.optimalAction,
@@ -6456,6 +6675,7 @@ class TrainerSession {
   }
 
   act(action                 )          {
+    this.counterFavoured = false;
     const record = this.table.act(action);
     this.absorb(record);
     this.settleIfDone();
@@ -6463,6 +6683,17 @@ class TrainerSession {
   }
 
   insurance(take         )          {
+    /*
+     * What the shoe actually held, read before the decision closes the phase.
+     *
+     * It never touches the grade, the cost or the rating — those come from the
+     * chart, because the chart is what the app teaches. It exists so that the
+     * one hand in a few hundred where the count really did call for insurance
+     * is not silently contradicted: a player who has read anything about
+     * counting deserves to be told that this was that hand, rather than left to
+     * conclude the app does not know.
+     */
+    this.counterFavoured = this.table.insuranceLiveEv() > 0;
     const record = this.table.takeInsurance(take);
     this.absorb(record);
     this.settleIfDone();
@@ -6491,6 +6722,12 @@ class TrainerSession {
    * it visibly without emptying it, which is the only thing the figure has to do.
    */
           static          STARTING_STACK = 200;
+
+  /**
+   * Whether the live shoe favoured insurance on the decision just taken. Text
+   * only — see `insurance()`.
+   */
+          counterFavoured = false;
 
   /** Turn one graded decision into the feedback card §7.1 describes. */
           absorb(record                )       {
@@ -6639,9 +6876,16 @@ class TrainerSession {
           ? prettyAction(record.optimalAction, this.locale)
           : actionName(record.optimalAction                   , this.locale),
       evCost: record.evCost,
+      counterNote: this.counterNote(record),
       ranked,
       sensitivity,
     };
+  }
+
+  /** The card-counter remark, or nothing at all. Costs and rating never see it. */
+          counterNote(record                )                {
+    if (record.scenarioKey !== 'bj:insurance' || !this.counterFavoured) return null;
+    return t(this.locale, 'insurance.counterNote');
   }
 
   /**
@@ -6852,6 +7096,10 @@ class TrainerSession {
     }
 
     if (view.phase === 'insurance') {
+      // The same two figures the feedback card quotes, from the same place, so
+      // the coach and the verdict cannot disagree about the odds.
+      const odds = insuranceOdds(this.rules);
+      const pct = (value        ) => `${Math.round(value * 100)}%`;
       return {
         phase: 'insurance',
         prompt: t(this.locale, 'coach.insurance.prompt'),
@@ -6859,7 +7107,10 @@ class TrainerSession {
           {
             id: 'odds',
             question: t(this.locale, 'coach.q.odds'),
-            answer: t(this.locale, 'coach.insurance.odds'),
+            answer: t(this.locale, 'coach.insurance.odds', {
+              tens: pct(odds.tens),
+              breakEven: pct(odds.breakEven),
+            }),
           },
         ],
       };
@@ -7081,6 +7332,7 @@ class TrainerSession {
       ...previous,
       headline: explanation.headline,
       steps: [...explanation.steps],
+      counterNote: this.counterNote(record),
       chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimalLabel: prettyAction(record.optimalAction, this.locale),
       optimalVerb:
@@ -7243,6 +7495,38 @@ function renderStanding(profile) {
   }
 }
 
+/**
+ * Why a hand carried no decision at all.
+ *
+ * It used to say "a natural" for every one of them, which is wrong more often
+ * than it is right: a *dealer* natural ends the hand on the deal too, and that
+ * is the case a player is most likely to come back and check, because from the
+ * seat it looked as though their turn had been skipped.
+ */
+function noDecisionReason(hand) {
+  const value = (cards) => {
+    let total = 0;
+    let aces = 0;
+    for (const card of cards) {
+      if (card.rank === 'A') {
+        aces++;
+        total += 11;
+      } else total += card.rank === '10' || 'JQK'.includes(card.rank) ? 10 : Number(card.rank);
+    }
+    while (total > 21 && aces > 0) {
+      total -= 10;
+      aces--;
+    }
+    return total;
+  };
+  const natural = (cards) => cards.length === 2 && value(cards) === 21;
+  if (natural(hand.dealerCards)) {
+    return natural(hand.playerHands[0] ?? []) ? 'log.bothNaturals' : 'log.dealerNatural';
+  }
+  if (natural(hand.playerHands[0] ?? [])) return 'log.playerNatural';
+  return 'log.noDecisions';
+}
+
 function renderHands(view) {
   const box = el('hands');
   box.replaceChildren();
@@ -7263,19 +7547,19 @@ function renderHands(view) {
     );
     const cards = hand.playerHands.map((h) => h.map((c) => c.rank + c.suit).join(' ')).join('  |  ');
     const dealer = hand.dealerCards.map((c) => c.rank + c.suit).join(' ');
+    const detail = worst
+      ? T(worst.correct ? 'log.right' : 'log.played', {
+          headline: worst.headline,
+          chosen: worst.chosen.toLowerCase(),
+        })
+      : T(noDecisionReason(hand));
 
     const row = document.createElement('div');
     row.className = 'log-row';
     row.innerHTML =
       `<div class="log-tier ${worst ? worst.severity : 'optimal'}"></div>` +
-      `<div><div class="log-hand">${cards} <span class="muted">vs</span> ${dealer}</div>` +
-      `<div class="log-detail">${
-        worst
-          ? worst.correct
-            ? `${worst.headline} · played it right`
-            : `${worst.headline} · you played ${worst.chosen.toLowerCase()}`
-          : 'a natural — nothing to decide'
-      }</div></div>` +
+      `<div><div class="log-hand">${cards} <span class="muted">${T('log.vs')}</span> ${dealer}</div>` +
+      `<div class="log-detail">${detail}</div></div>` +
       `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
         hand.netUnits > 0 ? '+' : ''
       }${hand.netUnits}</div>`;
@@ -8145,6 +8429,14 @@ function renderFeedback(view) {
   });
   box.appendChild(pref);
 
+  // The count said otherwise, and saying so costs the player nothing.
+  if (feedback.counterNote) {
+    const note = document.createElement('p');
+    note.className = 'sensitivity';
+    note.textContent = feedback.counterNote;
+    box.appendChild(note);
+  }
+
   // §7.1 item 6: flag answers that flip under another common rule set.
   if (feedback.sensitivity.length > 0) {
     const note = document.createElement('p');
@@ -8249,7 +8541,13 @@ function showInfo(which) {
   head.className = 'stat-info-head';
   head.textContent = T(`info.${which}.title`);
   const body = document.createElement('p');
-  renderRich(body, T(`info.${which}.body`));
+  // The edge of the rules themselves is a live figure, not a constant: it moves
+  // with the preset, with surrender, and with the split rule. Read from the same
+  // place the badge reads it, so the tooltip can never quote a stale number.
+  const rulesEdge = state.view?.ruleSet
+    ? `${state.view.ruleSet.edgePercent.toFixed(2)}%`
+    : '—';
+  renderRich(body, T(`info.${which}.body`, { rulesEdge }));
   box.append(head, body);
 
   if (which === 'accuracy' && state.view) {
@@ -8303,14 +8601,35 @@ for (const button of document.querySelectorAll('.stat[data-info]')) {
  * to the cards, and letting the two speak in one voice is how a player starts
  * hearing "you played well" in a hand that simply won.
  */
+/** A dealer natural: two cards to twenty-one, face up because the hand is over. */
+function dealerNatural(view) {
+  const dealer = view.dealer;
+  return !dealer.hidden && dealer.cards.length === 2 && dealer.total === 21;
+}
+
 function tableTalk(view) {
   const hands = view.hands;
   const dealer = view.dealer;
   const only = hands.length === 1 ? hands[0] : null;
 
   if (only && only.surrendered) return T('dealer.surrendered');
-  // Two cards to twenty-one, and no split to have made them: a natural.
-  if (only && only.cards.length === 2 && only.total === 21) return T('dealer.blackjack');
+
+  /*
+   * The dealer's own natural, named before anything else.
+   *
+   * It ends the hand where it stands — sometimes before the player has taken a
+   * single decision — and from the seat that is indistinguishable from the app
+   * having skipped their turn. Idan reported exactly that, on 5♥ K♣ against
+   * A♦ K♣. Nothing was skipped; there was nothing left to play. Saying so is
+   * the whole fix.
+   */
+  const playerNatural = Boolean(only && only.cards.length === 2 && only.total === 21);
+  if (dealerNatural(view)) {
+    return playerNatural ? T('dealer.bothNaturals') : T('dealer.dealerNatural');
+  }
+  // Two cards to twenty-one, and no split to have made them: a natural. Checked
+  // after the dealer's, because when both have one it is a push, not a payout.
+  if (playerNatural) return T('dealer.blackjack');
   if (hands.length > 0 && hands.every((hand) => hand.total > 21)) return T('dealer.youBust');
   if (dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
 
@@ -8331,14 +8650,20 @@ async function renderCoach(view) {
   const asks = el('asks');
   if (!say || !asks) return;
 
+  // A dealer natural can end a hand before the player decides anything, so
+  // there is no feedback card to hang the explanation on. The dealer says it
+  // instead — otherwise the screen goes straight back to "deal when ready" and
+  // the hand looks as though it was never played.
+  const spoken = view.phase === 'settled' && (view.feedback || dealerNatural(view));
+
   if (view.feedback && !revealComplete()) {
     say.textContent = T('ui.thinkPrompt');
-  } else if (view.feedback && view.phase === 'settled') {
+  } else if (spoken) {
     say.textContent = tableTalk(view);
   }
 
   if (view.phase !== 'player' && view.phase !== 'insurance') {
-    if (!view.feedback) say.textContent = T('ui.dealWhenReady');
+    if (!spoken) say.textContent = T('ui.dealWhenReady');
     asks.replaceChildren();
     answer.hidden = true;
     return;
@@ -8533,6 +8858,16 @@ document.addEventListener('keydown', (event) => {
   if (document.querySelector('dialog[open]')) return;
   const view = state.view;
   if (!view) return;
+  /*
+   * A held key must not walk the table.
+   *
+   * Space steps the reveal, and space deals the next hand. Held down, the
+   * auto-repeat ran straight through the end of one reveal and into a fresh
+   * deal — and, when the dealer showed an ace, on into the insurance decision,
+   * which used to take space as "decline". Three actions from one press, the
+   * last of them a bet. Only deliberate presses count.
+   */
+  if (event.repeat) return;
   const key = event.key.toLowerCase();
 
   // Space and Enter step the reasoning while a reveal is open, so the whole
@@ -8544,8 +8879,11 @@ document.addEventListener('keydown', (event) => {
   }
 
   if (view.phase === 'insurance') {
+    // Y and N only. Space belongs to the reveal and to the deal, and a key that
+    // means "carry on" elsewhere must never resolve a bet here.
+    if (key === ' ' || key === 'enter') event.preventDefault();
     if (key === 'y') send('/api/insurance', { take: true });
-    if (key === 'n' || key === ' ') send('/api/insurance', { take: false });
+    if (key === 'n') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {
