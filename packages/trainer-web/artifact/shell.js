@@ -93,11 +93,10 @@ let feed = [];
  * player instead: one profile, one history, one feed entry each. Fifteen people
  * playing for a year still come to forty-five documents.
  *
- * That is why the history is a rolling window inside a single document rather
- * than a document per hand — the alternative reaches the cap in an evening and
- * then starts refusing to save anything at all.
+ * That is why a player's hands are a rolling window inside their one saved
+ * session rather than a document each — the alternative reaches the cap in an
+ * evening and then starts refusing to save anything at all.
  */
-const HISTORY_KEPT = 40;
 const FEED_KEPT = 5;
 
 function watchLeaderboard() {
@@ -222,32 +221,103 @@ async function pushToFeed(hand) {
  */
 let myHistory = [];
 
-async function saveHand(hand) {
-  if (!db || !me.name) return;
-  myHistory = [hand, ...myHistory.filter((h) => h.id !== hand.id)].slice(0, HISTORY_KEPT);
+/** The session already keeps the rolling window; persisting is all that is left. */
+async function savePlayed() {
+  myHistory = session.view.history;
+  saveProgressLocally();
+  await saveProgressRemotely();
+}
+
+/**
+ * Where a player's progress is kept.
+ *
+ * Two places, on purpose. The browser always gets a copy, so the app remembers
+ * you even when it is opened from a file or from anywhere the shared store
+ * cannot be reached. The store gets one too when it is available, so the same
+ * player picks up on another device and so the table has something true to rank.
+ *
+ * The browser copy is written first and is never conditional. A rating built
+ * over three hundred hands should not depend on a network.
+ */
+const PROGRESS_KEY = 'ev:progress';
+
+/** The parts of a saved session that outlive the rules it was played under. */
+function playerOnly(progress) {
+  return {
+    ...progress,
+    hands: 0,
+    decisions: 0,
+    correct: 0,
+    evLost: 0,
+    netUnits: 0,
+    closeCalls: 0,
+    closeCallsCorrect: 0,
+    bySeverity: { optimal: 0, negligible: 0, minor: 0, significant: 0, blunder: 0 },
+    scenarioStats: [],
+    history: [],
+  };
+}
+
+function saveProgressLocally() {
   try {
-    await db.doc(`players/${me.id}/history/recent`).set({
-      at: Date.now(),
-      hands: myHistory,
-    });
+    store.set(PROGRESS_KEY, JSON.stringify(session.progress));
   } catch {
-    // Not fatal; the running session still has its own history.
+    // Storage full or disabled. The session in front of the player is unharmed.
   }
 }
 
-/** Pick up where this player left off, so the record survives a closed tab. */
-async function restoreMine() {
+function readLocalProgress() {
+  try {
+    const raw = store.get(PROGRESS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    // Corrupt or half-written. Starting fresh beats refusing to open.
+    return null;
+  }
+}
+
+async function saveProgressRemotely() {
   if (!db || !me.name) return;
   try {
-    const [history, mine] = await Promise.all([
+    await db.doc(`players/${me.id}/history/recent`).set({
+      at: Date.now(),
+      progress: session.progress,
+    });
+  } catch {
+    // Not fatal; the local copy already has it.
+  }
+}
+
+/**
+ * Pick up where this player left off.
+ *
+ * The local copy is applied first so the screen is right immediately, then the
+ * stored one replaces it if it is further along. "Further along" is measured in
+ * decisions played, which only ever increases — comparing timestamps would let a
+ * device with a wrong clock overwrite the real record.
+ */
+async function restoreMine() {
+  const local = readLocalProgress();
+  if (local) session.restore(local);
+
+  if (!db || !me.name) return;
+  try {
+    const [saved, mine] = await Promise.all([
       db.doc(`players/${me.id}/history/recent`).get(),
       db.doc(`feed/${me.id}`).get(),
     ]);
-    if (history.exists) myHistory = history.data()?.hands ?? [];
+    if (saved.exists) {
+      const remote = saved.data()?.progress;
+      if (remote && (!local || remote.decisions > local.decisions)) {
+        session.restore(remote);
+        saveProgressLocally();
+      }
+    }
     if (mine.exists) myFeed = mine.data()?.items ?? [];
   } catch {
-    // A first-time player, or an unreachable store. Both start empty.
+    // A first-time player, or an unreachable store. The local copy stands.
   }
+  myHistory = session.view.history;
 }
 
 /* --------------------------------------------------------------------------
@@ -293,7 +363,14 @@ async function api(path, body) {
       });
       session.setLocale(locale);
       if (me.name) session.setPlayerName(me.name);
+      // A rule change deals a new shoe against a new set of correct answers, so
+      // this session's totals go with it. The player does not: their name and
+      // their rating belong to them rather than to the rule set they were last
+      // sitting at.
+      const carried = readLocalProgress();
+      if (carried) session.restore(playerOnly(carried));
       lastSavedHandId = -1;
+      saveProgressLocally();
       return session.view;
     }
 
@@ -323,6 +400,7 @@ async function api(path, body) {
         session.setPlayerName(b.name);
         me.name = b.name.trim().slice(0, 24);
         store.set('ev:playerName', me.name);
+        saveProgressLocally();
         saveProfile();
       }
       if (typeof b.mode === 'string') session.setMode(b.mode);
@@ -341,7 +419,7 @@ function afterPlay() {
   const newest = view.history[0];
   if (newest && newest.id !== lastSavedHandId) {
     lastSavedHandId = newest.id;
-    saveHand(newest);
+    savePlayed();
     pushToFeed(newest);
     saveProfile();
   }

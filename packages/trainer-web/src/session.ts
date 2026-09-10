@@ -121,6 +121,23 @@ export interface PlayedHand {
  * this and none of them can exist without it, which is why it is kept from the
  * start even though nothing reads it yet.
  */
+/** A saved session, as `progress` produces it and `restore` consumes it. */
+export interface SessionProgress {
+  version: 1;
+  name: string | null;
+  hands: number;
+  decisions: number;
+  correct: number;
+  evLost: number;
+  netUnits: number;
+  closeCalls: number;
+  closeCallsCorrect: number;
+  bySeverity: Record<SeverityTier, number>;
+  rating: Rating;
+  scenarioStats: ScenarioStat[];
+  history: PlayedHand[];
+}
+
 export interface ScenarioStat {
   scenarioKey: string;
   attempts: number;
@@ -692,6 +709,79 @@ export class TrainerSession {
   setPlayerName(name: string): void {
     const trimmed = name.trim();
     if (trimmed.length > 0) this.playerName = trimmed.slice(0, 24);
+  }
+
+
+  /**
+   * Everything a player has earned, in a form that survives the tab closing.
+   *
+   * The rating is the point. It is built one decision at a time over hundreds of
+   * hands, and until now it started again from 1200 every time the page was
+   * opened — which made it a score for the last twenty minutes rather than a
+   * measure of anyone's play, and put a number on the shared table that meant
+   * nothing.
+   *
+   * Deliberately excluded: the hand in progress, the card currently on screen,
+   * and the shoe. A restored session begins between hands, which is the only
+   * boundary where resuming is unambiguous — half a split restored into a
+   * freshly shuffled shoe would be a different hand wearing the same cards.
+   */
+  get progress(): SessionProgress {
+    return {
+      version: 1,
+      name: this.playerName,
+      hands: this.hands,
+      decisions: this.decisions,
+      correct: this.correct,
+      evLost: this.evLost,
+      netUnits: this.netUnits,
+      closeCalls: this.closeCalls,
+      closeCallsCorrect: this.closeCallsCorrect,
+      bySeverity: { ...this.bySeverity },
+      rating: { ...this.rating },
+      scenarioStats: [...this.scenarioStats.values()],
+      history: this.history.slice(0, 40),
+    };
+  }
+
+  /**
+   * Put a saved session back.
+   *
+   * Ignores anything it does not recognise rather than throwing: a player whose
+   * stored progress predates a change to this shape should lose the fields that
+   * moved, not the ability to open the app.
+   */
+  restore(saved: SessionProgress | null | undefined): void {
+    if (!saved || saved.version !== 1) return;
+    const n = (value: unknown, fallback = 0): number =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+    if (typeof saved.name === 'string' && saved.name.trim().length > 0) {
+      this.playerName = saved.name.trim().slice(0, 24);
+    }
+    this.hands = n(saved.hands);
+    this.decisions = n(saved.decisions);
+    this.correct = n(saved.correct);
+    this.evLost = n(saved.evLost);
+    this.netUnits = n(saved.netUnits);
+    this.closeCalls = n(saved.closeCalls);
+    this.closeCallsCorrect = n(saved.closeCallsCorrect);
+    for (const tier of Object.keys(this.bySeverity) as SeverityTier[]) {
+      this.bySeverity[tier] = n(saved.bySeverity?.[tier]);
+    }
+    if (saved.rating && typeof saved.rating.rating === 'number') {
+      this.rating = { ...newRating(saved.rating.mode ?? 'basic'), ...saved.rating };
+    }
+    this.scenarioStats = new Map(
+      (saved.scenarioStats ?? []).map((stat) => [stat.scenarioKey, { ...stat }]),
+    );
+    this.history = [...(saved.history ?? [])];
+    // A restored session is between hands by construction, so nothing from the
+    // previous one is left pointing at a table that no longer exists.
+    this.pending = [];
+    this.lastFeedback = null;
+    this.lastRecord = null;
+    this.countedHand = -1;
   }
 
   /** The language in force, so a new session can carry it over. */
