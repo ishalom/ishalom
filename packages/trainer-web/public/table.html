@@ -144,6 +144,19 @@
         </label>
         <p class="muted fine" data-i18n="rules.restartsSession"></p>
 
+        <!--
+          Not a rule, so it does not restart anything and has its own listener.
+          The second sentence of the note is a product statement, which is why
+          it is on the screen rather than only in a comment.
+        -->
+        <label class="check">
+          <input type="checkbox" id="opt-sound" />
+          <span>
+            <strong data-i18n="sound.enable">Sound</strong>
+            <small data-i18n="sound.note"></small>
+          </span>
+        </label>
+
         <menu>
           <button value="cancel" data-i18n="ui.close">Close</button>
         </menu>

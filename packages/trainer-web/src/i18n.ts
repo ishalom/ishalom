@@ -390,6 +390,35 @@ const EN: Catalogue = {
   'dealer.youWinPlain': 'Those are good. Paying you.',
   'dealer.iWinPlain': 'Mine this time.',
   'dealer.dealerHas': 'I make {dealer}.',
+
+  // --- Playing well (§3.4) ---
+  //
+  // Every string here is about the decision. None of it mentions the money,
+  // and none of it gets louder as a run gets longer — see §16.
+  'fb.streak': '{n} correct in a row',
+  'fb.streakBest': 'Best run this session: {n}.',
+  'fb.streakCounts': 'A run of correct decisions. Close calls neither extend it nor break it, and it starts again with the session.',
+  'fb.milestone': '**{n} in a row** — {hard} of them the chart calls hard.',
+  'fb.milestoneOne': '**{n} in a row** — one of them the chart calls hard.',
+  'fb.milestoneNone': '**{n} in a row**.',
+
+  'ui.ratingPoints': '{delta} rating',
+  'home.sessionSwing': '{delta} this session',
+  'ui.ratingUnrated': 'not rated',
+  'fb.ratingWhy': 'The rating moves on the decision and how hard it was — never on whether the hand won.',
+  'fb.unratedWhy': 'No real decision here, so there is nothing to rate.',
+
+  'spot.routine': 'routine',
+  'spot.ordinary': 'ordinary',
+  'spot.tricky': 'tricky',
+  'spot.brutal': 'brutal',
+  'fb.spotBand': '{band} spot',
+  'fb.spotRarity': 'About one hand in {oneIn}.',
+  'fb.spotHeld': 'About one hand in {oneIn} — and you had it.',
+  'fb.spotAboveYou': 'Rated above you.',
+
+  'sound.enable': 'Sound',
+  'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
 };
 
 const HE: Catalogue = {
@@ -719,6 +748,32 @@ const HE: Catalogue = {
   'dealer.youWinPlain': 'אלה טובות. משלם לך.',
   'dealer.iWinPlain': 'הפעם זה שלי.',
   'dealer.dealerHas': 'יש לי {dealer}.',
+
+  // --- Playing well (§3.4) ---
+  'fb.streak': '{n} החלטות נכונות ברצף',
+  'fb.streakBest': 'הרצף הטוב במושב הזה: {n}.',
+  'fb.streakCounts': 'רצף של החלטות נכונות. מקרים צמודים לא מאריכים אותו ולא שוברים אותו, והוא מתחיל מחדש בכל מושב.',
+  'fb.milestone': '**{n} ברצף** — {hard} מהן נחשבות קשות בטבלה.',
+  'fb.milestoneOne': '**{n} ברצף** — אחת מהן נחשבת קשה בטבלה.',
+  'fb.milestoneNone': '**{n} ברצף**.',
+
+  'ui.ratingPoints': 'דירוג {delta}',
+  'home.sessionSwing': '{delta} במושב הזה',
+  'ui.ratingUnrated': 'לא מדורג',
+  'fb.ratingWhy': 'הדירוג זז לפי ההחלטה ולפי כמה שהיא הייתה קשה — לעולם לא לפי זה שהיד ניצחה.',
+  'fb.unratedWhy': 'אין כאן החלטה אמיתית, ולכן אין מה לדרג.',
+
+  'spot.routine': 'שגרתי',
+  'spot.ordinary': 'רגיל',
+  'spot.tricky': 'מסובך',
+  'spot.brutal': 'אכזרי',
+  'fb.spotBand': 'מצב {band}',
+  'fb.spotRarity': 'בערך יד אחת מכל {oneIn}.',
+  'fb.spotHeld': 'בערך יד אחת מכל {oneIn} — והחזקת אותה.',
+  'fb.spotAboveYou': 'מדורג מעליך.',
+
+  'sound.enable': 'צליל',
+  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

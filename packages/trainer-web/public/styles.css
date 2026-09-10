@@ -792,9 +792,10 @@ hr.brass {
   background:
     radial-gradient(140% 120% at 20% 0%, rgba(28, 106, 64, 0.55) 0%, transparent 70%),
     linear-gradient(180deg, #1f2731 0%, #171d25 100%);
-  transition: transform 0.12s ease, border-color 0.12s ease;
 }
-.door:hover { transform: translateY(-2px); border-color: var(--brass); }
+/* The lift and its transition live in the reduced-motion regime at the end of
+   this file; the colour change stays here, since it is not motion. */
+.door:hover { border-color: var(--brass); }
 .door.secondary {
   border-color: rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, #1e242c 0%, #171c23 100%);
@@ -1478,4 +1479,112 @@ body { font-family: var(--body); }
   .rail-bank .rail-value { font-size: 24px; }
   .seat-title { font-size: 15px; }
   .seat-total { font-size: 20px; }
+}
+
+/* ===========================================================================
+ * Playing well.
+ *
+ * The rating the decision was worth, the run it belongs to, and how hard the
+ * spot was — all of it about the decision, none of it about the money, and
+ * none of it louder at fifty than at one (§16).
+ * ======================================================================== */
+
+.quickcard .anchor { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.quickcard .rating-side {
+  display: flex;
+  margin-top: 0;
+  flex: none;
+  font-family: var(--display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.quickcard .rating-side .unrated { color: var(--line); }
+
+/* A run, worn beside the verdict rather than kept as a score of its own. */
+.streak {
+  margin-inline-start: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: 2px;
+  cursor: help;
+}
+
+.quickcard .spot { margin: 6px 0 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.quickcard .spot .tag { margin-inline-start: 0; }
+.spot-note { font-size: 12.5px; color: var(--muted); }
+
+.quickcard .milestone {
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickcard .milestone b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * Motion.
+ *
+ * Built the way round that makes stillness the default: every animated rule
+ * lives inside `prefers-reduced-motion: no-preference`, so a player who has
+ * asked for less gets a page with none, and nothing needs an override to
+ * undo. Nothing in the input path waits on any of it.
+ *
+ * Vertical only. The app runs right-to-left in Hebrew, and a deal that slid
+ * in from the left would arrive from the wrong side of the table.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes deal-in {
+    from { opacity: 0; transform: translate3d(0, -14px, 0) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Only cards that were not on the felt a moment ago carry `.arriving`, so
+     stepping through the reveal does not re-deal the hand. */
+  .card.arriving {
+    animation: deal-in 180ms ease-out backwards;
+    animation-delay: calc(var(--deal-index, 0) * 70ms);
+  }
+
+  @keyframes affirm-sweep {
+    from { transform: scaleY(0); opacity: 0.9; }
+    to { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* The leading rule brightens once down its length. That is the entire
+     celebration, and it is the same at the fiftieth as at the first. */
+  .quickcard.affirm { position: relative; }
+  .quickcard.affirm::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -3px;
+    width: 3px;
+    background: var(--optimal);
+    transform-origin: top;
+    animation: affirm-sweep 260ms ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes affirm-settle {
+    from { transform: scale(1.03); }
+    to { transform: none; }
+  }
+  .quickcard.affirm .verdict {
+    animation: affirm-settle 260ms ease-out;
+    transform-origin: inline-start;
+  }
+
+  .door { transition: transform 0.12s ease, border-color 0.12s ease; }
+  .door:hover { transform: translateY(-2px); }
 }

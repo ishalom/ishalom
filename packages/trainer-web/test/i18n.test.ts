@@ -104,6 +104,7 @@ test('keys the pages build at runtime resolve for every value', () => {
     ['action.', ['hit', 'stand', 'double', 'split', 'surrender', 'takeInsurance', 'declineInsurance']],
     ['verbTo.', ['hit', 'stand', 'double', 'split', 'surrender']],
     ['howto.', ['1', '2', '3', '4']],
+    ['spot.', ['routine', 'ordinary', 'tricky', 'brutal']],
     ['info.accuracy.', ['title', 'body']],
     ['info.evLost.', ['title', 'body']],
     ['info.edge.', ['title', 'body']],

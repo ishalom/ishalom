@@ -17,7 +17,143 @@ const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 
 const el = (id) => document.getElementById(id);
 
-const state = { view: null, busy: false, reveal: null };
+const state = {
+  view: null,
+  busy: false,
+  reveal: null,
+  /*
+   * Which cards the felt is already showing.
+   *
+   * `render()` runs after every response *and* after every step of the reveal,
+   * and the seats are rebuilt wholesale each time. Without a record of what was
+   * already there, anything that animates a card would replay the entire deal
+   * three times while the player reads the reasoning. So each pass works out
+   * which cards are genuinely new, and only those are treated as newly dealt.
+   */
+  shown: { dealer: [], hands: [] },
+  /** Guards the one-shot verdict effects; see `flashOnce`. */
+  flashed: null,
+};
+
+/** Identity of a card in its seat: same rank, same suit, same position. */
+const cardKey = (card, index) => `${index}:${card.rank}${card.suit}`;
+
+/**
+ * Which of these cards were not on the felt a moment ago.
+ *
+ * Positional, because that is what a seat is: the third card of a hand is a
+ * different thing from the third card of another hand, even with the same face.
+ * Returns a Set of keys, plus each new card's position among the new ones, so a
+ * fresh deal staggers and a single hit does not wait behind it.
+ */
+function newCards(keys, previous) {
+  const fresh = new Map();
+  for (let i = 0; i < keys.length; i++) {
+    if (previous[i] !== keys[i]) fresh.set(i, fresh.size);
+  }
+  return fresh;
+}
+
+/* --------------------------------------------------------------------------
+ * Sound
+ *
+ * Off unless asked for, and synthesised rather than shipped: no files, no
+ * fetch, nothing for a content policy to block, and a couple of kilobytes
+ * instead of a couple of hundred.
+ *
+ * Two voices, and a hard rule about what has none. A card landing makes a
+ * noise. A verdict makes a noise — the same length, the same loudness, right
+ * or wrong, differing only in pitch. Winning money makes no noise at all. A
+ * jingle on a won hand is the exact conditioning §3.1 and §16 exist to keep
+ * out of this app, and a buzzer on a lost one is the same mistake inverted.
+ * ----------------------------------------------------------------------- */
+
+function soundEnabled() {
+  try {
+    return localStorage.getItem('ev:sound') === '1';
+  } catch {
+    return false;
+  }
+}
+function setSoundEnabled(value) {
+  try {
+    localStorage.setItem('ev:sound', value ? '1' : '0');
+  } catch {
+    // Storage disabled; the preference simply lasts for this page.
+  }
+}
+
+/**
+ * The audio context, made only once and only on demand.
+ *
+ * Lazily, because a player who never turns sound on should never have one at
+ * all. On `window`, because the artifact build wraps this file in a function
+ * that runs again on every screen change — a module-level context would leak
+ * one per navigation.
+ */
+function audio() {
+  if (!soundEnabled()) return null;
+  try {
+    if (!window.__evAudio) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      const ctx = new Ctx();
+      const master = ctx.createGain();
+      master.gain.value = 0.25; // Nothing here can ever be loud.
+      master.connect(ctx.destination);
+      window.__evAudio = { ctx, master };
+    }
+    const held = window.__evAudio;
+    if (held.ctx.state === 'suspended') held.ctx.resume();
+    return held;
+  } catch {
+    return null;
+  }
+}
+
+/** A card landing on felt: a short filtered noise burst, nothing musical. */
+function playCard(delayMs) {
+  const held = audio();
+  if (!held) return;
+  const { ctx, master } = held;
+  const length = Math.floor(ctx.sampleRate * 0.012);
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) samples[i] = (Math.random() * 2 - 1) * (1 - i / length);
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2400;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.5;
+  source.connect(filter).connect(gain).connect(master);
+  source.start(ctx.currentTime + delayMs / 1000);
+}
+
+/**
+ * The verdict.
+ *
+ * Identical envelope, duration and gain either way — only the pitch moves.
+ * Not a rising arpeggio, not a chime, not a coin.
+ */
+function playVerdict(correct) {
+  const held = audio();
+  if (!held) return;
+  const { ctx, master } = held;
+  const at = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = correct ? 660 : 220;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(0.4, at + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+  osc.connect(gain).connect(master);
+  osc.start(at);
+  osc.stop(at + 0.1);
+}
 
 /**
  * Step through the reasoning, or show it all at once. Persisted, because being
@@ -54,6 +190,9 @@ async function send(path, body) {
   if (state.busy) return;
   state.busy = true;
   try {
+    // A new hand starts an empty felt, so its first cards are new even if they
+    // happen to match the last hand's rank, suit and seat.
+    if (path === '/api/deal') state.shown = { dealer: [], hands: [] };
     state.view = await api(path, body ?? {});
     const feedback = state.view.feedback;
     state.reveal = feedback
@@ -79,10 +218,16 @@ async function send(path, body) {
  * number of the draw that brought it. The distinction is in the shape and the
  * badge, not in colour alone (§13), and it reaches a screen reader too.
  */
-function cardNode(card, index) {
+function cardNode(card, index, dealtNow) {
   const drawn = index !== undefined && index >= 2;
+  // In step with the visual stagger, so the sound is the card landing rather
+  // than a separate event that happens to coincide.
+  if (dealtNow !== undefined) playCard(dealtNow * 70);
   const node = document.createElement('div');
-  node.className = 'card' + (card.red ? ' red' : '') + (drawn ? ' drawn' : ' dealt');
+  node.className =
+    'card' + (card.red ? ' red' : '') + (drawn ? ' drawn' : ' dealt') +
+    (dealtNow === undefined ? '' : ' arriving');
+  if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
   node.setAttribute(
     'aria-label',
@@ -101,9 +246,10 @@ function cardNode(card, index) {
   return node;
 }
 
-function faceDownNode() {
+function faceDownNode(dealtNow) {
   const node = document.createElement('div');
-  node.className = 'card back dealt';
+  node.className = 'card back dealt' + (dealtNow === undefined ? '' : ' arriving');
+  if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', 'face-down card');
   return node;
@@ -116,8 +262,16 @@ function renderDealer(view) {
   // grade would break that far more thoroughly than an early EV chip.
   const withhold = !revealComplete();
   const cards = withhold ? view.dealer.cards.slice(0, 1) : view.dealer.cards;
-  box.replaceChildren(...cards.map((card, i) => cardNode(card, i)));
-  if (view.dealer.hidden || withhold) box.appendChild(faceDownNode());
+
+  const keys = cards.map(cardKey);
+  // The hole card keys as itself, so turning it over counts as a card arriving
+  // rather than as one silently changing its face.
+  if (view.dealer.hidden || withhold) keys.push(`${keys.length}:back`);
+  const fresh = newCards(keys, state.shown.dealer);
+  state.shown.dealer = keys;
+
+  box.replaceChildren(...cards.map((card, i) => cardNode(card, i, fresh.get(i))));
+  if (view.dealer.hidden || withhold) box.appendChild(faceDownNode(fresh.get(cards.length)));
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
       ? ''
@@ -239,13 +393,19 @@ function renderHands(view) {
   const box = el('player-hands');
   box.replaceChildren();
 
-  for (const hand of view.hands) {
+  // Each seat keeps its own record, so splitting into a second hand does not
+  // make the first one look newly dealt.
+  const previous = state.shown.hands;
+  state.shown.hands = view.hands.map((hand) => hand.cards.map(cardKey));
+
+  view.hands.forEach((hand, handIndex) => {
     const wrap = document.createElement('div');
     wrap.className = 'hand' + (hand.active ? ' active' : '');
 
+    const fresh = newCards(state.shown.hands[handIndex], previous[handIndex] ?? []);
     const cards = document.createElement('div');
     cards.className = 'cards';
-    cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i)));
+    cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i, fresh.get(i))));
     wrap.appendChild(cards);
 
     // Only once there is more than one hand. With a single hand the betting
@@ -285,7 +445,7 @@ function renderHands(view) {
     }
     wrap.appendChild(meta);
     box.appendChild(wrap);
-  }
+  });
 
   el('empty-state').hidden = view.hands.length > 0;
 }
@@ -331,6 +491,80 @@ function revealComplete() {
 const stepTitles = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
 
 /**
+ * True once per token — the guard for anything that should happen exactly once
+ * when a verdict appears, rather than on every re-render of the same verdict.
+ */
+function flashOnce(token) {
+  if (state.flashed === token) return false;
+  state.flashed = token;
+  return true;
+}
+
+/**
+ * The rating points the decision was worth.
+ *
+ * Shown whether the hand went on to win or lose, and that is the point: a
+ * correct play that loses puts a green gain here directly above a red loss on
+ * the rail, in one frame. That picture argues §3.1 better than any sentence.
+ */
+function ratingSide(feedback) {
+  const side = document.createElement('span');
+  side.className = 'rating-side';
+  const delta = feedback.ratingDelta;
+
+  // Off the 311-cell grid there is no cell and nothing to rate. Say so rather
+  // than showing nothing, which reads as a bug.
+  if (delta === null || delta === undefined) {
+    const none = document.createElement('span');
+    none.className = 'unrated';
+    none.textContent = '—';
+    none.title = T('fb.unratedWhy');
+    side.appendChild(none);
+    return side;
+  }
+
+  const points = Math.round(delta);
+  const moved = document.createElement('span');
+  moved.className = points >= 0 ? 'up' : 'down';
+  // U+2212 for the minus, matching the typography everywhere else.
+  moved.textContent = T('ui.ratingPoints', {
+    delta: points >= 0 ? `+${points}` : `−${Math.abs(points)}`,
+  });
+  moved.title = T('fb.ratingWhy');
+  side.appendChild(moved);
+  return side;
+}
+
+/**
+ * How hard the spot was — but only when that is worth saying.
+ *
+ * Silence on the routine ones is what makes the tag mean anything. It comes
+ * free at the top of the board too: hard 20 has no chart cell at all, so the
+ * engine already reports nothing for it.
+ */
+function describeSpotLine(feedback) {
+  const spot = feedback.spot;
+  if (!spot) return null;
+  if (!spot.hard && !spot.aboveYou) return null;
+
+  const line = document.createElement('p');
+  line.className = 'spot';
+
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = T('fb.spotBand', { band: T(`spot.${spot.band}`) });
+  line.appendChild(tag);
+
+  const rarity = document.createElement('span');
+  rarity.className = 'spot-note';
+  rarity.textContent =
+    (feedback.correct ? T('fb.spotHeld', { oneIn: spot.oneIn }) : T('fb.spotRarity', { oneIn: spot.oneIn })) +
+    (spot.aboveYou ? ` ${T('fb.spotAboveYou')}` : '');
+  line.appendChild(rarity);
+  return line;
+}
+
+/**
  * The answer, pinned above the cards.
  *
  * The three-step reveal is the teaching, but it is long, and a player drilling
@@ -355,7 +589,16 @@ function renderQuickCard(view) {
     return;
   }
   box.hidden = false;
-  box.className = done ? `quickcard ${feedback.severity}` : 'quickcard thinking';
+  // The affirmation is added at build time on a freshly made node, so the
+  // animation starts once and only when the token says this is a new verdict.
+  const fresh = done && flashOnce(`${view.stats.decisions}`);
+  // Both the sweep and the tone hang off the same gate as everything else on
+  // this card. Firing either at click time would tell a player stepping through
+  // the reveal whether they were right, two clicks before the card says so.
+  if (fresh) playVerdict(feedback.correct);
+  const affirm = fresh && feedback.correct;
+  box.className =
+    (done ? `quickcard ${feedback.severity}` : 'quickcard thinking') + (affirm ? ' affirm' : '');
   box.replaceChildren();
 
   // After a split the board no longer shows what was actually decided, so the
@@ -369,6 +612,7 @@ function renderQuickCard(view) {
       `<b>${feedback.headline.split(' \u2192 ')[0]}</b> \u2014 ${T('fb.thinking')}`;
     return void box.appendChild(anchor);
   }
+  anchor.appendChild(ratingSide(feedback));
   box.appendChild(anchor);
 
   const verdict = document.createElement('p');
@@ -379,7 +623,36 @@ function renderQuickCard(view) {
         severity: severityWord(feedback.severity),
         cost: feedback.evCost.toFixed(3),
       });
+  // A run is an observation, not a score, so it stays quiet and only appears
+  // once there is actually something to observe.
+  const streak = feedback.streak;
+  if (streak && streak.current >= 3) {
+    const pill = document.createElement('span');
+    pill.className = 'streak';
+    pill.textContent = T('fb.streak', { n: streak.current });
+    pill.title = T('fb.streakCounts');
+    verdict.appendChild(pill);
+  }
   box.appendChild(verdict);
+
+  // How hard the spot was \u2014 the same line whether it was played right or wrong.
+  // Only the last clause differs, which is what stops the tag being a prize.
+  const spotLine = describeSpotLine(feedback);
+  if (spotLine) box.appendChild(spotLine);
+
+  if (feedback.milestone) {
+    const hard = feedback.streak.hard;
+    const note = document.createElement('p');
+    note.className = 'milestone';
+    renderRich(
+      note,
+      T(
+        hard === 0 ? 'fb.milestoneNone' : hard === 1 ? 'fb.milestoneOne' : 'fb.milestone',
+        { n: feedback.milestone, hard },
+      ),
+    );
+    box.appendChild(note);
+  }
 
   if (!feedback.correct) {
     const did = document.createElement('p');
@@ -561,6 +834,10 @@ function accuracyDetail(stats) {
   } else {
     parts.push(T('fb.noCloseCalls'));
   }
+  // The best run of the session belongs here rather than on the felt: it is a
+  // fact to look up, not a number to play towards.
+  const best = state.view?.feedback?.streak?.best ?? 0;
+  if (best >= 3) parts.push(T('fb.streakBest', { n: best }));
   return parts.join(' ');
 }
 
@@ -753,6 +1030,7 @@ async function openSettings() {
   const current = state.view.ruleSet.restrictions;
   el('opt-no-surrender').checked = current.noSurrender;
   el('opt-like-ranks').checked = current.likeRanksOnly;
+  el('opt-sound').checked = soundEnabled();
   el('settings').showModal();
 }
 
@@ -773,6 +1051,19 @@ for (const id of ['opt-no-surrender', 'opt-like-ranks']) {
     await send('/api/session', { presetId: state.view.ruleSet.id, ...restrictions() });
   });
 }
+
+/*
+ * Sound is a preference, not a rule: it must not restart the session, and it
+ * must not close the dialog either — someone turning it on wants to hear that
+ * it worked, not be thrown back to the felt.
+ *
+ * The change handler is a click, which is the user gesture browsers require
+ * before audio may start, so the context can safely be built right here.
+ */
+el('opt-sound').addEventListener('change', (event) => {
+  setSoundEnabled(event.target.checked);
+  if (event.target.checked) playCard(0);
+});
 
 function openHowTo() {
   const list = el('howto-list');

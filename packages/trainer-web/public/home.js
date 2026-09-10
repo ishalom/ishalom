@@ -50,6 +50,21 @@ function renderStanding(profile) {
       ? T('home.rating.settling', { left: Math.max(1, 30 - rating.ratedDecisions) })
       : T('home.rating.peak', { peak: round10(rating.peak) });
 
+  // Which way it has gone this session. The rating falls as readily as it
+  // rises, which is what makes it worth showing at all.
+  const swing = el('rating-swing');
+  if (swing) {
+    const moved = rated && Math.round(rating.sessionDelta) !== 0;
+    swing.hidden = !moved;
+    if (moved) {
+      const points = Math.round(rating.sessionDelta);
+      swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
+      swing.textContent = T('home.sessionSwing', {
+        delta: points > 0 ? `+${points}` : `−${Math.abs(points)}`,
+      });
+    }
+  }
+
   for (const button of document.querySelectorAll('.mode')) {
     button.setAttribute('aria-pressed', String(button.dataset.mode === rating.mode));
   }

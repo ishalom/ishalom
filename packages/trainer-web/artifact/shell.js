@@ -271,12 +271,15 @@ async function restoreMine() {
  * other.
  * ----------------------------------------------------------------------- */
 
-const HARD_SPOTS = new Set([
-  'bj:hard16:vs10', 'bj:hard15:vs10', 'bj:hard16:vs9', 'bj:hard12:vs3',
-  'bj:soft18:vs9', 'bj:soft18:vs10', 'bj:pair8:vs10', 'bj:pair8:vsA',
-  'bj:hard12:vs2', 'bj:soft17:vs2', 'bj:pair9:vs7', 'bj:hard11:vsA',
-]);
-const hardSpot = (decision) => HARD_SPOTS.has(decision.scenarioKey);
+/*
+ * Hard enough to be worth showing other people.
+ *
+ * This used to be a hand-written list of twelve scenario keys, which was a
+ * guess at something the engine measures for all three hundred and eleven. It
+ * now asks. Older saved hands predate the field and simply do not qualify,
+ * which is why the read is guarded rather than assumed.
+ */
+const hardSpot = (decision) => Boolean(decision.spot && decision.spot.hard);
 
 function showcaseOf(hand) {
   const worst = hand.decisions.reduce(

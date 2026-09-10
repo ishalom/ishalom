@@ -805,9 +805,10 @@ hr.brass {
   background:
     radial-gradient(140% 120% at 20% 0%, rgba(28, 106, 64, 0.55) 0%, transparent 70%),
     linear-gradient(180deg, #1f2731 0%, #171d25 100%);
-  transition: transform 0.12s ease, border-color 0.12s ease;
 }
-.door:hover { transform: translateY(-2px); border-color: var(--brass); }
+/* The lift and its transition live in the reduced-motion regime at the end of
+   this file; the colour change stays here, since it is not motion. */
+.door:hover { border-color: var(--brass); }
 .door.secondary {
   border-color: rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, #1e242c 0%, #171c23 100%);
@@ -1491,6 +1492,114 @@ body { font-family: var(--body); }
   .rail-bank .rail-value { font-size: 24px; }
   .seat-title { font-size: 15px; }
   .seat-total { font-size: 20px; }
+}
+
+/* ===========================================================================
+ * Playing well.
+ *
+ * The rating the decision was worth, the run it belongs to, and how hard the
+ * spot was — all of it about the decision, none of it about the money, and
+ * none of it louder at fifty than at one (§16).
+ * ======================================================================== */
+
+.quickcard .anchor { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.quickcard .rating-side {
+  display: flex;
+  margin-top: 0;
+  flex: none;
+  font-family: var(--display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.quickcard .rating-side .unrated { color: var(--line); }
+
+/* A run, worn beside the verdict rather than kept as a score of its own. */
+.streak {
+  margin-inline-start: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: 2px;
+  cursor: help;
+}
+
+.quickcard .spot { margin: 6px 0 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.quickcard .spot .tag { margin-inline-start: 0; }
+.spot-note { font-size: 12.5px; color: var(--muted); }
+
+.quickcard .milestone {
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickcard .milestone b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * Motion.
+ *
+ * Built the way round that makes stillness the default: every animated rule
+ * lives inside `prefers-reduced-motion: no-preference`, so a player who has
+ * asked for less gets a page with none, and nothing needs an override to
+ * undo. Nothing in the input path waits on any of it.
+ *
+ * Vertical only. The app runs right-to-left in Hebrew, and a deal that slid
+ * in from the left would arrive from the wrong side of the table.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes deal-in {
+    from { opacity: 0; transform: translate3d(0, -14px, 0) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Only cards that were not on the felt a moment ago carry `.arriving`, so
+     stepping through the reveal does not re-deal the hand. */
+  .card.arriving {
+    animation: deal-in 180ms ease-out backwards;
+    animation-delay: calc(var(--deal-index, 0) * 70ms);
+  }
+
+  @keyframes affirm-sweep {
+    from { transform: scaleY(0); opacity: 0.9; }
+    to { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* The leading rule brightens once down its length. That is the entire
+     celebration, and it is the same at the fiftieth as at the first. */
+  .quickcard.affirm { position: relative; }
+  .quickcard.affirm::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -3px;
+    width: 3px;
+    background: var(--optimal);
+    transform-origin: top;
+    animation: affirm-sweep 260ms ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes affirm-settle {
+    from { transform: scale(1.03); }
+    to { transform: none; }
+  }
+  .quickcard.affirm .verdict {
+    animation: affirm-settle 260ms ease-out;
+    transform-origin: inline-start;
+  }
+
+  .door { transition: transform 0.12s ease, border-color 0.12s ease; }
+  .door:hover { transform: translateY(-2px); }
 }
 
 /* ===========================================================================
@@ -4713,6 +4822,35 @@ const EN            = {
   'dealer.youWinPlain': 'Those are good. Paying you.',
   'dealer.iWinPlain': 'Mine this time.',
   'dealer.dealerHas': 'I make {dealer}.',
+
+  // --- Playing well (§3.4) ---
+  //
+  // Every string here is about the decision. None of it mentions the money,
+  // and none of it gets louder as a run gets longer — see §16.
+  'fb.streak': '{n} correct in a row',
+  'fb.streakBest': 'Best run this session: {n}.',
+  'fb.streakCounts': 'A run of correct decisions. Close calls neither extend it nor break it, and it starts again with the session.',
+  'fb.milestone': '**{n} in a row** — {hard} of them the chart calls hard.',
+  'fb.milestoneOne': '**{n} in a row** — one of them the chart calls hard.',
+  'fb.milestoneNone': '**{n} in a row**.',
+
+  'ui.ratingPoints': '{delta} rating',
+  'home.sessionSwing': '{delta} this session',
+  'ui.ratingUnrated': 'not rated',
+  'fb.ratingWhy': 'The rating moves on the decision and how hard it was — never on whether the hand won.',
+  'fb.unratedWhy': 'No real decision here, so there is nothing to rate.',
+
+  'spot.routine': 'routine',
+  'spot.ordinary': 'ordinary',
+  'spot.tricky': 'tricky',
+  'spot.brutal': 'brutal',
+  'fb.spotBand': '{band} spot',
+  'fb.spotRarity': 'About one hand in {oneIn}.',
+  'fb.spotHeld': 'About one hand in {oneIn} — and you had it.',
+  'fb.spotAboveYou': 'Rated above you.',
+
+  'sound.enable': 'Sound',
+  'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
 };
 
 const HE            = {
@@ -5042,6 +5180,32 @@ const HE            = {
   'dealer.youWinPlain': 'אלה טובות. משלם לך.',
   'dealer.iWinPlain': 'הפעם זה שלי.',
   'dealer.dealerHas': 'יש לי {dealer}.',
+
+  // --- Playing well (§3.4) ---
+  'fb.streak': '{n} החלטות נכונות ברצף',
+  'fb.streakBest': 'הרצף הטוב במושב הזה: {n}.',
+  'fb.streakCounts': 'רצף של החלטות נכונות. מקרים צמודים לא מאריכים אותו ולא שוברים אותו, והוא מתחיל מחדש בכל מושב.',
+  'fb.milestone': '**{n} ברצף** — {hard} מהן נחשבות קשות בטבלה.',
+  'fb.milestoneOne': '**{n} ברצף** — אחת מהן נחשבת קשה בטבלה.',
+  'fb.milestoneNone': '**{n} ברצף**.',
+
+  'ui.ratingPoints': 'דירוג {delta}',
+  'home.sessionSwing': '{delta} במושב הזה',
+  'ui.ratingUnrated': 'לא מדורג',
+  'fb.ratingWhy': 'הדירוג זז לפי ההחלטה ולפי כמה שהיא הייתה קשה — לעולם לא לפי זה שהיד ניצחה.',
+  'fb.unratedWhy': 'אין כאן החלטה אמיתית, ולכן אין מה לדרג.',
+
+  'spot.routine': 'שגרתי',
+  'spot.ordinary': 'רגיל',
+  'spot.tricky': 'מסובך',
+  'spot.brutal': 'אכזרי',
+  'fb.spotBand': 'מצב {band}',
+  'fb.spotRarity': 'בערך יד אחת מכל {oneIn}.',
+  'fb.spotHeld': 'בערך יד אחת מכל {oneIn} — והחזקת אותה.',
+  'fb.spotAboveYou': 'מדורג מעליך.',
+
+  'sound.enable': 'צליל',
+  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
 };
 
 const MESSAGES                            = { en: EN, he: HE };
@@ -5938,6 +6102,8 @@ function cardView(card        )           {
                    
                            
                        
+                                                                                
+                                  
                     
                                                   
      
@@ -5978,6 +6144,83 @@ function cardView(card        )           {
                         
  
 
+/**
+ * How hard the spot was, for the player who just played it.
+ *
+ * Numbers and an untranslated band name, never prose: the feedback card is
+ * rebuilt in the new language when the player switches, and anything already
+ * phrased would survive that untouched and be left in the old one.
+ */
+                                  
+                                                                      
+                       
+                                                                   
+                 
+                 
+                                                                            
+                
+                                                                             
+                    
+                                                             
+                
+ 
+
+                                                                    
+
+/**
+ * Absolute thresholds, not relative to the player.
+ *
+ * A band has to mean the same thing to everyone. Scaling it to the player would
+ * relabel easy cells as hard for a weak player, which flatters them and makes
+ * the tag worthless the moment they compare notes with anybody. The relative
+ * fact is carried separately by `aboveYou`.
+ */
+function bandFor(rating        )           {
+  if (rating >= 1700) return 'brutal';
+  if (rating >= 1500) return 'tricky';
+  if (rating >= 1300) return 'ordinary';
+  return 'routine';
+}
+
+const STREAK_MILESTONES                    = [10, 25, 50, 100];
+
+/**
+ * The run of correct decisions.
+ *
+ * Close calls are invisible to it in both directions — the same exclusion the
+ * accuracy denominator makes (§9.2). Pure, so every combination can be checked
+ * without dealing a card.
+ */
+function advanceStreak(
+  current        ,
+  outcome                                          ,
+)         {
+  if (outcome.closeCall) return current;
+  return outcome.correct ? current + 1 : 0;
+}
+
+/** Two significant figures, so a rounded number reads as one. */
+function roundish(value        )         {
+  if (value < 10) return Math.max(1, Math.round(value));
+  const scale = 10 ** (Math.floor(Math.log10(value)) - 1);
+  return Math.round(value / scale) * scale;
+}
+
+function describeSpot(cell                    , rating        )                  {
+  const difficulty = cell[rating.mode];
+  const band = bandFor(difficulty);
+  return {
+    mode: rating.mode,
+    rating: Math.round(difficulty),
+    band,
+    // Rounded to two figures, because the sentence says "about". "One hand in
+    // 1,135" claims a precision the word in front of it disclaims.
+    oneIn: roundish(1000 / Math.max(cell.perThousand, 0.01)),
+    aboveYou: !rating.provisional && difficulty >= rating.rating + 100,
+    hard: band === 'tricky' || band === 'brutal',
+  };
+}
+
                                
                 
                     
@@ -6013,6 +6256,19 @@ class TrainerSession {
           netUnits = 0;
           closeCalls = 0;
           closeCallsCorrect = 0;
+  /*
+   * The current run of correct decisions, and the best of this session.
+   *
+   * Deliberately absent from `progress`, from storage and from the shared
+   * table. A run that survives closing the tab stops being an observation and
+   * becomes a chain you must not break, which is the compulsion §16 exists to
+   * keep out. Best-of-session is a fact about the last twenty minutes;
+   * best-of-all-time is a leash.
+   */
+          streak = 0;
+          streakBest = 0;
+          streakHard = 0;
+          streakMilestone                = null;
           bySeverity                               = {
     optimal: 0,
     negligible: 0,
@@ -6102,6 +6358,8 @@ class TrainerSession {
     this.table.startHand(1);
     this.lastFeedback = null;
     this.lastRatingDelta = null;
+    // A milestone belongs to the decision that reached it, not to the run.
+    this.streakMilestone = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -6169,15 +6427,47 @@ class TrainerSession {
       record.chosenAction                   ,
     );
     const closeCall = explanation.gap < TrainerSession.CLOSE_CALL;
+    const correct = record.evCost === 0;
+
+    /*
+     * How hard this spot is, looked up once and used three times.
+     *
+     * It has to come before the counters because the streak wants to know
+     * whether the run included any hard hands, and before `updateRating`
+     * because that mutates the rating this comparison reads. Off the 311-cell
+     * grid — hard 18 through 21, which turn up constantly and are trivially
+     * correct — there is no cell and nothing to rate.
+     */
+    const chart = chartFor(this.rules);
+    const cell = difficultyTable(this.rules, chart).get(record.scenarioKey);
+    const spot = cell === undefined ? null : describeSpot(cell, this.rating);
 
     this.decisions++;
-    if (record.evCost === 0) this.correct++;
+    if (correct) this.correct++;
     this.evLost += record.evCost;
     this.bySeverity[record.severityTier]++;
     if (closeCall) {
       this.closeCalls++;
-      if (record.evCost === 0) this.closeCallsCorrect++;
+      if (correct) this.closeCallsCorrect++;
     }
+
+    /*
+     * The run of correct decisions.
+     *
+     * A close call neither extends it nor breaks it — the same exclusion the
+     * accuracy denominator makes (§9.2), which lets the whole rule be stated in
+     * one verifiable sentence: the accuracy numerator, run consecutively.
+     * Breaking a thirty-run on a hand the accuracy panel says does not count
+     * would be indefensible; letting one extend the run would grow it on
+     * coin-flips, which is the free-points ratchet §16 forbids.
+     */
+    const before = this.streak;
+    this.streak = advanceStreak(this.streak, { correct, closeCall });
+    if (this.streak === 0) this.streakHard = 0;
+    else if (this.streak > before && spot?.hard) this.streakHard++;
+    this.streakBest = Math.max(this.streakBest, this.streak);
+    this.streakMilestone =
+      this.streak > before && STREAK_MILESTONES.includes(this.streak) ? this.streak : null;
 
     const ranked = record.legalActions
       .map((action) => ({
@@ -6192,13 +6482,9 @@ class TrainerSession {
         ? []
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
-    // Rate it — unless the spot is off the 311-cell grid. Hard 18 through 21
-    // have no chart cell but turn up constantly, and standing on 19 is trivially
-    // correct, so rating them would be a stream of free points.
-    const chart = chartFor(this.rules);
-    const difficulty = difficultyTable(this.rules, chart).get(record.scenarioKey);
-    this.lastRatingDelta = difficulty
-      ? updateRating(this.rating, difficulty[this.rating.mode], record.severityTier)
+    // Last, because it moves the rating every comparison above had to read.
+    this.lastRatingDelta = cell
+      ? updateRating(this.rating, cell[this.rating.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -6206,10 +6492,11 @@ class TrainerSession {
       headline: explanation.headline,
       chosen: prettyAction(record.chosenAction, this.locale),
       optimal: prettyAction(record.optimalAction, this.locale),
-      correct: record.evCost === 0,
+      correct,
       evCost: record.evCost,
       severity: record.severityTier,
       closeCall,
+      spot,
       steps: [...explanation.steps],
       ranked: ranked.map((r) => ({ action: r.action, ev: r.ev })),
     });
@@ -6243,8 +6530,14 @@ class TrainerSession {
       steps: explanation.steps,
       gap: explanation.gap,
       closeCall,
-      correct: record.evCost === 0,
+      correct,
       severity: record.severityTier,
+      // How hard the spot was, and the run it belongs to — both about the
+      // decision, both known before a single card of the outcome is turned.
+      spot,
+      ratingDelta: this.lastRatingDelta,
+      streak: { current: this.streak, best: this.streakBest, hard: this.streakHard },
+      milestone: this.streakMilestone,
       chosen: record.chosenAction,
       chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimal: record.optimalAction,
@@ -6729,8 +7022,8 @@ function describeScenarioKey(key        , locale         = 'en')         {
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"/table.html\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"/ultimate.html\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\"><span data-i18n=\"ui.lookAround\">Look around</span> <span class=\"tag\" data-i18n=\"ui.preview\">preview</span></span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
-const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"/home.html\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <span class=\"rules-badge\" id=\"rules-badge\"></span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"/table.html\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"/ultimate.html\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\"><span data-i18n=\"ui.lookAround\">Look around</span> <span class=\"tag\" data-i18n=\"ui.preview\">preview</span></span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
+const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"/home.html\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <span class=\"rules-badge\" id=\"rules-badge\"></span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 
 /* The two screen scripts, unchanged but for their transport. */
 function initHome() {
@@ -6776,6 +7069,21 @@ function renderStanding(profile) {
     : rating.provisional
       ? T('home.rating.settling', { left: Math.max(1, 30 - rating.ratedDecisions) })
       : T('home.rating.peak', { peak: round10(rating.peak) });
+
+  // Which way it has gone this session. The rating falls as readily as it
+  // rises, which is what makes it worth showing at all.
+  const swing = el('rating-swing');
+  if (swing) {
+    const moved = rated && Math.round(rating.sessionDelta) !== 0;
+    swing.hidden = !moved;
+    if (moved) {
+      const points = Math.round(rating.sessionDelta);
+      swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
+      swing.textContent = T('home.sessionSwing', {
+        delta: points > 0 ? `+${points}` : `−${Math.abs(points)}`,
+      });
+    }
+  }
 
   for (const button of document.querySelectorAll('.mode')) {
     button.setAttribute('aria-pressed', String(button.dataset.mode === rating.mode));
@@ -6987,7 +7295,143 @@ const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 
 const el = (id) => document.getElementById(id);
 
-const state = { view: null, busy: false, reveal: null };
+const state = {
+  view: null,
+  busy: false,
+  reveal: null,
+  /*
+   * Which cards the felt is already showing.
+   *
+   * `render()` runs after every response *and* after every step of the reveal,
+   * and the seats are rebuilt wholesale each time. Without a record of what was
+   * already there, anything that animates a card would replay the entire deal
+   * three times while the player reads the reasoning. So each pass works out
+   * which cards are genuinely new, and only those are treated as newly dealt.
+   */
+  shown: { dealer: [], hands: [] },
+  /** Guards the one-shot verdict effects; see `flashOnce`. */
+  flashed: null,
+};
+
+/** Identity of a card in its seat: same rank, same suit, same position. */
+const cardKey = (card, index) => `${index}:${card.rank}${card.suit}`;
+
+/**
+ * Which of these cards were not on the felt a moment ago.
+ *
+ * Positional, because that is what a seat is: the third card of a hand is a
+ * different thing from the third card of another hand, even with the same face.
+ * Returns a Set of keys, plus each new card's position among the new ones, so a
+ * fresh deal staggers and a single hit does not wait behind it.
+ */
+function newCards(keys, previous) {
+  const fresh = new Map();
+  for (let i = 0; i < keys.length; i++) {
+    if (previous[i] !== keys[i]) fresh.set(i, fresh.size);
+  }
+  return fresh;
+}
+
+/* --------------------------------------------------------------------------
+ * Sound
+ *
+ * Off unless asked for, and synthesised rather than shipped: no files, no
+ * fetch, nothing for a content policy to block, and a couple of kilobytes
+ * instead of a couple of hundred.
+ *
+ * Two voices, and a hard rule about what has none. A card landing makes a
+ * noise. A verdict makes a noise — the same length, the same loudness, right
+ * or wrong, differing only in pitch. Winning money makes no noise at all. A
+ * jingle on a won hand is the exact conditioning §3.1 and §16 exist to keep
+ * out of this app, and a buzzer on a lost one is the same mistake inverted.
+ * ----------------------------------------------------------------------- */
+
+function soundEnabled() {
+  try {
+    return localStorage.getItem('ev:sound') === '1';
+  } catch {
+    return false;
+  }
+}
+function setSoundEnabled(value) {
+  try {
+    localStorage.setItem('ev:sound', value ? '1' : '0');
+  } catch {
+    // Storage disabled; the preference simply lasts for this page.
+  }
+}
+
+/**
+ * The audio context, made only once and only on demand.
+ *
+ * Lazily, because a player who never turns sound on should never have one at
+ * all. On `window`, because the artifact build wraps this file in a function
+ * that runs again on every screen change — a module-level context would leak
+ * one per navigation.
+ */
+function audio() {
+  if (!soundEnabled()) return null;
+  try {
+    if (!window.__evAudio) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return null;
+      const ctx = new Ctx();
+      const master = ctx.createGain();
+      master.gain.value = 0.25; // Nothing here can ever be loud.
+      master.connect(ctx.destination);
+      window.__evAudio = { ctx, master };
+    }
+    const held = window.__evAudio;
+    if (held.ctx.state === 'suspended') held.ctx.resume();
+    return held;
+  } catch {
+    return null;
+  }
+}
+
+/** A card landing on felt: a short filtered noise burst, nothing musical. */
+function playCard(delayMs) {
+  const held = audio();
+  if (!held) return;
+  const { ctx, master } = held;
+  const length = Math.floor(ctx.sampleRate * 0.012);
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) samples[i] = (Math.random() * 2 - 1) * (1 - i / length);
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 2400;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.5;
+  source.connect(filter).connect(gain).connect(master);
+  source.start(ctx.currentTime + delayMs / 1000);
+}
+
+/**
+ * The verdict.
+ *
+ * Identical envelope, duration and gain either way — only the pitch moves.
+ * Not a rising arpeggio, not a chime, not a coin.
+ */
+function playVerdict(correct) {
+  const held = audio();
+  if (!held) return;
+  const { ctx, master } = held;
+  const at = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = correct ? 660 : 220;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(0.4, at + 0.005);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+  osc.connect(gain).connect(master);
+  osc.start(at);
+  osc.stop(at + 0.1);
+}
 
 /**
  * Step through the reasoning, or show it all at once. Persisted, because being
@@ -7014,6 +7458,9 @@ async function send(path, body) {
   if (state.busy) return;
   state.busy = true;
   try {
+    // A new hand starts an empty felt, so its first cards are new even if they
+    // happen to match the last hand's rank, suit and seat.
+    if (path === '/api/deal') state.shown = { dealer: [], hands: [] };
     state.view = await api(path, body ?? {});
     const feedback = state.view.feedback;
     state.reveal = feedback
@@ -7039,10 +7486,16 @@ async function send(path, body) {
  * number of the draw that brought it. The distinction is in the shape and the
  * badge, not in colour alone (§13), and it reaches a screen reader too.
  */
-function cardNode(card, index) {
+function cardNode(card, index, dealtNow) {
   const drawn = index !== undefined && index >= 2;
+  // In step with the visual stagger, so the sound is the card landing rather
+  // than a separate event that happens to coincide.
+  if (dealtNow !== undefined) playCard(dealtNow * 70);
   const node = document.createElement('div');
-  node.className = 'card' + (card.red ? ' red' : '') + (drawn ? ' drawn' : ' dealt');
+  node.className =
+    'card' + (card.red ? ' red' : '') + (drawn ? ' drawn' : ' dealt') +
+    (dealtNow === undefined ? '' : ' arriving');
+  if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
   node.setAttribute(
     'aria-label',
@@ -7061,9 +7514,10 @@ function cardNode(card, index) {
   return node;
 }
 
-function faceDownNode() {
+function faceDownNode(dealtNow) {
   const node = document.createElement('div');
-  node.className = 'card back dealt';
+  node.className = 'card back dealt' + (dealtNow === undefined ? '' : ' arriving');
+  if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', 'face-down card');
   return node;
@@ -7076,8 +7530,16 @@ function renderDealer(view) {
   // grade would break that far more thoroughly than an early EV chip.
   const withhold = !revealComplete();
   const cards = withhold ? view.dealer.cards.slice(0, 1) : view.dealer.cards;
-  box.replaceChildren(...cards.map((card, i) => cardNode(card, i)));
-  if (view.dealer.hidden || withhold) box.appendChild(faceDownNode());
+
+  const keys = cards.map(cardKey);
+  // The hole card keys as itself, so turning it over counts as a card arriving
+  // rather than as one silently changing its face.
+  if (view.dealer.hidden || withhold) keys.push(`${keys.length}:back`);
+  const fresh = newCards(keys, state.shown.dealer);
+  state.shown.dealer = keys;
+
+  box.replaceChildren(...cards.map((card, i) => cardNode(card, i, fresh.get(i))));
+  if (view.dealer.hidden || withhold) box.appendChild(faceDownNode(fresh.get(cards.length)));
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
       ? ''
@@ -7199,13 +7661,19 @@ function renderHands(view) {
   const box = el('player-hands');
   box.replaceChildren();
 
-  for (const hand of view.hands) {
+  // Each seat keeps its own record, so splitting into a second hand does not
+  // make the first one look newly dealt.
+  const previous = state.shown.hands;
+  state.shown.hands = view.hands.map((hand) => hand.cards.map(cardKey));
+
+  view.hands.forEach((hand, handIndex) => {
     const wrap = document.createElement('div');
     wrap.className = 'hand' + (hand.active ? ' active' : '');
 
+    const fresh = newCards(state.shown.hands[handIndex], previous[handIndex] ?? []);
     const cards = document.createElement('div');
     cards.className = 'cards';
-    cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i)));
+    cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i, fresh.get(i))));
     wrap.appendChild(cards);
 
     // Only once there is more than one hand. With a single hand the betting
@@ -7245,7 +7713,7 @@ function renderHands(view) {
     }
     wrap.appendChild(meta);
     box.appendChild(wrap);
-  }
+  });
 
   el('empty-state').hidden = view.hands.length > 0;
 }
@@ -7291,6 +7759,80 @@ function revealComplete() {
 const stepTitles = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
 
 /**
+ * True once per token — the guard for anything that should happen exactly once
+ * when a verdict appears, rather than on every re-render of the same verdict.
+ */
+function flashOnce(token) {
+  if (state.flashed === token) return false;
+  state.flashed = token;
+  return true;
+}
+
+/**
+ * The rating points the decision was worth.
+ *
+ * Shown whether the hand went on to win or lose, and that is the point: a
+ * correct play that loses puts a green gain here directly above a red loss on
+ * the rail, in one frame. That picture argues §3.1 better than any sentence.
+ */
+function ratingSide(feedback) {
+  const side = document.createElement('span');
+  side.className = 'rating-side';
+  const delta = feedback.ratingDelta;
+
+  // Off the 311-cell grid there is no cell and nothing to rate. Say so rather
+  // than showing nothing, which reads as a bug.
+  if (delta === null || delta === undefined) {
+    const none = document.createElement('span');
+    none.className = 'unrated';
+    none.textContent = '—';
+    none.title = T('fb.unratedWhy');
+    side.appendChild(none);
+    return side;
+  }
+
+  const points = Math.round(delta);
+  const moved = document.createElement('span');
+  moved.className = points >= 0 ? 'up' : 'down';
+  // U+2212 for the minus, matching the typography everywhere else.
+  moved.textContent = T('ui.ratingPoints', {
+    delta: points >= 0 ? `+${points}` : `−${Math.abs(points)}`,
+  });
+  moved.title = T('fb.ratingWhy');
+  side.appendChild(moved);
+  return side;
+}
+
+/**
+ * How hard the spot was — but only when that is worth saying.
+ *
+ * Silence on the routine ones is what makes the tag mean anything. It comes
+ * free at the top of the board too: hard 20 has no chart cell at all, so the
+ * engine already reports nothing for it.
+ */
+function describeSpotLine(feedback) {
+  const spot = feedback.spot;
+  if (!spot) return null;
+  if (!spot.hard && !spot.aboveYou) return null;
+
+  const line = document.createElement('p');
+  line.className = 'spot';
+
+  const tag = document.createElement('span');
+  tag.className = 'tag';
+  tag.textContent = T('fb.spotBand', { band: T(`spot.${spot.band}`) });
+  line.appendChild(tag);
+
+  const rarity = document.createElement('span');
+  rarity.className = 'spot-note';
+  rarity.textContent =
+    (feedback.correct ? T('fb.spotHeld', { oneIn: spot.oneIn }) : T('fb.spotRarity', { oneIn: spot.oneIn })) +
+    (spot.aboveYou ? ` ${T('fb.spotAboveYou')}` : '');
+  line.appendChild(rarity);
+  return line;
+}
+
+/**
  * The answer, pinned above the cards.
  *
  * The three-step reveal is the teaching, but it is long, and a player drilling
@@ -7315,7 +7857,16 @@ function renderQuickCard(view) {
     return;
   }
   box.hidden = false;
-  box.className = done ? `quickcard ${feedback.severity}` : 'quickcard thinking';
+  // The affirmation is added at build time on a freshly made node, so the
+  // animation starts once and only when the token says this is a new verdict.
+  const fresh = done && flashOnce(`${view.stats.decisions}`);
+  // Both the sweep and the tone hang off the same gate as everything else on
+  // this card. Firing either at click time would tell a player stepping through
+  // the reveal whether they were right, two clicks before the card says so.
+  if (fresh) playVerdict(feedback.correct);
+  const affirm = fresh && feedback.correct;
+  box.className =
+    (done ? `quickcard ${feedback.severity}` : 'quickcard thinking') + (affirm ? ' affirm' : '');
   box.replaceChildren();
 
   // After a split the board no longer shows what was actually decided, so the
@@ -7329,6 +7880,7 @@ function renderQuickCard(view) {
       `<b>${feedback.headline.split(' \u2192 ')[0]}</b> \u2014 ${T('fb.thinking')}`;
     return void box.appendChild(anchor);
   }
+  anchor.appendChild(ratingSide(feedback));
   box.appendChild(anchor);
 
   const verdict = document.createElement('p');
@@ -7339,7 +7891,36 @@ function renderQuickCard(view) {
         severity: severityWord(feedback.severity),
         cost: feedback.evCost.toFixed(3),
       });
+  // A run is an observation, not a score, so it stays quiet and only appears
+  // once there is actually something to observe.
+  const streak = feedback.streak;
+  if (streak && streak.current >= 3) {
+    const pill = document.createElement('span');
+    pill.className = 'streak';
+    pill.textContent = T('fb.streak', { n: streak.current });
+    pill.title = T('fb.streakCounts');
+    verdict.appendChild(pill);
+  }
   box.appendChild(verdict);
+
+  // How hard the spot was \u2014 the same line whether it was played right or wrong.
+  // Only the last clause differs, which is what stops the tag being a prize.
+  const spotLine = describeSpotLine(feedback);
+  if (spotLine) box.appendChild(spotLine);
+
+  if (feedback.milestone) {
+    const hard = feedback.streak.hard;
+    const note = document.createElement('p');
+    note.className = 'milestone';
+    renderRich(
+      note,
+      T(
+        hard === 0 ? 'fb.milestoneNone' : hard === 1 ? 'fb.milestoneOne' : 'fb.milestone',
+        { n: feedback.milestone, hard },
+      ),
+    );
+    box.appendChild(note);
+  }
 
   if (!feedback.correct) {
     const did = document.createElement('p');
@@ -7521,6 +8102,10 @@ function accuracyDetail(stats) {
   } else {
     parts.push(T('fb.noCloseCalls'));
   }
+  // The best run of the session belongs here rather than on the felt: it is a
+  // fact to look up, not a number to play towards.
+  const best = state.view?.feedback?.streak?.best ?? 0;
+  if (best >= 3) parts.push(T('fb.streakBest', { n: best }));
   return parts.join(' ');
 }
 
@@ -7713,6 +8298,7 @@ async function openSettings() {
   const current = state.view.ruleSet.restrictions;
   el('opt-no-surrender').checked = current.noSurrender;
   el('opt-like-ranks').checked = current.likeRanksOnly;
+  el('opt-sound').checked = soundEnabled();
   el('settings').showModal();
 }
 
@@ -7733,6 +8319,19 @@ for (const id of ['opt-no-surrender', 'opt-like-ranks']) {
     await send('/api/session', { presetId: state.view.ruleSet.id, ...restrictions() });
   });
 }
+
+/*
+ * Sound is a preference, not a rule: it must not restart the session, and it
+ * must not close the dialog either — someone turning it on wants to hear that
+ * it worked, not be thrown back to the felt.
+ *
+ * The change handler is a click, which is the user gesture browsers require
+ * before audio may start, so the context can safely be built right here.
+ */
+el('opt-sound').addEventListener('change', (event) => {
+  setSoundEnabled(event.target.checked);
+  if (event.target.checked) playCard(0);
+});
 
 function openHowTo() {
   const list = el('howto-list');
@@ -8330,12 +8929,15 @@ async function restoreMine() {
  * other.
  * ----------------------------------------------------------------------- */
 
-const HARD_SPOTS = new Set([
-  'bj:hard16:vs10', 'bj:hard15:vs10', 'bj:hard16:vs9', 'bj:hard12:vs3',
-  'bj:soft18:vs9', 'bj:soft18:vs10', 'bj:pair8:vs10', 'bj:pair8:vsA',
-  'bj:hard12:vs2', 'bj:soft17:vs2', 'bj:pair9:vs7', 'bj:hard11:vsA',
-]);
-const hardSpot = (decision) => HARD_SPOTS.has(decision.scenarioKey);
+/*
+ * Hard enough to be worth showing other people.
+ *
+ * This used to be a hand-written list of twelve scenario keys, which was a
+ * guess at something the engine measures for all three hundred and eleven. It
+ * now asks. Older saved hands predate the field and simply do not qualify,
+ * which is why the read is guarded rather than assumed.
+ */
+const hardSpot = (decision) => Boolean(decision.spot && decision.spot.hard);
 
 function showcaseOf(hand) {
   const worst = hand.decisions.reduce(

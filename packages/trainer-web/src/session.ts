@@ -37,6 +37,7 @@ import {
 } from './explain.ts';
 import {
   difficultyTable,
+  type ScenarioDifficulty,
   newRating,
   updateRating,
   type DifficultyMode,
@@ -109,6 +110,8 @@ export interface PlayedHand {
     evCost: number;
     severity: SeverityTier;
     closeCall: boolean;
+    /** Null off the 311-cell grid, and on records saved before this existed. */
+    spot?: SpotDescription | null;
     steps: string[];
     ranked: Array<{ action: string; ev: number }>;
   }>;
@@ -149,6 +152,83 @@ export interface ScenarioStat {
   lastAttemptAt: number;
 }
 
+/**
+ * How hard the spot was, for the player who just played it.
+ *
+ * Numbers and an untranslated band name, never prose: the feedback card is
+ * rebuilt in the new language when the player switches, and anything already
+ * phrased would survive that untouched and be left in the old one.
+ */
+export interface SpotDescription {
+  /** The mode this difficulty is measured on — the ladders differ. */
+  mode: DifficultyMode;
+  /** 800 to 2200, on the same scale as the player's own rating. */
+  rating: number;
+  band: SpotBand;
+  /** Roughly one hand in this many, so "hard" is paired with "and rare". */
+  oneIn: number;
+  /** Above the player's own rating by a clear margin, once they have one. */
+  aboveYou: boolean;
+  /** Whether it counts toward the hard tally of a streak. */
+  hard: boolean;
+}
+
+export type SpotBand = 'routine' | 'ordinary' | 'tricky' | 'brutal';
+
+/**
+ * Absolute thresholds, not relative to the player.
+ *
+ * A band has to mean the same thing to everyone. Scaling it to the player would
+ * relabel easy cells as hard for a weak player, which flatters them and makes
+ * the tag worthless the moment they compare notes with anybody. The relative
+ * fact is carried separately by `aboveYou`.
+ */
+export function bandFor(rating: number): SpotBand {
+  if (rating >= 1700) return 'brutal';
+  if (rating >= 1500) return 'tricky';
+  if (rating >= 1300) return 'ordinary';
+  return 'routine';
+}
+
+export const STREAK_MILESTONES: readonly number[] = [10, 25, 50, 100];
+
+/**
+ * The run of correct decisions.
+ *
+ * Close calls are invisible to it in both directions — the same exclusion the
+ * accuracy denominator makes (§9.2). Pure, so every combination can be checked
+ * without dealing a card.
+ */
+export function advanceStreak(
+  current: number,
+  outcome: { correct: boolean; closeCall: boolean },
+): number {
+  if (outcome.closeCall) return current;
+  return outcome.correct ? current + 1 : 0;
+}
+
+/** Two significant figures, so a rounded number reads as one. */
+function roundish(value: number): number {
+  if (value < 10) return Math.max(1, Math.round(value));
+  const scale = 10 ** (Math.floor(Math.log10(value)) - 1);
+  return Math.round(value / scale) * scale;
+}
+
+function describeSpot(cell: ScenarioDifficulty, rating: Rating): SpotDescription {
+  const difficulty = cell[rating.mode];
+  const band = bandFor(difficulty);
+  return {
+    mode: rating.mode,
+    rating: Math.round(difficulty),
+    band,
+    // Rounded to two figures, because the sentence says "about". "One hand in
+    // 1,135" claims a precision the word in front of it disclaims.
+    oneIn: roundish(1000 / Math.max(cell.perThousand, 0.01)),
+    aboveYou: !rating.provisional && difficulty >= rating.rating + 100,
+    hard: band === 'tricky' || band === 'brutal',
+  };
+}
+
 export interface SessionStats {
   hands: number;
   decisions: number;
@@ -184,6 +264,19 @@ export class TrainerSession {
   private netUnits = 0;
   private closeCalls = 0;
   private closeCallsCorrect = 0;
+  /*
+   * The current run of correct decisions, and the best of this session.
+   *
+   * Deliberately absent from `progress`, from storage and from the shared
+   * table. A run that survives closing the tab stops being an observation and
+   * becomes a chain you must not break, which is the compulsion §16 exists to
+   * keep out. Best-of-session is a fact about the last twenty minutes;
+   * best-of-all-time is a leash.
+   */
+  private streak = 0;
+  private streakBest = 0;
+  private streakHard = 0;
+  private streakMilestone: number | null = null;
   private bySeverity: Record<SeverityTier, number> = {
     optimal: 0,
     negligible: 0,
@@ -273,6 +366,8 @@ export class TrainerSession {
     this.table.startHand(1);
     this.lastFeedback = null;
     this.lastRatingDelta = null;
+    // A milestone belongs to the decision that reached it, not to the run.
+    this.streakMilestone = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -340,15 +435,47 @@ export class TrainerSession {
       record.chosenAction as BlackjackAction,
     );
     const closeCall = explanation.gap < TrainerSession.CLOSE_CALL;
+    const correct = record.evCost === 0;
+
+    /*
+     * How hard this spot is, looked up once and used three times.
+     *
+     * It has to come before the counters because the streak wants to know
+     * whether the run included any hard hands, and before `updateRating`
+     * because that mutates the rating this comparison reads. Off the 311-cell
+     * grid — hard 18 through 21, which turn up constantly and are trivially
+     * correct — there is no cell and nothing to rate.
+     */
+    const chart = chartFor(this.rules);
+    const cell = difficultyTable(this.rules, chart).get(record.scenarioKey);
+    const spot = cell === undefined ? null : describeSpot(cell, this.rating);
 
     this.decisions++;
-    if (record.evCost === 0) this.correct++;
+    if (correct) this.correct++;
     this.evLost += record.evCost;
     this.bySeverity[record.severityTier]++;
     if (closeCall) {
       this.closeCalls++;
-      if (record.evCost === 0) this.closeCallsCorrect++;
+      if (correct) this.closeCallsCorrect++;
     }
+
+    /*
+     * The run of correct decisions.
+     *
+     * A close call neither extends it nor breaks it — the same exclusion the
+     * accuracy denominator makes (§9.2), which lets the whole rule be stated in
+     * one verifiable sentence: the accuracy numerator, run consecutively.
+     * Breaking a thirty-run on a hand the accuracy panel says does not count
+     * would be indefensible; letting one extend the run would grow it on
+     * coin-flips, which is the free-points ratchet §16 forbids.
+     */
+    const before = this.streak;
+    this.streak = advanceStreak(this.streak, { correct, closeCall });
+    if (this.streak === 0) this.streakHard = 0;
+    else if (this.streak > before && spot?.hard) this.streakHard++;
+    this.streakBest = Math.max(this.streakBest, this.streak);
+    this.streakMilestone =
+      this.streak > before && STREAK_MILESTONES.includes(this.streak) ? this.streak : null;
 
     const ranked = record.legalActions
       .map((action) => ({
@@ -363,13 +490,9 @@ export class TrainerSession {
         ? []
         : ruleSensitivity(record.scenarioKey, this.rules, evaluation.optimalAction);
 
-    // Rate it — unless the spot is off the 311-cell grid. Hard 18 through 21
-    // have no chart cell but turn up constantly, and standing on 19 is trivially
-    // correct, so rating them would be a stream of free points.
-    const chart = chartFor(this.rules);
-    const difficulty = difficultyTable(this.rules, chart).get(record.scenarioKey);
-    this.lastRatingDelta = difficulty
-      ? updateRating(this.rating, difficulty[this.rating.mode], record.severityTier)
+    // Last, because it moves the rating every comparison above had to read.
+    this.lastRatingDelta = cell
+      ? updateRating(this.rating, cell[this.rating.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -377,10 +500,11 @@ export class TrainerSession {
       headline: explanation.headline,
       chosen: prettyAction(record.chosenAction, this.locale),
       optimal: prettyAction(record.optimalAction, this.locale),
-      correct: record.evCost === 0,
+      correct,
       evCost: record.evCost,
       severity: record.severityTier,
       closeCall,
+      spot,
       steps: [...explanation.steps],
       ranked: ranked.map((r) => ({ action: r.action, ev: r.ev })),
     });
@@ -414,8 +538,14 @@ export class TrainerSession {
       steps: explanation.steps,
       gap: explanation.gap,
       closeCall,
-      correct: record.evCost === 0,
+      correct,
       severity: record.severityTier,
+      // How hard the spot was, and the run it belongs to — both about the
+      // decision, both known before a single card of the outcome is turned.
+      spot,
+      ratingDelta: this.lastRatingDelta,
+      streak: { current: this.streak, best: this.streakBest, hard: this.streakHard },
+      milestone: this.streakMilestone,
       chosen: record.chosenAction,
       chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimal: record.optimalAction,
