@@ -73,11 +73,50 @@ function collect(entry: string, seen = new Set<string>(), order: string[] = []):
 }
 
 /**
+ * A renamed import: `{ Shoe as Composition }`.
+ *
+ * Dropping the import statement is only safe while a module refers to what it
+ * imported by the name it was declared under. A rename breaks that — the code
+ * says `Composition` and the bundle only ever declares `Shoe` — so each rename
+ * has to leave an alias behind. This shipped broken once: the aliased name was
+ * reached only on the insurance path, so every other hand worked and the
+ * published page threw the moment a dealer showed an ace.
+ */
+function aliasesIn(source: string): Array<[string, string]> {
+  const aliases: Array<[string, string]> = [];
+  IMPORT_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = IMPORT_RE.exec(source)) !== null) {
+    const braces = /\{([\s\S]*?)\}/.exec(m[0]);
+    if (!braces) continue;
+    for (const part of braces[1]!.split(',')) {
+      const renamed = /^\s*(?:type\s+)?([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)\s*$/.exec(part);
+      // A type-only rename erases with the types; only value renames need one.
+      if (renamed && !/^\s*type\s/.test(part)) aliases.push([renamed[2]!, renamed[1]!]);
+    }
+  }
+  return aliases;
+}
+
+/**
  * Strip the module wrapper: imports become nothing (one scope), and `export`
  * becomes nothing (everything is already visible). Re-export barrels collapse to
  * nothing at all, since what they re-export is in scope by then.
  */
-function demodularise(source: string): string {
+function demodularise(source: string, alias: Map<string, string>): string {
+  /* Two modules can rename the same export, and both then need the alias in
+     scope — but only the first may declare it. The bundle is in dependency
+     order, so the first emission always precedes every use. */
+  const lines: string[] = [];
+  for (const [as, original] of aliasesIn(source)) {
+    const existing = alias.get(as);
+    if (existing === undefined) {
+      alias.set(as, original);
+      lines.push(`const ${as} = ${original};`);
+    } else if (existing !== original) {
+      throw new Error(`${as} is an alias for both ${existing} and ${original}`);
+    }
+  }
   let out = stripTypeScriptTypes(source, { mode: 'strip' });
   out = out.replace(EXPORT_FROM_RE, '');
   out = out.replace(IMPORT_RE, '');
@@ -85,7 +124,31 @@ function demodularise(source: string): string {
   // `export { a, b };` with no `from` — the names are already declared above it.
   out = out.replace(/^\s*export\s*\{[^}]*\};?\s*$/gm, '');
   out = out.replace(/^(\s*)export\s+(default\s+)?/gm, '$1');
-  return out;
+  return lines.length > 0 ? `${lines.join('\n')}\n${out}` : out;
+}
+
+/**
+ * Every value a module imports must be declared somewhere in the bundle.
+ *
+ * This is the check that would have caught the alias bug before it was
+ * published. It is cheap and it is total: collect what each module asked for by
+ * name, and refuse to emit a bundle that cannot supply one of them.
+ */
+function importedNames(source: string): string[] {
+  const names: string[] = [];
+  IMPORT_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = IMPORT_RE.exec(source)) !== null) {
+    if (/^\s*import\s+type\s/.test(m[0])) continue;
+    const braces = /\{([\s\S]*?)\}/.exec(m[0]);
+    if (!braces) continue;
+    for (const part of braces[1]!.split(',')) {
+      if (/^\s*type\s/.test(part) || part.trim() === '') continue;
+      const renamed = /\s+as\s+([A-Za-z_$][\w$]*)\s*$/.exec(part);
+      names.push(renamed ? renamed[1]! : part.trim());
+    }
+  }
+  return names;
 }
 
 /** Top-level declarations, for the collision check. */
@@ -106,15 +169,30 @@ export function bundle(entries: readonly string[]): string {
   const parts: string[] = [];
   const collisions: string[] = [];
 
+  const wanted: Array<[string, string]> = [];
+  const alias = new Map<string, string>();
+
   for (const file of order) {
-    const js = demodularise(readFileSync(file, 'utf8'));
+    const source = readFileSync(file, 'utf8');
+    const js = demodularise(source, alias);
     const short = relative(ROOT, file).replace(/\\/g, '/');
     for (const name of declaredNames(js)) {
       const previous = owner.get(name);
       if (previous !== undefined) collisions.push(`${name}: ${previous} and ${short}`);
       else owner.set(name, short);
     }
+    for (const name of importedNames(source)) wanted.push([name, short]);
     parts.push(`/* ===== ${short} ===== */\n${js.trim()}\n`);
+  }
+
+  const missing = wanted
+    .filter(([name]) => !owner.has(name))
+    .map(([name, from]) => `${name} (wanted by ${from})`);
+  if (missing.length > 0) {
+    throw new Error(
+      `The bundle refers to names nothing in it declares, so the page would ` +
+        `throw the first time one is reached:\n  ${[...new Set(missing)].join('\n  ')}`,
+    );
   }
 
   if (collisions.length > 0) {
