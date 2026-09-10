@@ -4,3 +4,6 @@ node_modules/
 # packages/ev-engine/test/golden; these are scratch output from `npm run charts`.
 charts/
 packages/trainer-web/build/
+
+# A working channel between two Claude sessions, not documentation.
+handoff/
