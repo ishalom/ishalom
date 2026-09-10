@@ -369,6 +369,10 @@ const EN: Catalogue = {
   'ui.drawn': 'drawn',
   'ui.cardDealt': '{card}, dealt',
   'ui.cardDrawn': '{card}, drawn on hit {n}',
+
+  'hand.doubled': 'doubled',
+  'hand.surrendered': 'surrendered',
+  'hand.units': '{n} units',
 };
 
 const HE: Catalogue = {
@@ -682,6 +686,10 @@ const HE: Catalogue = {
   'ui.drawn': 'נמשך',
   'ui.cardDealt': '{card}, מהחלוקה',
   'ui.cardDrawn': '{card}, נמשך בלקיחה {n}',
+
+  'hand.doubled': 'הוכפל',
+  'hand.surrendered': 'ויתור',
+  'hand.units': '{n} יחידות',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

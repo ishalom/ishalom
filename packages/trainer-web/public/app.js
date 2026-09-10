@@ -181,7 +181,7 @@ function renderRail(view) {
   box.replaceChildren();
 
   const wager = document.createElement('div');
-  wager.className = 'rail-spot';
+  wager.className = 'rail-spot rail-bet';
   const wagerChips = document.createElement('span');
   wagerChips.className = 'chips';
   wagerChips.setAttribute('aria-hidden', 'true');
@@ -235,18 +235,31 @@ function renderHands(view) {
     cards.replaceChildren(...hand.cards.map((card, i) => cardNode(card, i)));
     wrap.appendChild(cards);
 
-    const wager = document.createElement('div');
-    wager.className = 'hand-wager';
-    wager.setAttribute('aria-hidden', 'true');
-    wager.replaceChildren(...chipNodes(hand.bet, 4));
-    wrap.appendChild(wager);
+    // Only once there is more than one hand. With a single hand the betting
+    // circle below already shows the wager, and saying it twice on the same
+    // felt reads as two different bets.
+    if (view.hands.length > 1) {
+      const wager = document.createElement('div');
+      wager.className = 'hand-wager';
+      wager.setAttribute('aria-hidden', 'true');
+      wager.replaceChildren(...chipNodes(hand.bet, 4));
+      wrap.appendChild(wager);
+    }
+
+    // The total is the thing the player is actually reading, so it is its own
+    // element and sized like it — the notes beside it stay small and quiet.
+    const total = document.createElement('div');
+    total.className = 'hand-total' + (hand.total > 21 ? ' bust' : '');
+    total.textContent = hand.total;
+    wrap.appendChild(total);
 
     const meta = document.createElement('div');
     meta.className = 'hand-meta';
-    const bits = [`${hand.total}${hand.total > 21 ? ' bust' : ''}`];
-    if (hand.doubled) bits.push('doubled');
-    if (hand.surrendered) bits.push('surrendered');
-    if (hand.bet !== 1) bits.push(`${hand.bet} units`);
+    const bits = [];
+    if (hand.total > 21) bits.push(T('ui.bust'));
+    if (hand.doubled) bits.push(T('hand.doubled'));
+    if (hand.surrendered) bits.push(T('hand.surrendered'));
+    if (hand.bet !== 1) bits.push(T('hand.units', { n: hand.bet }));
     meta.textContent = bits.join(' · ');
 
     // §3.1: the result is shown, but afterwards and de-emphasised — and never
