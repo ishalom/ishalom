@@ -4407,20 +4407,20 @@ const EN            = {
   'upcard.number': 'a {rank}',
 
   // --- Step 1: read the dealer ---
-  'dealer.bust': '{up}{worst} — a **bust card**. Breaks {bust}.',
+  'dealer.bust': '{up}{worst} — a **bust card**. Breaks {bust} of the time.',
   'dealer.worst': ', their worst',
-  'dealer.ace': 'An ace, and **no blackjack** behind it. Still breaks only {bust}.',
-  'dealer.strong': '{up} — **strong**. Breaks {bust}, makes 17+ {made}.',
+  'dealer.ace': 'An ace, and **no blackjack** behind it. The dealer still breaks only {bust} of the time.',
+  'dealer.strong': '{up} — **strong**. Breaks {bust} of the time, and makes 17+ the other {made}.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'Insurance rides on **my hole card**, not your hand. Barely three cards in thirteen are tens.',
+  'hand.insurance': 'Insurance rides on **the dealer’s hole card**, not your hand. Barely three cards in thirteen are tens.',
   'hand.aces': 'A,A — the **best pair in the deck**. Held together the second ace is dead weight.',
   'hand.eights': '8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.',
   'hand.splitDas': '{pair} — a small pair. Each half wants to draw then **double**, so this one rides on the double-after-split rule.',
   'hand.splitOffensive': '{pair} — fine as one hand. Splitting is an **attack**.',
   'hand.splitDefensive': '{pair} — as one hand it wins only when the dealer breaks. Apart, each card **starts again** somewhere better.',
   'hand.pairNever': '{pair} — a pair worth **keeping**. Apart it is two weaker hands.',
-  'hand.stiff': '{total} — a **stiff**. Standing never wins it; drawing breaks it {bust}. No good answer, only a **cheaper** one.',
+  'hand.stiff': '{total} — a **stiff**. Standing never wins it; drawing breaks it {bust} of the time. No good answer, only a **cheaper** one.',
   'hand.doubling': '{total} — **cannot break** on one card, and every ten makes it a real hand.',
   'hand.softDraw': 'Soft {total} — the ace protects you. **Nothing you draw can break it**.',
   'hand.softMade': 'Soft {total} — already good, and **free to improve**. The question is whether it is worth it.',
@@ -4436,10 +4436,10 @@ const EN            = {
 
   // --- Step 3: the supporting figure ---
   'stat.softDraw': 'The draw is free — and against {up}, what you have is not enough.',
-  'stat.standWins': 'Standing wins {win}, loses {lose}. Little beats it.',
-  'stat.standBadPat': 'Standing still loses {lose} — **bad, just less bad** than the rest.',
-  'stat.standBreaks': 'Standing only wins when I break, and I break {bust}.',
-  'stat.hitVsSurrender': 'Drawing breaks it {bust} on the very next card.',
+  'stat.standWins': 'Standing wins {win} of the time and loses {lose}. Little beats it.',
+  'stat.standBadPat': 'Standing still loses {lose} of the time — **bad, just less bad** than the rest.',
+  'stat.standBreaks': 'Standing only wins when the dealer breaks, and the dealer breaks {bust} of the time.',
+  'stat.hitVsSurrender': 'Drawing breaks it {bust} of the time on the very next card.',
   'stat.double': 'Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.',
   'stat.splitGains': 'Two hands are worth {gap} more than one.',
   'stat.splitCosts': 'Splitting costs {gap} — one good total becomes two worse ones.',
@@ -4743,18 +4743,18 @@ const HE            = {
   // --- Step 1: read the dealer ---
   'dealer.bust': 'לדילר {up}{worst} — **קלף חלש**. הוא נשרף ב-{bust} מהמקרים.',
   'dealer.worst': ', הגרוע שלו',
-  'dealer.ace': 'אס, וכבר ידוע שאין **בלאק ג׳ק**. עדיין נשרף רק ב-{bust}.',
-  'dealer.strong': 'לדילר {up} — **חזק**. נשרף ב-{bust} בלבד, ומגיע ל-17 ומעלה ב-{made}.',
+  'dealer.ace': 'אס, וכבר ידוע שאין **בלאק ג׳ק**. הדילר עדיין נשרף רק ב-{bust} מהמקרים.',
+  'dealer.strong': 'לדילר {up} — **חזק**. הוא נשרף רק ב-{bust} מהמקרים, ומגיע ל-17 ומעלה ב-{made} הנותרים.',
 
   // --- Step 2: read your hand ---
-  'hand.insurance': 'הביטוח תלוי **בקלף הסמוי שלי**, לא ביד שלך. בקושי שלושה קלפים מתוך שלושה־עשר הם עשיריות.',
+  'hand.insurance': 'הביטוח תלוי **בקלף הסמוי של הדילר**, לא ביד שלך. בקושי שלושה קלפים מתוך שלושה־עשר הם עשיריות.',
   'hand.aces': 'A,A — **הזוג הכי טוב בחפיסה**. ביד אחת האס השני מיותר.',
   'hand.eights': '8,8 — **שש־עשרה**, הסכום הגרוע ביותר. הפיצול הוא **בריחה**, לא התקפה.',
   'hand.splitDas': '{pair} — זוג קטן. כל חצי רוצה לקחת קלף ואז **להכפיל**, אז הכול תלוי בכלל ההכפלה אחרי פיצול.',
   'hand.splitOffensive': '{pair} — סביר כיד אחת. הפיצול כאן הוא **התקפה**.',
   'hand.splitDefensive': '{pair} — כיד אחת היא מנצחת רק כשהדילר נשרף. בפיצול כל קלף **מתחיל מחדש** ממקום טוב יותר.',
   'hand.pairNever': '{pair} — זוג ש**שווה לשמור**. בפיצול זה הופך לשתי ידיים חלשות יותר.',
-  'hand.stiff': '{total} — **יד תקועה**. עצירה לא מנצחת אותה, ולקיחת קלף שורפת אותה ב-{bust}. אין תשובה טובה, רק **זולה יותר**.',
+  'hand.stiff': '{total} — **יד תקועה**. עצירה לא מנצחת אותה, ולקיחת קלף שורפת אותה ב-{bust} מהמקרים. אין תשובה טובה, רק **זולה יותר**.',
   'hand.doubling': '{total} — **לא יכולה להישרף** בקלף אחד, וכל עשירייה הופכת אותה ליד אמיתית.',
   'hand.softDraw': 'יד רכה {total} — האס מגן עליך. **שום קלף לא יכול לשרוף אותה**.',
   'hand.softMade': 'יד רכה {total} — כבר טובה, ואפשר **לשפר בחינם**. השאלה היא אם זה שווה.',
@@ -4770,10 +4770,10 @@ const HE            = {
 
   // --- Step 3: the supporting figure ---
   'stat.softDraw': 'הקלף הנוסף לא עולה כלום — ומול {up}, מה שיש לך לא מספיק.',
-  'stat.standWins': 'עצירה מנצחת ב-{win} ומפסידה ב-{lose}. מעט מאוד מנצח אותה.',
-  'stat.standBadPat': 'עצירה עדיין מפסידה ב-{lose} — **גרוע, פשוט פחות גרוע** מהשאר.',
-  'stat.standBreaks': 'עצירה מנצחת רק כשאני נשרף, ואני נשרף ב-{bust}.',
-  'stat.hitVsSurrender': 'לקיחת קלף שורפת את היד ב-{bust} כבר בקלף הבא.',
+  'stat.standWins': 'עצירה מנצחת ב-{win} מהמקרים ומפסידה ב-{lose}. מעט מאוד מנצח אותה.',
+  'stat.standBadPat': 'עצירה עדיין מפסידה ב-{lose} מהמקרים — **גרוע, פשוט פחות גרוע** מהשאר.',
+  'stat.standBreaks': 'עצירה מנצחת רק כשהדילר נשרף, והדילר נשרף ב-{bust} מהמקרים.',
+  'stat.hitVsSurrender': 'לקיחת קלף שורפת את היד ב-{bust} מהמקרים כבר בקלף הבא.',
   'stat.double': 'אותו קלף כמו בלקיחה, **בכפול כסף**, בלי קלף שני — וכאן קלף אחד בדרך כלל מספיק.',
   'stat.splitGains': 'שתי ידיים שוות כאן {gap} יותר מיד אחת.',
   'stat.splitCosts': 'פיצול עולה {gap} — סכום אחד טוב הופך לשניים גרועים.',

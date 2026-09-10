@@ -18,7 +18,14 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { t, type Locale } from '../src/i18n.ts';
+import { catalogue, t, type Locale } from '../src/i18n.ts';
+
+/** Keys the dealer actually says out loud, where "I" is hers and correct. */
+const SPEECH = new Set([
+  'dealer.youBust', 'dealer.iBust', 'dealer.blackjack', 'dealer.push',
+  'dealer.surrendered', 'dealer.youWin', 'dealer.iWin', 'dealer.youWinPlain',
+  'dealer.iWinPlain', 'dealer.dealerHas',
+]);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -136,5 +143,53 @@ test('every ending has a Hebrew line, and it is not the English one', () => {
     assert.notEqual(he, say(view), `still English: "${he}"`);
     // The bug that started this: a stray English clause inside a Hebrew line.
     assert.doesNotMatch(he, /[A-Za-z]{3,}/, `English words left in: "${he}"`);
+  }
+});
+
+test('the explanation names the dealer; only the dealer speaks as herself', () => {
+  /*
+   * Two voices that must not blur.
+   *
+   * The three-step reveal is narration — it appears under a numbered heading,
+   * not in a speech bubble — and it had been written in the dealer's first
+   * person: "Standing only wins when I break." There is no "I" on that part of
+   * the screen, so a reader has to work out who is talking before they can read
+   * the sentence.
+   *
+   * Her own lines are the exception and stay first person: they sit in a bubble
+   * beside her portrait, under her name, where "I" is unambiguous and anything
+   * else would have her referring to herself in the third person.
+   */
+  const en = catalogue('en');
+  const he = catalogue('he');
+
+  const narration = (key: string) =>
+    key.startsWith('dealer.') && !SPEECH.has(key)
+      ? true
+      : key.startsWith('hand.') || key.startsWith('stat.') || key.startsWith('gap.') ||
+        key.startsWith('combined') || key.startsWith('headline');
+
+  for (const [key, line] of Object.entries(en)) {
+    if (!narration(key)) continue;
+    assert.doesNotMatch(line, /\b(I|my|me)\b/, `${key} narrates in the first person: "${line}"`);
+  }
+  for (const key of Object.keys(en)) {
+    if (!narration(key)) continue;
+    // אני = I, שלי = mine. Either one in narration is the same defect.
+    assert.doesNotMatch(he[key]!, /אני|שלי/, `${key} narrates in the first person: "${he[key]}"`);
+  }
+});
+
+test('a percentage in the explanation says what it is a percentage of', () => {
+  // "Breaks 37%" is not a statement about anything. Every frequency the reveal
+  // quotes has to name its denominator, in both languages.
+  const en = catalogue('en');
+  const he = catalogue('he');
+  const frequency = ['dealer.bust', 'dealer.ace', 'dealer.strong', 'hand.stiff',
+    'stat.standWins', 'stat.standBadPat', 'stat.standBreaks', 'stat.hitVsSurrender'];
+
+  for (const key of frequency) {
+    assert.match(en[key]!, /of the time|the other/, `${key} quotes a bare figure: "${en[key]}"`);
+    assert.match(he[key]!, /מהמקרים|הנותרים/, `${key} quotes a bare figure: "${he[key]}"`);
   }
 });
