@@ -96,7 +96,7 @@ __out.openBackend = openBackend;`)(out);
 }
 
 /** Load the hosted page's scripts against a DOM stub and a real backend. */
-function loadHosted(config: unknown): Record<string, any> {
+function loadHosted(config: unknown, stored?: Array<[string, string]>): Record<string, any> {
   const html = readFileSync(join(ROOT, 'docs', 'index.html'), 'utf8');
   // The built page carries whatever backend it was built with. The test
   // supplies its own, so the page's declaration is removed rather than
@@ -106,24 +106,54 @@ function loadHosted(config: unknown): Record<string, any> {
     .join('\n')
     .replace(/^[ \t]*const BACKEND_CONFIG = .*$/m, '');
 
-  const el = (): any => ({
-    style: {}, dataset: {}, children: [], value: '', textContent: '', innerHTML: '',
-    hidden: false, lang: '',
-    classList: { add() {}, remove() {}, contains: () => false },
-    setAttribute() {}, getAttribute: () => null,
-    appendChild: (c: unknown) => c, append() {}, replaceChildren() {},
-    insertBefore: (c: unknown) => c, addEventListener() {}, focus() {}, remove() {},
-    showModal() {}, close() {},
-    querySelector: () => el(), querySelectorAll: () => [],
-    get parentElement() { return el(); },
-  });
+  /*
+   * Enough DOM to press a button.
+   *
+   * Queries are memoised so the same selector yields the same node twice, and
+   * listeners are kept so a test can fire one. Without both, a handler
+   * registered on a queried element is unreachable and screens that are only
+   * driven by clicks — the very first one a new player sees — cannot be tested
+   * at all.
+   */
+  const el = (): any => {
+    const queries = new Map<string, any>();
+    const node: any = {
+      style: {}, dataset: {}, children: [], value: '', textContent: '', innerHTML: '',
+      hidden: false, lang: '', listeners: {} as Record<string, Function[]>,
+      classList: { add() {}, remove() {}, contains: () => false },
+      setAttribute() {}, getAttribute: () => null,
+      appendChild(c: any) { node.children.push(c); return c; },
+      append(...c: any[]) { node.children.push(...c); },
+      replaceChildren(...c: any[]) { node.children = c; },
+      insertBefore(c: any) { node.children.unshift(c); return c; },
+      addEventListener(type: string, fn: Function) {
+        (node.listeners[type] ??= []).push(fn);
+      },
+      fire(type: string, event: any = { preventDefault() {} }) {
+        for (const fn of node.listeners[type] ?? []) fn(event);
+      },
+      focus() {}, remove() {}, showModal() {}, close() {},
+      querySelector(selector: string) {
+        if (!queries.has(selector)) queries.set(selector, el());
+        return queries.get(selector);
+      },
+      querySelectorAll: () => [],
+      get parentElement() { return el(); },
+    };
+    return node;
+  };
   const doc = el();
-  doc.getElementById = () => el();
+  const byId = new Map<string, any>();
+  doc.getElementById = (id: string) => {
+    if (!byId.has(id)) byId.set(id, el());
+    return byId.get(id);
+  };
   doc.createElement = () => el();
   doc.documentElement = el();
   doc.body = el();
+  (globalThis as any).__doc = doc;
 
-  const disk = new Map<string, string>([['ev:playerName', 'Dana']]);
+  const disk = new Map<string, string>(stored ?? [['ev:playerName', 'Dana']]);
   const g = globalThis as any;
   g.document = doc;
   g.localStorage = {
@@ -136,6 +166,7 @@ function loadHosted(config: unknown): Record<string, any> {
   g.location = { reload() {} };
   g.alert = () => {};
 
+  (globalThis as any).__disk = disk;
   const out: Record<string, any> = {};
   new Function(
     '__out',
@@ -143,7 +174,8 @@ function loadHosted(config: unknown): Record<string, any> {
     `const BACKEND_CONFIG = __config;\n${code}\n` +
       '__out.api = api; __out.session = () => session; __out.booted = booted;' +
       '__out.openBackend = openBackend; __out.leaderboard = () => leaderboard;' +
-      '__out.stopWatching = () => stopWatching && stopWatching();',
+      '__out.stopWatching = () => stopWatching && stopWatching();' +
+      '__out.screen = () => screen; __out.storage = () => __disk;',
   )(out, config);
   return out;
 }
@@ -298,4 +330,48 @@ test('two writes in flight cannot land out of order', async () => {
   // Twelve hands during slow writes must not mean twelve queued requests: a
   // newer state replaces a pending one rather than joining a queue behind it.
   assert.equal(rows.length, 1, 'more than one player row was created');
+});
+
+test('a brand new player can sit down', async () => {
+  /*
+   * The first screen anyone sees, and for a while the only one they could not
+   * get past. The handler behind "Sit down" called a function that had been
+   * renamed out from under it, so it threw — after storing the name but before
+   * changing screens. The button did nothing, and refreshing walked straight
+   * in, because by then the name was already saved.
+   *
+   * Every other test here starts with a name already in storage, which is
+   * exactly how this survived: the path a new player takes was the one path
+   * nothing ran.
+   */
+  const app = loadHosted(undefined, []);
+  await app.booted;
+
+  const doc = (globalThis as any).__doc;
+  const wrap = doc.getElementById('app').children[0];
+  assert.ok(wrap, 'the welcome screen was never mounted');
+
+  const input = wrap.querySelector('#welcome-name');
+  const form = wrap.querySelector('#welcome-form');
+  assert.ok((form.listeners.submit ?? []).length > 0, 'nothing is listening for the name');
+
+  input.value = '  Yossi  ';
+  form.fire('submit');
+
+  assert.equal(app.screen(), 'home', 'the button did not take the player anywhere');
+  assert.equal(app.storage().get('ev:playerName'), 'Yossi', 'the name was not kept, or not trimmed');
+  assert.ok(app.storage().get('ev:progress'), 'nothing was saved for the new player');
+
+  // And the app is genuinely usable from there, not merely on a different screen.
+  const view = await app.api('/api/deal');
+  assert.ok(['player', 'insurance', 'settled'].includes(view.phase));
+});
+
+test('an empty name does not let anyone in', async () => {
+  const app = loadHosted(undefined, []);
+  await app.booted;
+  const wrap = (globalThis as any).__doc.getElementById('app').children[0];
+  wrap.querySelector('#welcome-name').value = '   ';
+  wrap.querySelector('#welcome-form').fire('submit');
+  assert.notEqual(app.screen(), 'home');
 });

@@ -89,7 +89,8 @@ function sweep(scope) {
 
 /* --- Screens -------------------------------------------------------------- */
 
-let screen = 'home';
+/* What is actually mounted. Starts at the door, not at the home screen. */
+let screen = 'welcome';
 const app = () => document.getElementById('app');
 
 function mount(name) {
@@ -303,6 +304,7 @@ function ago(at) {
 /* --- First run ------------------------------------------------------------ */
 
 function askName() {
+  screen = 'welcome';
   const wrap = document.createElement('div');
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
@@ -327,7 +329,10 @@ function askName() {
     me.name = name;
     store.set('ev:playerName', name);
     session.setPlayerName(name);
-    saveProfile();
+    saveProgressLocally();
+    // Fire-and-forget: joining the table is not worth making anyone wait at the
+    // door for, and the write is retried after the first hand anyway.
+    void publish();
     mount('home');
   });
 }
