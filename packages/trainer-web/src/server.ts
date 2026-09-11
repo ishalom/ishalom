@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
 import { TrainerSession, type Restrictions } from './session.ts';
-import { uthPreview } from './uth.ts';
+import { UthSession } from './uth-session.ts';
 import { catalogue, LOCALES, type Locale } from './i18n.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -38,6 +38,8 @@ const TYPES: Record<string, string> = {
 // One session, because this is a local single-player harness. A real deployment
 // would key these by user and persist them (spec §11).
 let session = new TrainerSession();
+/** Ultimate Texas Hold'em, kept apart from the Blackjack session entirely. */
+const uth = new UthSession();
 
 async function readBody(request: import('node:http').IncomingMessage): Promise<any> {
   const chunks: Buffer[] = [];
@@ -120,13 +122,27 @@ const server = createServer(async (request, response) => {
         case '/api/coach':
           return json(session.coach);
 
-        case '/api/uth/preview':
-          return json(uthPreview());
+        // Ultimate Texas Hold'em. Its own session, so nothing played here can
+        // reach the Blackjack rating, stats or history.
+        case '/api/uth/state':
+          return json(uth.view);
+
+        case '/api/uth/deal':
+          return json(uth.deal());
+
+        case '/api/uth/act':
+          return json(uth.act(body.action as never));
+
+        case '/api/uth/prepare':
+          return json(uth.prepare());
 
         case '/api/player': {
           if (typeof body.name === 'string') session.setPlayerName(body.name);
           if (typeof body.mode === 'string') session.setMode(body.mode as never);
-          if (typeof body.locale === 'string') session.setLocale(body.locale as Locale);
+          if (typeof body.locale === 'string') {
+            session.setLocale(body.locale as Locale);
+            uth.setLocale(body.locale as Locale);
+          }
           return json(session.profile);
         }
 

@@ -26,7 +26,7 @@
  */
 
 import { evaluateSuitMasks } from '../poker/evaluator.ts';
-import { RANK_CHARS, makeCard, unseenCards, type Card } from '../core/cards.ts';
+import { RANK_CHARS, makeCard, rankOf, suitOf, unseenCards, type Card } from '../core/cards.ts';
 import {
   blindPayout,
   FLOP_RAISE,
@@ -95,6 +95,22 @@ export function allHoleClasses(): HoleClass[] {
     }
   }
   return out;
+}
+
+/**
+ * The class a pair of hole cards belongs to: AA, AKs, AKo.
+ *
+ * Lives here rather than in the app because it is the key into the solved
+ * table, and a label built by one rule and looked up in a table built by
+ * another is a grading bug that shows as a missing row rather than as a wrong
+ * answer — which is the good case only by luck.
+ */
+export function holeClassLabel(a: Card, b: Card): string {
+  const high = Math.max(rankOf(a), rankOf(b));
+  const low = Math.min(rankOf(a), rankOf(b));
+  const label = `${RANK_CHARS[high]}${RANK_CHARS[low]}`;
+  if (high === low) return label;
+  return label + (suitOf(a) === suitOf(b) ? 's' : 'o');
 }
 
 export interface PreflopResult {

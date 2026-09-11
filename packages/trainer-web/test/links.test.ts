@@ -46,28 +46,33 @@ test('every door in a built page is an in-page target that the router knows', ()
   const targets = [...html.matchAll(/href=\\"(#[^\\]*)\\"/g)].map((m) => m[1]!);
   assert.ok(targets.length >= 3, `only ${targets.length} doors found`);
 
-  // `#ultimate` is deliberately not a screen: the door is locked, and a link to
-  // it has to land somewhere real rather than on nothing.
+  // Round 4a opened the Ultimate door, so every door is now a screen.
   const routed = /const SCREENS = \{([^}]*)\}/.exec(html);
   assert.ok(routed, 'the screen table is gone from the page');
   const known = [...routed[1]!.matchAll(/'(#[a-z]+)'/g)].map((m) => m[1]!);
-  assert.deepEqual(known.sort(), ['#home', '#table']);
+  assert.deepEqual(known.sort(), ['#home', '#table', '#ultimate']);
   for (const target of targets) {
-    assert.ok(
-      known.includes(target) || target === '#ultimate',
-      `${target} is a door onto nothing`,
-    );
+    assert.ok(known.includes(target), `${target} is a door onto nothing`);
   }
 });
 
-test('the Ultimate door is still locked, and locked on the target it now has', () => {
-  // The door was matched by its old path. Rewriting the markup without
-  // rewriting the match would have quietly unlocked a screen that does not
-  // exist, which is a worse bug than the one being fixed.
+test('the Ultimate door opens onto the game, not onto a preview', () => {
+  /*
+   * Until round 4a the door was locked, and a link to it landed on home. It now
+   * mounts a playable screen, so the lock — and the line explaining it — must be
+   * gone rather than merely unreached.
+   */
   const html = hosted();
-  assert.match(html, /target === '#ultimate'/, 'the locked door matches nothing');
-  assert.match(html, /door-locked/, 'the locked style is gone');
-  assert.match(html, /uth\.notPlayableYet/, 'the door no longer says why it is shut');
+  assert.doesNotMatch(html, /door-locked/, 'the door is still being locked');
+  // The line that explained the lock said the tables were "still being
+  // computed". They are not, and a sentence that false must not be able to
+  // reach a screen, so it is gone from the catalogue rather than just unused.
+  assert.doesNotMatch(html, /notPlayableYet/, 'the page still carries the not-playable line');
+  for (const locale of ['en', 'he'] as const) {
+    assert.equal(catalogue(locale)['ui.notPlayableYet'], undefined);
+  }
+  assert.match(html, /const ULTIMATE_HTML = /, 'the Ultimate screen is not in the page');
+  assert.match(html, /function initUltimate\(\)/, 'the Ultimate screen script is not in the page');
 });
 
 test('the local app keeps its own paths', () => {
@@ -105,10 +110,14 @@ test('a copied link opens the screen it was copied from', async () => {
   await home.booted;
   assert.equal(home.screen(), 'home');
 
-  // An unknown or locked target lands on the home screen rather than on nothing.
-  const locked = loadHosted('#ultimate');
-  await locked.booted;
-  assert.equal(locked.screen(), 'home');
+  const ultimate = loadHosted('#ultimate');
+  await ultimate.booted;
+  assert.equal(ultimate.screen(), 'ultimate', 'a copied #ultimate link did not open the game');
+
+  // An unknown target lands on the home screen rather than on nothing.
+  const nowhere = loadHosted('#nowhere');
+  await nowhere.booted;
+  assert.equal(nowhere.screen(), 'home');
 });
 
 test('the back button walks the screens instead of leaving the app', async () => {

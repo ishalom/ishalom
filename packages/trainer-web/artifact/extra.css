@@ -143,7 +143,3 @@ body { background: var(--bg); }
 }
 .feed-verdict { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-/* --- A door that is not open yet ------------------------------------------ */
-
-.door-locked { opacity: 0.5; cursor: default; }
-.door-locked:hover { border-color: var(--line); }

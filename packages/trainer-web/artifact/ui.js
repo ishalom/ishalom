@@ -59,6 +59,7 @@ function setLocale(code) {
   messages = catalogue(code);
   store.set('ev:locale', code);
   session.setLocale(code);
+  uthSession.setLocale(code);
   applyLanguage();
   // Re-mounting redraws every generated sentence in the new language. The local
   // app reloads instead, because there the prose is composed on the server and
@@ -103,10 +104,10 @@ const app = () => document.getElementById('app');
  * opens the screen it was copied from, and the browser's back button walks the
  * screens instead of leaving the app.
  *
- * `#ultimate` is deliberately absent: the door is locked, so a link to it lands
- * on the home screen rather than on nothing.
+ * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
-const SCREENS = { '#home': 'home', '#table': 'table' };
+const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate' };
+const SCREEN_HTML = { home: () => HOME_HTML, table: () => TABLE_HTML, ultimate: () => ULTIMATE_HTML };
 const screenFromHash = () => SCREENS[location.hash] ?? null;
 
 function mount(name) {
@@ -114,7 +115,7 @@ function mount(name) {
   // Set before the markup, and only when it differs: `hashchange` fires after
   // this returns, sees the screen it names is already mounted, and does nothing.
   if (location.hash !== `#${name}`) location.hash = `#${name}`;
-  app().innerHTML = name === 'table' ? TABLE_HTML : HOME_HTML;
+  app().innerHTML = SCREEN_HTML[name]();
   sweep(app());
   applyLanguage();
 
@@ -125,6 +126,8 @@ function mount(name) {
     if (saved === 'table' || saved === 'feed') {
       app().querySelector(`.tab[data-tab="${saved}"]`)?.click();
     }
+  } else if (name === 'ultimate') {
+    initUltimate();
   } else {
     initTable();
   }
@@ -138,13 +141,6 @@ function mount(name) {
         event.preventDefault();
         mount(SCREENS[target]);
       });
-    } else if (target === '#ultimate') {
-      // Ultimate is solved but not yet playable; the door says so rather than
-      // opening onto nothing.
-      link.classList.add('door-locked');
-      link.addEventListener('click', (event) => event.preventDefault());
-      const sub = link.querySelector('.door-sub');
-      if (sub) sub.textContent = tr('uth.notPlayableYet');
     }
   }
 
@@ -472,6 +468,13 @@ function switchPlayer() {
 /* --- Boot ----------------------------------------------------------------- */
 
 session.setLocale(locale);
+/*
+ * The UTH session composes its own prose, so it has to be told the language at
+ * boot as well as on a switch. Without this line a Hebrew player opened
+ * Ultimate onto English buttons and an English card — found by looking at the
+ * built page, not by the session tests, which set the locale themselves.
+ */
+uthSession.setLocale(locale);
 if (me.name) session.setPlayerName(me.name);
 applyLanguage();
 /*

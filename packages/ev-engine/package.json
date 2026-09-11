@@ -6,7 +6,8 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./blackjack": "./src/blackjack/index.ts"
+    "./blackjack": "./src/blackjack/index.ts",
+    "./uth": "./src/uth-entry.ts"
   },
   "engines": {
     "node": ">=22.18"

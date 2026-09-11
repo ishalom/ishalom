@@ -90,12 +90,14 @@ function jsString(value: string): string {
   return JSON.stringify(value);
 }
 
-const engine = bundle([join(PKG, 'src', 'session.ts')]);
+const engine = bundle([join(PKG, 'src', 'session.ts'), join(PKG, 'src', 'uth-session.ts')]);
 const styles = read(PUBLIC, 'styles.css') + read(ARTIFACT, 'extra.css');
 const homeHtml = localLinks(bodyOf(read(PUBLIC, 'home.html')), 'home.html');
 const tableHtml = localLinks(bodyOf(read(PUBLIC, 'table.html')), 'table.html');
+const ultimateHtml = localLinks(bodyOf(read(PUBLIC, 'ultimate.html')), 'ultimate.html');
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
+const ultimateJs = screenScript(read(PUBLIC, 'ultimate.js'), 'initUltimate');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 const shell = read(ARTIFACT, 'shell.js');
@@ -168,10 +170,12 @@ ${engine}
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = ${jsString(homeHtml)};
 const TABLE_HTML = ${jsString(tableHtml)};
+const ULTIMATE_HTML = ${jsString(ultimateHtml)};
 
-/* The two screen scripts, unchanged but for their transport. */
+/* The three screen scripts, unchanged but for their transport. */
 ${homeJs}
 ${tableJs}
+${ultimateJs}
 
 ${identity}
 
@@ -245,5 +249,6 @@ console.log(
   `${relative(ROOT, artifactTarget)}  ${kb(artifactPage.length)}\n` +
     `${relative(ROOT, hostedTarget)}  ${kb(hostedPage.length)}  ` +
     `(shared table: ${config === null ? 'not configured' : config.url})\n` +
-    `  engine ${kb(engine.length)}, styles ${kb(styles.length)}, screens ${kb(homeJs.length + tableJs.length)}`,
+    `  engine ${kb(engine.length)}, styles ${kb(styles.length)}, ` +
+      `screens ${kb(homeJs.length + tableJs.length + ultimateJs.length)}`,
 );

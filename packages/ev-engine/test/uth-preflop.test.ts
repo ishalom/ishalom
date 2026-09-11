@@ -19,13 +19,19 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { NUM_CARDS, rankOf, suitOf } from '../src/core/cards.ts';
+import { makeCard, NUM_CARDS, rankOf, suitOf } from '../src/core/cards.ts';
 import {
   allHoleClasses,
   boardIndex,
+  holeClassLabel,
   PREFLOP_BOARDS,
   type PreflopResult,
 } from '../src/uth/preflop.ts';
+import {
+  PREFLOP_TABLE,
+  PREFLOP_TABLE_PAYTABLE,
+  preflopRow,
+} from '../src/uth/preflop-table.ts';
 
 const ASSET = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -229,4 +235,92 @@ test('the table agrees with published pre-flop strategy', { skip: assetSkip }, (
     checked++;
   }
   assert.ok(checked > 0, 'no published boundary classes were present in the asset');
+});
+
+// --- The emitted module -----------------------------------------------------
+
+test('the emitted module holds exactly what the solver wrote', () => {
+  /*
+   * Two copies of the same table exist on purpose: the JSON is the offline
+   * job's output, and `preflop-table.ts` is the copy the browser can hold,
+   * because the shared build has no runtime to read a file with. Two copies
+   * that can drift are two copies that will, and drift here means the app
+   * grades from numbers nobody solved. So they are held to each other, to the
+   * last bit.
+   */
+  const asset = JSON.parse(readFileSync(ASSET, 'utf8')) as {
+    blindPaytable: string;
+    classes: Record<string, PreflopResult>;
+  };
+
+  assert.equal(PREFLOP_TABLE_PAYTABLE, asset.blindPaytable);
+  assert.deepEqual(
+    Object.keys(PREFLOP_TABLE).sort(),
+    Object.keys(asset.classes).sort(),
+    'the module and the asset name different classes',
+  );
+
+  for (const [label, row] of Object.entries(asset.classes)) {
+    const emitted = preflopRow(label);
+    for (const field of [
+      'ev4x', 'ev3x', 'evCheck', 'margin', 'flopRaiseFrequency', 'riverFoldFrequency',
+    ] as const) {
+      assert.equal(
+        emitted[field],
+        row[field],
+        `${label}.${field}: module ${emitted[field]} vs asset ${row[field]}`,
+      );
+    }
+    assert.equal(emitted.optimalAction, row.optimalAction, `${label}.optimalAction`);
+  }
+});
+
+test('the emitted module is complete, and 3x is never the best of the three', () => {
+  // §5.2.3 as a fact about the shipped data rather than a claim in the spec:
+  // any hand strong enough to raise is strong enough to raise the maximum.
+  assert.equal(Object.keys(PREFLOP_TABLE).length, 169);
+  const byAction: Record<string, number> = {};
+  for (const row of Object.values(PREFLOP_TABLE)) {
+    byAction[row.optimalAction] = (byAction[row.optimalAction] ?? 0) + 1;
+    assert.ok(
+      row.ev3x <= Math.max(row.ev4x, row.evCheck),
+      `${row.label}: 3x beats both alternatives`,
+    );
+    /*
+     * The precise shape of §5.2.3, which is narrower than "3x is always worse
+     * than 4x". On a hand that should be checked, raising 3x loses *less* than
+     * raising 4x — naturally, since less money goes in on a raise that should
+     * not have been made. The claim is about hands worth raising: there, the
+     * maximum is always right.
+     */
+    if (row.optimalAction === 'raise4x') {
+      assert.ok(row.ev3x < row.ev4x, `${row.label}: 3x is not worse than 4x on a raising hand`);
+    }
+  }
+  assert.equal(byAction.raise3x ?? 0, 0, '3x is optimal somewhere, which §5.2.3 denies');
+  assert.equal((byAction.raise4x ?? 0) + (byAction.check ?? 0), 169);
+});
+
+test('a missing class fails loudly rather than grading against nothing', () => {
+  assert.throws(() => preflopRow('ZZ'), /No solved pre-flop row/);
+});
+
+test('every starting hand finds its class, and suits only matter through sharing', () => {
+  const labels = new Set(Object.keys(PREFLOP_TABLE));
+  let hands = 0;
+  for (let a = 0; a < NUM_CARDS; a++) {
+    for (let b = a + 1; b < NUM_CARDS; b++) {
+      const label = holeClassLabel(a, b);
+      assert.ok(labels.has(label), `${label} has no solved row`);
+      // The label must not depend on which card is named first.
+      assert.equal(label, holeClassLabel(b, a));
+      hands++;
+    }
+  }
+  assert.equal(hands, 1326);
+
+  // A pair takes neither suffix; two of a suit take s; anything else o.
+  assert.equal(holeClassLabel(makeCard(12, 3), makeCard(12, 2)), 'AA');
+  assert.equal(holeClassLabel(makeCard(12, 3), makeCard(11, 3)), 'AKs');
+  assert.equal(holeClassLabel(makeCard(11, 2), makeCard(12, 3)), 'AKo');
 });

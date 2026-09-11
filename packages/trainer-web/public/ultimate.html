@@ -9,121 +9,52 @@
     <script src="/i18n.js"></script>
     <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
-    <style>
-      .preview-note {
-        margin: 0;
-        padding: 9px 16px;
-        background: rgba(201, 162, 39, 0.1);
-        border-bottom: 1px solid rgba(201, 162, 39, 0.28);
-        color: var(--voice);
-        font-size: 12px;
-      }
-      .street { padding: 12px 16px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
-      .street:first-of-type { border-top: none; }
-      .street-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 9px; }
-      .street-name {
-        font-size: 10.5px;
-        text-transform: uppercase;
-        letter-spacing: 0.09em;
-        color: rgba(232, 237, 242, 0.62);
-        font-weight: 700;
-      }
-      .street-stake { font-size: 11.5px; color: var(--muted); }
-      .verdict-row { margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-      .verdict-pill {
-        font-family: var(--display);
-        font-size: 14px;
-        padding: 5px 12px;
-        border-radius: 999px;
-        background: rgba(52, 211, 153, 0.14);
-        border: 1px solid #2f9e6c;
-        color: var(--ink);
-      }
-      .verdict-pill.fold { background: rgba(248, 113, 113, 0.13); border-color: #a8474a; }
-      .bars { margin-top: 9px; display: grid; gap: 5px; }
-      .bar-row { display: grid; grid-template-columns: 74px 1fr 68px; gap: 9px; align-items: center; font-size: 12px; }
-      .bar-track { height: 8px; border-radius: 4px; background: #101820; overflow: hidden; }
-      .bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #1f6f4a, #34d399); }
-      .bar-fill.neg { background: linear-gradient(90deg, #7c2d33, #f87171); }
-      .bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
-      .progress { height: 6px; border-radius: 3px; background: #101820; overflow: hidden; margin-top: 8px; }
-      .progress i { display: block; height: 100%; background: linear-gradient(90deg, var(--brass-dim), var(--brass)); }
-    </style>
   </head>
   <body>
-    <div class="shell">
-      <header class="rules">
+    <div class="shell uth">
+      <!-- The rules are a statement, as on the Blackjack table. There is one
+           paytable and it is the one the pre-flop table was solved against, so
+           nothing here offers to change it. -->
+      <header class="rules" id="rules-bar">
         <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
-        <div class="rules-main" style="text-align: right">
+        <div class="rules-main">
           <span class="rules-name" data-i18n="ui.ultimateTitle">Ultimate Texas Hold’em</span>
-          <span class="rules-badge" data-i18n="uth.blindPays">Blind pays straight or better</span>
+          <span class="rules-badge" data-i18n="uth.rulesLine">Blind pays a straight or better · dealer qualifies with a pair</span>
         </div>
       </header>
 
-      <p class="preview-note">
-        Preview — the solvers are finished and exact, but there is no table to play
-        at yet. Nothing here is wagered.
-      </p>
-
-      <main class="felt">
-        <section class="street">
-          <div class="street-head">
-            <span class="street-name" data-i18n="uth.yourHand">Your hand</span>
-            <span class="street-stake" id="hole-class">—</span>
-          </div>
-          <div class="cards" id="hole"></div>
+      <main class="table felt uth-felt" id="uth-table">
+        <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+          <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span></h2>
+          <div class="cards" id="uth-dealer"></div>
         </section>
 
-        <section class="street">
-          <div class="street-head">
-            <span class="street-name" data-i18n="uth.preflopStreet">Pre-flop · raise 4× or check</span>
-            <span class="street-stake">looked up, not solved</span>
-          </div>
-          <div class="verdict-row"><span class="verdict-pill" id="pf-verdict">—</span></div>
-          <div class="bars" id="pf-bars"></div>
-          <p class="muted" id="pf-note" style="margin: 9px 0 0; font-size: 12px"></p>
+        <section class="seat uth-board" data-i18n-attr="aria-label:uth.board">
+          <h2 class="seat-title"><span data-i18n="uth.board">Board</span></h2>
+          <div class="cards" id="uth-board"></div>
         </section>
 
-        <section class="street">
-          <div class="street-head">
-            <span class="street-name" data-i18n="uth.flopStreet">Flop · raise 2× or check</span>
-            <span class="street-stake" id="fl-count">—</span>
-          </div>
-          <div class="cards" id="flop"></div>
-          <div class="verdict-row"><span class="verdict-pill" id="fl-verdict">—</span></div>
-          <div class="bars" id="fl-bars"></div>
+        <section class="seat" data-i18n-attr="aria-label:ui.yourHand">
+          <h2 class="seat-title">
+            <span data-i18n="ui.you">You</span>
+            <span class="seat-total" id="uth-class"></span>
+          </h2>
+          <div class="cards" id="uth-hole"></div>
+          <!-- Ante, Blind and Play, and the stack behind them. -->
+          <div class="uth-rail" id="uth-rail"></div>
+          <p class="uth-memory" data-i18n="uth.memoryOnly">Practice stack — it resets when you close the tab.</p>
         </section>
 
-        <section class="street">
-          <div class="street-head">
-            <span class="street-name" data-i18n="uth.riverStreet">River · raise 1× or fold</span>
-            <span class="street-stake" id="rv-count">—</span>
-          </div>
-          <div class="cards" id="river"></div>
-          <div class="verdict-row"><span class="verdict-pill" id="rv-verdict">—</span></div>
-          <div class="bars" id="rv-bars"></div>
-        </section>
+        <p class="empty" id="uth-empty" data-i18n="uth.pressDeal">Deal to post Ante 1 and Blind 1.</p>
       </main>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title" data-i18n="uth.tripsPanel">Trips side bet</h2>
-          <span class="panel-note" id="trips-hit">—</span>
-        </div>
-        <div class="panel-body"><p style="margin: 0; font-size: 13.5px" id="trips"></p></div>
-      </section>
+      <div class="dock">
+        <!-- The grade first; the result under it, later and quieter (§3.1). -->
+        <section class="quickcard" id="uth-card" hidden aria-live="polite"></section>
+        <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
+      </div>
 
-      <section class="panel">
-        <div class="panel-head">
-          <h2 class="panel-title" data-i18n="uth.preflopPanel">Pre-flop table</h2>
-          <span class="panel-note" id="table-count">—</span>
-        </div>
-        <div class="panel-body"><div class="progress"><i id="table-bar" style="width: 0%"></i></div></div>
-      </section>
-
-      <nav class="actions">
-        <button class="action primary" id="redeal" data-i18n="uth.dealAnother">Deal another</button>
-      </nav>
+      <p class="uth-keys" data-i18n="uth.keys">Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.</p>
     </div>
 
     <script src="/ultimate.js"></script>

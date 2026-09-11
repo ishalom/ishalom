@@ -200,7 +200,6 @@ const EN: Catalogue = {
   // --- Ultimate ---
   'ui.ultimateTitle': 'Ultimate Texas Hold’em',
   'ui.solverPreview': 'Solver preview',
-  'ui.notPlayableYet': 'Not playable yet — the tables are still being computed.',
 
   // --- The dealer at the table (§7: asked, not lectured) ---
   'coach.q.odds': 'My odds?',
@@ -321,6 +320,76 @@ const EN: Catalogue = {
   'uth.raise2': 'Raise 2×',
   'uth.raise1': 'Raise 1×',
   'uth.check': 'Check',
+  'uth.board':
+    'Board',
+  'uth.ante':
+    'Ante',
+  'uth.blind':
+    'Blind',
+  'uth.play':
+    'Play',
+  'uth.atRisk':
+    'in play',
+  'uth.memoryOnly':
+    'Practice stack — it resets when you close the tab.',
+  'uth.pressDeal':
+    'Deal to post Ante 1 and Blind 1.',
+  'uth.nextHand':
+    'Next hand',
+  'uth.keys':
+    'Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.',
+  'uth.rulesLine':
+    'Blind pays a straight or better · dealer qualifies with a pair',
+  'uth.readingFlop':
+    'Reading the flop…',
+  'uth.h.preflop':
+    '{class} · before the flop',
+  'uth.h.flop':
+    '{class} · on the flop',
+  'uth.h.river':
+    '{class} · on the river',
+  'uth.s.threeX':
+    '3× is the best play on **none of the 169 starting hands** — any hand worth raising is worth raising the maximum. Here it gives up **{cost}** against {best}.',
+  'uth.s.preRaise':
+    '{class} is strong enough to raise the maximum: 4× is worth **{gap}** more than checking.',
+  'uth.s.preCheck':
+    '{class} is worth more checked. Checked, it goes on to raise the flop in {flopRaise} of cases and to fold the river in {riverFold} of cases.',
+  'uth.s.flopRaise':
+    '2× beats checking by **{gap}**. Checked, this hand ends up folding the river in {riverFold} of cases.',
+  'uth.s.flopCheck':
+    'Checking beats 2× by **{gap}**. You keep a 1× decision on the river, and fold it in {riverFold} of cases.',
+  'uth.s.riverRaise':
+    'Your hand beats **{wins}** and ties {ties} of the 990 hands the dealer could hold — worth more than folding for −2.',
+  'uth.s.riverFold':
+    'Your hand beats only **{wins}** of the 990 hands the dealer could hold, so 1× loses more than folding for −2.',
+  'uth.line.dealerQualified':
+    'Dealer qualifies with a pair or better — Ante {ante}',
+  'uth.line.dealerNotQualified':
+    'Dealer does not qualify — the Ante pushes',
+  'uth.line.tie':
+    'A tie — every bet pushes',
+  'uth.line.playWin':
+    'Play {bet}× wins {play}',
+  'uth.line.playLose':
+    'Play {bet}× loses {play}',
+  'uth.line.playPush':
+    'Play {bet}× pushes',
+  'uth.line.blindPaid':
+    'Blind pays {blind} on a straight or better',
+  'uth.line.blindPush':
+    'Blind pushes — the win was below a straight',
+  'uth.line.blindLose':
+    'Blind loses −1',
+  'uth.line.blindTie':
+    'Blind pushes',
+  'uth.line.folded':
+    'You folded — the dealer keeps their cards down',
+  'uth.line.foldPlay':
+    'No Play bet was made',
+  'uth.line.forfeit':
+    'Ante and Blind are forfeit: −2',
+  'uth.line.net':
+    'Hand {net}',
   'uth.fold': 'Fold',
   'uth.threeXNever': 'The 3× raise loses to both alternatives here — as it does everywhere.',
   'uth.stillComputing': 'This class is still being computed by the offline job. The flop and river below are exact.',
@@ -602,7 +671,6 @@ const HE: Catalogue = {
   // --- Ultimate ---
   'ui.ultimateTitle': 'אולטימייט טקסס הולדם',
   'ui.solverPreview': 'תצוגה מקדימה של הפותר',
-  'ui.notPlayableYet': 'עדיין לא ניתן לשחק — הטבלאות עדיין בחישוב.',
 
   // --- The dealer at the table (§7: asked, not lectured) ---
   'coach.q.odds': 'מה הסיכויים שלי?',
@@ -723,6 +791,76 @@ const HE: Catalogue = {
   'uth.raise2': 'העלאה 2×',
   'uth.raise1': 'העלאה 1×',
   'uth.check': 'צ׳ק',
+  'uth.board':
+    'הלוח',
+  'uth.ante':
+    'אנטה',
+  'uth.blind':
+    'בליינד',
+  'uth.play':
+    'פליי',
+  'uth.atRisk':
+    'במשחק',
+  'uth.memoryOnly':
+    'קופת אימון — היא מתאפסת כשסוגרים את הלשונית.',
+  'uth.pressDeal':
+    'חלק כדי להניח אנטה 1 ובליינד 1.',
+  'uth.nextHand':
+    'היד הבאה',
+  'uth.keys':
+    'מקשים: 4 · 3 · C לפני הפלופ, 2 · C בפלופ, 1 · F בריבר, N ליד הבאה.',
+  'uth.rulesLine':
+    'הבליינד משלם על רצף ומעלה · הדילר מתאים עם זוג',
+  'uth.readingFlop':
+    'קורא את הפלופ…',
+  'uth.h.preflop':
+    '{class} · לפני הפלופ',
+  'uth.h.flop':
+    '{class} · בפלופ',
+  'uth.h.river':
+    '{class} · בריבר',
+  'uth.s.threeX':
+    '3× הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
+  'uth.s.preRaise':
+    '{class} חזקה מספיק להעלאה המקסימלית: 4× שווה **{gap}** יותר מצ׳ק.',
+  'uth.s.preCheck':
+    '{class} שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
+  'uth.s.flopRaise':
+    '2× עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
+  'uth.s.flopCheck':
+    'צ׳ק עדיף על 2× ב-**{gap}**. נשארת לך החלטת 1× בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
+  'uth.s.riverRaise':
+    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-−2.',
+  'uth.s.riverFold':
+    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן 1× מפסיד יותר מפרישה ב-−2.',
+  'uth.line.dealerQualified':
+    'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
+  'uth.line.dealerNotQualified':
+    'הדילר לא מתאים — האנטה בתיקו',
+  'uth.line.tie':
+    'תיקו — כל ההימורים חוזרים',
+  'uth.line.playWin':
+    'פליי {bet}× מנצח {play}',
+  'uth.line.playLose':
+    'פליי {bet}× מפסיד {play}',
+  'uth.line.playPush':
+    'פליי {bet}× בתיקו',
+  'uth.line.blindPaid':
+    'הבליינד משלם {blind} על רצף ומעלה',
+  'uth.line.blindPush':
+    'הבליינד בתיקו — הניצחון היה מתחת לרצף',
+  'uth.line.blindLose':
+    'הבליינד מפסיד −1',
+  'uth.line.blindTie':
+    'הבליינד בתיקו',
+  'uth.line.folded':
+    'פרשת — הקלפים של הדילר נשארים סגורים',
+  'uth.line.foldPlay':
+    'לא הונח הימור פליי',
+  'uth.line.forfeit':
+    'האנטה והבליינד אבודים: −2',
+  'uth.line.net':
+    'היד {net}',
   'uth.fold': 'פרישה',
   'uth.threeXNever': 'ההעלאה של 3× מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',

@@ -34,22 +34,36 @@ export interface PlayerHand {
   net: number | null;
 }
 
-/** Spec §11, Decision. One graded choice. */
-export interface DecisionRecord {
+/**
+ * Spec §11, Decision. One graded choice.
+ *
+ * Generic over the action vocabulary because two games grade through it and
+ * they do not share one. Everything downstream of a decision — the severity
+ * colour, the EV chips, the cost, the accuracy denominator — works on this
+ * shape alone and never on what the actions are called, which is why Ultimate
+ * Texas Hold'em could be added without any of it changing. Letting `raise4x`
+ * into `GradedAction` instead would have put a poker action inside a blackjack
+ * chart cell, where nothing could ever produce one and every reader would have
+ * to know that.
+ */
+export interface DecisionRecordOf<Action extends string> {
   sequenceIndex: number;
-  /** Which hand of a split this belonged to. */
+  /** Which hand of a split this belonged to. Always 0 where there are no splits. */
   handIndex: number;
   scenarioKey: string;
-  legalActions: GradedAction[];
+  legalActions: Action[];
   /** EV of every legal action, in units — the vector §7.1 puts on the card. */
-  evByAction: Partial<Record<GradedAction, number>>;
-  optimalAction: GradedAction;
-  chosenAction: GradedAction;
+  evByAction: Partial<Record<Action, number>>;
+  optimalAction: Action;
+  chosenAction: Action;
   /** EV given up, never negative. */
   evCost: number;
   severityTier: SeverityTier;
   timeToDecideMs: number | null;
 }
+
+/** A graded Blackjack decision. */
+export type DecisionRecord = DecisionRecordOf<GradedAction>;
 
 /** Spec §11, Hand. */
 export interface HandRecord {

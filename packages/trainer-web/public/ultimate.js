@@ -1,104 +1,341 @@
 /*
- * The Ultimate Texas Hold'em preview.
+ * Ultimate Texas Hold'em, playable (round 4a).
  *
- * Read-only: a hand is dealt and the solvers are asked what they make of it at
- * each decision point. The river and flop are solved live — 990 dealer holdings
- * and 1,070,190 outcomes — while pre-flop is a table lookup, because solving
- * that one live is 2.1 billion outcomes per hole-card class.
+ * Draws what `UthSession.view` describes and sends the player's choices back.
+ * It decides nothing: the grade, the EVs, the sentence and the settlement lines
+ * all arrive composed, in the current language, from the session — the same
+ * division of labour as the Blackjack table, and for the same reason. A page
+ * that computed its own verdict would be a second grader, and the day the two
+ * disagreed the app would be teaching two answers.
  */
 
 const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 
 const el = (id) => document.getElementById(id);
 
-function cardNode(card) {
+const uthState = {
+  view: null,
+  busy: false,
+  /** The decision the card was last drawn for, so the result waits its turn. */
+  cardToken: null,
+  /** Measured solve times on this page, for anyone checking the flop is quick. */
+  timings: [],
+};
+
+async function api(path, body) {
+  const response = await fetch(path, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: body === undefined ? {} : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error ?? 'request failed');
+  return data;
+}
+
+/** Every call that changes the table goes through here, one at a time. */
+async function uthSend(path, body) {
+  if (uthState.busy) return;
+  uthState.busy = true;
+  try {
+    uthState.view = await api(path, body ?? {});
+    uthRender();
+    if (uthState.view.needsPrepare) await uthPrepare();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    uthState.busy = false;
+    uthRenderActions();
+  }
+}
+
+/**
+ * Solve the flop while it is being turned over.
+ *
+ * The flop solve is about 80 ms of main-thread work. Done at the moment of the
+ * click, it would sit between the player's decision and the card that grades it.
+ * Done here, it runs while the new cards animate in — transforms run on the
+ * compositor, so the turn-over does not stall — and the buttons come back only
+ * once the answer is cached, so the grading click itself is instant.
+ *
+ * Waiting two frames first lets the browser paint the flop before the solve
+ * takes the thread — but never waiting on frames alone. A tab in the background
+ * gets no animation frames at all, so a player who clicked Check and switched
+ * away would come back to "Reading the flop…" still waiting to start. Whichever
+ * comes first, two frames or 50 ms, the solve goes ahead.
+ */
+async function uthPrepare() {
+  uthRenderActions(T('uth.readingFlop'));
+  await Promise.race([
+    new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    new Promise((resolve) => setTimeout(resolve, 50)),
+  ]);
+  const started = performance.now();
+  const result = await api('/api/uth/prepare', {});
+  const wall = performance.now() - started;
+  uthState.timings.push({ phase: result.phase, solveMs: result.solveMs, wallMs: wall });
+  window.EV_UTH_TIMINGS = uthState.timings;
+}
+
+// --- Drawing ----------------------------------------------------------------
+
+function uthCard(card) {
   const node = document.createElement('div');
-  node.className = 'card' + (card.red ? ' red' : '');
+  node.className = 'card dealt' + (card.red ? ' red' : '');
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', card.label);
-  node.innerHTML =
-    `<span class="card-rank">${card.rank}</span><span class="card-suit">${card.suit}</span>`;
+  const rank = document.createElement('span');
+  rank.className = 'card-rank';
+  rank.textContent = card.rank;
+  const suit = document.createElement('span');
+  suit.className = 'card-suit';
+  suit.textContent = card.suit;
+  node.append(rank, suit);
   return node;
 }
 
-/** Bars scaled together, so their lengths are comparable within a street. */
-function bars(container, rows) {
-  const span = Math.max(...rows.map((r) => Math.abs(r.ev)), 0.01);
-  container.replaceChildren();
-  for (const row of rows) {
+function uthBack() {
+  const node = document.createElement('div');
+  node.className = 'card back dealt';
+  node.setAttribute('role', 'img');
+  node.setAttribute('aria-label', 'face-down card');
+  return node;
+}
+
+/** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
+function uthRich(target, text) {
+  target.replaceChildren();
+  text.split(/(\*\*[^*]+\*\*)/).forEach((part) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const b = document.createElement('b');
+      b.textContent = part.slice(2, -2);
+      target.appendChild(b);
+    } else if (part) {
+      target.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+function uthRender() {
+  const view = uthState.view;
+  if (!view) return;
+  const inHand = view.phase !== 'idle';
+
+  el('uth-empty').hidden = inHand;
+
+  el('uth-dealer').replaceChildren(
+    ...(view.dealerRevealed
+      ? view.dealerHole.map(uthCard)
+      : inHand ? [uthBack(), uthBack()] : []),
+  );
+
+  const board = view.board.map(uthCard);
+  for (let i = 0; i < view.boardHidden; i++) board.push(uthBack());
+  el('uth-board').replaceChildren(...board);
+
+  el('uth-hole').replaceChildren(...view.hole.map(uthCard));
+  el('uth-class').textContent = view.holeClass ?? '';
+
+  uthRenderRail(view);
+  uthRenderCard(view);
+  uthRenderActions();
+}
+
+function uthRenderRail(view) {
+  const rail = el('uth-rail');
+  rail.replaceChildren();
+  const spot = (label, value, extra) => {
     const div = document.createElement('div');
-    div.className = 'bar-row';
-    div.innerHTML =
-      `<span>${row.label}</span>` +
-      `<span class="bar-track"><i class="bar-fill${row.ev < 0 ? ' neg' : ''}" ` +
-      `style="width:${(Math.abs(row.ev) / span) * 100}%"></i></span>` +
-      `<span class="bar-value">${row.ev >= 0 ? '+' : ''}${row.ev.toFixed(3)}</span>`;
-    container.appendChild(div);
+    div.className = 'uth-spot' + (extra ? ` ${extra}` : '');
+    const figure = document.createElement('span');
+    figure.className = 'rail-value';
+    figure.textContent = value;
+    const name = document.createElement('span');
+    name.className = 'rail-label';
+    name.textContent = label;
+    div.append(figure, name);
+    return div;
+  };
+  const stake = view.stake;
+  rail.append(
+    spot(T('uth.ante'), stake.ante || '—'),
+    spot(T('uth.blind'), stake.blind || '—'),
+    spot(T('uth.play'), stake.play || '—'),
+  );
+
+  const bank = spot(T('ui.stack'), view.stack.balance.toFixed(view.stack.balance % 1 === 0 ? 0 : 1), 'bank');
+  // The swing from the hand, drawn only once the card above has had its moment.
+  if (view.stack.lastNet !== null && view.settlement) {
+    const delta = document.createElement('span');
+    const net = view.stack.lastNet;
+    delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
+    delta.textContent = `${net > 0 ? '+' : ''}${net}`;
+    delta.hidden = true;
+    bank.appendChild(delta);
+  }
+  rail.appendChild(bank);
+}
+
+/**
+ * The card: the grade, then — later and quieter — what the cards did.
+ *
+ * §3.1 keeps the result behind the decision. With no three-step reveal in 4a
+ * the separation is made in time and in weight instead: the verdict is drawn at
+ * once and large, and the settlement lines appear a moment later, small and
+ * muted, underneath it.
+ */
+function uthRenderCard(view) {
+  const box = el('uth-card');
+  const feedback = view.feedback;
+  if (!feedback) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.className = `quickcard ${feedback.severity}`;
+  box.dataset.solveMs = String(feedback.solveMs);
+  box.replaceChildren();
+
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  const head = document.createElement('b');
+  head.textContent = feedback.headline;
+  anchor.appendChild(head);
+  box.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = feedback.verdict;
+  box.appendChild(verdict);
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    box.appendChild(did);
+  }
+
+  const evs = document.createElement('div');
+  evs.className = 'evs';
+  feedback.ranked.forEach((entry, index) => {
+    const chip = document.createElement('span');
+    chip.className =
+      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
+    chip.textContent = `${entry.label}: ${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`;
+    evs.appendChild(chip);
+  });
+  box.appendChild(evs);
+
+  const sentence = document.createElement('p');
+  sentence.className = 'reason';
+  uthRich(sentence, feedback.sentence);
+  box.appendChild(sentence);
+
+  if (view.settlement) {
+    const result = document.createElement('div');
+    result.className = 'uth-result uth-late';
+    result.hidden = true;
+    for (const line of view.settlement.lines) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      result.appendChild(p);
+    }
+    const net = document.createElement('p');
+    net.className = 'uth-net';
+    net.textContent = view.settlement.net;
+    result.appendChild(net);
+    box.appendChild(result);
+  }
+
+  // One token per graded decision: the result is revealed once, after a beat,
+  // and not again on an unrelated re-render.
+  const token = `${view.hands}:${feedback.phase}:${feedback.chosen}`;
+  const reduced =
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reveal = () => {
+    for (const node of document.querySelectorAll('.uth-late')) node.hidden = false;
+  };
+  if (uthState.cardToken === token || reduced) reveal();
+  else {
+    uthState.cardToken = token;
+    setTimeout(reveal, 450);
   }
 }
 
-function pill(id, text, fold) {
-  const node = el(id);
-  node.textContent = text;
-  node.className = 'verdict-pill' + (fold ? ' fold' : '');
-}
+function uthRenderActions(waiting) {
+  const box = el('uth-actions');
+  const view = uthState.view;
+  box.replaceChildren();
+  if (!view) return;
 
-async function deal() {
-  const button = el('redeal');
-  button.disabled = true;
-  button.textContent = T('uth.solving');
+  const add = (label, key, handler, primary) => {
+    const button = document.createElement('button');
+    button.className = 'action' + (primary ? ' primary' : '');
+    button.type = 'button';
+    button.disabled = uthState.busy;
+    const text = document.createElement('span');
+    text.textContent = label;
+    const hint = document.createElement('span');
+    hint.className = 'key';
+    hint.textContent = key;
+    button.append(text, hint);
+    button.addEventListener('click', handler);
+    box.appendChild(button);
+  };
 
-  const data = await (await fetch('/api/uth/preview')).json();
-
-  el('hole').replaceChildren(...data.hole.map(cardNode));
-  el('flop').replaceChildren(...data.board.slice(0, 3).map(cardNode));
-  el('river').replaceChildren(...data.board.slice(3).map(cardNode));
-  el('hole-class').textContent = data.holeClass;
-
-  if (data.preflop) {
-    const raise = data.preflop.optimalAction === 'raise4x';
-    pill('pf-verdict', T(raise ? 'uth.raise4' : 'uth.check'), !raise);
-    bars(el('pf-bars'), [
-      { label: T('uth.raise4'), ev: data.preflop.ev4x },
-      { label: T('uth.raise3'), ev: data.preflop.ev3x },
-      { label: T('uth.check'), ev: data.preflop.evCheck },
-    ]);
-    // §5.2.3: any hand strong enough to raise is strong enough to raise the max.
-    el('pf-note').textContent =
-      data.preflop.ev3x < Math.max(data.preflop.ev4x, data.preflop.evCheck)
-        ? T('uth.threeXNever')
-        : '';
-  } else {
-    pill('pf-verdict', `${data.holeClass} not solved yet`, true);
-    el('pf-bars').replaceChildren();
-    el('pf-note').textContent =
-      T('uth.stillComputing');
+  if (waiting) {
+    const note = document.createElement('p');
+    note.className = 'uth-waiting';
+    note.textContent = waiting;
+    box.appendChild(note);
+    return;
   }
 
-  const flopRaise = data.flop.optimalAction === 'play';
-  pill('fl-verdict', T(flopRaise ? 'uth.raise2' : 'uth.check'), !flopRaise);
-  bars(el('fl-bars'), [
-    { label: T('uth.raise2'), ev: data.flop.evPlay },
-    { label: T('uth.check'), ev: data.flop.evCheck },
-  ]);
-  el('fl-count').textContent = `${data.flop.outcomes.toLocaleString()} outcomes, exact`;
-
-  const riverRaise = data.river.optimalAction === 'play';
-  pill('rv-verdict', T(riverRaise ? 'uth.raise1' : 'uth.fold'), !riverRaise);
-  bars(el('rv-bars'), [
-    { label: T('uth.raise1'), ev: data.river.evPlay },
-    { label: 'Fold', ev: data.river.evFold },
-  ]);
-  el('rv-count').textContent = `beats ${data.river.wins} of 990 dealer hands`;
-
-  el('trips').textContent = data.trips.verdict;
-  el('trips-hit').textContent = `hits ${(data.trips.winProbability * 100).toFixed(1)}% of hands`;
-  el('table-count').textContent = `${data.solvedClasses} of ${data.totalClasses} solved`;
-  el('table-bar').style.width = `${(data.solvedClasses / data.totalClasses) * 100}%`;
-
-  button.disabled = false;
-  button.textContent = T('uth.dealAnother');
+  if (view.legalActions.length > 0) {
+    // All decision buttons look the same. Colouring the first one — raise, as
+    // it happens — would be the page quietly suggesting an answer to a decision
+    // it is about to grade.
+    for (const entry of view.legalActions) {
+      add(entry.label, entry.key, () => uthSend('/api/uth/act', { action: entry.action }), false);
+    }
+    return;
+  }
+  add(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true);
 }
 
-el('redeal').addEventListener('click', deal);
-deal();
+// --- Keyboard ---------------------------------------------------------------
+
+/*
+ * Physical keys, not characters: a Hebrew layout turns C into ב and F into כ,
+ * and a shortcut that only works in English is not a shortcut for the person
+ * this app is mostly played by.
+ *
+ * Space and Enter do nothing here at all. Every action on this table places or
+ * resolves a bet — dealing posts the Ante and the Blind — and round 2 found a
+ * "carry on" key resolving a bet the player never chose. N deals; a held key
+ * never repeats.
+ */
+document.addEventListener('keydown', (event) => {
+  if (document.querySelector('dialog[open]')) return;
+  if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+  const view = uthState.view;
+  if (!view || uthState.busy) return;
+  if (event.code === 'Space' || event.code === 'Enter' || event.code === 'NumpadEnter') {
+    event.preventDefault();
+    return;
+  }
+  const entry = view.legalActions.find((candidate) => candidate.code === event.code);
+  if (entry) {
+    event.preventDefault();
+    uthSend('/api/uth/act', { action: entry.action });
+    return;
+  }
+  if (view.legalActions.length === 0 && event.code === 'KeyN') {
+    event.preventDefault();
+    uthSend('/api/uth/deal');
+  }
+});
+
+Promise.resolve(window.EV && window.EV.ready).then(() => uthSend('/api/uth/state'));

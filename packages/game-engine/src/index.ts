@@ -14,4 +14,5 @@
 export * from './rng.ts';
 export * from './shoe.ts';
 export * from './table.ts';
+export * from './uth-table.ts';
 export * from './types.ts';

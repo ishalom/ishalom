@@ -36,6 +36,7 @@ const EV_ENGINE = join(ROOT, 'packages', 'ev-engine', 'src');
 /** Bare specifiers that resolve inside the bundle rather than to a package. */
 const WORKSPACE: Record<string, string> = {
   '@evtrainer/ev-engine': join(EV_ENGINE, 'blackjack-browser.ts'),
+  '@evtrainer/ev-engine/uth': join(EV_ENGINE, 'uth-entry.ts'),
   '@evtrainer/game-engine': join(ROOT, 'packages', 'game-engine', 'src', 'index.ts'),
 };
 

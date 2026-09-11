@@ -1664,3 +1664,60 @@ body { font-family: var(--body); }
   max-width: 40ch;
 }
 .switch-player { display: block; margin: 18px auto 0; }
+
+/* ===========================================================================
+ * Ultimate Texas Hold'em (round 4a).
+ *
+ * The Blackjack table's pieces, reused: the same cards, the same dock, the same
+ * feedback card and severity colours. What is new is only what the game has
+ * and Blackjack does not — a board of five, and three separate stakes.
+ * ======================================================================== */
+
+.uth-felt .seat { padding: 10px 16px; }
+.uth-board .cards { gap: 7px; }
+.uth-board .card { width: 62px; height: 88px; }
+.uth-board .card-rank { font-size: 26px; }
+.uth-board .card-suit { font-size: 20px; }
+
+/* Ante, Blind, Play, then the stack, in one row under the hand. */
+.uth-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.uth-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.uth-spot.bank { border-color: rgba(201, 162, 39, 0.35); }
+.uth-spot .rail-value { font-size: 20px; font-weight: 650; }
+.uth-spot .rail-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.uth-spot .rail-delta { font-size: 12px; }
+
+/* Honest about where the money lives: nowhere, yet. */
+.uth-memory { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+.uth-keys { margin: 8px 14px 14px; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+/* The result: under the grade, smaller and quieter than it (§3.1). */
+.uth-result { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
+.uth-result p { margin: 0 0 2px; font-size: 13px; color: var(--muted); }
+.uth-result .uth-net { margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.uth-waiting { margin: 0; padding: 14px 0; width: 100%; text-align: center; color: var(--muted); }
+/*
+ * The key hint sits in the button with a gap, not a margin. In Hebrew the label
+ * ("Check") and the hint ("C") are both left-to-right runs inside a
+ * right-to-left button, so the browser lays them out as one run and a margin on
+ * the hint's inline-start side ends up facing away from the label. A flex gap
+ * spaces children whichever way the text runs.
+ */
+.uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.uth .actions .action .key { opacity: 0.55; font-size: 12px; }

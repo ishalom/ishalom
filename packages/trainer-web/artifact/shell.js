@@ -378,6 +378,13 @@ let session = new TrainerSession(
 );
 let lastSavedHandId = -1;
 
+/*
+ * Ultimate Texas Hold'em. Its own session, held in memory for the life of the
+ * tab (round 4a): it is never saved, never published, and never restored, so it
+ * cannot reach the Blackjack record in either direction.
+ */
+const uthSession = new UthSession();
+
 /**
  * The server's routes, answered in the page.
  *
@@ -417,6 +424,15 @@ async function api(path, body) {
       saveProgressLocally();
       return session.view;
     }
+
+    case '/api/uth/state':
+      return uthSession.view;
+    case '/api/uth/deal':
+      return uthSession.deal();
+    case '/api/uth/act':
+      return uthSession.act(b.action);
+    case '/api/uth/prepare':
+      return uthSession.prepare();
 
     case '/api/deal':
       session.deal();
