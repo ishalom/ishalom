@@ -55,15 +55,31 @@ body {
 }
 .rules-main { display: flex; flex-direction: column; min-width: 0; }
 .rules-name { font-weight: 600; font-size: 14px; }
+.rules-sub { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .rules-badge { color: var(--muted); font-size: 12px; }
+.rules-change { font-size: 11px; flex: none; }
 
-/* --- Session stats (§9.2: accuracy first, units last and quiet) --- */
+/* --- Session stats (§9.2: accuracy first, units last and quiet) ---
+ *
+ * Pinned under the rules bar, for the same reason the dock is pinned to the
+ * bottom: these four figures are what the session is *for*, and a player who
+ * has scrolled down to read a hand log should not have to scroll back to see
+ * what it did to their accuracy.
+ *
+ * `--rules-h` is measured rather than guessed. The bar above is two lines of
+ * text whose height depends on the language and the font, so a hardcoded offset
+ * would leave a gap in one locale and overlap in another. `pinStrip()` in
+ * app.js sets it and keeps it current.
+ */
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
   background: var(--line);
   border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: var(--rules-h, 52px);
+  z-index: 4; /* under the rules bar, over the felt */
 }
 .stat {
   background: var(--panel);
@@ -74,6 +90,22 @@ body {
 .stat-value { display: block; font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .stat-label { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .stat-quiet .stat-value { color: var(--muted); font-weight: 500; }
+
+/*
+ * Short screens: the strip gives way first.
+ *
+ * Pinned strip at the top plus pinned dock at the bottom leaves the felt what
+ * is left, and on a 768px-high laptop that is not much. Idan's decision: the
+ * strip shrinks to one compact line of figures before the cards shrink, with
+ * the labels behind the "?" — which is where the full explanation already
+ * lives, so nothing is lost that was not one tap away before.
+ */
+@media (max-height: 800px) {
+  .stat { padding: 5px 6px; }
+  .stat-value { font-size: 15px; }
+  .stat-label { display: none; }
+  .stat-more { opacity: 0.7; }
+}
 
 /* --- Table --- */
 .table {
@@ -437,6 +469,33 @@ td.R { background: #4a3d21; }
 .log-net.loss { color: var(--blunder); }
 .log-steps { padding: 2px 13px 12px 26px; }
 .log-steps p { margin: 0 0 5px; font-size: 12.5px; color: var(--muted); }
+
+/* One block per decision, so three decisions read as three, not as one that
+   changed its mind. The separator is what makes them visibly separate. */
+.log-decision { padding: 8px 0; }
+.log-decision + .log-decision { border-top: 1px solid var(--line); }
+.log-decision-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--negligible); flex: none; }
+.log-dot.optimal { background: var(--optimal); }
+.log-dot.negligible { background: var(--negligible); }
+.log-dot.minor { background: var(--minor); }
+.log-dot.significant { background: var(--significant); }
+.log-dot.blunder { background: var(--blunder); }
+.log-step-title {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.75;
+}
 
 /* ===========================================================================
  * Casino dressing, ported from the approved mockup.

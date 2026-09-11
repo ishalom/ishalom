@@ -17,7 +17,17 @@
       <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
       <div class="rules-main">
         <span class="rules-name" id="rules-name">—</span>
-        <span class="rules-badge" id="rules-badge"></span>
+        <!--
+          The badge states the rules; it is not a control (§10.1). The link
+          beside it is, so the surrender switch is one tap from the statement it
+          contradicts rather than behind a button labelled "Rules" that reads as
+          reference material.
+        -->
+        <div class="rules-sub">
+          <span class="rules-badge" id="rules-badge"></span>
+          <button class="link rules-change" id="change-rules" type="button"
+                  data-i18n="ui.change">change</button>
+        </div>
       </div>
       <button class="link" id="open-settings" data-i18n-attr="aria-label:ui.changeRuleSet" data-i18n="ui.rules">Rules</button>
     </header>

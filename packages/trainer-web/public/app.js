@@ -947,13 +947,27 @@ function tableTalk(view) {
   }
   // Two cards to twenty-one, and no split to have made them: a natural. Checked
   // after the dealer's, because when both have one it is a push, not a payout.
-  if (playerNatural) return T('dealer.blackjack');
+  // The payout is a rule, not a constant: 6:5 tables exist and the app offers
+  // one, and a dealer who promises 3:2 on a 6:5 table is lying about money.
+  if (playerNatural) {
+    const short = view.ruleSet && view.ruleSet.blackjackPayout === '6:5';
+    return T('dealer.blackjack', { pays: T(short ? 'dealer.pays65' : 'dealer.pays32') });
+  }
   if (hands.length > 0 && hands.every((hand) => hand.total > 21)) return T('dealer.youBust');
-  if (dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
+  /*
+   * "And I break. Yours." — but only on a single hand.
+   *
+   * Across a split it can be false: one hand busts, the other lives, the dealer
+   * breaks, and the player is level rather than paid. With one hand it cannot
+   * be: the bust case was ruled out above, so a broken dealer always pays.
+   */
+  if (only && dealer.total !== null && dealer.total > 21) return T('dealer.iBust');
 
   const net = view.netUnits;
   if (net === 0) return T('dealer.push');
-  if (dealer.total === null) return T('dealer.dealerHas', { dealer: '?' });
+  // Unreachable: settle() reveals the dealer before the phase becomes settled.
+  // Kept as a guard, because the lines below name a total and this one cannot.
+  if (dealer.total === null) return T(net > 0 ? 'dealer.youWinPlain' : 'dealer.iWinPlain');
   if (net > 0) {
     return only
       ? T('dealer.youWin', { player: only.total, dealer: dealer.total })
@@ -1215,7 +1229,32 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+/**
+ * Keep the pinned strip sitting exactly under the pinned rules bar.
+ *
+ * The offset cannot be a constant: the rules bar holds two lines of text whose
+ * height moves with the language, the font and the length of the rule-set name.
+ * Measuring it is three lines and is right in every locale.
+ *
+ * `ResizeObserver` where it exists, because the bar also changes height when the
+ * rule set changes rather than only when the window does.
+ */
+function pinStrip() {
+  const bar = el('rules-bar');
+  const shell = bar && bar.parentElement;
+  if (!bar || !shell) return;
+  const measure = () => {
+    shell.style.setProperty('--rules-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+  };
+  measure();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(bar);
+  else window.addEventListener('resize', measure);
+}
+
+pinStrip();
+
 el('open-settings').addEventListener('click', openSettings);
+el('change-rules').addEventListener('click', openSettings);
 el('open-reference').addEventListener('click', openReference);
 el('open-howto').addEventListener('click', openHowTo);
 

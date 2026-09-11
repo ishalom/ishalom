@@ -125,6 +125,90 @@ function noDecisionReason(hand) {
   return 'log.noDecisions';
 }
 
+/**
+ * The one-line summary of a whole hand.
+ *
+ * It used to be the headline of the hand's *worst* decision — "5,5 vs 8 →
+ * Double" — sitting above three decisions, belonging to one of them and
+ * describing none of the others. Idan read it as the app changing its mind:
+ * "how come one time one thing was right and then another?" A hand with one
+ * decision can still be summarised by that decision; a hand with several has to
+ * be summarised as a hand.
+ */
+function handSummary(hand) {
+  const decisions = hand.decisions;
+  if (decisions.length === 0) return T(noDecisionReason(hand));
+  if (decisions.length === 1) {
+    const only = decisions[0];
+    return T(only.correct ? 'log.right' : 'log.played', {
+      headline: only.headline,
+      chosen: only.chosen.toLowerCase(),
+    });
+  }
+  const off = decisions.filter((d) => !d.correct).length;
+  return off === 0
+    ? T('log.allRight', { n: decisions.length })
+    : T('log.someOff', { n: decisions.length, bad: off });
+}
+
+const STEP_TITLES = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
+
+/**
+ * The expanded hand: one block per decision, each under its own header.
+ *
+ * Three decisions used to expand into nine unlabelled paragraphs, the first of
+ * which — the dealer read — was identical three times over, because the dealer's
+ * upcard does not change inside a hand. In the live reveal repeating it is
+ * right: each decision is walked on its own. In the log it is noise, and it
+ * pushed the part that differs off the bottom of the block.
+ *
+ * So the dealer read is lifted out and shown once, and repeated only if it
+ * genuinely changes — which it does when an insurance decision and a hand
+ * decision sit in the same hand, since those two do not read the same dealer.
+ */
+function decisionBlocks(hand) {
+  const box = document.createElement('div');
+  box.className = 'log-steps';
+  box.hidden = true;
+
+  const titles = STEP_TITLES();
+  let dealerShown = null;
+
+  for (const decision of hand.decisions) {
+    const block = document.createElement('div');
+    block.className = 'log-decision';
+
+    const head = document.createElement('div');
+    head.className = 'log-decision-head';
+    const tier = document.createElement('span');
+    tier.className = `log-dot ${decision.severity}`;
+    const text = document.createElement('span');
+    text.textContent = T(decision.correct ? 'log.right' : 'log.played', {
+      headline: decision.headline,
+      chosen: decision.chosen.toLowerCase(),
+    });
+    head.append(tier, text);
+    block.appendChild(head);
+
+    decision.steps.forEach((line, i) => {
+      // Step one is the dealer read. Once per hand, unless it changed.
+      if (i === 0) {
+        if (line === dealerShown) return;
+        dealerShown = line;
+      }
+      const step = document.createElement('p');
+      const title = document.createElement('span');
+      title.className = 'log-step-title';
+      title.textContent = titles[i] ?? '';
+      step.append(title, document.createTextNode(line));
+      block.appendChild(step);
+    });
+
+    box.appendChild(block);
+  }
+  return box;
+}
+
 function renderHands(view) {
   const box = el('hands');
   box.replaceChildren();
@@ -145,12 +229,7 @@ function renderHands(view) {
     );
     const cards = hand.playerHands.map((h) => h.map((c) => c.rank + c.suit).join(' ')).join('  |  ');
     const dealer = hand.dealerCards.map((c) => c.rank + c.suit).join(' ');
-    const detail = worst
-      ? T(worst.correct ? 'log.right' : 'log.played', {
-          headline: worst.headline,
-          chosen: worst.chosen.toLowerCase(),
-        })
-      : T(noDecisionReason(hand));
+    const detail = handSummary(hand);
 
     const row = document.createElement('div');
     row.className = 'log-row';
@@ -162,16 +241,7 @@ function renderHands(view) {
         hand.netUnits > 0 ? '+' : ''
       }${hand.netUnits}</div>`;
 
-    const steps = document.createElement('div');
-    steps.className = 'log-steps';
-    steps.hidden = true;
-    for (const decision of hand.decisions) {
-      for (const line of decision.steps) {
-        const p = document.createElement('p');
-        p.textContent = line;
-        steps.appendChild(p);
-      }
-    }
+    const steps = decisionBlocks(hand);
     row.addEventListener('click', () => {
       steps.hidden = !steps.hidden;
     });

@@ -41,6 +41,41 @@ function bodyOf(html: string): string {
   return match[1]!.replace(/<script[\s\S]*?<\/script>/g, '').trim();
 }
 
+/**
+ * The doors, rewritten for a single page.
+ *
+ * The local app is three pages and the browser walks between them, so its links
+ * are root-relative: `/home.html`, `/table.html`, `/ultimate.html`. The built
+ * page is one document served from `/ishalom/`, and `ui.js` intercepts a plain
+ * click — so an ordinary click worked and everything else did not. Middle-click,
+ * ctrl-click, "open in new tab", a long press on a phone, and "copy link" all
+ * use the href itself, which went to the site root and 404'd. Idan found it by
+ * sharing a link.
+ *
+ * A hash cannot leave the page, and it carries the screen with it, so a copied
+ * link opens where the person who copied it was standing.
+ */
+const DOORS: ReadonlyArray<[RegExp, string]> = [
+  [/href="\/home\.html"/g, 'href="#home"'],
+  [/href="\/table\.html"/g, 'href="#table"'],
+  [/href="\/ultimate\.html"/g, 'href="#ultimate"'],
+];
+
+function localLinks(html: string, where: string): string {
+  let out = html;
+  for (const [pattern, replacement] of DOORS) out = out.replace(pattern, replacement);
+  // Anything still absolute is a link off the site, and the next one added
+  // should fail the build rather than the share.
+  const stray = /href="\/[^"]*"/.exec(out);
+  if (stray) {
+    throw new Error(
+      `${where}: ${stray[0]} points at the host root, which is not where this page lives. ` +
+        'Give it an in-page target, or add it to DOORS.',
+    );
+  }
+  return out;
+}
+
 /** Strip a page script's own `api()`, and wrap what is left in a named function. */
 function screenScript(source: string, name: string): string {
   const API = /\nasync function api\(path, body\) \{[\s\S]*?\n\}\n/;
@@ -57,8 +92,8 @@ function jsString(value: string): string {
 
 const engine = bundle([join(PKG, 'src', 'session.ts')]);
 const styles = read(PUBLIC, 'styles.css') + read(ARTIFACT, 'extra.css');
-const homeHtml = bodyOf(read(PUBLIC, 'home.html'));
-const tableHtml = bodyOf(read(PUBLIC, 'table.html'));
+const homeHtml = localLinks(bodyOf(read(PUBLIC, 'home.html')), 'home.html');
+const tableHtml = localLinks(bodyOf(read(PUBLIC, 'table.html')), 'table.html');
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
 const identity = read(ARTIFACT, 'identity.js');

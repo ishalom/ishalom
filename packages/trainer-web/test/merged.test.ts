@@ -234,6 +234,9 @@ function loadPage(stored: Record<string, string>): Record<string, any> {
       insertBefore(c: any) { node.children.unshift(c); return c; },
       addEventListener(t: string, fn: Function) { (node.listeners[t] ??= []).push(fn); },
       fire(t: string, e: any = { preventDefault() {} }) { for (const fn of node.listeners[t] ?? []) fn(e); },
+      getBoundingClientRect: () => ({
+        height: 52, width: 320, top: 0, left: 0, right: 320, bottom: 52,
+      }),
       focus() {}, remove() {}, showModal() {}, close() {},
       querySelector(s: string) { if (!queries.has(s)) queries.set(s, el()); return queries.get(s); },
       querySelectorAll: () => [],
@@ -260,8 +263,29 @@ function loadPage(stored: Record<string, string>): Record<string, any> {
     getItem: (k: string) => disk.get(k) ?? null,
     setItem: (k: string, v: string) => disk.set(k, String(v)),
   };
+  /*
+   * The page routes screens through the hash and listens for `hashchange`, so a
+   * stub window has to carry both. Assigning the hash here notifies the
+   * listeners, the way a browser does — which is what lets a test open the page
+   * on a shared link rather than only assert that the code exists.
+   */
+  const windowListeners: Record<string, Function[]> = {};
+  g.addEventListener = (type: string, fn: Function) => {
+    (windowListeners[type] ??= []).push(fn);
+  };
   g.window = globalThis;
-  g.location = { reload() {} };
+  let hash = '';
+  g.location = {
+    reload() {},
+    get hash() {
+      return hash;
+    },
+    set hash(value: string) {
+      if (hash === value) return;
+      hash = value;
+      for (const fn of windowListeners.hashchange ?? []) fn({});
+    },
+  };
   g.alert = () => {};
 
   const out: Record<string, any> = {};

@@ -24,6 +24,7 @@ import {
   suitOf,
   severityForCost,
   type BlackjackAction,
+  type BlackjackPayout,
   type BlackjackRules,
   type SeverityTier,
 } from '@evtrainer/ev-engine';
@@ -390,6 +391,7 @@ export class TrainerSession {
     badge: string;
     note: string | null;
     edgePercent: number;
+    blackjackPayout: BlackjackPayout;
     restrictions: Restrictions;
   } {
     const preset = RULE_PRESETS.find((p) => p.id === this.presetId)!;
@@ -411,6 +413,8 @@ export class TrainerSession {
       badge,
       note: preset.note ?? null,
       edgePercent: this.baseEdgePercent,
+      // What a natural actually pays, for the one line on screen that quotes it.
+      blackjackPayout: rules.blackjackPayout,
       restrictions: this.restrictions,
     };
   }

@@ -24,7 +24,7 @@ import { catalogue, t, type Locale } from '../src/i18n.ts';
 const SPEECH = new Set([
   'dealer.youBust', 'dealer.iBust', 'dealer.blackjack', 'dealer.push',
   'dealer.surrendered', 'dealer.youWin', 'dealer.iWin', 'dealer.youWinPlain',
-  'dealer.iWinPlain', 'dealer.dealerHas', 'dealer.dealerNatural', 'dealer.bothNaturals',
+  'dealer.iWinPlain', 'dealer.dealerNatural', 'dealer.bothNaturals',
 ]);
 
 const HERE = dirname(fileURLToPath(import.meta.url));

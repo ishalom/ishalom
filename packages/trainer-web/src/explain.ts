@@ -178,7 +178,11 @@ export function standOutcome(
 function upcardPhrase(upcard: BjRank, locale: Locale): string {
   if (upcard === 0) return t(locale, 'upcard.ace');
   if (upcard === 9) return t(locale, 'upcard.ten');
-  return t(locale, 'upcard.number', { rank: upcardLabel(upcard) });
+  const rank = upcardLabel(upcard);
+  // "An 8", not "A 8". English has exactly one of these among 2 through 9, and
+  // the article belongs to the language rather than to this function, so it
+  // stays in the catalogue.
+  return t(locale, rank === '8' ? 'upcard.numberAn' : 'upcard.number', { rank });
 }
 
 function sentenceCase(text: string): string {
@@ -324,6 +328,9 @@ function pairName(rank: BjRank): string {
  * The break-even point is a property of the 2:1 payout, not of the shoe: the bet
  * returns `2p - (1 - p)`, which is zero at exactly one in three.
  */
+/** Insurance stakes half the original wager, which is where its EV is quoted from. */
+const INSURANCE_STAKE = 0.5;
+
 export function insuranceOdds(rules: BlackjackRules): { tens: number; breakEven: number } {
   const shoe = Shoe.fresh(rules.decks);
   shoe.remove(ACE); // the ace the player can see
@@ -435,7 +442,25 @@ function supportingStat(
   rules: BlackjackRules,
   locale: Locale,
 ): string {
-  if (!runnerUp || scenario.upcard === undefined) return '';
+  if (!runnerUp) return '';
+
+  /*
+   * Insurance, stated on the money that is actually at risk.
+   *
+   * The gap above is in units of the main wager, and insurance stakes only half
+   * of one — so a bet that loses about seven cents in every chip put on it comes
+   * out as 0.037 and is described as "narrow". That word is true of the number
+   * and wrong about the bet: this is a rule with no exceptions, not a close
+   * call. Rather than carve a special case into the gap logic, which would then
+   * describe one cell differently from the other 310, the sentence underneath
+   * says what the same figure is as a share of the insurance stake.
+   */
+  if (scenario.kind === 'insurance') {
+    const take = Math.min(best.ev, runnerUp.ev);
+    return t(locale, 'stat.insurance', { pct: percent(Math.abs(take) / INSURANCE_STAKE) });
+  }
+
+  if (scenario.upcard === undefined) return '';
   const pair = new Set([best.action, runnerUp.action]);
   const odds = dealerOdds(scenario.upcard, rules);
   const up = upcardPhrase(scenario.upcard, locale);

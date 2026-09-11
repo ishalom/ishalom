@@ -84,6 +84,7 @@ const EN: Catalogue = {
   'upcard.ace': 'an ace',
   'upcard.ten': 'a ten',
   'upcard.number': 'a {rank}',
+  'upcard.numberAn': 'an {rank}',
 
   // --- Step 1: read the dealer ---
   'dealer.bust': '{up}{worst} — a **bust card**. Breaks {bust} of the time.',
@@ -120,6 +121,8 @@ const EN: Catalogue = {
   'stat.standBadPat': 'Standing still loses {lose} of the time — **bad, just less bad** than the rest.',
   'stat.standBreaks': 'Standing only wins when the dealer breaks, and the dealer breaks {bust} of the time.',
   'stat.hitVsSurrender': 'Drawing breaks it {bust} of the time on the very next card.',
+  'stat.insurance':
+    'That gap looks small only because it is measured against your main bet, and insurance stakes half of one. Of the money you actually put up, it gives away **{pct}** — every single time.',
   'stat.double': 'Same card as hitting, **twice the stake**, no second draw — and one card is usually enough here.',
   'stat.doubleTooThin':
     'Doubling buys **one card and no more**. Here that card leaves you under seventeen {stiff} of the time — stuck standing on a hand you would still want to draw to, for twice the money.',
@@ -191,6 +194,7 @@ const EN: Catalogue = {
   'ui.blackjackResult': 'Blackjack',
   'ui.bust': 'Bust',
   'ui.rules': 'Rules',
+  'ui.change': 'change',
   'ui.askDealer': 'Ask the dealer',
 
   // --- Ultimate ---
@@ -219,6 +223,8 @@ const EN: Catalogue = {
   'log.vs': 'vs',
   'log.right': '{headline} · played it right',
   'log.played': '{headline} · you played {chosen}',
+  'log.allRight': '{n} decisions · played them all right',
+  'log.someOff': '{n} decisions · {bad} not the best play',
   'log.playerNatural': 'blackjack — nothing to decide',
   'log.dealerNatural': 'dealer blackjack — the hand ended on the deal',
   'log.bothNaturals': 'blackjack both sides — a push on the deal',
@@ -401,7 +407,9 @@ const EN: Catalogue = {
   // someone dealing cards.
   'dealer.youBust': 'Too many.',
   'dealer.iBust': 'And I break. Yours.',
-  'dealer.blackjack': 'Blackjack. Pays three to two.',
+  'dealer.blackjack': 'Blackjack. Pays {pays}.',
+  'dealer.pays32': 'three to two',
+  'dealer.pays65': 'six to five',
   'dealer.dealerNatural':
     'Ace and a ten — blackjack, so the hand is over before you play it. Nothing was skipped; there was nothing left to decide.',
   'dealer.bothNaturals': 'Blackjack here too. Push — your bet stays up.',
@@ -411,7 +419,6 @@ const EN: Catalogue = {
   'dealer.iWin': '{dealer} here. That one is mine.',
   'dealer.youWinPlain': 'Those are good. Paying you.',
   'dealer.iWinPlain': 'Mine this time.',
-  'dealer.dealerHas': 'I make {dealer}.',
 
   // --- Playing well (§3.4) ---
   //
@@ -479,6 +486,7 @@ const HE: Catalogue = {
   'upcard.ace': 'אס',
   'upcard.ten': 'עשר',
   'upcard.number': '{rank}',
+  'upcard.numberAn': '{rank}',
 
   // --- Step 1: read the dealer ---
   'dealer.bust': 'לדילר {up}{worst} — **קלף חלש**. הוא נשרף ב-{bust} מהמקרים.',
@@ -515,6 +523,8 @@ const HE: Catalogue = {
   'stat.standBadPat': 'עצירה עדיין מפסידה ב-{lose} מהמקרים — **גרוע, פשוט פחות גרוע** מהשאר.',
   'stat.standBreaks': 'עצירה מנצחת רק כשהדילר נשרף, והדילר נשרף ב-{bust} מהמקרים.',
   'stat.hitVsSurrender': 'לקיחת קלף שורפת את היד ב-{bust} מהמקרים כבר בקלף הבא.',
+  'stat.insurance':
+    'הפער נראה קטן רק כי הוא נמדד מול ההימור הראשי, והביטוח מסכן רק חצי ממנו. מהכסף שאתה באמת מניח, הוא מוותר על **{pct}** — בכל פעם מחדש.',
   'stat.double': 'אותו קלף כמו בלקיחה, **בכפול כסף**, בלי קלף שני — וכאן קלף אחד בדרך כלל מספיק.',
   'stat.doubleTooThin':
     'הכפלה קונה **קלף אחד וזהו**. כאן הקלף הזה משאיר אותך מתחת ל-17 ב-{stiff} מהמקרים — תקוע עם יד שהיית רוצה להמשיך לקחת אליה, על כפול כסף.',
@@ -586,6 +596,7 @@ const HE: Catalogue = {
   'ui.blackjackResult': 'בלאק ג׳ק',
   'ui.bust': 'נשרף',
   'ui.rules': 'חוקים',
+  'ui.change': 'שינוי',
   'ui.askDealer': 'שאל את הדילר',
 
   // --- Ultimate ---
@@ -614,6 +625,8 @@ const HE: Catalogue = {
   'log.vs': 'מול',
   'log.right': '{headline} · שיחקת נכון',
   'log.played': '{headline} · שיחקת {chosen}',
+  'log.allRight': '{n} החלטות · שיחקת את כולן נכון',
+  'log.someOff': '{n} החלטות · {bad} לא לפי המהלך הטוב ביותר',
   'log.playerNatural': 'בלאק ג׳ק — לא היה מה להחליט',
   'log.dealerNatural': 'בלאק ג׳ק לדילר — היד נגמרה כבר בחלוקה',
   'log.bothNaturals': 'בלאק ג׳ק לשני הצדדים — תיקו בחלוקה',
@@ -791,7 +804,9 @@ const HE: Catalogue = {
   // --- Table talk (§3.4) ---
   'dealer.youBust': 'נשרפת.',
   'dealer.iBust': 'ואני נשרף. שלך.',
-  'dealer.blackjack': 'בלאק ג׳ק. משלם 3 ל-2.',
+  'dealer.blackjack': 'בלאק ג׳ק. משלם {pays}.',
+  'dealer.pays32': '3 ל-2',
+  'dealer.pays65': '6 ל-5',
   'dealer.dealerNatural':
     'אס ועשר — בלאק ג׳ק, ולכן היד נגמרת לפני שמשחקת אותה. שום דבר לא דולג — פשוט לא נשאר מה להחליט.',
   'dealer.bothNaturals': 'גם לי בלאק ג׳ק. תיקו — ההימור נשאר.',
@@ -801,7 +816,6 @@ const HE: Catalogue = {
   'dealer.iWin': '{dealer} אצלי. הפעם זה שלי.',
   'dealer.youWinPlain': 'אלה טובות. משלם לך.',
   'dealer.iWinPlain': 'הפעם זה שלי.',
-  'dealer.dealerHas': 'יש לי {dealer}.',
 
   // --- Playing well (§3.4) ---
   'fb.streak': '{n} החלטות נכונות ברצף',

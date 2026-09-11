@@ -151,7 +151,35 @@ test('no step of the insurance explanation argues against the verdict', () => {
         'declineInsurance',
         'the verdict itself changed, which the steps were written against',
       );
+
+      /*
+       * "A narrow win over the next best" is true of 0.037 units and wrong about
+       * insurance, which is a rule with no exceptions. The gap logic is left
+       * alone — one cell described by different rules from the other 310 is how
+       * a chart stops being readable — and the sentence under it restates the
+       * same figure on the money actually staked.
+       */
+      assert.match(whole, /7%/, `${locale}: the card does not say what the bet costs`);
     }
+  }
+});
+
+test('the insurance stake sentence is the same number, on the right base', () => {
+  const session = tensRichSession('9s Ad 7h 2c');
+  session.deal();
+  const feedback = session.insurance(false) as {
+    steps: string[];
+    ranked: Array<{ action: string; ev: number }>;
+  };
+  const take = feedback.ranked.find((entry) => entry.action === 'takeInsurance')!;
+  // Insurance stakes half the wager, so the share of it given away is |ev| / 0.5.
+  const share = Math.round((Math.abs(take.ev) / 0.5) * 100);
+  assert.equal(share, 7, `the engine now says ${share}%`);
+  for (const locale of ['en', 'he'] as Locale[]) {
+    const shown = tensRichSession('9s Ad 7h 2c', locale);
+    shown.deal();
+    const steps = (shown.insurance(false) as { steps: string[] }).steps;
+    assert.match(steps[2]!, new RegExp(`${share}%`), `${locale}: ${steps[2]}`);
   }
 });
 

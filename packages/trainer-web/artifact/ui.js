@@ -93,8 +93,27 @@ function sweep(scope) {
 let screen = 'welcome';
 const app = () => document.getElementById('app');
 
+/*
+ * The screen lives in the hash.
+ *
+ * The doors are rewritten to `#home` and `#table` at build time, for a reason
+ * that is about sharing rather than routing: the built page is served from
+ * `/ishalom/`, and the local app's `/table.html` left the site whenever a click
+ * was not an ordinary left click. Keeping the hash in step means a copied link
+ * opens the screen it was copied from, and the browser's back button walks the
+ * screens instead of leaving the app.
+ *
+ * `#ultimate` is deliberately absent: the door is locked, so a link to it lands
+ * on the home screen rather than on nothing.
+ */
+const SCREENS = { '#home': 'home', '#table': 'table' };
+const screenFromHash = () => SCREENS[location.hash] ?? null;
+
 function mount(name) {
   screen = name;
+  // Set before the markup, and only when it differs: `hashchange` fires after
+  // this returns, sees the screen it names is already mounted, and does nothing.
+  if (location.hash !== `#${name}`) location.hash = `#${name}`;
   app().innerHTML = name === 'table' ? TABLE_HTML : HOME_HTML;
   sweep(app());
   applyLanguage();
@@ -114,12 +133,12 @@ function mount(name) {
   // change screens instead of pages.
   for (const link of app().querySelectorAll('a[href]')) {
     const target = link.getAttribute('href');
-    if (target === '/table.html' || target === '/home.html') {
+    if (SCREENS[target]) {
       link.addEventListener('click', (event) => {
         event.preventDefault();
-        mount(target === '/table.html' ? 'table' : 'home');
+        mount(SCREENS[target]);
       });
-    } else if (target === '/ultimate.html') {
+    } else if (target === '#ultimate') {
       // Ultimate is solved but not yet playable; the door says so rather than
       // opening onto nothing.
       link.classList.add('door-locked');
@@ -430,7 +449,9 @@ async function enter(name, restore = false) {
   // Fire-and-forget: joining the table is not worth waiting at the door for,
   // and the write is retried after the first hand anyway.
   void publish();
-  mount('home');
+  // A shared `#table` link opens the table once its recipient has sat down,
+  // rather than dropping them on the home screen with the link spent.
+  mount(screenFromHash() ?? 'home');
 }
 
 /**
@@ -462,7 +483,14 @@ applyLanguage();
  * test, say — can wait for it rather than calling connect again and quietly
  * opening a second subscription.
  */
+window.addEventListener('hashchange', () => {
+  const next = screenFromHash();
+  // Only once there is a player: the door has to come first, however the page
+  // was opened.
+  if (next && next !== screen && me.name) mount(next);
+});
+
 const booted = connect().then(() => {
-  if (me.name) mount('home');
+  if (me.name) mount(screenFromHash() ?? 'home');
   else askName();
 });

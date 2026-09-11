@@ -96,7 +96,11 @@ __out.openBackend = openBackend;`)(out);
 }
 
 /** Load the hosted page's scripts against a DOM stub and a real backend. */
-function loadHosted(config: unknown, stored?: Array<[string, string]>): Record<string, any> {
+function loadHosted(
+  config: unknown,
+  stored?: Array<[string, string]>,
+  startHash?: string,
+): Record<string, any> {
   const html = readFileSync(join(ROOT, 'docs', 'index.html'), 'utf8');
   // The built page carries whatever backend it was built with. The test
   // supplies its own, so the page's declaration is removed rather than
@@ -132,6 +136,9 @@ function loadHosted(config: unknown, stored?: Array<[string, string]>): Record<s
       fire(type: string, event: any = { preventDefault() {} }) {
         for (const fn of node.listeners[type] ?? []) fn(event);
       },
+      getBoundingClientRect: () => ({
+        height: 52, width: 320, top: 0, left: 0, right: 320, bottom: 52,
+      }),
       focus() {}, remove() {}, showModal() {}, close() {},
       querySelector(selector: string) {
         if (!queries.has(selector)) queries.set(selector, el());
@@ -162,8 +169,29 @@ function loadHosted(config: unknown, stored?: Array<[string, string]>): Record<s
   };
   // `crypto` is a real, getter-only global here and already has the one method
   // the page uses, so it is left alone rather than stubbed over.
+  /*
+   * The page routes screens through the hash and listens for `hashchange`, so a
+   * stub window has to carry both. Assigning the hash here notifies the
+   * listeners, the way a browser does — which is what lets a test open the page
+   * on a shared link rather than only assert that the code exists.
+   */
+  const windowListeners: Record<string, Function[]> = {};
+  g.addEventListener = (type: string, fn: Function) => {
+    (windowListeners[type] ??= []).push(fn);
+  };
   g.window = globalThis;
-  g.location = { reload() {} };
+  let hash = startHash ?? '';
+  g.location = {
+    reload() {},
+    get hash() {
+      return hash;
+    },
+    set hash(value: string) {
+      if (hash === value) return;
+      hash = value;
+      for (const fn of windowListeners.hashchange ?? []) fn({});
+    },
+  };
   g.alert = () => {};
 
   (globalThis as any).__disk = disk;
@@ -175,7 +203,8 @@ function loadHosted(config: unknown, stored?: Array<[string, string]>): Record<s
       '__out.api = api; __out.session = () => session; __out.booted = booted;' +
       '__out.openBackend = openBackend; __out.leaderboard = () => leaderboard;' +
       '__out.stopWatching = () => stopWatching && stopWatching();' +
-      '__out.screen = () => screen; __out.storage = () => __disk;',
+      '__out.screen = () => screen; __out.storage = () => __disk;' +
+      '__out.go = (h) => { location.hash = h; }; __out.mount = mount;',
   )(out, config);
   return out;
 }
