@@ -109,6 +109,10 @@ test('keys the pages build at runtime resolve for every value', () => {
     ['info.evLost.', ['title', 'body']],
     ['info.edge.', ['title', 'body']],
     ['info.units.', ['title', 'body']],
+    // The UTH strip's own tooltips, where Blackjack's would say something false
+    // (units of the bet, card counting).
+    ['info.uthEvLost.', ['title', 'body']],
+    ['info.uthEdge.', ['title', 'body']],
   ];
   for (const info of LOCALES) {
     const table = catalogue(info.code);

@@ -320,6 +320,24 @@ const EN: Catalogue = {
   'uth.raise2': 'Raise 2×',
   'uth.raise1': 'Raise 1×',
   'uth.check': 'Check',
+  'info.uthEvLost.title':
+    'EV lost per 100 hands',
+  'info.uthEvLost.body':
+    '**Lower is better. 0 is perfect** — it cannot go below 0, because nothing beats perfect play. This is what your mistakes cost over a hundred hands, in units of your **Ante**; a perfect player scores zero no matter how the cards ran. It is the only number here that is entirely yours.',
+  'info.uthEdge.title':
+    'House edge you face',
+  'info.uthEdge.body':
+    '**Lower is better.** The floor is the game’s own edge against perfect play, {rulesEdge} of the Ante, solved exactly from every starting hand. Counting cards cannot lower it: the deck is reshuffled for every hand. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes.',
+  'uth.logTitle':
+    'Hands',
+  'uth.logEmpty':
+    'Every hand you play is kept here, with each decision graded.',
+  'uth.howto.1':
+    'Deal to post **Ante 1** and **Blind 1**. Then decide: raise **4×** or check before the flop, **2×** or check on the flop, **1×** or fold on the river. One raise ends your decisions.',
+  'uth.howto.2':
+    'You are graded on the **decision**, not the result: the card shows what every choice was worth and what yours cost. The cards come after it, and quieter.',
+  'uth.howto.trips':
+    '**Trips is not offered here.** Under the default Trips paytable it costs **{edge}** of every bet placed on it.',
   'uth.board':
     'Board',
   'uth.ante':
@@ -330,8 +348,6 @@ const EN: Catalogue = {
     'Play',
   'uth.atRisk':
     'in play',
-  'uth.memoryOnly':
-    'Practice stack — it resets when you close the tab.',
   'uth.pressDeal':
     'Deal to post Ante 1 and Blind 1.',
   'uth.nextHand':
@@ -791,6 +807,24 @@ const HE: Catalogue = {
   'uth.raise2': 'העלאה ⁦2×⁩',
   'uth.raise1': 'העלאה ⁦1×⁩',
   'uth.check': 'צ׳ק',
+  'info.uthEvLost.title':
+    'EV שאבד ל-100 ידיים',
+  'info.uthEvLost.body':
+    '**כמה שיותר נמוך. 0 זה מושלם** — אי אפשר לרדת מתחת ל-0, כי אין משחק טוב יותר מהמשחק המושלם. זה מה שהטעויות שלך עולות לאורך מאה ידיים, ביחידות של **האנטה**; שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר היחיד כאן ששלך לגמרי.',
+  'info.uthEdge.title':
+    'יתרון הקזינו מולך',
+  'info.uthEdge.body':
+    '**כמה שיותר נמוך.** הרצפה היא היתרון של המשחק עצמו מול משחק מושלם, {rulesEdge} מהאנטה, מחושב במדויק מכל הידיים הפותחות. ספירת קלפים לא יכולה להוריד אותו: החפיסה נטרפת לפני כל יד. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים, ולכן כל מה שמעל {rulesEdge} הוא הטעויות שלך.',
+  'uth.logTitle':
+    'ידיים',
+  'uth.logEmpty':
+    'כל יד שתשחק נשמרת כאן, עם ציון לכל החלטה.',
+  'uth.howto.1':
+    'חלק כדי להניח **אנטה 1** ו**בליינד 1**. אחר כך מחליטים: העלאה **⁦4×⁩** או צ׳ק לפני הפלופ, **⁦2×⁩** או צ׳ק בפלופ, **⁦1×⁩** או פרישה בריבר. העלאה אחת מסיימת את ההחלטות שלך.',
+  'uth.howto.2':
+    'הציון הוא על **ההחלטה**, לא על התוצאה: הכרטיס מראה כמה שווה כל אפשרות וכמה עלתה הבחירה שלך. הקלפים מגיעים אחריו, ובשקט.',
+  'uth.howto.trips':
+    '**טריפס לא מוצע כאן.** בטבלת התשלומים ברירת המחדל שלו הוא עולה **{edge}** מכל הימור שמונח עליו.',
   'uth.board':
     'הלוח',
   'uth.ante':
@@ -801,8 +835,6 @@ const HE: Catalogue = {
     'פליי',
   'uth.atRisk':
     'במשחק',
-  'uth.memoryOnly':
-    'קופת אימון — היא מתאפסת כשסוגרים את הלשונית.',
   'uth.pressDeal':
     'חלק כדי להניח אנטה 1 ובליינד 1.',
   'uth.nextHand':

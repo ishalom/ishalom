@@ -1,23 +1,29 @@
 /**
- * An Ultimate Texas Hold'em session: the table, the practice stack, and the card
- * that grades each decision (spec §5.2, §7.1).
+ * An Ultimate Texas Hold'em session: the table, the stack, the stats, the hand
+ * log, and the card that grades each decision (spec §5.2, §7.1, §9.2).
  *
  * A sibling of `TrainerSession` rather than a mode inside it. The two games
  * share the grading vocabulary — severity tiers, EV chips, a cost in units — and
- * nothing else: not a board, not a rating, not a history. Folding them into one
- * class would put two games' worth of branches in the object that has to stay
- * readable, and would make it possible for a UTH hand to touch the Blackjack
- * rating by accident. Kept apart, it is not possible at all.
+ * the arithmetic of the stat strip, and nothing else: not a board, not a rating,
+ * not a history. Folding them into one class would put two games' worth of
+ * branches in the object that has to stay readable, and would make it possible
+ * for a UTH hand to touch the Blackjack rating by accident. Kept apart, it is
+ * not possible at all.
  *
- * Round 4a scope: in memory only. No stats panel, no saved progress, no hand
- * log. The stack is honest about that on screen.
+ * Since round 4b this session is saved. It reads and writes the `uth` part of a
+ * version 3 progress blob; the shell composes that with the Blackjack part into
+ * the one record a browser and a player's row hold.
  */
 
 import {
+  PREFLOP_TABLE,
+  TRIPS_PAYTABLES,
+  analyseTrips,
   formatCard,
   rankOf,
   suitOf,
   type Card,
+  type SeverityTier,
 } from '@evtrainer/ev-engine/uth';
 import {
   UthTable,
@@ -66,6 +72,9 @@ const ACTIONS: Record<UthAction, { label: string; key: string; code: string }> =
   fold: { label: 'uth.fold', key: 'F', code: 'KeyF' },
 };
 
+const UTH_ACTIONS = Object.keys(ACTIONS) as UthAction[];
+const TIERS: SeverityTier[] = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
+
 /**
  * Keep a figure in one piece inside right-to-left text.
  *
@@ -77,8 +86,8 @@ const ACTIONS: Record<UthAction, { label: string; key: string; code: string }> =
  * of every loss. A left-to-right isolate (U+2066 … U+2069) makes each figure an
  * island the algorithm cannot split. English needs none, and gets none.
  */
-const LRI = '\u2066';
-const PDI = '\u2069';
+const LRI = '⁦';
+const PDI = '⁩';
 const isolateFor = (locale: Locale) => (text: string): string =>
   locale === 'he' ? `${LRI}${text}${PDI}` : text;
 
@@ -91,11 +100,42 @@ const money = (value: number): string => {
   return `${value < 0 ? '−' : value > 0 ? '+' : ''}${text}`;
 };
 
+/** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
+const UTH_CLOSE_CALL = 0.01;
+
+/** How many finished hands the log and the saved record keep — Blackjack's figure. */
+const UTH_HISTORY_KEPT = 40;
+
+let perfectPlayEdge: number | null = null;
+
+/**
+ * What the game takes from a player who never makes a mistake, as a percentage
+ * of the Ante.
+ *
+ * Read off the solved pre-flop table: each class's best EV, weighted by how many
+ * of the 1,326 starting hands fall in it — a pair 6, suited 4, offsuit 12. The
+ * pre-flop EVs already assume the flop and river are then played perfectly, so
+ * this is the whole game's edge, not the first decision's. It comes to 2.185%,
+ * which is also the published figure; the stat strip's floor is this number.
+ */
+export function uthPerfectPlayEdgePercent(): number {
+  if (perfectPlayEdge !== null) return perfectPlayEdge;
+  let weight = 0;
+  let ev = 0;
+  for (const row of Object.values(PREFLOP_TABLE)) {
+    const combinations = row.label.length === 2 ? 6 : row.label.endsWith('s') ? 4 : 12;
+    weight += combinations;
+    ev += combinations * Math.max(row.ev4x, row.ev3x, row.evCheck);
+  }
+  perfectPlayEdge = (-100 * ev) / weight;
+  return perfectPlayEdge;
+}
+
 export interface UthFeedback {
   phase: 'preflop' | 'flop' | 'river';
   headline: string;
   correct: boolean;
-  severity: UthDecisionRecord['severityTier'];
+  severity: SeverityTier;
   verdict: string;
   /** Present only when the choice was not the best one. */
   youChose: string | null;
@@ -110,15 +150,99 @@ export interface UthFeedback {
   solveMs: number;
 }
 
+/** One graded decision as it is saved: data only, so it can be worded in any language later. */
+export interface UthSavedDecision {
+  phase: 'preflop' | 'flop' | 'river';
+  legalActions: UthAction[];
+  evByAction: Partial<Record<UthAction, number>>;
+  optimalAction: UthAction;
+  chosenAction: UthAction;
+  evCost: number;
+  severityTier: SeverityTier;
+  facts: {
+    flopRaiseFrequency?: number;
+    riverFoldFrequency?: number;
+    wins?: number;
+    ties?: number;
+    losses?: number;
+  };
+}
+
+export interface UthPlayedHand {
+  id: number;
+  hole: Card[];
+  dealerHole: Card[];
+  board: Card[];
+  holeClass: string;
+  settlement: UthSettlement;
+  decisions: UthSavedDecision[];
+}
+
+/** The `uth` part of a version 3 progress blob. */
+export interface UthProgressV1 {
+  version: 1;
+  /** Between hands: a hand still on the felt when this was taken is not in it. */
+  balance: number;
+  hands: number;
+  decisions: number;
+  correct: number;
+  evLost: number;
+  netUnits: number;
+  closeCalls: number;
+  closeCallsCorrect: number;
+  bySeverity: Record<SeverityTier, number>;
+  /** Only ever rises; the shell uses it to decide which saved copy is newer. */
+  lifetimeDecisions: number;
+  history: UthPlayedHand[];
+}
+
+/** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
+export interface UthStats {
+  hands: number;
+  decisions: number;
+  correct: number;
+  accuracy: number;
+  closeCallsExcluded: number;
+  accuracyIncludingCloseCalls: number;
+  evLost: number;
+  /** In units of the Ante. */
+  evLostPer100: number;
+  bySeverity: Record<SeverityTier, number>;
+  /** Percent of the Ante: the game's perfect-play edge plus what mistakes add. */
+  effectiveHouseEdgePercent: number;
+  netUnits: number;
+}
+
+const zeroSeverity = (): Record<SeverityTier, number> => ({
+  optimal: 0,
+  negligible: 0,
+  minor: 0,
+  significant: 0,
+  blunder: 0,
+});
+
 export class UthSession {
-  /** The practice stack a session opens with. Round 4a keeps it in memory only. */
+  /** The stack a new player opens with, in units of the Ante. */
   static readonly STARTING_STACK = 200;
 
   private readonly table: UthTable;
   private locale: Locale = 'en';
+
   private balance = UthSession.STARTING_STACK;
-  private lastNet: number | null = null;
   private hands = 0;
+  private decisions = 0;
+  private correct = 0;
+  private evLost = 0;
+  private netUnits = 0;
+  private closeCalls = 0;
+  private closeCallsCorrect = 0;
+  private bySeverity = zeroSeverity();
+  private lifetimeDecisions = 0;
+  private history: UthPlayedHand[] = [];
+
+  /** Decisions of the hand on the felt, saved when it settles. */
+  private pending: UthSavedDecision[] = [];
+  private lastNet: number | null = null;
 
   /** The last graded decision, kept so a language change can re-word the card. */
   private last: { record: UthDecisionRecord; evaluation: UthEvaluation; holeClass: string } | null =
@@ -142,6 +266,7 @@ export class UthSession {
     this.balance -= 2; // Ante 1 + Blind 1, onto the felt
     this.lastNet = null;
     this.last = null;
+    this.pending = [];
     return this.view;
   }
 
@@ -167,6 +292,7 @@ export class UthSession {
     const evaluation = this.table.evaluate();
     const record = this.table.act(action);
     this.last = { record, evaluation, holeClass };
+    this.count(record, evaluation);
 
     const raise = { raise4x: 4, raise3x: 3, raise2x: 2, raise1x: 1 }[action as string];
     if (raise !== undefined) this.balance -= raise;
@@ -175,12 +301,198 @@ export class UthSession {
     if (view.phase === 'settled' && view.settlement) {
       const settlement = view.settlement;
       // Everything staked comes back, plus or minus what it won.
-      const staked = 2 + settlement.playBet;
-      this.balance += staked + settlement.net;
+      this.balance += 2 + settlement.playBet + settlement.net;
       this.lastNet = settlement.net;
+      this.netUnits += settlement.net;
       this.hands++;
+      const hand = this.table.handRecord;
+      this.history.unshift({
+        id: hand.id,
+        hole: [...hand.hole],
+        dealerHole: [...hand.dealerHole],
+        board: [...hand.board],
+        holeClass: hand.holeClass,
+        settlement: { ...settlement },
+        decisions: this.pending,
+      });
+      this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
+      this.pending = [];
     }
     return this.view;
+  }
+
+  /** The same counters, and the same close-call rule, as Blackjack's `absorb`. */
+  private count(record: UthDecisionRecord, evaluation: UthEvaluation): void {
+    const evs = record.legalActions
+      .map((a) => record.evByAction[a] ?? 0)
+      .sort((a, b) => b - a);
+    const closeCall = evs.length > 1 && evs[0]! - evs[1]! < UTH_CLOSE_CALL;
+    const correct = record.evCost === 0;
+
+    this.decisions++;
+    this.lifetimeDecisions++;
+    if (correct) this.correct++;
+    this.evLost += record.evCost;
+    this.bySeverity[record.severityTier]++;
+    if (closeCall) {
+      this.closeCalls++;
+      if (correct) this.closeCallsCorrect++;
+    }
+
+    this.pending.push({
+      phase: evaluation.phase,
+      legalActions: [...record.legalActions],
+      evByAction: { ...record.evByAction },
+      optimalAction: record.optimalAction,
+      chosenAction: record.chosenAction,
+      evCost: record.evCost,
+      severityTier: record.severityTier,
+      facts: {
+        flopRaiseFrequency: evaluation.flopRaiseFrequency,
+        riverFoldFrequency: evaluation.riverFoldFrequency,
+        wins: evaluation.wins,
+        ties: evaluation.ties,
+        losses: evaluation.losses,
+      },
+    });
+  }
+
+  // --- Saving and restoring ------------------------------------------------
+
+  get stats(): UthStats {
+    // Close calls leave the denominator with their outcomes, as in Blackjack.
+    const graded = this.decisions - this.closeCalls;
+    const gradedCorrect = this.correct - this.closeCallsCorrect;
+    const evLostPer100 = this.hands === 0 ? 0 : (this.evLost / this.hands) * 100;
+    return {
+      hands: this.hands,
+      decisions: this.decisions,
+      correct: this.correct,
+      accuracy: graded === 0 ? 1 : gradedCorrect / graded,
+      closeCallsExcluded: this.closeCalls,
+      accuracyIncludingCloseCalls: this.decisions === 0 ? 1 : this.correct / this.decisions,
+      evLost: this.evLost,
+      evLostPer100,
+      bySeverity: { ...this.bySeverity },
+      effectiveHouseEdgePercent: uthPerfectPlayEdgePercent() + evLostPer100,
+      netUnits: this.netUnits,
+    };
+  }
+
+  /**
+   * The `uth` part of the saved record.
+   *
+   * Always between hands. A hand still on the felt has not happened yet as far
+   * as the record is concerned — its Ante, Blind and any Play bet go back on the
+   * balance, and its decisions are not counted — which is how Blackjack treats a
+   * hand in progress too. Closing the tab mid-hand therefore costs nothing.
+   */
+  get progress(): UthProgressV1 {
+    const view = this.table.view;
+    const inHand = view.phase !== 'idle' && view.phase !== 'settled';
+    const pendingCost = this.pending.reduce((sum, d) => sum + d.evCost, 0);
+    const pendingCorrect = this.pending.filter((d) => d.evCost === 0).length;
+    const pendingBy = zeroSeverity();
+    for (const d of this.pending) pendingBy[d.severityTier]++;
+
+    const unwound = (value: number, pending: number) => (inHand ? value - pending : value);
+    const bySeverity = zeroSeverity();
+    for (const tier of TIERS) bySeverity[tier] = unwound(this.bySeverity[tier], pendingBy[tier]);
+
+    // Close calls inside the unfinished hand come off as well.
+    let pendingClose = 0;
+    let pendingCloseCorrect = 0;
+    if (inHand) {
+      for (const d of this.pending) {
+        const evs = d.legalActions.map((a) => d.evByAction[a] ?? 0).sort((a, b) => b - a);
+        if (evs.length > 1 && evs[0]! - evs[1]! < UTH_CLOSE_CALL) {
+          pendingClose++;
+          if (d.evCost === 0) pendingCloseCorrect++;
+        }
+      }
+    }
+
+    return {
+      version: 1,
+      balance: inHand ? this.balance + view.ante + view.blind + view.playBet : this.balance,
+      hands: this.hands,
+      decisions: unwound(this.decisions, this.pending.length),
+      correct: unwound(this.correct, pendingCorrect),
+      evLost: unwound(this.evLost, pendingCost),
+      netUnits: this.netUnits,
+      closeCalls: this.closeCalls - pendingClose,
+      closeCallsCorrect: this.closeCallsCorrect - pendingCloseCorrect,
+      bySeverity,
+      lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
+      history: this.history.map((hand) => ({
+        ...hand,
+        hole: [...hand.hole],
+        dealerHole: [...hand.dealerHole],
+        board: [...hand.board],
+        settlement: { ...hand.settlement },
+        decisions: hand.decisions.map((d) => ({ ...d, legalActions: [...d.legalActions] })),
+      })),
+    };
+  }
+
+  /**
+   * Take a saved `uth` part back.
+   *
+   * Anything that is not a version 1 object — including the nothing a version 1
+   * or 2 blob holds, from before Ultimate was saved — leaves the session at zero
+   * with a full stack, which is where those players genuinely are. Every number
+   * is checked on the way in: a record passed around a family can be half-written.
+   */
+  restore(saved: unknown): void {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') {
+      throw new Error('Restore between hands, not during one');
+    }
+    this.reset();
+    const s = saved as Partial<UthProgressV1> | null | undefined;
+    if (!s || typeof s !== 'object' || s.version !== 1) return;
+
+    const n = (value: unknown, fallback = 0): number =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+    this.balance = n(s.balance, UthSession.STARTING_STACK);
+    this.hands = n(s.hands);
+    this.decisions = n(s.decisions);
+    this.correct = n(s.correct);
+    this.evLost = n(s.evLost);
+    this.netUnits = n(s.netUnits);
+    this.closeCalls = n(s.closeCalls);
+    this.closeCallsCorrect = n(s.closeCallsCorrect);
+    for (const tier of TIERS) this.bySeverity[tier] = n(s.bySeverity?.[tier]);
+    this.lifetimeDecisions = n(s.lifetimeDecisions, this.decisions);
+    this.history = (Array.isArray(s.history) ? s.history : [])
+      .filter(
+        (hand): hand is UthPlayedHand =>
+          !!hand &&
+          Array.isArray(hand.hole) &&
+          Array.isArray(hand.board) &&
+          Array.isArray(hand.decisions) &&
+          hand.decisions.every((d) => UTH_ACTIONS.includes(d.chosenAction) && TIERS.includes(d.severityTier)) &&
+          !!hand.settlement,
+      )
+      .slice(0, UTH_HISTORY_KEPT);
+  }
+
+  private reset(): void {
+    this.balance = UthSession.STARTING_STACK;
+    this.hands = 0;
+    this.decisions = 0;
+    this.correct = 0;
+    this.evLost = 0;
+    this.netUnits = 0;
+    this.closeCalls = 0;
+    this.closeCallsCorrect = 0;
+    this.bySeverity = zeroSeverity();
+    this.lifetimeDecisions = 0;
+    this.history = [];
+    this.pending = [];
+    this.last = null;
+    this.lastNet = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -189,6 +501,7 @@ export class UthSession {
     const table = this.table.view;
     const settled = table.phase === 'settled';
     const inHand = table.phase !== 'idle';
+    const iso = isolateFor(this.locale);
     return {
       game: 'uth',
       phase: table.phase,
@@ -208,9 +521,11 @@ export class UthSession {
         start: UthSession.STARTING_STACK,
         balance: this.balance,
         lastNet: this.lastNet,
-        memoryOnly: true,
       },
       hands: this.hands,
+      stats: this.stats,
+      // The floor under the effective edge, as the tooltip quotes it.
+      rulesEdge: iso(`${uthPerfectPlayEdgePercent().toFixed(2)}%`),
       legalActions: table.legalActions.map((action) => ({
         action,
         label: t(this.locale, ACTIONS[action].label),
@@ -222,6 +537,110 @@ export class UthSession {
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
       settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+      history: this.history.map((hand) => this.logEntry(hand)),
+      howTo: this.howTo(),
+    };
+  }
+
+  /**
+   * "How to play", including the one line about Trips.
+   *
+   * Trips is not offered as a bet. What it would cost is not left as a claim:
+   * `analyseTrips` works it out exactly under the default paytable, 3.50%.
+   */
+  private howTo(): string[] {
+    const trips = analyseTrips(TRIPS_PAYTABLES[0]!);
+    return [
+      t(this.locale, 'uth.howto.1'),
+      t(this.locale, 'uth.howto.2'),
+      t(this.locale, 'uth.keys'),
+      t(this.locale, 'uth.howto.trips', {
+        edge: isolateFor(this.locale)(`${trips.houseEdgePercent.toFixed(2)}%`),
+      }),
+    ];
+  }
+
+  // --- The hand log ----------------------------------------------------------
+
+  /**
+   * One finished hand, worded now in the current language.
+   *
+   * The Blackjack log's structure from round 3: a summary that describes the
+   * hand rather than one decision in it, then one block per decision under its
+   * own header, then the result, quieter than any of it.
+   */
+  private logEntry(hand: UthPlayedHand): unknown {
+    const L = this.locale;
+    // A run of cards is left-to-right notation; inside Hebrew text "7♠ 2♦"
+    // otherwise draws as "♠7 ♦2", the suit being a neutral character.
+    const cards = (list: Card[]) =>
+      isolateFor(L)(
+        list
+          .map((card) => {
+            const v = pokerCardView(card);
+            return `${v.rank}${v.suit}`;
+          })
+          .join(' '),
+      );
+
+    const decisions = hand.decisions.map((d, index) => {
+      const record: UthDecisionRecord = {
+        sequenceIndex: index,
+        handIndex: 0,
+        scenarioKey: `uth:${d.phase}`,
+        legalActions: d.legalActions,
+        evByAction: d.evByAction,
+        optimalAction: d.optimalAction,
+        chosenAction: d.chosenAction,
+        evCost: d.evCost,
+        severityTier: d.severityTier,
+        timeToDecideMs: null,
+      };
+      const evaluation: UthEvaluation = {
+        phase: d.phase,
+        evByAction: d.evByAction,
+        optimalAction: d.optimalAction,
+        ...d.facts,
+        solveMs: 0,
+      };
+      const card = this.compose({ record, evaluation, holeClass: hand.holeClass });
+      return {
+        header: t(L, card.correct ? 'log.right' : 'log.played', {
+          headline: `${card.headline} → ${this.label(d.optimalAction)}`,
+          chosen: this.label(d.chosenAction).toLowerCase(),
+        }),
+        severity: d.severityTier,
+        correct: card.correct,
+        sentence: card.sentence,
+      };
+    });
+
+    const off = decisions.filter((d) => !d.correct).length;
+    const summary =
+      decisions.length === 1
+        ? decisions[0]!.header
+        : off === 0
+          ? t(L, 'log.allRight', { n: decisions.length })
+          : t(L, 'log.someOff', { n: decisions.length, bad: off });
+    const worst = hand.decisions.reduce<SeverityTier>(
+      (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
+      'optimal',
+    );
+    const result = this.lines(hand.settlement);
+
+    return {
+      id: hand.id,
+      cards: {
+        hole: cards(hand.hole),
+        dealer: hand.settlement.folded ? null : cards(hand.dealerHole),
+        board: cards(hand.board),
+      },
+      summary,
+      severity: worst,
+      net: hand.settlement.net,
+      decisions,
+      lines: result.lines,
+      netLine: result.net,
     };
   }
 

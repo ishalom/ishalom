@@ -23,10 +23,10 @@ import { makeCard, NUM_CARDS, rankOf, suitOf } from '../src/core/cards.ts';
 import {
   allHoleClasses,
   boardIndex,
-  holeClassLabel,
   PREFLOP_BOARDS,
   type PreflopResult,
 } from '../src/uth/preflop.ts';
+import { holeClassLabel } from '../src/uth/hole-class.ts';
 import {
   PREFLOP_TABLE,
   PREFLOP_TABLE_PAYTABLE,

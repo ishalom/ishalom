@@ -782,30 +782,75 @@ const LABELS = {
   surrender: 'action.surrender',
 };
 
+/**
+ * Where each decision button sits, as rows of action names.
+ *
+ * Idan's rule, for both games and both languages: the "yes" action on the
+ * physical left, the "no" action on the physical right. Opening a hand, Hit and
+ * Stand share the top row and Double and Surrender the row below, and either of
+ * those alone takes the whole row. A pair adds Split as a row of its own. Later
+ * in the hand only Hit and Stand are left, so that is one row.
+ *
+ * Layout only: the rows are built from the legal actions the engine sends and
+ * never add, drop or change what is legal.
+ */
+function blackjackRows(legal) {
+  const has = (action) => legal.includes(action);
+  const rows = [
+    ['hit', 'stand'].filter(has),
+    ['double', 'surrender'].filter(has),
+    ['split'].filter(has),
+  ];
+  return rows.filter((row) => row.length > 0);
+}
+
 function renderActions(view) {
   const box = el('actions');
   box.replaceChildren();
+  box.classList.add('rows');
 
-  const add = (label, handler, primary) => {
-    const button = document.createElement('button');
-    button.className = 'action' + (primary ? ' primary' : '');
-    button.textContent = label;
-    button.addEventListener('click', handler);
-    box.appendChild(button);
+  /*
+   * One row, laid out left to right whatever the page direction. The row has
+   * `direction: ltr` in the stylesheet, so a Hebrew page does not mirror it; the
+   * text inside each button still reads right to left.
+   */
+  const row = (buttons) => {
+    const line = document.createElement('div');
+    line.className = 'action-row';
+    line.style.setProperty('--cols', String(buttons.length));
+    line.append(...buttons);
+    box.appendChild(line);
+  };
+  const button = (label, handler, primary, action) => {
+    const node = document.createElement('button');
+    node.className = 'action' + (primary ? ' primary' : '');
+    node.type = 'button';
+    node.textContent = label;
+    if (action) node.dataset.action = action;
+    node.addEventListener('click', handler);
+    return node;
   };
 
   if (view.phase === 'insurance') {
-    add(T('action.takeInsurance'), () => send('/api/insurance', { take: true }));
-    add(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), true);
+    // No decision button is primary: colouring one suggests the answer to a
+    // decision the page is about to grade.
+    row([
+      button(T('action.takeInsurance'), () => send('/api/insurance', { take: true }), false, 'takeInsurance'),
+      button(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), false, 'declineInsurance'),
+    ]);
     return;
   }
   if (view.phase === 'player') {
-    for (const action of view.legalActions) {
-      add(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }));
+    for (const actions of blackjackRows(view.legalActions)) {
+      row(
+        actions.map((action) =>
+          button(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }), false, action),
+        ),
+      );
     }
     return;
   }
-  add(T('ui.deal'), () => send('/api/deal'), true);
+  row([button(T('ui.deal'), () => send('/api/deal'), true, 'deal')]);
 }
 
 function renderStats(view) {
@@ -1200,11 +1245,23 @@ document.addEventListener('keydown', (event) => {
    * last of them a bet. Only deliberate presses count.
    */
   if (event.repeat) return;
-  const key = event.key.toLowerCase();
+  // Ctrl+S is the browser saving the page, not a stand.
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  /*
+   * Physical keys, not characters.
+   *
+   * These were matched on `event.key`, the character typed. On a Hebrew layout
+   * H types a Hebrew letter and so does S, so none of the shortcuts worked for a
+   * player typing in Hebrew, which is most of the people this app is played by.
+   * `event.code` names the key on the keyboard whatever the layout puts on it.
+   * The keys themselves are unchanged.
+   */
+  const code = event.code;
+  const carryOn = code === 'Space' || code === 'Enter' || code === 'NumpadEnter';
 
   // Space and Enter step the reasoning while a reveal is open, so the whole
   // thing is reachable without a mouse.
-  if ((key === ' ' || key === 'enter') && !revealComplete()) {
+  if (carryOn && !revealComplete()) {
     event.preventDefault();
     advanceReveal();
     return;
@@ -1213,17 +1270,17 @@ document.addEventListener('keydown', (event) => {
   if (view.phase === 'insurance') {
     // Y and N only. Space belongs to the reveal and to the deal, and a key that
     // means "carry on" elsewhere must never resolve a bet here.
-    if (key === ' ' || key === 'enter') event.preventDefault();
-    if (key === 'y') send('/api/insurance', { take: true });
-    if (key === 'n') send('/api/insurance', { take: false });
+    if (carryOn) event.preventDefault();
+    if (code === 'KeyY') send('/api/insurance', { take: true });
+    if (code === 'KeyN') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {
-    const action = { h: 'hit', s: 'stand', d: 'double', p: 'split', r: 'surrender' }[key];
+    const action = { KeyH: 'hit', KeyS: 'stand', KeyD: 'double', KeyP: 'split', KeyR: 'surrender' }[code];
     if (action && view.legalActions.includes(action)) send('/api/act', { action });
     return;
   }
-  if (key === ' ' || key === 'enter') {
+  if (carryOn) {
     event.preventDefault();
     send('/api/deal');
   }

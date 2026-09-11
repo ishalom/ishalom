@@ -1721,3 +1721,23 @@ body { font-family: var(--body); }
  */
 .uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .uth .actions .action .key { opacity: 0.55; font-size: 12px; }
+
+/* ===========================================================================
+ * Decision buttons in rows (round 4b).
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in Hebrew and English alike. Each row is laid out left to right with
+ * `direction: ltr`, so a right-to-left page does not mirror it; the label inside
+ * each button keeps the page's own direction, so Hebrew still reads right to
+ * left. A row takes as many equal columns as it has buttons, which is how a
+ * lone Double, a lone Surrender, Split or Raise 3x comes to fill its row.
+ * ======================================================================== */
+.actions.rows { flex-direction: column; flex-wrap: nowrap; }
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: 8px;
+  direction: ltr;
+}
+.action-row > .action { min-width: 0; }
+[dir="rtl"] .action-row > .action { direction: rtl; }

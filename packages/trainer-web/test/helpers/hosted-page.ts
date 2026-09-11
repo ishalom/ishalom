@@ -27,6 +27,15 @@ export interface HostedPage {
   go: (hash: string) => void;
   api: (path: string, body?: unknown) => Promise<any>;
   stopWatching: () => void;
+  /** The page's own sessions, for stacking a deck or reading a record. */
+  session: () => any;
+  uthSession: () => any;
+  parseCards: (text: string) => number[];
+  lifetimeOf: (progress: unknown) => number;
+  /** What this browser has in local storage. */
+  storage: () => Map<string, string>;
+  document: any;
+  press: (code: string, key: string) => void;
 }
 
 function element(): any {
@@ -88,6 +97,8 @@ function element(): any {
 export function loadHosted(
   startHash = '',
   stored: Array<[string, string]> = [['ev:playerName', 'Dana']],
+  /** A shared table to talk to, as the hosted build is configured with one. */
+  config?: { url: string; key: string },
 ): HostedPage {
   const html = readFileSync(join(ROOT, 'docs', 'index.html'), 'utf8');
   const code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)]
@@ -104,8 +115,16 @@ export function loadHosted(
     return byId.get(id);
   };
   doc.createElement = () => element();
+  doc.createTextNode = (text: string) => ({ textContent: text, nodeType: 3 });
   doc.documentElement = element();
   doc.body = element();
+  /*
+   * No dialog is open. The stub hands back a node for any selector, which made
+   * `document.querySelector('dialog[open]')` truthy — and both key handlers
+   * return early while a dialog is open, so no key ever reached a table.
+   */
+  const anyNode = doc.querySelector;
+  doc.querySelector = (selector: string) => (selector.includes('[open]') ? null : anyNode(selector));
 
   const disk = new Map<string, string>(stored);
   const g = globalThis as any;
@@ -137,10 +156,31 @@ export function loadHosted(
   const out: Record<string, any> = {};
   new Function(
     '__out',
-    `${code}\n` +
+    '__config',
+    // With no config this declares it undefined, which the page reads as "no
+    // shared table" — the same as the declaration having been left out.
+    `const BACKEND_CONFIG = __config;\n${code}\n` +
       '__out.api = api; __out.booted = booted; __out.screen = () => screen;' +
       '__out.go = (h) => { location.hash = h; };' +
+      '__out.session = () => session; __out.uthSession = () => uthSession;' +
+      '__out.parseCards = parseCards; __out.lifetimeOf = lifetimeOf;' +
       '__out.stopWatching = () => stopWatching && stopWatching();',
-  )(out);
-  return out as unknown as HostedPage;
+  )(out, config);
+  const page = out as unknown as HostedPage;
+  page.storage = () => disk;
+  page.document = doc;
+  /** Press a key the way a browser reports it: the physical key and the character. */
+  page.press = (code: string, key: string) => {
+    const event = {
+      code,
+      key,
+      repeat: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      preventDefault() {},
+    };
+    for (const fn of doc.listeners.keydown ?? []) fn(event);
+  };
+  return page;
 }

@@ -3,5 +3,6 @@ export * from './showdown.ts';
 export * from './river.ts';
 export * from './flop.ts';
 export * from './trips.ts';
+export * from './hole-class.ts';
 export * from './preflop.ts';
 export * from './preflop-table.ts';

@@ -147,8 +147,188 @@ function uthRender() {
 
   uthRenderRail(view);
   uthRenderCard(view);
+  uthRenderStats(view);
+  uthRenderLog(view);
   uthRenderActions();
 }
+
+// --- The strip, its tooltips, the hand log and How to play --------------------
+
+let uthOpenInfo = null;
+
+/**
+ * Keep the pinned strip sitting under the pinned rules bar, measured rather than
+ * guessed — the same reason and the same three lines as `pinStrip` on the
+ * Blackjack table: the bar's height moves with the language and the font.
+ */
+function uthPinStrip() {
+  const bar = el('rules-bar');
+  const shell = bar && bar.parentElement;
+  if (!bar || !shell) return;
+  const measure = () => {
+    shell.style.setProperty('--rules-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+  };
+  measure();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(bar);
+  else window.addEventListener('resize', measure);
+}
+
+/** The same four figures as the Blackjack strip, from this game's session. */
+function uthRenderStats(view) {
+  const s = view.stats;
+  if (!s) return;
+  el('uth-stat-accuracy').textContent = s.decisions === 0 ? '—' : `${(s.accuracy * 100).toFixed(1)}%`;
+  el('uth-stat-evlost').textContent = s.hands === 0 ? '—' : s.evLostPer100.toFixed(2);
+  el('uth-stat-edge').textContent = `${s.effectiveHouseEdgePercent.toFixed(2)}%`;
+  el('uth-stat-units').textContent = uthFigure(
+    `${s.netUnits > 0 ? '+' : s.netUnits < 0 ? '−' : ''}${Math.abs(s.netUnits)}`,
+  );
+  if (uthOpenInfo) uthShowInfo(uthOpenInfo);
+}
+
+function uthShowInfo(which) {
+  const box = el('uth-stat-info');
+  box.replaceChildren();
+  box.hidden = false;
+  uthOpenInfo = which;
+
+  const head = document.createElement('div');
+  head.className = 'stat-info-head';
+  head.textContent = T(`info.${which}.title`);
+  const body = document.createElement('p');
+  // The floor is this game's perfect-play edge, composed by the session from the
+  // solved table, so the tooltip cannot quote a number the engine did not give.
+  uthRich(body, T(`info.${which}.body`, { rulesEdge: uthState.view ? uthState.view.rulesEdge : '—' }));
+  box.append(head, body);
+
+  const s = uthState.view && uthState.view.stats;
+  if (which === 'accuracy' && s && s.decisions > 0) {
+    const parts = [T('fb.accuracyCount', { right: s.correct, total: s.decisions })];
+    if (s.closeCallsExcluded > 0) {
+      parts.push(
+        T(s.closeCallsExcluded === 1 ? 'fb.accuracyExcludedOne' : 'fb.accuracyExcluded', {
+          n: s.closeCallsExcluded,
+        }),
+      );
+      parts.push(T('fb.accuracyAll', { pct: (s.accuracyIncludingCloseCalls * 100).toFixed(1) }));
+    } else {
+      parts.push(T('fb.noCloseCalls'));
+    }
+    const detail = document.createElement('p');
+    detail.className = 'stat-info-detail';
+    uthRich(detail, parts.join(' '));
+    box.appendChild(detail);
+  }
+
+  for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+    button.setAttribute('aria-expanded', String(button.dataset.info === which));
+  }
+}
+
+function uthHideInfo() {
+  el('uth-stat-info').hidden = true;
+  uthOpenInfo = null;
+  for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+    button.setAttribute('aria-expanded', 'false');
+  }
+}
+
+for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+  button.addEventListener('click', () => {
+    if (uthOpenInfo === button.dataset.info) uthHideInfo();
+    else uthShowInfo(button.dataset.info);
+  });
+}
+
+/**
+ * Every finished hand, in the Blackjack log's round 3 structure.
+ *
+ * The row summarises the hand, not one decision in it. Opened, each decision
+ * has its own header and its one sentence, and the result comes last, in the
+ * quiet style the card uses for it. Everything arrives worded by the session in
+ * the current language; the page only lays it out.
+ */
+function uthRenderLog(view) {
+  const box = el('uth-hands');
+  if (!box) return;
+  box.replaceChildren();
+  const hands = view.history || [];
+  if (hands.length === 0) {
+    const note = document.createElement('p');
+    note.className = 'empty-note';
+    note.textContent = T('uth.logEmpty');
+    box.appendChild(note);
+    return;
+  }
+
+  for (const hand of hands) {
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    const tier = document.createElement('div');
+    tier.className = `log-tier ${hand.severity}`;
+    const middle = document.createElement('div');
+    const cards = document.createElement('div');
+    cards.className = 'log-hand';
+    cards.textContent = hand.cards.dealer
+      ? `${hand.cards.hole} ${T('log.vs')} ${hand.cards.dealer} · ${hand.cards.board}`
+      : `${hand.cards.hole} · ${hand.cards.board}`;
+    const detail = document.createElement('div');
+    detail.className = 'log-detail';
+    detail.textContent = hand.summary;
+    middle.append(cards, detail);
+    const net = document.createElement('div');
+    net.className = 'log-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
+    net.textContent = uthFigure(`${hand.net > 0 ? '+' : hand.net < 0 ? '−' : ''}${Math.abs(hand.net)}`);
+    row.append(tier, middle, net);
+
+    const steps = document.createElement('div');
+    steps.className = 'log-steps';
+    steps.hidden = true;
+    for (const decision of hand.decisions) {
+      const block = document.createElement('div');
+      block.className = 'log-decision';
+      const head = document.createElement('div');
+      head.className = 'log-decision-head';
+      const dot = document.createElement('span');
+      dot.className = `log-dot ${decision.severity}`;
+      const text = document.createElement('span');
+      text.textContent = decision.header;
+      head.append(dot, text);
+      const sentence = document.createElement('p');
+      uthRich(sentence, decision.sentence);
+      block.append(head, sentence);
+      steps.appendChild(block);
+    }
+    const result = document.createElement('div');
+    result.className = 'uth-result';
+    for (const line of [...hand.lines, hand.netLine]) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      result.appendChild(p);
+    }
+    steps.appendChild(result);
+
+    row.addEventListener('click', () => {
+      steps.hidden = !steps.hidden;
+    });
+    box.append(row, steps);
+  }
+}
+
+/** How to play, including the Trips line — worded, and figured, by the session. */
+function uthOpenHowTo() {
+  const list = el('uth-howto-list');
+  list.replaceChildren();
+  for (const line of (uthState.view && uthState.view.howTo) || []) {
+    const item = document.createElement('li');
+    uthRich(item, line);
+    list.appendChild(item);
+  }
+  el('uth-howto').showModal();
+}
+
+el('uth-open-howto')?.addEventListener('click', uthOpenHowTo);
+uthPinStrip();
 
 function uthRenderRail(view) {
   const rail = el('uth-rail');
@@ -273,25 +453,54 @@ function uthRenderCard(view) {
   }
 }
 
+/**
+ * Where each decision button sits, as rows of action names.
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in both languages: Raise 4× | Check before the flop, with Raise 3× as
+ * a full-width row under them; Raise 2× | Check on the flop; Raise 1× | Fold on
+ * the river. Layout only — built from the legal actions the session sends.
+ */
+function uthRows(legal) {
+  const rows = [];
+  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
+    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
+  }
+  if (legal.includes('raise3x')) rows.push(['raise3x']);
+  // Anything a future rule adds that no row names still gets a button.
+  const placed = new Set(rows.flat());
+  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  return rows;
+}
+
 function uthRenderActions(waiting) {
   const box = el('uth-actions');
   const view = uthState.view;
   box.replaceChildren();
+  box.classList.add('rows');
   if (!view) return;
 
-  const add = (label, key, handler, primary) => {
-    const button = document.createElement('button');
-    button.className = 'action' + (primary ? ' primary' : '');
-    button.type = 'button';
-    button.disabled = uthState.busy;
+  const button = (label, key, handler, primary, action) => {
+    const node = document.createElement('button');
+    node.className = 'action' + (primary ? ' primary' : '');
+    node.type = 'button';
+    node.disabled = uthState.busy;
+    if (action) node.dataset.action = action;
     const text = document.createElement('span');
     text.textContent = label;
     const hint = document.createElement('span');
     hint.className = 'key';
     hint.textContent = key;
-    button.append(text, hint);
-    button.addEventListener('click', handler);
-    box.appendChild(button);
+    node.append(text, hint);
+    node.addEventListener('click', handler);
+    return node;
+  };
+  const row = (buttons) => {
+    const line = document.createElement('div');
+    line.className = 'action-row';
+    line.style.setProperty('--cols', String(buttons.length));
+    line.append(...buttons);
+    box.appendChild(line);
   };
 
   if (waiting) {
@@ -303,15 +512,20 @@ function uthRenderActions(waiting) {
   }
 
   if (view.legalActions.length > 0) {
-    // All decision buttons look the same. Colouring the first one — raise, as
-    // it happens — would be the page quietly suggesting an answer to a decision
-    // it is about to grade.
-    for (const entry of view.legalActions) {
-      add(entry.label, entry.key, () => uthSend('/api/uth/act', { action: entry.action }), false);
+    // All decision buttons look the same. Colouring one would be the page
+    // quietly suggesting an answer to a decision it is about to grade.
+    const byAction = new Map(view.legalActions.map((entry) => [entry.action, entry]));
+    for (const actions of uthRows(view.legalActions.map((entry) => entry.action))) {
+      row(
+        actions.map((action) => {
+          const entry = byAction.get(action);
+          return button(entry.label, entry.key, () => uthSend('/api/uth/act', { action }), false, action);
+        }),
+      );
     }
     return;
   }
-  add(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true);
+  row([button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true, 'deal')]);
 }
 
 // --- Keyboard ---------------------------------------------------------------

@@ -10,11 +10,18 @@
  * Node, under the type checker and inside the bundle.
  *
  * It carries only what grading and settling a hand need. The pre-flop *solver*
- * comes along because it shares a module with the class labels; the table it
- * produced is what is actually read.
+ * is left out: the app reads the table it produced and never runs it, and it
+ * used to come along only because it shared a module with the class labels.
+ * `uth/index.ts` still exports it, for the offline script and the tests.
  */
 
 export * from './core/cards.ts';
 export { evaluate7 } from './poker/evaluator.ts';
 export { severityForCost, type SeverityTier } from './blackjack/feedback.ts';
-export * from './uth/index.ts';
+export * from './uth/rules.ts';
+export * from './uth/showdown.ts';
+export * from './uth/river.ts';
+export * from './uth/flop.ts';
+export * from './uth/trips.ts';
+export * from './uth/hole-class.ts';
+export * from './uth/preflop-table.ts';

@@ -66,8 +66,12 @@ test('the page draws no decision button as the primary one', () => {
   assert.ok(from > 0, 'uthRenderActions is gone from ultimate.js');
   const body = source.slice(from, source.indexOf('\n}\n', from));
 
-  const decisionCall = /for \(const entry of view\.legalActions\) \{\s*add\(([\s\S]*?)\);\s*\}/.exec(body);
-  assert.ok(decisionCall, 'the decision buttons are no longer drawn in one loop');
-  assert.match(decisionCall[1]!, /,\s*false\s*$/, 'a decision button is drawn as primary');
+  // Since round 4b the buttons are drawn in rows. Every decision button still
+  // passes false for primary; only the deal button may pass true.
+  const primaries = [...body.matchAll(/,\s*(true|false),\s*'?(\w+)'?\)/g)].map((m) => [m[1], m[2]]);
+  assert.ok(primaries.length >= 2, 'the button calls were not found');
+  for (const [primary, action] of primaries) {
+    if (action !== 'deal') assert.equal(primary, 'false', `${action} is drawn as primary`);
+  }
   assert.doesNotMatch(body, /index === 0/, 'the first decision button is singled out');
 });

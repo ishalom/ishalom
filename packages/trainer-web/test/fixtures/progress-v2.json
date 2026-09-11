@@ -1,0 +1,367 @@
+{
+  "version": 2,
+  "name": "Idan",
+  "hands": 30,
+  "decisions": 27,
+  "correct": 5,
+  "evLost": 20.26967869121788,
+  "netUnits": -17,
+  "closeCalls": 1,
+  "closeCallsCorrect": 0,
+  "lifetimeDecisions": 27,
+  "bySeverity": {
+    "optimal": 5,
+    "negligible": 0,
+    "minor": 0,
+    "significant": 1,
+    "blunder": 21
+  },
+  "mode": "basic",
+  "ratings": {
+    "basic": {
+      "mode": "basic",
+      "rating": 1104.4904968502944,
+      "peak": 1248.8220302280117,
+      "ratedDecisions": 25,
+      "provisional": true,
+      "sessionDelta": -95.50950314970603
+    },
+    "recall": {
+      "mode": "recall",
+      "rating": 1200,
+      "peak": 1200,
+      "ratedDecisions": 0,
+      "provisional": true,
+      "sessionDelta": 0
+    },
+    "value": {
+      "mode": "value",
+      "rating": 1200,
+      "peak": 1200,
+      "ratedDecisions": 0,
+      "provisional": true,
+      "sessionDelta": 0
+    }
+  },
+  "scenarioStats": [
+    {
+      "scenarioKey": "bj:hard12:vs3",
+      "attempts": 1,
+      "correct": 0,
+      "consecutiveCorrect": 0,
+      "evCostTotal": 0.23378712796876078,
+      "confusion": {
+        "double": 1
+      },
+      "lastAttemptAt": 0
+    },
+    {
+      "scenarioKey": "bj:hard15:vs9",
+      "attempts": 1,
+      "correct": 0,
+      "consecutiveCorrect": 0,
+      "evCostTotal": 0.47653243897084613,
+      "confusion": {
+        "double": 1
+      },
+      "lastAttemptAt": 1
+    },
+    {
+      "scenarioKey": "bj:hard8:vs5",
+      "attempts": 1,
+      "correct": 0,
+      "consecutiveCorrect": 0,
+      "evCostTotal": 0.056458933651452325,
+      "confusion": {
+        "double": 1
+      },
+      "lastAttemptAt": 2
+    },
+    {
+      "scenarioKey": "bj:hard14:vs10",
+      "attempts": 1,
+      "correct": 0,
+      "consecutiveCorrect": 0,
+      "evCostTotal": 0.4692859813647238,
+      "confusion": {
+        "double": 1
+      },
+      "lastAttemptAt": 3
+    }
+  ],
+  "history": [
+    {
+      "id": 30,
+      "dealtCards": [
+        14,
+        8,
+        38,
+        45,
+        24
+      ],
+      "playerHands": [
+        [
+          {
+            "rank": "5",
+            "suit": "♥",
+            "red": true,
+            "label": "5 of hearts"
+          },
+          {
+            "rank": "J",
+            "suit": "♥",
+            "red": true,
+            "label": "jack of hearts"
+          },
+          {
+            "rank": "8",
+            "suit": "♣",
+            "red": false,
+            "label": "8 of clubs"
+          }
+        ]
+      ],
+      "dealerCards": [
+        {
+          "rank": "4",
+          "suit": "♣",
+          "red": false,
+          "label": "4 of clubs"
+        },
+        {
+          "rank": "K",
+          "suit": "♦",
+          "red": true,
+          "label": "king of diamonds"
+        }
+      ],
+      "netUnits": -2,
+      "insuranceTaken": false,
+      "decisions": [
+        {
+          "scenarioKey": "bj:hard15:vs4",
+          "headline": "15 vs 4 → Stand",
+          "chosen": "Double",
+          "optimal": "Stand",
+          "correct": false,
+          "evCost": 0.5886781234778832,
+          "severity": "blunder",
+          "closeCall": false,
+          "spot": {
+            "mode": "basic",
+            "rating": 1445,
+            "band": "ordinary",
+            "oneIn": 180,
+            "aboveYou": false,
+            "hard": false
+          },
+          "steps": [
+            "A 4 — a **bust card**. Breaks 40% of the time.",
+            "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+            "**Stand** — **closer to the next best** than it looks. −0.208 against −0.398 to hit. Standing only wins when the dealer breaks, and the dealer breaks 40% of the time."
+          ],
+          "ranked": [
+            {
+              "action": "stand",
+              "ev": -0.20786607676917013
+            },
+            {
+              "action": "hit",
+              "ev": -0.39827210012352665
+            },
+            {
+              "action": "surrender",
+              "ev": -0.5
+            },
+            {
+              "action": "double",
+              "ev": -0.7965442002470533
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "dealtCards": [
+        24,
+        11,
+        44,
+        32,
+        23
+      ],
+      "playerHands": [
+        [
+          {
+            "rank": "8",
+            "suit": "♣",
+            "red": false,
+            "label": "8 of clubs"
+          },
+          {
+            "rank": "K",
+            "suit": "♣",
+            "red": false,
+            "label": "king of clubs"
+          },
+          {
+            "rank": "7",
+            "suit": "♠",
+            "red": false,
+            "label": "7 of spades"
+          }
+        ]
+      ],
+      "dealerCards": [
+        {
+          "rank": "4",
+          "suit": "♠",
+          "red": false,
+          "label": "4 of spades"
+        },
+        {
+          "rank": "10",
+          "suit": "♣",
+          "red": false,
+          "label": "ten of clubs"
+        }
+      ],
+      "netUnits": -2,
+      "insuranceTaken": false,
+      "decisions": [
+        {
+          "scenarioKey": "bj:hard18:vs4",
+          "headline": "18 vs 4 → Stand",
+          "chosen": "Double",
+          "optimal": "Stand",
+          "correct": false,
+          "evCost": 1.402430751330251,
+          "severity": "blunder",
+          "closeCall": false,
+          "spot": null,
+          "steps": [
+            "A 4 — a **bust card**. Breaks 40% of the time.",
+            "18 — **pat**. It wins what it wins; the rest is the dealer's business.",
+            "**Stand** — **well clear** of the next best. +0.174 against −0.500 to surrender. Standing wins 53% of the time and loses 35%. Little beats it."
+          ],
+          "ranked": [
+            {
+              "action": "stand",
+              "ev": 0.1740596833279462
+            },
+            {
+              "action": "surrender",
+              "ev": -0.5
+            },
+            {
+              "action": "hit",
+              "ev": -0.6141855340011524
+            },
+            {
+              "action": "double",
+              "ev": -1.2283710680023048
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "dealtCards": [
+        15,
+        42,
+        32,
+        18,
+        18,
+        10
+      ],
+      "playerHands": [
+        [
+          {
+            "rank": "5",
+            "suit": "♠",
+            "red": false,
+            "label": "5 of spades"
+          },
+          {
+            "rank": "10",
+            "suit": "♣",
+            "red": false,
+            "label": "ten of clubs"
+          },
+          {
+            "rank": "6",
+            "suit": "♥",
+            "red": true,
+            "label": "6 of hearts"
+          }
+        ]
+      ],
+      "dealerCards": [
+        {
+          "rank": "Q",
+          "suit": "♥",
+          "red": true,
+          "label": "queen of hearts"
+        },
+        {
+          "rank": "6",
+          "suit": "♥",
+          "red": true,
+          "label": "6 of hearts"
+        },
+        {
+          "rank": "4",
+          "suit": "♥",
+          "red": true,
+          "label": "4 of hearts"
+        }
+      ],
+      "netUnits": 2,
+      "insuranceTaken": false,
+      "decisions": [
+        {
+          "scenarioKey": "bj:hard15:vs10",
+          "headline": "15 vs 10 → Surrender",
+          "chosen": "Double",
+          "optimal": "Surrender",
+          "correct": false,
+          "evCost": 0.5065063242358028,
+          "severity": "blunder",
+          "closeCall": true,
+          "spot": {
+            "mode": "basic",
+            "rating": 1610,
+            "band": "tricky",
+            "oneIn": 46,
+            "aboveYou": false,
+            "hard": true
+          },
+          "steps": [
+            "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+            "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+            "**Surrender** — a **coin-flip** with the next best; either is defensible. −0.500 against −0.503 to hit. Drawing breaks it 54% of the time on the very next card."
+          ],
+          "ranked": [
+            {
+              "action": "surrender",
+              "ev": -0.5
+            },
+            {
+              "action": "hit",
+              "ev": -0.5031806721149723
+            },
+            {
+              "action": "stand",
+              "ev": -0.5394704896684672
+            },
+            {
+              "action": "double",
+              "ev": -1.0065063242358028
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -102,7 +102,13 @@ async function connect() {
   } else {
     // No table to join, but the local copy is still worth reading back.
     const local = readLocalProgress();
-    if (local) session.restore(local);
+    if (local) {
+      session.restore(local);
+      // The UTH part too. Without it a browser with no shared table (the
+      // published artifact, or a page built without one) reopened Ultimate at a
+      // fresh stack every time, while Blackjack came back as it was.
+      uthSession.restore(local.uth);
+    }
     myFeed = readLocalFeed();
     myHistory = session.view.history;
   }
@@ -168,7 +174,7 @@ async function writeRecord() {
       accuracy: stats.accuracy,
       evLostPer100: stats.evLostPer100,
       at: Date.now(),
-      progress: session.progress,
+      progress: fullProgress(),
       feed: myFeed,
     });
   } catch {
@@ -210,11 +216,23 @@ function playerOnly(progress) {
 
 function saveProgressLocally() {
   try {
-    store.set(PROGRESS_KEY, JSON.stringify(session.progress));
+    store.set(PROGRESS_KEY, JSON.stringify(fullProgress()));
     store.set(FEED_KEY, JSON.stringify(myFeed));
   } catch {
     // Storage full or switched off. The session in front of the player is fine.
   }
+}
+
+/**
+ * The whole saved record: the Blackjack session's version 3 blob, with the UTH
+ * session's part under `uth`.
+ *
+ * Composed here rather than inside either session, so neither class holds a
+ * reference to the other — which is what keeps a UTH hand from ever being able
+ * to reach the Blackjack rating.
+ */
+function fullProgress() {
+  return { ...session.progress, uth: uthSession.progress };
 }
 
 function readLocalProgress() {
@@ -236,7 +254,15 @@ function readLocalProgress() {
  */
 function lifetimeOf(progress) {
   if (!progress) return -1;
-  return progress.lifetimeDecisions ?? progress.decisions ?? 0;
+  /*
+   * Both games' lifetime counters, added. Each only ever rises, so the sum only
+   * ever rises. Counting Blackjack alone would let an evening of UTH on one
+   * device lose to an older copy on another, because its Blackjack count had not
+   * moved.
+   */
+  const blackjack = progress.lifetimeDecisions ?? progress.decisions ?? 0;
+  const uth = progress.uth && typeof progress.uth.lifetimeDecisions === 'number' ? progress.uth.lifetimeDecisions : 0;
+  return blackjack + uth;
 }
 
 function readLocalFeed() {
@@ -259,7 +285,11 @@ function readLocalFeed() {
  */
 async function restoreMine() {
   const local = readLocalProgress();
-  if (local) session.restore(local);
+  if (local) {
+    session.restore(local);
+    // A version 1 or 2 blob has no `uth`, and this leaves UTH at zero.
+    uthSession.restore(local.uth);
+  }
   myFeed = readLocalFeed();
 
   if (backend && me.name) {
@@ -294,6 +324,7 @@ async function restoreMine() {
         const there = lifetimeOf(remote.progress);
         if (remote.progress && (!local || there > here)) {
           session.restore(remote.progress);
+          uthSession.restore(remote.progress.uth);
         }
         if (remote.feed.length > 0) myFeed = remote.feed;
         saveProgressLocally();
@@ -379,9 +410,9 @@ let session = new TrainerSession(
 let lastSavedHandId = -1;
 
 /*
- * Ultimate Texas Hold'em. Its own session, held in memory for the life of the
- * tab (round 4a): it is never saved, never published, and never restored, so it
- * cannot reach the Blackjack record in either direction.
+ * Ultimate Texas Hold'em. Its own session: saved under `uth` in the same record
+ * as Blackjack since round 4b, but never read by the Blackjack session, so it
+ * cannot reach the Blackjack rating, stats or history in either direction.
  */
 const uthSession = new UthSession();
 
@@ -429,8 +460,14 @@ async function api(path, body) {
       return uthSession.view;
     case '/api/uth/deal':
       return uthSession.deal();
-    case '/api/uth/act':
-      return uthSession.act(b.action);
+    case '/api/uth/act': {
+      const view = uthSession.act(b.action);
+      if (view.phase === 'settled') {
+        saveProgressLocally();
+        void publish();
+      }
+      return view;
+    }
     case '/api/uth/prepare':
       return uthSession.prepare();
 

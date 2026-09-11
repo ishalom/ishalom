@@ -169,7 +169,23 @@ export interface SessionProgressV1 {
   history: PlayedHand[];
 }
 
-export type SessionProgress = SessionProgressV2 | SessionProgressV1;
+/**
+ * Version 3: version 2, plus room for Ultimate Texas Hold'em.
+ *
+ * The Blackjack fields are exactly version 2's. `uth` belongs to `UthSession`,
+ * which reads and writes it; this class never looks inside it and never needs
+ * to, which is what keeps a UTH hand from reaching the Blackjack rating by any
+ * route. The shell composes the two into the one blob a player's row holds.
+ *
+ * No database change: `progress` is a single JSON column. A version 2 blob read
+ * here loads with no `uth`, and `UthSession` starts that part at zero.
+ */
+export interface SessionProgressV3 extends Omit<SessionProgressV2, 'version'> {
+  version: 3;
+  uth?: unknown;
+}
+
+export type SessionProgress = SessionProgressV3 | SessionProgressV2 | SessionProgressV1;
 
 export interface ScenarioStat {
   scenarioKey: string;
@@ -946,9 +962,9 @@ export class TrainerSession {
    * boundary where resuming is unambiguous — half a split restored into a
    * freshly shuffled shoe would be a different hand wearing the same cards.
    */
-  get progress(): SessionProgressV2 {
+  get progress(): SessionProgressV3 {
     return {
-      version: 2,
+      version: 3,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -978,7 +994,9 @@ export class TrainerSession {
    * moved, not the ability to open the app.
    */
   restore(saved: SessionProgress | null | undefined): void {
-    if (!saved || (saved.version !== 1 && saved.version !== 2)) return;
+    // Versions 2 and 3 hold the same Blackjack fields; version 3 only adds
+    // `uth`, which is `UthSession`'s to read.
+    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3)) return;
     const n = (value: unknown, fallback = 0): number =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 

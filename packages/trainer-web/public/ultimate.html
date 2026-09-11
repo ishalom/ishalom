@@ -23,6 +23,35 @@
         </div>
       </header>
 
+      <!-- The same strip as the Blackjack table, reading this game's figures. -->
+      <section class="stats" id="uth-stats" data-i18n-attr="aria-label:ui.sessionStats">
+        <button class="stat" type="button" data-info="accuracy"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-accuracy">—</span>
+          <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEvLost"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-evlost">—</span>
+          <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEdge"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-edge">—</span>
+          <span class="stat-label" data-i18n="ui.yourEdge">house edge you face</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat stat-quiet" type="button" data-info="units"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-units">—</span>
+          <span class="stat-label" data-i18n="ui.units">units</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+      </section>
+      <section class="stat-info" id="uth-stat-info" hidden aria-live="polite"></section>
+
       <main class="table felt uth-felt" id="uth-table">
         <section class="seat" data-i18n-attr="aria-label:ui.dealer">
           <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span></h2>
@@ -42,11 +71,18 @@
           <div class="cards" id="uth-hole"></div>
           <!-- Ante, Blind and Play, and the stack behind them. -->
           <div class="uth-rail" id="uth-rail"></div>
-          <p class="uth-memory" data-i18n="uth.memoryOnly">Practice stack — it resets when you close the tab.</p>
         </section>
 
         <p class="empty" id="uth-empty" data-i18n="uth.pressDeal">Deal to post Ante 1 and Blind 1.</p>
       </main>
+
+      <!-- Every finished hand, kept: one block per decision, the result quietest. -->
+      <section class="panel" id="uth-log-panel">
+        <div class="panel-head">
+          <h2 class="panel-title" data-i18n="uth.logTitle">Hands</h2>
+        </div>
+        <div id="uth-hands"></div>
+      </section>
 
       <div class="dock">
         <!-- The grade first; the result under it, later and quieter (§3.1). -->
@@ -54,7 +90,19 @@
         <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
       </div>
 
-      <p class="uth-keys" data-i18n="uth.keys">Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.</p>
+      <dialog id="uth-howto">
+        <form method="dialog">
+          <h2 data-i18n="howto.title">How this works</h2>
+          <ol class="howto" id="uth-howto-list"></ol>
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <footer class="footer">
+        <button class="link" id="uth-open-howto" type="button" data-i18n="howto.open">How to play</button>
+      </footer>
     </div>
 
     <script src="/ultimate.js"></script>

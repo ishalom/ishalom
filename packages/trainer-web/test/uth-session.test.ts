@@ -74,7 +74,8 @@ test('a hand deals two, two face down, five face down, and the stack goes 200 th
   assert.equal(view.stake.ante, 1);
   assert.equal(view.stake.blind, 1);
   assert.equal(view.stack.balance, 198);
-  assert.equal(view.stack.memoryOnly, true, 'the page would present the stack as saved');
+  // Saved since round 4b, so nothing may still describe the stack as temporary.
+  assert.equal(view.stack.memoryOnly, undefined, 'the stack is still marked as temporary');
 });
 
 test('the stack moves by exactly what the hand paid', () => {

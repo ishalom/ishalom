@@ -199,14 +199,16 @@ test('a version 1 save restores with its rating in the mode it was earned in', (
   assert.equal(session.progress.lifetimeDecisions, 398);
 });
 
-test('a version 2 save round-trips all three ladders', () => {
+test('a saved record round-trips all three ladders', () => {
   const session = new TrainerSession('vegas-strip-6d-s17', 20260922);
   play(session, 40);
   session.setMode('value');
   play(session, 40);
 
   const saved = session.progress;
-  assert.equal(saved.version, 2);
+  // Version 3 since round 4b: version 2's Blackjack fields plus a UTH part,
+  // so the ladders round-trip exactly as they did.
+  assert.equal(saved.version, 3);
   assert.ok(saved.lifetimeDecisions > 0);
 
   const restored = new TrainerSession('vegas-strip-6d-s17', 12);
