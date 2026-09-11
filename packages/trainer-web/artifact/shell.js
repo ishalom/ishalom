@@ -110,6 +110,9 @@ async function connect() {
         if (reachable === backendReachable) return;
         backendReachable = reachable;
         renderSocial();
+        // Back from offline: what was played meanwhile is only in this browser.
+        // Send it now, not at the next hand — the offline line promises as much.
+        if (reachable) void publish();
       },
     );
     void publish();
