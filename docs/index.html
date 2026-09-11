@@ -6,8 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="d627021ae189dce3427089cb9a656529d27371d1-dirty" />
-<meta name="ev-build-at" content="2026-09-11T13:32:56.707Z" />
+<meta name="ev-build-commit" content="86af48c952f220d7eaa67d68d96798ee72fbe145-dirty" />
+<meta name="ev-build-at" content="2026-09-11T21:19:50.980Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -1736,6 +1736,26 @@ body { font-family: var(--body); }
  */
 .uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .uth .actions .action .key { opacity: 0.55; font-size: 12px; }
+
+/* ===========================================================================
+ * Decision buttons in rows (round 4b).
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in Hebrew and English alike. Each row is laid out left to right with
+ * `direction: ltr`, so a right-to-left page does not mirror it; the label inside
+ * each button keeps the page's own direction, so Hebrew still reads right to
+ * left. A row takes as many equal columns as it has buttons, which is how a
+ * lone Double, a lone Surrender, Split or Raise 3x comes to fill its row.
+ * ======================================================================== */
+.actions.rows { flex-direction: column; flex-wrap: nowrap; }
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: 8px;
+  direction: ltr;
+}
+.action-row > .action { min-width: 0; }
+[dir="rtl"] .action-row > .action { direction: rtl; }
 
 /* ===========================================================================
  * The shared build only.
@@ -5601,420 +5621,26 @@ const TRIPS_PAYING_CATEGORIES                    = [
   STRAIGHT_FLUSH,
 ];
 
-/* ===== packages/ev-engine/src/uth/preflop.ts ===== */
-/**
- * The pre-flop decision: raise 4x, or check (spec §6.3, §5.2.3).
- *
- * This is the one decision the spec says cannot be solved at runtime. Fully
- * exact means every board against every dealer holding:
- *
- *     C(50,5) x C(45,2) = 2,118,760 x 990 = 2,097,572,400
- *
- * outcomes, for one pair of hole cards. So it is an offline job whose output
- * ships as a lookup asset, keyed on the equivalence class of the player's two
- * cards — rank pair plus suitedness, 169 classes — with runtime lookup O(1).
- *
- * Two structural facts make the job tractable rather than merely large.
- *
- * The board is fixed across the dealer's 990 holdings, so its four suit masks
- * are built once and each dealer hand costs two ORs and a score. The player's
- * seven cards are that same board plus the two hole cards, which is the
- * identical operation — so one function and one set of masks serve both.
- *
- * And settlement splits into a part independent of the raise size (the ante and
- * the blind) and a part that is exactly the raise (the play bet). One pass over
- * a board therefore yields its value at every raise size at once: 4x, 3x, the 2x
- * available on the flop and the 1x available on the river. That is what lets the
- * check branch — which needs optimal play at both later streets — fall out of
- * the same enumeration instead of a second, far larger one.
- */
-
-
-
-
-/** One of the 169 pre-flop equivalence classes, such as AKs, AKo or AA. */
-                            
-                                                                               
-                
-                                                                            
-                      
-                   
-                  
-                  
-                                                                          
-                       
- 
-
-const SPADES = 3;
-const HEARTS = 2;
-
-/**
- * All 169 classes: 13 pairs, 78 suited and 78 offsuit.
- *
- * Suits matter only through whether the two cards share one, so a single
- * representative stands for the whole class. Spades and hearts are used
- * throughout, which keeps representatives comparable when debugging.
- */
-function allHoleClasses()              {
-  const out              = [];
-  for (let high = 12; high >= 0; high--) {
-    for (let low = high; low >= 0; low--) {
-      if (high === low) {
-        out.push({
-          label: `${RANK_CHARS[high]}${RANK_CHARS[low]}`,
-          cards: [makeCard(high, SPADES), makeCard(low, HEARTS)],
-          highRank: high,
-          lowRank: low,
-          suited: false,
-          combinations: 6,
-        });
-        continue;
-      }
-      out.push({
-        label: `${RANK_CHARS[high]}${RANK_CHARS[low]}s`,
-        cards: [makeCard(high, SPADES), makeCard(low, SPADES)],
-        highRank: high,
-        lowRank: low,
-        suited: true,
-        combinations: 4,
-      });
-      out.push({
-        label: `${RANK_CHARS[high]}${RANK_CHARS[low]}o`,
-        cards: [makeCard(high, SPADES), makeCard(low, HEARTS)],
-        highRank: high,
-        lowRank: low,
-        suited: false,
-        combinations: 12,
-      });
-    }
-  }
-  return out;
-}
-
+/* ===== packages/ev-engine/src/uth/hole-class.ts ===== */
 /**
  * The class a pair of hole cards belongs to: AA, AKs, AKo.
  *
- * Lives here rather than in the app because it is the key into the solved
- * table, and a label built by one rule and looked up in a table built by
- * another is a grading bug that shows as a missing row rather than as a wrong
- * answer — which is the good case only by luck.
+ * A module of its own so the browser can have it without the offline pre-flop
+ * solver it used to share a file with. The app needs this one function to look a
+ * hand up in the solved table; it never runs `solvePreflop`, and shipping it
+ * anyway was most of the page weight Ultimate added.
+ *
+ * It is the key into that table, and a label built by one rule and looked up in
+ * a table built by another is a grading bug that shows up as a missing row
+ * rather than a wrong answer — the good case only by luck.
  */
+
 function holeClassLabel(a      , b      )         {
   const high = Math.max(rankOf(a), rankOf(b));
   const low = Math.min(rankOf(a), rankOf(b));
   const label = `${RANK_CHARS[high]}${RANK_CHARS[low]}`;
   if (high === low) return label;
   return label + (suitOf(a) === suitOf(b) ? 's' : 'o');
-}
-
-                                
-                
-                                                                
-               
-     
-                                                                                
-                                                                                   
-     
-               
-                                                                   
-                  
-                                     
-                                               
-                 
-                                                                      
-                             
-                                                               
-                             
- 
-
-/**
- * Binomial coefficients up to C(50,5), for ranking five-card boards.
- *
- * A board has to be addressable by index, because the check branch revisits each
- * one through all ten of its flop splittings and must find the value the board
- * enumeration stored. The combinatorial number system gives that addressing for
- * free: the colex rank of five sorted indices is a bijection onto
- * [0, C(50,5)), so no hash map and no sorting is needed in the inner loop.
- */
-const CHOOSE_N = 50;
-const CHOOSE_K = 5;
-const CHOOSE_WIDTH = CHOOSE_K + 1;
-
-const BINOMIAL             = (() => {
-  const table = new Int32Array((CHOOSE_N + 1) * CHOOSE_WIDTH);
-  for (let i = 0; i <= CHOOSE_N; i++) {
-    table[i * CHOOSE_WIDTH] = 1;
-    for (let j = 1; j <= CHOOSE_K; j++) {
-      if (j > i) break;
-      table[i * CHOOSE_WIDTH + j] =
-        table[(i - 1) * CHOOSE_WIDTH + j - 1]  +
-        (j <= i - 1 ? table[(i - 1) * CHOOSE_WIDTH + j]  : 0);
-    }
-  }
-  return table;
-})();
-
-function choose(n        , k        )         {
-  return n < k ? 0 : BINOMIAL[n * CHOOSE_WIDTH + k] ;
-}
-
-/**
- * Colex rank of five sorted card indices drawn from the 50 available.
- * Bijective onto [0, 2118760), which `preflop.test.ts` verifies exhaustively.
- */
-function boardIndex(a        , b        , c        , d        , e        )         {
-  return choose(a, 1) + choose(b, 2) + choose(c, 3) + choose(d, 4) + choose(e, 5);
-}
-
-/**
- * Score a board's four suit masks plus two more cards, without disturbing the
- * masks.
- *
- * The board is fixed across the dealer's 990 holdings, so its masks are built
- * once per board and each hand costs two ORs and a score. The player's seven
- * cards are the same board plus the two hole cards, so this one helper serves
- * both sides of every showdown.
- */
-function scoreWithTwo(masks            , a      , b      )         {
-  let s0 = masks[0] ;
-  let s1 = masks[1] ;
-  let s2 = masks[2] ;
-  let s3 = masks[3] ;
-
-  const bitA = 1 << ((a / 4) | 0);
-  switch (a % 4) {
-    case 0: s0 |= bitA; break;
-    case 1: s1 |= bitA; break;
-    case 2: s2 |= bitA; break;
-    default: s3 |= bitA;
-  }
-
-  const bitB = 1 << ((b / 4) | 0);
-  switch (b % 4) {
-    case 0: s0 |= bitB; break;
-    case 1: s1 |= bitB; break;
-    case 2: s2 |= bitB; break;
-    default: s3 |= bitB;
-  }
-
-  return evaluateSuitMasks(s0, s1, s2, s3);
-}
-
-                                      
-                                                                           
-                                          
- 
-
-/** Boards in the enumeration: C(50,5). */
-const PREFLOP_BOARDS = 2_118_760;
-/** Dealer holdings per board: C(45,2). */
-const HOLDINGS = 990;
-
-/**
- * Solve one hole-card class exactly.
- *
- * This is the multi-billion-outcome job. It takes minutes per class and belongs
- * to the offline script; the app reads the table it produces and never calls it.
- */
-function solvePreflop(
-  holeClass           ,
-  paytable               ,
-  options                      = {},
-)                {
-  const holeA = holeClass.cards[0];
-  const holeB = holeClass.cards[1];
-  const available = unseenCards([holeA, holeB]);
-  if (available.length !== 50) throw new Error('Expected 50 available cards');
-
-  // Per-board value, stored so any raise size can be recovered from it:
-  //   value(bet) = anteAndBlind + bet * net
-  const anteAndBlind = new Float64Array(PREFLOP_BOARDS);
-  const net = new Float64Array(PREFLOP_BOARDS);
-
-  // Board suit masks after 0..5 cards, reused rather than reallocated.
-  const masks = [
-    new Int32Array(4), new Int32Array(4), new Int32Array(4),
-    new Int32Array(4), new Int32Array(4), new Int32Array(4),
-  ];
-  const extend = (to        , from        , card      )       => {
-    const target = masks[to] ;
-    const source = masks[from] ;
-    target[0] = source[0] ;
-    target[1] = source[1] ;
-    target[2] = source[2] ;
-    target[3] = source[3] ;
-    target[card % 4]  |= 1 << ((card / 4) | 0);
-  };
-
-  const dealerPool = new Int32Array(45);
-
-  for (let i0 = 0; i0 < 46; i0++) {
-    extend(1, 0, available[i0] );
-    const rank0 = choose(i0, 1);
-    for (let i1 = i0 + 1; i1 < 47; i1++) {
-      extend(2, 1, available[i1] );
-      const rank1 = rank0 + choose(i1, 2);
-      for (let i2 = i1 + 1; i2 < 48; i2++) {
-        extend(3, 2, available[i2] );
-        const rank2 = rank1 + choose(i2, 3);
-        for (let i3 = i2 + 1; i3 < 49; i3++) {
-          extend(4, 3, available[i3] );
-          const rank3 = rank2 + choose(i3, 4);
-          for (let i4 = i3 + 1; i4 < 50; i4++) {
-            extend(5, 4, available[i4] );
-            const index = rank3 + choose(i4, 5); // === boardIndex(i0..i4), accumulated
-            const board = masks[5] ;
-
-            // The player's seven cards are this board plus the two hole cards —
-            // exactly the operation the dealer's hand needs.
-            const playerScore = scoreWithTwo(board, holeA, holeB);
-            const blind = blindPayout(playerScore, paytable);
-
-            let n = 0;
-            for (let k = 0; k < 50; k++) {
-              if (k === i0 || k === i1 || k === i2 || k === i3 || k === i4) continue;
-              dealerPool[n++] = available[k] ;
-            }
-
-            let ab = 0;
-            let sign = 0;
-            for (let a = 0; a < 45; a++) {
-              const cardA = dealerPool[a] ;
-              for (let b = a + 1; b < 45; b++) {
-                const dealerScore = scoreWithTwo(board, cardA, dealerPool[b] );
-                if (playerScore > dealerScore) {
-                  ab += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
-                  sign++;
-                } else if (playerScore < dealerScore) {
-                  ab += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
-                  sign--;
-                }
-              }
-            }
-            anteAndBlind[index] = ab / HOLDINGS;
-            net[index] = sign / HOLDINGS;
-          }
-        }
-      }
-    }
-    options.onProgress?.((i0 + 1) / 46);
-  }
-
-  return summarise(holeClass.label, anteAndBlind, net);
-}
-
-/**
- * Turn per-board values into the three pre-flop EVs.
- *
- * The raise branches are a straight average over boards, because raising ends
- * the decisions. Checking does not: the hand still faces the flop and then the
- * river, and it plays both correctly. So the check branch averages over flops
- * the better of raising 2x and checking again, where checking again averages
- * over turn-and-river the better of betting 1x and folding.
- */
-function summarise(
-  label        ,
-  anteAndBlind              ,
-  net              ,
-)                {
-  let sum4 = 0;
-  let sum3 = 0;
-  let riverFolds = 0;
-  for (let i = 0; i < PREFLOP_BOARDS; i++) {
-    const ab = anteAndBlind[i] ;
-    const nt = net[i] ;
-    sum4 += ab + PREFLOP_RAISE * nt;
-    sum3 += ab + PREFLOP_RAISE_SMALL * nt;
-    if (ab + RIVER_RAISE * nt < FOLD_RESULT) riverFolds++;
-  }
-
-  const remaining = new Int32Array(47);
-  const merged = new Int32Array(5);
-  let checkSum = 0;
-  let flops = 0;
-  let flopRaises = 0;
-
-  for (let f0 = 0; f0 < 48; f0++) {
-    for (let f1 = f0 + 1; f1 < 49; f1++) {
-      for (let f2 = f1 + 1; f2 < 50; f2++) {
-        let m = 0;
-        for (let k = 0; k < 50; k++) {
-          if (k === f0 || k === f1 || k === f2) continue;
-          remaining[m++] = k;
-        }
-
-        let betTotal = 0;
-        let checkTotal = 0;
-        let completions = 0;
-        for (let t = 0; t < 47; t++) {
-          const turn = remaining[t] ;
-          for (let r = t + 1; r < 47; r++) {
-            const index = rankFive(f0, f1, f2, turn, remaining[r] , merged);
-            const ab = anteAndBlind[index] ;
-            const nt = net[index] ;
-            betTotal += ab + FLOP_RAISE * nt;
-            const river = ab + RIVER_RAISE * nt;
-            checkTotal += river >= FOLD_RESULT ? river : FOLD_RESULT;
-            completions++;
-          }
-        }
-
-        const evFlopBet = betTotal / completions;
-        const evFlopCheck = checkTotal / completions;
-        if (evFlopBet >= evFlopCheck) {
-          checkSum += evFlopBet;
-          flopRaises++;
-        } else {
-          checkSum += evFlopCheck;
-        }
-        flops++;
-      }
-    }
-  }
-
-  const ev4x = sum4 / PREFLOP_BOARDS;
-  const ev3x = sum3 / PREFLOP_BOARDS;
-  const evCheck = checkSum / flops;
-
-  return {
-    label,
-    ev4x,
-    ev3x,
-    evCheck,
-    optimalAction: ev4x >= evCheck ? 'raise4x' : 'check',
-    margin: Math.abs(ev4x - evCheck),
-    flopRaiseFrequency: flopRaises / flops,
-    riverFoldFrequency: riverFolds / PREFLOP_BOARDS,
-  };
-}
-
-/**
- * Colex rank of the five board indices, given a sorted flop plus two further
- * sorted cards. The two runs are merged rather than sorted, since both are
- * already ordered.
- */
-function rankFive(
-  f0        ,
-  f1        ,
-  f2        ,
-  turn        ,
-  river        ,
-  merged            ,
-)         {
-  let i = 0;
-  let j = 0;
-  for (let k = 0; k < 5; k++) {
-    const left = i === 0 ? f0 : i === 1 ? f1 : i === 2 ? f2 : Infinity;
-    const right = j === 0 ? turn : j === 1 ? river : Infinity;
-    if (left < right) {
-      merged[k] = left;
-      i++;
-    } else {
-      merged[k] = right;
-      j++;
-    }
-  }
-  return boardIndex(merged[0] , merged[1] , merged[2] , merged[3] , merged[4] );
 }
 
 /* ===== packages/ev-engine/src/uth/preflop-table.ts ===== */
@@ -6242,9 +5868,6 @@ function preflopRow(label        )             {
   return row;
 }
 
-/* ===== packages/ev-engine/src/uth/index.ts ===== */
-
-
 /* ===== packages/ev-engine/src/uth-entry.ts ===== */
 /**
  * The Ultimate Texas Hold'em half of the engine, flat.
@@ -6258,8 +5881,9 @@ function preflopRow(label        )             {
  * Node, under the type checker and inside the bundle.
  *
  * It carries only what grading and settling a hand need. The pre-flop *solver*
- * comes along because it shares a module with the class labels; the table it
- * produced is what is actually read.
+ * is left out: the app reads the table it produced and never runs it, and it
+ * used to come along only because it shared a module with the class labels.
+ * `uth/index.ts` still exports it, for the offline script and the tests.
  */
 
 /* ===== packages/game-engine/src/uth-table.ts ===== */
@@ -7091,6 +6715,24 @@ const EN            = {
   'uth.raise2': 'Raise 2×',
   'uth.raise1': 'Raise 1×',
   'uth.check': 'Check',
+  'info.uthEvLost.title':
+    'EV lost per 100 hands',
+  'info.uthEvLost.body':
+    '**Lower is better. 0 is perfect** — it cannot go below 0, because nothing beats perfect play. This is what your mistakes cost over a hundred hands, in units of your **Ante**; a perfect player scores zero no matter how the cards ran. It is the only number here that is entirely yours.',
+  'info.uthEdge.title':
+    'House edge you face',
+  'info.uthEdge.body':
+    '**Lower is better.** The floor is the game’s own edge against perfect play, {rulesEdge} of the Ante, solved exactly from every starting hand. Counting cards cannot lower it: the deck is reshuffled for every hand. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes.',
+  'uth.logTitle':
+    'Hands',
+  'uth.logEmpty':
+    'Every hand you play is kept here, with each decision graded.',
+  'uth.howto.1':
+    'Deal to post **Ante 1** and **Blind 1**. Then decide: raise **4×** or check before the flop, **2×** or check on the flop, **1×** or fold on the river. One raise ends your decisions.',
+  'uth.howto.2':
+    'You are graded on the **decision**, not the result: the card shows what every choice was worth and what yours cost. The cards come after it, and quieter.',
+  'uth.howto.trips':
+    '**Trips is not offered here.** Under the default Trips paytable it costs **{edge}** of every bet placed on it.',
   'uth.board':
     'Board',
   'uth.ante':
@@ -7101,8 +6743,6 @@ const EN            = {
     'Play',
   'uth.atRisk':
     'in play',
-  'uth.memoryOnly':
-    'Practice stack — it resets when you close the tab.',
   'uth.pressDeal':
     'Deal to post Ante 1 and Blind 1.',
   'uth.nextHand':
@@ -7562,6 +7202,24 @@ const HE            = {
   'uth.raise2': 'העלאה ⁦2×⁩',
   'uth.raise1': 'העלאה ⁦1×⁩',
   'uth.check': 'צ׳ק',
+  'info.uthEvLost.title':
+    'EV שאבד ל-100 ידיים',
+  'info.uthEvLost.body':
+    '**כמה שיותר נמוך. 0 זה מושלם** — אי אפשר לרדת מתחת ל-0, כי אין משחק טוב יותר מהמשחק המושלם. זה מה שהטעויות שלך עולות לאורך מאה ידיים, ביחידות של **האנטה**; שחקן מושלם מקבל כאן אפס בלי קשר לאיך שהקלפים נפלו. זה המספר היחיד כאן ששלך לגמרי.',
+  'info.uthEdge.title':
+    'יתרון הקזינו מולך',
+  'info.uthEdge.body':
+    '**כמה שיותר נמוך.** הרצפה היא היתרון של המשחק עצמו מול משחק מושלם, {rulesEdge} מהאנטה, מחושב במדויק מכל הידיים הפותחות. ספירת קלפים לא יכולה להוריד אותו: החפיסה נטרפת לפני כל יד. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים, ולכן כל מה שמעל {rulesEdge} הוא הטעויות שלך.',
+  'uth.logTitle':
+    'ידיים',
+  'uth.logEmpty':
+    'כל יד שתשחק נשמרת כאן, עם ציון לכל החלטה.',
+  'uth.howto.1':
+    'חלק כדי להניח **אנטה 1** ו**בליינד 1**. אחר כך מחליטים: העלאה **⁦4×⁩** או צ׳ק לפני הפלופ, **⁦2×⁩** או צ׳ק בפלופ, **⁦1×⁩** או פרישה בריבר. העלאה אחת מסיימת את ההחלטות שלך.',
+  'uth.howto.2':
+    'הציון הוא על **ההחלטה**, לא על התוצאה: הכרטיס מראה כמה שווה כל אפשרות וכמה עלתה הבחירה שלך. הקלפים מגיעים אחריו, ובשקט.',
+  'uth.howto.trips':
+    '**טריפס לא מוצע כאן.** בטבלת התשלומים ברירת המחדל שלו הוא עולה **{edge}** מכל הימור שמונח עליו.',
   'uth.board':
     'הלוח',
   'uth.ante':
@@ -7572,8 +7230,6 @@ const HE            = {
     'פליי',
   'uth.atRisk':
     'במשחק',
-  'uth.memoryOnly':
-    'קופת אימון — היא מתאפסת כשסוגרים את הלשונית.',
   'uth.pressDeal':
     'חלק כדי להניח אנטה 1 ובליינד 1.',
   'uth.nextHand':
@@ -8817,7 +8473,23 @@ function cardView(card        )           {
                         
  
 
-                                                                    
+/**
+ * Version 3: version 2, plus room for Ultimate Texas Hold'em.
+ *
+ * The Blackjack fields are exactly version 2's. `uth` belongs to `UthSession`,
+ * which reads and writes it; this class never looks inside it and never needs
+ * to, which is what keeps a UTH hand from reaching the Blackjack rating by any
+ * route. The shell composes the two into the one blob a player's row holds.
+ *
+ * No database change: `progress` is a single JSON column. A version 2 blob read
+ * here loads with no `uth`, and `UthSession` starts that part at zero.
+ */
+                                                                               
+             
+                
+ 
+
+                                                                                        
 
                                
                       
@@ -9596,7 +9268,7 @@ class TrainerSession {
    */
   get progress()                    {
     return {
-      version: 2,
+      version: 3,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -9626,7 +9298,9 @@ class TrainerSession {
    * moved, not the ability to open the app.
    */
   restore(saved                                    )       {
-    if (!saved || (saved.version !== 1 && saved.version !== 2)) return;
+    // Versions 2 and 3 hold the same Blackjack fields; version 3 only adds
+    // `uth`, which is `UthSession`'s to read.
+    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3)) return;
     const n = (value         , fallback = 0)         =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -9805,18 +9479,20 @@ function describeScenarioKey(key        , locale         = 'en')         {
 
 /* ===== packages/trainer-web/src/uth-session.ts ===== */
 /**
- * An Ultimate Texas Hold'em session: the table, the practice stack, and the card
- * that grades each decision (spec §5.2, §7.1).
+ * An Ultimate Texas Hold'em session: the table, the stack, the stats, the hand
+ * log, and the card that grades each decision (spec §5.2, §7.1, §9.2).
  *
  * A sibling of `TrainerSession` rather than a mode inside it. The two games
  * share the grading vocabulary — severity tiers, EV chips, a cost in units — and
- * nothing else: not a board, not a rating, not a history. Folding them into one
- * class would put two games' worth of branches in the object that has to stay
- * readable, and would make it possible for a UTH hand to touch the Blackjack
- * rating by accident. Kept apart, it is not possible at all.
+ * the arithmetic of the stat strip, and nothing else: not a board, not a rating,
+ * not a history. Folding them into one class would put two games' worth of
+ * branches in the object that has to stay readable, and would make it possible
+ * for a UTH hand to touch the Blackjack rating by accident. Kept apart, it is
+ * not possible at all.
  *
- * Round 4a scope: in memory only. No stats panel, no saved progress, no hand
- * log. The stack is honest about that on screen.
+ * Since round 4b this session is saved. It reads and writes the `uth` part of a
+ * version 3 progress blob; the shell composes that with the Blackjack part into
+ * the one record a browser and a player's row hold.
  */
 
 
@@ -9857,6 +9533,9 @@ const ACTIONS                                                                  =
   fold: { label: 'uth.fold', key: 'F', code: 'KeyF' },
 };
 
+const UTH_ACTIONS = Object.keys(ACTIONS)               ;
+const TIERS                 = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
+
 /**
  * Keep a figure in one piece inside right-to-left text.
  *
@@ -9868,8 +9547,8 @@ const ACTIONS                                                                  =
  * of every loss. A left-to-right isolate (U+2066 … U+2069) makes each figure an
  * island the algorithm cannot split. English needs none, and gets none.
  */
-const LRI = '\u2066';
-const PDI = '\u2069';
+const LRI = '⁦';
+const PDI = '⁩';
 const isolateFor = (locale        ) => (text        )         =>
   locale === 'he' ? `${LRI}${text}${PDI}` : text;
 
@@ -9882,11 +9561,42 @@ const money = (value        )         => {
   return `${value < 0 ? '−' : value > 0 ? '+' : ''}${text}`;
 };
 
+/** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
+const UTH_CLOSE_CALL = 0.01;
+
+/** How many finished hands the log and the saved record keep — Blackjack's figure. */
+const UTH_HISTORY_KEPT = 40;
+
+let perfectPlayEdge                = null;
+
+/**
+ * What the game takes from a player who never makes a mistake, as a percentage
+ * of the Ante.
+ *
+ * Read off the solved pre-flop table: each class's best EV, weighted by how many
+ * of the 1,326 starting hands fall in it — a pair 6, suited 4, offsuit 12. The
+ * pre-flop EVs already assume the flop and river are then played perfectly, so
+ * this is the whole game's edge, not the first decision's. It comes to 2.185%,
+ * which is also the published figure; the stat strip's floor is this number.
+ */
+function uthPerfectPlayEdgePercent()         {
+  if (perfectPlayEdge !== null) return perfectPlayEdge;
+  let weight = 0;
+  let ev = 0;
+  for (const row of Object.values(PREFLOP_TABLE)) {
+    const combinations = row.label.length === 2 ? 6 : row.label.endsWith('s') ? 4 : 12;
+    weight += combinations;
+    ev += combinations * Math.max(row.ev4x, row.ev3x, row.evCheck);
+  }
+  perfectPlayEdge = (-100 * ev) / weight;
+  return perfectPlayEdge;
+}
+
                               
                                       
                    
                    
-                                              
+                         
                   
                                                            
                           
@@ -9901,15 +9611,99 @@ const money = (value        )         => {
                   
  
 
+/** One graded decision as it is saved: data only, so it can be worded in any language later. */
+                                   
+                                      
+                            
+                                                 
+                           
+                          
+                 
+                             
+          
+                                
+                                
+                  
+                  
+                    
+    
+ 
+
+                                
+             
+               
+                     
+                
+                    
+                            
+                                
+ 
+
+/** The `uth` part of a version 3 progress blob. */
+                                
+             
+                                                                                  
+                  
+                
+                    
+                  
+                 
+                   
+                     
+                            
+                                           
+                                                                                
+                            
+                           
+ 
+
+/** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
+                           
+                
+                    
+                  
+                   
+                             
+                                      
+                 
+                              
+                       
+                                           
+                                                                                  
+                                    
+                   
+ 
+
+const zeroSeverity = ()                               => ({
+  optimal: 0,
+  negligible: 0,
+  minor: 0,
+  significant: 0,
+  blunder: 0,
+});
+
 class UthSession {
-  /** The practice stack a session opens with. Round 4a keeps it in memory only. */
+  /** The stack a new player opens with, in units of the Ante. */
   static          STARTING_STACK = 200;
 
                    table          ;
           locale         = 'en';
+
           balance = UthSession.STARTING_STACK;
-          lastNet                = null;
           hands = 0;
+          decisions = 0;
+          correct = 0;
+          evLost = 0;
+          netUnits = 0;
+          closeCalls = 0;
+          closeCallsCorrect = 0;
+          bySeverity = zeroSeverity();
+          lifetimeDecisions = 0;
+          history                  = [];
+
+  /** Decisions of the hand on the felt, saved when it settles. */
+          pending                     = [];
+          lastNet                = null;
 
   /** The last graded decision, kept so a language change can re-word the card. */
           last                                                                                     =
@@ -9933,6 +9727,7 @@ class UthSession {
     this.balance -= 2; // Ante 1 + Blind 1, onto the felt
     this.lastNet = null;
     this.last = null;
+    this.pending = [];
     return this.view;
   }
 
@@ -9958,6 +9753,7 @@ class UthSession {
     const evaluation = this.table.evaluate();
     const record = this.table.act(action);
     this.last = { record, evaluation, holeClass };
+    this.count(record, evaluation);
 
     const raise = { raise4x: 4, raise3x: 3, raise2x: 2, raise1x: 1 }[action          ];
     if (raise !== undefined) this.balance -= raise;
@@ -9966,12 +9762,198 @@ class UthSession {
     if (view.phase === 'settled' && view.settlement) {
       const settlement = view.settlement;
       // Everything staked comes back, plus or minus what it won.
-      const staked = 2 + settlement.playBet;
-      this.balance += staked + settlement.net;
+      this.balance += 2 + settlement.playBet + settlement.net;
       this.lastNet = settlement.net;
+      this.netUnits += settlement.net;
       this.hands++;
+      const hand = this.table.handRecord;
+      this.history.unshift({
+        id: hand.id,
+        hole: [...hand.hole],
+        dealerHole: [...hand.dealerHole],
+        board: [...hand.board],
+        holeClass: hand.holeClass,
+        settlement: { ...settlement },
+        decisions: this.pending,
+      });
+      this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
+      this.pending = [];
     }
     return this.view;
+  }
+
+  /** The same counters, and the same close-call rule, as Blackjack's `absorb`. */
+          count(record                   , evaluation               )       {
+    const evs = record.legalActions
+      .map((a) => record.evByAction[a] ?? 0)
+      .sort((a, b) => b - a);
+    const closeCall = evs.length > 1 && evs[0]  - evs[1]  < UTH_CLOSE_CALL;
+    const correct = record.evCost === 0;
+
+    this.decisions++;
+    this.lifetimeDecisions++;
+    if (correct) this.correct++;
+    this.evLost += record.evCost;
+    this.bySeverity[record.severityTier]++;
+    if (closeCall) {
+      this.closeCalls++;
+      if (correct) this.closeCallsCorrect++;
+    }
+
+    this.pending.push({
+      phase: evaluation.phase,
+      legalActions: [...record.legalActions],
+      evByAction: { ...record.evByAction },
+      optimalAction: record.optimalAction,
+      chosenAction: record.chosenAction,
+      evCost: record.evCost,
+      severityTier: record.severityTier,
+      facts: {
+        flopRaiseFrequency: evaluation.flopRaiseFrequency,
+        riverFoldFrequency: evaluation.riverFoldFrequency,
+        wins: evaluation.wins,
+        ties: evaluation.ties,
+        losses: evaluation.losses,
+      },
+    });
+  }
+
+  // --- Saving and restoring ------------------------------------------------
+
+  get stats()           {
+    // Close calls leave the denominator with their outcomes, as in Blackjack.
+    const graded = this.decisions - this.closeCalls;
+    const gradedCorrect = this.correct - this.closeCallsCorrect;
+    const evLostPer100 = this.hands === 0 ? 0 : (this.evLost / this.hands) * 100;
+    return {
+      hands: this.hands,
+      decisions: this.decisions,
+      correct: this.correct,
+      accuracy: graded === 0 ? 1 : gradedCorrect / graded,
+      closeCallsExcluded: this.closeCalls,
+      accuracyIncludingCloseCalls: this.decisions === 0 ? 1 : this.correct / this.decisions,
+      evLost: this.evLost,
+      evLostPer100,
+      bySeverity: { ...this.bySeverity },
+      effectiveHouseEdgePercent: uthPerfectPlayEdgePercent() + evLostPer100,
+      netUnits: this.netUnits,
+    };
+  }
+
+  /**
+   * The `uth` part of the saved record.
+   *
+   * Always between hands. A hand still on the felt has not happened yet as far
+   * as the record is concerned — its Ante, Blind and any Play bet go back on the
+   * balance, and its decisions are not counted — which is how Blackjack treats a
+   * hand in progress too. Closing the tab mid-hand therefore costs nothing.
+   */
+  get progress()                {
+    const view = this.table.view;
+    const inHand = view.phase !== 'idle' && view.phase !== 'settled';
+    const pendingCost = this.pending.reduce((sum, d) => sum + d.evCost, 0);
+    const pendingCorrect = this.pending.filter((d) => d.evCost === 0).length;
+    const pendingBy = zeroSeverity();
+    for (const d of this.pending) pendingBy[d.severityTier]++;
+
+    const unwound = (value        , pending        ) => (inHand ? value - pending : value);
+    const bySeverity = zeroSeverity();
+    for (const tier of TIERS) bySeverity[tier] = unwound(this.bySeverity[tier], pendingBy[tier]);
+
+    // Close calls inside the unfinished hand come off as well.
+    let pendingClose = 0;
+    let pendingCloseCorrect = 0;
+    if (inHand) {
+      for (const d of this.pending) {
+        const evs = d.legalActions.map((a) => d.evByAction[a] ?? 0).sort((a, b) => b - a);
+        if (evs.length > 1 && evs[0]  - evs[1]  < UTH_CLOSE_CALL) {
+          pendingClose++;
+          if (d.evCost === 0) pendingCloseCorrect++;
+        }
+      }
+    }
+
+    return {
+      version: 1,
+      balance: inHand ? this.balance + view.ante + view.blind + view.playBet : this.balance,
+      hands: this.hands,
+      decisions: unwound(this.decisions, this.pending.length),
+      correct: unwound(this.correct, pendingCorrect),
+      evLost: unwound(this.evLost, pendingCost),
+      netUnits: this.netUnits,
+      closeCalls: this.closeCalls - pendingClose,
+      closeCallsCorrect: this.closeCallsCorrect - pendingCloseCorrect,
+      bySeverity,
+      lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
+      history: this.history.map((hand) => ({
+        ...hand,
+        hole: [...hand.hole],
+        dealerHole: [...hand.dealerHole],
+        board: [...hand.board],
+        settlement: { ...hand.settlement },
+        decisions: hand.decisions.map((d) => ({ ...d, legalActions: [...d.legalActions] })),
+      })),
+    };
+  }
+
+  /**
+   * Take a saved `uth` part back.
+   *
+   * Anything that is not a version 1 object — including the nothing a version 1
+   * or 2 blob holds, from before Ultimate was saved — leaves the session at zero
+   * with a full stack, which is where those players genuinely are. Every number
+   * is checked on the way in: a record passed around a family can be half-written.
+   */
+  restore(saved         )       {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') {
+      throw new Error('Restore between hands, not during one');
+    }
+    this.reset();
+    const s = saved                                             ;
+    if (!s || typeof s !== 'object' || s.version !== 1) return;
+
+    const n = (value         , fallback = 0)         =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+    this.balance = n(s.balance, UthSession.STARTING_STACK);
+    this.hands = n(s.hands);
+    this.decisions = n(s.decisions);
+    this.correct = n(s.correct);
+    this.evLost = n(s.evLost);
+    this.netUnits = n(s.netUnits);
+    this.closeCalls = n(s.closeCalls);
+    this.closeCallsCorrect = n(s.closeCallsCorrect);
+    for (const tier of TIERS) this.bySeverity[tier] = n(s.bySeverity?.[tier]);
+    this.lifetimeDecisions = n(s.lifetimeDecisions, this.decisions);
+    this.history = (Array.isArray(s.history) ? s.history : [])
+      .filter(
+        (hand)                        =>
+          !!hand &&
+          Array.isArray(hand.hole) &&
+          Array.isArray(hand.board) &&
+          Array.isArray(hand.decisions) &&
+          hand.decisions.every((d) => UTH_ACTIONS.includes(d.chosenAction) && TIERS.includes(d.severityTier)) &&
+          !!hand.settlement,
+      )
+      .slice(0, UTH_HISTORY_KEPT);
+  }
+
+          reset()       {
+    this.balance = UthSession.STARTING_STACK;
+    this.hands = 0;
+    this.decisions = 0;
+    this.correct = 0;
+    this.evLost = 0;
+    this.netUnits = 0;
+    this.closeCalls = 0;
+    this.closeCallsCorrect = 0;
+    this.bySeverity = zeroSeverity();
+    this.lifetimeDecisions = 0;
+    this.history = [];
+    this.pending = [];
+    this.last = null;
+    this.lastNet = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -9980,6 +9962,7 @@ class UthSession {
     const table = this.table.view;
     const settled = table.phase === 'settled';
     const inHand = table.phase !== 'idle';
+    const iso = isolateFor(this.locale);
     return {
       game: 'uth',
       phase: table.phase,
@@ -9999,9 +9982,11 @@ class UthSession {
         start: UthSession.STARTING_STACK,
         balance: this.balance,
         lastNet: this.lastNet,
-        memoryOnly: true,
       },
       hands: this.hands,
+      stats: this.stats,
+      // The floor under the effective edge, as the tooltip quotes it.
+      rulesEdge: iso(`${uthPerfectPlayEdgePercent().toFixed(2)}%`),
       legalActions: table.legalActions.map((action) => ({
         action,
         label: t(this.locale, ACTIONS[action].label),
@@ -10013,6 +9998,110 @@ class UthSession {
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
       settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+      history: this.history.map((hand) => this.logEntry(hand)),
+      howTo: this.howTo(),
+    };
+  }
+
+  /**
+   * "How to play", including the one line about Trips.
+   *
+   * Trips is not offered as a bet. What it would cost is not left as a claim:
+   * `analyseTrips` works it out exactly under the default paytable, 3.50%.
+   */
+          howTo()           {
+    const trips = analyseTrips(TRIPS_PAYTABLES[0] );
+    return [
+      t(this.locale, 'uth.howto.1'),
+      t(this.locale, 'uth.howto.2'),
+      t(this.locale, 'uth.keys'),
+      t(this.locale, 'uth.howto.trips', {
+        edge: isolateFor(this.locale)(`${trips.houseEdgePercent.toFixed(2)}%`),
+      }),
+    ];
+  }
+
+  // --- The hand log ----------------------------------------------------------
+
+  /**
+   * One finished hand, worded now in the current language.
+   *
+   * The Blackjack log's structure from round 3: a summary that describes the
+   * hand rather than one decision in it, then one block per decision under its
+   * own header, then the result, quieter than any of it.
+   */
+          logEntry(hand               )          {
+    const L = this.locale;
+    // A run of cards is left-to-right notation; inside Hebrew text "7♠ 2♦"
+    // otherwise draws as "♠7 ♦2", the suit being a neutral character.
+    const cards = (list        ) =>
+      isolateFor(L)(
+        list
+          .map((card) => {
+            const v = pokerCardView(card);
+            return `${v.rank}${v.suit}`;
+          })
+          .join(' '),
+      );
+
+    const decisions = hand.decisions.map((d, index) => {
+      const record                    = {
+        sequenceIndex: index,
+        handIndex: 0,
+        scenarioKey: `uth:${d.phase}`,
+        legalActions: d.legalActions,
+        evByAction: d.evByAction,
+        optimalAction: d.optimalAction,
+        chosenAction: d.chosenAction,
+        evCost: d.evCost,
+        severityTier: d.severityTier,
+        timeToDecideMs: null,
+      };
+      const evaluation                = {
+        phase: d.phase,
+        evByAction: d.evByAction,
+        optimalAction: d.optimalAction,
+        ...d.facts,
+        solveMs: 0,
+      };
+      const card = this.compose({ record, evaluation, holeClass: hand.holeClass });
+      return {
+        header: t(L, card.correct ? 'log.right' : 'log.played', {
+          headline: `${card.headline} → ${this.label(d.optimalAction)}`,
+          chosen: this.label(d.chosenAction).toLowerCase(),
+        }),
+        severity: d.severityTier,
+        correct: card.correct,
+        sentence: card.sentence,
+      };
+    });
+
+    const off = decisions.filter((d) => !d.correct).length;
+    const summary =
+      decisions.length === 1
+        ? decisions[0] .header
+        : off === 0
+          ? t(L, 'log.allRight', { n: decisions.length })
+          : t(L, 'log.someOff', { n: decisions.length, bad: off });
+    const worst = hand.decisions.reduce              (
+      (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
+      'optimal',
+    );
+    const result = this.lines(hand.settlement);
+
+    return {
+      id: hand.id,
+      cards: {
+        hole: cards(hand.hole),
+        dealer: hand.settlement.folded ? null : cards(hand.dealerHole),
+        board: cards(hand.board),
+      },
+      summary,
+      severity: worst,
+      net: hand.settlement.net,
+      decisions,
+      lines: result.lines,
+      netLine: result.net,
     };
   }
 
@@ -10167,7 +10256,7 @@ class UthSession {
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
-const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n            <span class=\"seat-total\" id=\"uth-class\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n          <p class=\"uth-memory\" data-i18n=\"uth.memoryOnly\">Practice stack — it resets when you close the tab.</p>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\" data-i18n=\"uth.pressDeal\">Deal to post Ante 1 and Blind 1.</p>\n      </main>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <p class=\"uth-keys\" data-i18n=\"uth.keys\">Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.</p>\n    </div>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n            <span class=\"seat-total\" id=\"uth-class\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\" data-i18n=\"uth.pressDeal\">Deal to post Ante 1 and Blind 1.</p>\n      </main>\n\n      <!-- Every finished hand, kept: one block per decision, the result quietest. -->\n      <section class=\"panel\" id=\"uth-log-panel\">\n        <div class=\"panel-head\">\n          <h2 class=\"panel-title\" data-i18n=\"uth.logTitle\">Hands</h2>\n        </div>\n        <div id=\"uth-hands\"></div>\n      </section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 
 /* The three screen scripts, unchanged but for their transport. */
 function initHome() {
@@ -11296,30 +11385,75 @@ const LABELS = {
   surrender: 'action.surrender',
 };
 
+/**
+ * Where each decision button sits, as rows of action names.
+ *
+ * Idan's rule, for both games and both languages: the "yes" action on the
+ * physical left, the "no" action on the physical right. Opening a hand, Hit and
+ * Stand share the top row and Double and Surrender the row below, and either of
+ * those alone takes the whole row. A pair adds Split as a row of its own. Later
+ * in the hand only Hit and Stand are left, so that is one row.
+ *
+ * Layout only: the rows are built from the legal actions the engine sends and
+ * never add, drop or change what is legal.
+ */
+function blackjackRows(legal) {
+  const has = (action) => legal.includes(action);
+  const rows = [
+    ['hit', 'stand'].filter(has),
+    ['double', 'surrender'].filter(has),
+    ['split'].filter(has),
+  ];
+  return rows.filter((row) => row.length > 0);
+}
+
 function renderActions(view) {
   const box = el('actions');
   box.replaceChildren();
+  box.classList.add('rows');
 
-  const add = (label, handler, primary) => {
-    const button = document.createElement('button');
-    button.className = 'action' + (primary ? ' primary' : '');
-    button.textContent = label;
-    button.addEventListener('click', handler);
-    box.appendChild(button);
+  /*
+   * One row, laid out left to right whatever the page direction. The row has
+   * `direction: ltr` in the stylesheet, so a Hebrew page does not mirror it; the
+   * text inside each button still reads right to left.
+   */
+  const row = (buttons) => {
+    const line = document.createElement('div');
+    line.className = 'action-row';
+    line.style.setProperty('--cols', String(buttons.length));
+    line.append(...buttons);
+    box.appendChild(line);
+  };
+  const button = (label, handler, primary, action) => {
+    const node = document.createElement('button');
+    node.className = 'action' + (primary ? ' primary' : '');
+    node.type = 'button';
+    node.textContent = label;
+    if (action) node.dataset.action = action;
+    node.addEventListener('click', handler);
+    return node;
   };
 
   if (view.phase === 'insurance') {
-    add(T('action.takeInsurance'), () => send('/api/insurance', { take: true }));
-    add(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), true);
+    // No decision button is primary: colouring one suggests the answer to a
+    // decision the page is about to grade.
+    row([
+      button(T('action.takeInsurance'), () => send('/api/insurance', { take: true }), false, 'takeInsurance'),
+      button(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), false, 'declineInsurance'),
+    ]);
     return;
   }
   if (view.phase === 'player') {
-    for (const action of view.legalActions) {
-      add(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }));
+    for (const actions of blackjackRows(view.legalActions)) {
+      row(
+        actions.map((action) =>
+          button(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }), false, action),
+        ),
+      );
     }
     return;
   }
-  add(T('ui.deal'), () => send('/api/deal'), true);
+  row([button(T('ui.deal'), () => send('/api/deal'), true, 'deal')]);
 }
 
 function renderStats(view) {
@@ -11714,11 +11848,23 @@ document.addEventListener('keydown', (event) => {
    * last of them a bet. Only deliberate presses count.
    */
   if (event.repeat) return;
-  const key = event.key.toLowerCase();
+  // Ctrl+S is the browser saving the page, not a stand.
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  /*
+   * Physical keys, not characters.
+   *
+   * These were matched on `event.key`, the character typed. On a Hebrew layout
+   * H types a Hebrew letter and so does S, so none of the shortcuts worked for a
+   * player typing in Hebrew, which is most of the people this app is played by.
+   * `event.code` names the key on the keyboard whatever the layout puts on it.
+   * The keys themselves are unchanged.
+   */
+  const code = event.code;
+  const carryOn = code === 'Space' || code === 'Enter' || code === 'NumpadEnter';
 
   // Space and Enter step the reasoning while a reveal is open, so the whole
   // thing is reachable without a mouse.
-  if ((key === ' ' || key === 'enter') && !revealComplete()) {
+  if (carryOn && !revealComplete()) {
     event.preventDefault();
     advanceReveal();
     return;
@@ -11727,17 +11873,17 @@ document.addEventListener('keydown', (event) => {
   if (view.phase === 'insurance') {
     // Y and N only. Space belongs to the reveal and to the deal, and a key that
     // means "carry on" elsewhere must never resolve a bet here.
-    if (key === ' ' || key === 'enter') event.preventDefault();
-    if (key === 'y') send('/api/insurance', { take: true });
-    if (key === 'n') send('/api/insurance', { take: false });
+    if (carryOn) event.preventDefault();
+    if (code === 'KeyY') send('/api/insurance', { take: true });
+    if (code === 'KeyN') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {
-    const action = { h: 'hit', s: 'stand', d: 'double', p: 'split', r: 'surrender' }[key];
+    const action = { KeyH: 'hit', KeyS: 'stand', KeyD: 'double', KeyP: 'split', KeyR: 'surrender' }[code];
     if (action && view.legalActions.includes(action)) send('/api/act', { action });
     return;
   }
-  if (key === ' ' || key === 'enter') {
+  if (carryOn) {
     event.preventDefault();
     send('/api/deal');
   }
@@ -11917,8 +12063,188 @@ function uthRender() {
 
   uthRenderRail(view);
   uthRenderCard(view);
+  uthRenderStats(view);
+  uthRenderLog(view);
   uthRenderActions();
 }
+
+// --- The strip, its tooltips, the hand log and How to play --------------------
+
+let uthOpenInfo = null;
+
+/**
+ * Keep the pinned strip sitting under the pinned rules bar, measured rather than
+ * guessed — the same reason and the same three lines as `pinStrip` on the
+ * Blackjack table: the bar's height moves with the language and the font.
+ */
+function uthPinStrip() {
+  const bar = el('rules-bar');
+  const shell = bar && bar.parentElement;
+  if (!bar || !shell) return;
+  const measure = () => {
+    shell.style.setProperty('--rules-h', `${Math.round(bar.getBoundingClientRect().height)}px`);
+  };
+  measure();
+  if (typeof ResizeObserver === 'function') new ResizeObserver(measure).observe(bar);
+  else window.addEventListener('resize', measure);
+}
+
+/** The same four figures as the Blackjack strip, from this game's session. */
+function uthRenderStats(view) {
+  const s = view.stats;
+  if (!s) return;
+  el('uth-stat-accuracy').textContent = s.decisions === 0 ? '—' : `${(s.accuracy * 100).toFixed(1)}%`;
+  el('uth-stat-evlost').textContent = s.hands === 0 ? '—' : s.evLostPer100.toFixed(2);
+  el('uth-stat-edge').textContent = `${s.effectiveHouseEdgePercent.toFixed(2)}%`;
+  el('uth-stat-units').textContent = uthFigure(
+    `${s.netUnits > 0 ? '+' : s.netUnits < 0 ? '−' : ''}${Math.abs(s.netUnits)}`,
+  );
+  if (uthOpenInfo) uthShowInfo(uthOpenInfo);
+}
+
+function uthShowInfo(which) {
+  const box = el('uth-stat-info');
+  box.replaceChildren();
+  box.hidden = false;
+  uthOpenInfo = which;
+
+  const head = document.createElement('div');
+  head.className = 'stat-info-head';
+  head.textContent = T(`info.${which}.title`);
+  const body = document.createElement('p');
+  // The floor is this game's perfect-play edge, composed by the session from the
+  // solved table, so the tooltip cannot quote a number the engine did not give.
+  uthRich(body, T(`info.${which}.body`, { rulesEdge: uthState.view ? uthState.view.rulesEdge : '—' }));
+  box.append(head, body);
+
+  const s = uthState.view && uthState.view.stats;
+  if (which === 'accuracy' && s && s.decisions > 0) {
+    const parts = [T('fb.accuracyCount', { right: s.correct, total: s.decisions })];
+    if (s.closeCallsExcluded > 0) {
+      parts.push(
+        T(s.closeCallsExcluded === 1 ? 'fb.accuracyExcludedOne' : 'fb.accuracyExcluded', {
+          n: s.closeCallsExcluded,
+        }),
+      );
+      parts.push(T('fb.accuracyAll', { pct: (s.accuracyIncludingCloseCalls * 100).toFixed(1) }));
+    } else {
+      parts.push(T('fb.noCloseCalls'));
+    }
+    const detail = document.createElement('p');
+    detail.className = 'stat-info-detail';
+    uthRich(detail, parts.join(' '));
+    box.appendChild(detail);
+  }
+
+  for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+    button.setAttribute('aria-expanded', String(button.dataset.info === which));
+  }
+}
+
+function uthHideInfo() {
+  el('uth-stat-info').hidden = true;
+  uthOpenInfo = null;
+  for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+    button.setAttribute('aria-expanded', 'false');
+  }
+}
+
+for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
+  button.addEventListener('click', () => {
+    if (uthOpenInfo === button.dataset.info) uthHideInfo();
+    else uthShowInfo(button.dataset.info);
+  });
+}
+
+/**
+ * Every finished hand, in the Blackjack log's round 3 structure.
+ *
+ * The row summarises the hand, not one decision in it. Opened, each decision
+ * has its own header and its one sentence, and the result comes last, in the
+ * quiet style the card uses for it. Everything arrives worded by the session in
+ * the current language; the page only lays it out.
+ */
+function uthRenderLog(view) {
+  const box = el('uth-hands');
+  if (!box) return;
+  box.replaceChildren();
+  const hands = view.history || [];
+  if (hands.length === 0) {
+    const note = document.createElement('p');
+    note.className = 'empty-note';
+    note.textContent = T('uth.logEmpty');
+    box.appendChild(note);
+    return;
+  }
+
+  for (const hand of hands) {
+    const row = document.createElement('div');
+    row.className = 'log-row';
+    const tier = document.createElement('div');
+    tier.className = `log-tier ${hand.severity}`;
+    const middle = document.createElement('div');
+    const cards = document.createElement('div');
+    cards.className = 'log-hand';
+    cards.textContent = hand.cards.dealer
+      ? `${hand.cards.hole} ${T('log.vs')} ${hand.cards.dealer} · ${hand.cards.board}`
+      : `${hand.cards.hole} · ${hand.cards.board}`;
+    const detail = document.createElement('div');
+    detail.className = 'log-detail';
+    detail.textContent = hand.summary;
+    middle.append(cards, detail);
+    const net = document.createElement('div');
+    net.className = 'log-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
+    net.textContent = uthFigure(`${hand.net > 0 ? '+' : hand.net < 0 ? '−' : ''}${Math.abs(hand.net)}`);
+    row.append(tier, middle, net);
+
+    const steps = document.createElement('div');
+    steps.className = 'log-steps';
+    steps.hidden = true;
+    for (const decision of hand.decisions) {
+      const block = document.createElement('div');
+      block.className = 'log-decision';
+      const head = document.createElement('div');
+      head.className = 'log-decision-head';
+      const dot = document.createElement('span');
+      dot.className = `log-dot ${decision.severity}`;
+      const text = document.createElement('span');
+      text.textContent = decision.header;
+      head.append(dot, text);
+      const sentence = document.createElement('p');
+      uthRich(sentence, decision.sentence);
+      block.append(head, sentence);
+      steps.appendChild(block);
+    }
+    const result = document.createElement('div');
+    result.className = 'uth-result';
+    for (const line of [...hand.lines, hand.netLine]) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      result.appendChild(p);
+    }
+    steps.appendChild(result);
+
+    row.addEventListener('click', () => {
+      steps.hidden = !steps.hidden;
+    });
+    box.append(row, steps);
+  }
+}
+
+/** How to play, including the Trips line — worded, and figured, by the session. */
+function uthOpenHowTo() {
+  const list = el('uth-howto-list');
+  list.replaceChildren();
+  for (const line of (uthState.view && uthState.view.howTo) || []) {
+    const item = document.createElement('li');
+    uthRich(item, line);
+    list.appendChild(item);
+  }
+  el('uth-howto').showModal();
+}
+
+el('uth-open-howto')?.addEventListener('click', uthOpenHowTo);
+uthPinStrip();
 
 function uthRenderRail(view) {
   const rail = el('uth-rail');
@@ -12043,25 +12369,54 @@ function uthRenderCard(view) {
   }
 }
 
+/**
+ * Where each decision button sits, as rows of action names.
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in both languages: Raise 4× | Check before the flop, with Raise 3× as
+ * a full-width row under them; Raise 2× | Check on the flop; Raise 1× | Fold on
+ * the river. Layout only — built from the legal actions the session sends.
+ */
+function uthRows(legal) {
+  const rows = [];
+  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
+    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
+  }
+  if (legal.includes('raise3x')) rows.push(['raise3x']);
+  // Anything a future rule adds that no row names still gets a button.
+  const placed = new Set(rows.flat());
+  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  return rows;
+}
+
 function uthRenderActions(waiting) {
   const box = el('uth-actions');
   const view = uthState.view;
   box.replaceChildren();
+  box.classList.add('rows');
   if (!view) return;
 
-  const add = (label, key, handler, primary) => {
-    const button = document.createElement('button');
-    button.className = 'action' + (primary ? ' primary' : '');
-    button.type = 'button';
-    button.disabled = uthState.busy;
+  const button = (label, key, handler, primary, action) => {
+    const node = document.createElement('button');
+    node.className = 'action' + (primary ? ' primary' : '');
+    node.type = 'button';
+    node.disabled = uthState.busy;
+    if (action) node.dataset.action = action;
     const text = document.createElement('span');
     text.textContent = label;
     const hint = document.createElement('span');
     hint.className = 'key';
     hint.textContent = key;
-    button.append(text, hint);
-    button.addEventListener('click', handler);
-    box.appendChild(button);
+    node.append(text, hint);
+    node.addEventListener('click', handler);
+    return node;
+  };
+  const row = (buttons) => {
+    const line = document.createElement('div');
+    line.className = 'action-row';
+    line.style.setProperty('--cols', String(buttons.length));
+    line.append(...buttons);
+    box.appendChild(line);
   };
 
   if (waiting) {
@@ -12073,15 +12428,20 @@ function uthRenderActions(waiting) {
   }
 
   if (view.legalActions.length > 0) {
-    // All decision buttons look the same. Colouring the first one — raise, as
-    // it happens — would be the page quietly suggesting an answer to a decision
-    // it is about to grade.
-    for (const entry of view.legalActions) {
-      add(entry.label, entry.key, () => uthSend('/api/uth/act', { action: entry.action }), false);
+    // All decision buttons look the same. Colouring one would be the page
+    // quietly suggesting an answer to a decision it is about to grade.
+    const byAction = new Map(view.legalActions.map((entry) => [entry.action, entry]));
+    for (const actions of uthRows(view.legalActions.map((entry) => entry.action))) {
+      row(
+        actions.map((action) => {
+          const entry = byAction.get(action);
+          return button(entry.label, entry.key, () => uthSend('/api/uth/act', { action }), false, action);
+        }),
+      );
     }
     return;
   }
-  add(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true);
+  row([button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true, 'deal')]);
 }
 
 // --- Keyboard ---------------------------------------------------------------
@@ -12609,7 +12969,13 @@ async function connect() {
   } else {
     // No table to join, but the local copy is still worth reading back.
     const local = readLocalProgress();
-    if (local) session.restore(local);
+    if (local) {
+      session.restore(local);
+      // The UTH part too. Without it a browser with no shared table (the
+      // published artifact, or a page built without one) reopened Ultimate at a
+      // fresh stack every time, while Blackjack came back as it was.
+      uthSession.restore(local.uth);
+    }
     myFeed = readLocalFeed();
     myHistory = session.view.history;
   }
@@ -12675,7 +13041,7 @@ async function writeRecord() {
       accuracy: stats.accuracy,
       evLostPer100: stats.evLostPer100,
       at: Date.now(),
-      progress: session.progress,
+      progress: fullProgress(),
       feed: myFeed,
     });
   } catch {
@@ -12717,11 +13083,23 @@ function playerOnly(progress) {
 
 function saveProgressLocally() {
   try {
-    store.set(PROGRESS_KEY, JSON.stringify(session.progress));
+    store.set(PROGRESS_KEY, JSON.stringify(fullProgress()));
     store.set(FEED_KEY, JSON.stringify(myFeed));
   } catch {
     // Storage full or switched off. The session in front of the player is fine.
   }
+}
+
+/**
+ * The whole saved record: the Blackjack session's version 3 blob, with the UTH
+ * session's part under `uth`.
+ *
+ * Composed here rather than inside either session, so neither class holds a
+ * reference to the other — which is what keeps a UTH hand from ever being able
+ * to reach the Blackjack rating.
+ */
+function fullProgress() {
+  return { ...session.progress, uth: uthSession.progress };
 }
 
 function readLocalProgress() {
@@ -12743,7 +13121,15 @@ function readLocalProgress() {
  */
 function lifetimeOf(progress) {
   if (!progress) return -1;
-  return progress.lifetimeDecisions ?? progress.decisions ?? 0;
+  /*
+   * Both games' lifetime counters, added. Each only ever rises, so the sum only
+   * ever rises. Counting Blackjack alone would let an evening of UTH on one
+   * device lose to an older copy on another, because its Blackjack count had not
+   * moved.
+   */
+  const blackjack = progress.lifetimeDecisions ?? progress.decisions ?? 0;
+  const uth = progress.uth && typeof progress.uth.lifetimeDecisions === 'number' ? progress.uth.lifetimeDecisions : 0;
+  return blackjack + uth;
 }
 
 function readLocalFeed() {
@@ -12766,7 +13152,11 @@ function readLocalFeed() {
  */
 async function restoreMine() {
   const local = readLocalProgress();
-  if (local) session.restore(local);
+  if (local) {
+    session.restore(local);
+    // A version 1 or 2 blob has no `uth`, and this leaves UTH at zero.
+    uthSession.restore(local.uth);
+  }
   myFeed = readLocalFeed();
 
   if (backend && me.name) {
@@ -12801,6 +13191,7 @@ async function restoreMine() {
         const there = lifetimeOf(remote.progress);
         if (remote.progress && (!local || there > here)) {
           session.restore(remote.progress);
+          uthSession.restore(remote.progress.uth);
         }
         if (remote.feed.length > 0) myFeed = remote.feed;
         saveProgressLocally();
@@ -12886,9 +13277,9 @@ let session = new TrainerSession(
 let lastSavedHandId = -1;
 
 /*
- * Ultimate Texas Hold'em. Its own session, held in memory for the life of the
- * tab (round 4a): it is never saved, never published, and never restored, so it
- * cannot reach the Blackjack record in either direction.
+ * Ultimate Texas Hold'em. Its own session: saved under `uth` in the same record
+ * as Blackjack since round 4b, but never read by the Blackjack session, so it
+ * cannot reach the Blackjack rating, stats or history in either direction.
  */
 const uthSession = new UthSession();
 
@@ -12936,8 +13327,14 @@ async function api(path, body) {
       return uthSession.view;
     case '/api/uth/deal':
       return uthSession.deal();
-    case '/api/uth/act':
-      return uthSession.act(b.action);
+    case '/api/uth/act': {
+      const view = uthSession.act(b.action);
+      if (view.phase === 'settled') {
+        saveProgressLocally();
+        void publish();
+      }
+      return view;
+    }
     case '/api/uth/prepare':
       return uthSession.prepare();
 
