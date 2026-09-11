@@ -1,0 +1,1696 @@
+{
+  "generatedWith": "scripts/generate-preflop.ts",
+  "blindPaytable": "standard",
+  "classes": {
+    "22": {
+      "label": "22",
+      "ev4x": -0.2878776990023634,
+      "ev3x": -0.29455808056962934,
+      "evCheck": -0.1794784366918627,
+      "optimalAction": "check",
+      "margin": 0.10839926231050068,
+      "flopRaiseFrequency": 0.14438775510204083,
+      "riverFoldFrequency": 0.06359757594064452
+    },
+    "33": {
+      "label": "33",
+      "ev4x": 0.08845558179425665,
+      "ev3x": 0.0145940540597555,
+      "evCheck": 0.007454228326048681,
+      "optimalAction": "raise4x",
+      "margin": 0.08100135346820797,
+      "flopRaiseFrequency": 0.33948979591836737,
+      "riverFoldFrequency": 0.04857463799580887
+    },
+    "44": {
+      "label": "44",
+      "ev4x": 0.46156950244178907,
+      "ev3x": 0.3211130786258267,
+      "evCheck": 0.2106180341617795,
+      "optimalAction": "raise4x",
+      "margin": 0.2509514682800096,
+      "flopRaiseFrequency": 0.5747959183673469,
+      "riverFoldFrequency": 0.036004077856859676
+    },
+    "55": {
+      "label": "55",
+      "ev4x": 0.8316433516145525,
+      "ev3x": 0.6251449413662831,
+      "evCheck": 0.4298843196068029,
+      "optimalAction": "raise4x",
+      "margin": 0.4017590320077496,
+      "flopRaiseFrequency": 0.8212244897959183,
+      "riverFoldFrequency": 0.026030319620910344
+    },
+    "66": {
+      "label": "66",
+      "ev4x": 1.159873092821814,
+      "ev3x": 0.8941781284808331,
+      "evCheck": 0.6325584940953576,
+      "optimalAction": "raise4x",
+      "margin": 0.5273145987264564,
+      "flopRaiseFrequency": 0.9318367346938775,
+      "riverFoldFrequency": 0.017972776529668298
+    },
+    "77": {
+      "label": "77",
+      "ev4x": 1.4869482507584562,
+      "ev3x": 1.1622277948501232,
+      "evCheck": 0.8386095612242053,
+      "optimalAction": "raise4x",
+      "margin": 0.6483386895342509,
+      "flopRaiseFrequency": 0.9745918367346939,
+      "riverFoldFrequency": 0.011798410390983406
+    },
+    "88": {
+      "label": "88",
+      "ev4x": 1.8114612859255144,
+      "ev3x": 1.4282005765288983,
+      "evCheck": 1.0451773466317353,
+      "optimalAction": "raise4x",
+      "margin": 0.766283939293779,
+      "flopRaiseFrequency": 0.9953061224489796,
+      "riverFoldFrequency": 0.001081764805829825
+    },
+    "99": {
+      "label": "99",
+      "ev4x": 2.1325134054904105,
+      "ev3x": 1.6913683665889787,
+      "evCheck": 1.2502816821960505,
+      "optimalAction": "raise4x",
+      "margin": 0.88223172329436,
+      "flopRaiseFrequency": 0.9990816326530613,
+      "riverFoldFrequency": 0.000388906719024335
+    },
+    "A2o": {
+      "label": "A2o",
+      "ev4x": 0.04172992932349652,
+      "ev3x": -0.05684124419356213,
+      "evCheck": -0.08232740996210702,
+      "optimalAction": "raise4x",
+      "margin": 0.12405733928560354,
+      "flopRaiseFrequency": 0.515,
+      "riverFoldFrequency": 0.049865015386358055
+    },
+    "K5o": {
+      "label": "K5o",
+      "ev4x": -0.11758213470919712,
+      "ev3x": -0.18386159138010777,
+      "evCheck": -0.15109970158836616,
+      "optimalAction": "raise4x",
+      "margin": 0.03351756687916904,
+      "flopRaiseFrequency": 0.39464285714285713,
+      "riverFoldFrequency": 0.0741150484245502
+    },
+    "K4o": {
+      "label": "K4o",
+      "ev4x": -0.22881163934891227,
+      "ev3x": -0.27536108145903315,
+      "evCheck": -0.20601432408244946,
+      "optimalAction": "check",
+      "margin": 0.02279731526646281,
+      "flopRaiseFrequency": 0.3807142857142857,
+      "riverFoldFrequency": 0.08985538711321717
+    },
+    "K2s": {
+      "label": "K2s",
+      "ev4x": -0.07450668448882375,
+      "ev3x": -0.13874125107798377,
+      "evCheck": -0.0799197399813249,
+      "optimalAction": "raise4x",
+      "margin": 0.005413055492501151,
+      "flopRaiseFrequency": 0.45005102040816325,
+      "riverFoldFrequency": 0.10810568445694652
+    },
+    "Q8o": {
+      "label": "Q8o",
+      "ev4x": -0.06942854034551268,
+      "ev3x": -0.1414243818228927,
+      "evCheck": -0.0925628876028314,
+      "optimalAction": "raise4x",
+      "margin": 0.02313434725731872,
+      "flopRaiseFrequency": 0.3939285714285714,
+      "riverFoldFrequency": 0.08086427910664729
+    },
+    "Q7o": {
+      "label": "Q7o",
+      "ev4x": -0.2776057994472402,
+      "ev3x": -0.3129191183102297,
+      "evCheck": -0.20938796753809472,
+      "optimalAction": "check",
+      "margin": 0.06821783190914546,
+      "flopRaiseFrequency": 0.3634183673469388,
+      "riverFoldFrequency": 0.08312597934641017
+    },
+    "Q6s": {
+      "label": "Q6s",
+      "ev4x": -0.006073839453488858,
+      "ev3x": -0.07832516818022242,
+      "evCheck": -0.028120218067324846,
+      "optimalAction": "raise4x",
+      "margin": 0.022046378613835987,
+      "flopRaiseFrequency": 0.44673469387755105,
+      "riverFoldFrequency": 0.08602437274632332
+    },
+    "Q5s": {
+      "label": "Q5s",
+      "ev4x": -0.09568226441235636,
+      "ev3x": -0.15107048223898753,
+      "evCheck": -0.0744700579107548,
+      "optimalAction": "check",
+      "margin": 0.021212206501601563,
+      "flopRaiseFrequency": 0.44224489795918365,
+      "riverFoldFrequency": 0.09315920632822972
+    },
+    "JTo": {
+      "label": "JTo",
+      "ev4x": 0.17402375217105207,
+      "ev3x": 0.06906969051511944,
+      "evCheck": 0.11028687186196572,
+      "optimalAction": "raise4x",
+      "margin": 0.06373688030908635,
+      "flopRaiseFrequency": 0.46596938775510205,
+      "riverFoldFrequency": 0.16379108535180956
+    },
+    "J9o": {
+      "label": "J9o",
+      "ev4x": -0.07000007341853272,
+      "ev3x": -0.13502401108986248,
+      "evCheck": -0.03854835027386967,
+      "optimalAction": "check",
+      "margin": 0.031451723144663046,
+      "flopRaiseFrequency": 0.42,
+      "riverFoldFrequency": 0.16213445600256754
+    },
+    "J8s": {
+      "label": "J8s",
+      "ev4x": 0.10738602657993926,
+      "ev3x": 0.02707314298254699,
+      "evCheck": 0.09631778965055236,
+      "optimalAction": "raise4x",
+      "margin": 0.011068236929386896,
+      "flopRaiseFrequency": 0.4574489795918367,
+      "riverFoldFrequency": 0.1516283108988276
+    },
+    "J7s": {
+      "label": "J7s",
+      "ev4x": -0.10660755309312663,
+      "ev3x": -0.15310317679553848,
+      "evCheck": -0.03444510945128834,
+      "optimalAction": "check",
+      "margin": 0.07216244364183828,
+      "flopRaiseFrequency": 0.4328061224489796,
+      "riverFoldFrequency": 0.1542548471747626
+    },
+    "AA": {
+      "label": "AA",
+      "ev4x": 3.6010726380495988,
+      "ev3x": 2.8969983720247803,
+      "evCheck": 2.1929241059807616,
+      "optimalAction": "raise4x",
+      "margin": 1.4081485320688372,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "AKs": {
+      "label": "AKs",
+      "ev4x": 1.6583264053227311,
+      "ev3x": 1.317433759139855,
+      "evCheck": 0.9867402297055493,
+      "optimalAction": "raise4x",
+      "margin": 0.6715861756171818,
+      "flopRaiseFrequency": 0.8682142857142857,
+      "riverFoldFrequency": 0.023436349562951916
+    },
+    "AKo": {
+      "label": "AKo",
+      "ev4x": 1.17191350153165,
+      "ev3x": 0.8655120657575303,
+      "evCheck": 0.5689276916019729,
+      "optimalAction": "raise4x",
+      "margin": 0.6029858099296771,
+      "flopRaiseFrequency": 0.8614285714285714,
+      "riverFoldFrequency": 0.021901489550491798
+    },
+    "AQs": {
+      "label": "AQs",
+      "ev4x": 1.5727046518166679,
+      "ev3x": 1.2485274038697174,
+      "evCheck": 0.935690706599695,
+      "optimalAction": "raise4x",
+      "margin": 0.6370139452169729,
+      "flopRaiseFrequency": 0.8607142857142858,
+      "riverFoldFrequency": 0.02753544526043535
+    },
+    "AQo": {
+      "label": "AQo",
+      "ev4x": 1.080609022841694,
+      "ev3x": 0.7919722353801811,
+      "evCheck": 0.5144081797605607,
+      "optimalAction": "raise4x",
+      "margin": 0.5662008430811333,
+      "flopRaiseFrequency": 0.8467346938775511,
+      "riverFoldFrequency": 0.023558118899733808
+    },
+    "AJs": {
+      "label": "AJs",
+      "ev4x": 1.4895067805528217,
+      "ev3x": 1.1816531999088011,
+      "evCheck": 0.8860204801512479,
+      "optimalAction": "raise4x",
+      "margin": 0.6034863004015738,
+      "flopRaiseFrequency": 0.8443367346938776,
+      "riverFoldFrequency": 0.025143952122939833
+    },
+    "AJo": {
+      "label": "AJo",
+      "ev4x": 0.9917668110044442,
+      "ev3x": 0.720501652768407,
+      "evCheck": 0.4612609109463863,
+      "optimalAction": "raise4x",
+      "margin": 0.5305059000580579,
+      "flopRaiseFrequency": 0.8278571428571428,
+      "riverFoldFrequency": 0.023606260265438276
+    },
+    "ATs": {
+      "label": "ATs",
+      "ev4x": 1.4093121376893036,
+      "ev3x": 1.1172644019332898,
+      "evCheck": 0.8378836690929017,
+      "optimalAction": "raise4x",
+      "margin": 0.571428468596402,
+      "flopRaiseFrequency": 0.818469387755102,
+      "riverFoldFrequency": 0.02362466725820763
+    },
+    "ATo": {
+      "label": "ATo",
+      "ev4x": 0.906070676034354,
+      "ev3x": 0.651637583284524,
+      "evCheck": 0.40963711631598376,
+      "optimalAction": "raise4x",
+      "margin": 0.4964335597183702,
+      "flopRaiseFrequency": 0.8020408163265306,
+      "riverFoldFrequency": 0.02320697011459533
+    },
+    "A9s": {
+      "label": "A9s",
+      "ev4x": 0.9535638512406284,
+      "ev3x": 0.697939572909332,
+      "evCheck": 0.4582399185839779,
+      "optimalAction": "raise4x",
+      "margin": 0.4953239326566505,
+      "flopRaiseFrequency": 0.7731632653061224,
+      "riverFoldFrequency": 0.02329050954331779
+    },
+    "A9o": {
+      "label": "A9o",
+      "ev4x": 0.6676953944477301,
+      "ev3x": 0.45223926668761383,
+      "evCheck": 0.252452110306181,
+      "optimalAction": "raise4x",
+      "margin": 0.4152432841415491,
+      "flopRaiseFrequency": 0.7261224489795919,
+      "riverFoldFrequency": 0.022474466197209688
+    },
+    "A8s": {
+      "label": "A8s",
+      "ev4x": 0.8688901884859006,
+      "ev3x": 0.6300139756801245,
+      "evCheck": 0.40961910516175576,
+      "optimalAction": "raise4x",
+      "margin": 0.45927108332414485,
+      "flopRaiseFrequency": 0.7238775510204082,
+      "riverFoldFrequency": 0.021541845230229003
+    },
+    "A8o": {
+      "label": "A8o",
+      "ev4x": 0.5753141638879533,
+      "ev3x": 0.3778620621156635,
+      "evCheck": 0.19946807218668697,
+      "optimalAction": "raise4x",
+      "margin": 0.37584609170126637,
+      "flopRaiseFrequency": 0.6270408163265306,
+      "riverFoldFrequency": 0.020279786290094207
+    },
+    "A7s": {
+      "label": "A7s",
+      "ev4x": 0.7674309344459117,
+      "ev3x": 0.54775176341958,
+      "evCheck": 0.351950992537848,
+      "optimalAction": "raise4x",
+      "margin": 0.4154799419080637,
+      "flopRaiseFrequency": 0.6856122448979591,
+      "riverFoldFrequency": 0.02111423662897166
+    },
+    "A7o": {
+      "label": "A7o",
+      "ev4x": 0.4659964969511885,
+      "ev3x": 0.28917258851176475,
+      "evCheck": 0.13919819168101244,
+      "optimalAction": "raise4x",
+      "margin": 0.32679830527017606,
+      "flopRaiseFrequency": 0.5585714285714286,
+      "riverFoldFrequency": 0.019126281409881252
+    },
+    "A6s": {
+      "label": "A6s",
+      "ev4x": 0.6492745628235149,
+      "ev3x": 0.45115800198353095,
+      "evCheck": 0.2856993079237654,
+      "optimalAction": "raise4x",
+      "margin": 0.3635752548997495,
+      "flopRaiseFrequency": 0.637704081632653,
+      "riverFoldFrequency": 0.01956380146878363
+    },
+    "A6o": {
+      "label": "A6o",
+      "ev4x": 0.33976286134470407,
+      "ev3x": 0.18611381542741756,
+      "evCheck": 0.07090996596827769,
+      "optimalAction": "raise4x",
+      "margin": 0.26885289537642637,
+      "flopRaiseFrequency": 0.5222448979591837,
+      "riverFoldFrequency": 0.017431894126753385
+    },
+    "A5s": {
+      "label": "A5s",
+      "ev4x": 0.6902166761918456,
+      "ev3x": 0.4917581638663082,
+      "evCheck": 0.3297471682979829,
+      "optimalAction": "raise4x",
+      "margin": 0.3604695078938627,
+      "flopRaiseFrequency": 0.645969387755102,
+      "riverFoldFrequency": 0.026453680454605524
+    },
+    "A5o": {
+      "label": "A5o",
+      "ev4x": 0.35854077766290077,
+      "ev3x": 0.20461009045524642,
+      "evCheck": 0.09355643962515924,
+      "optimalAction": "raise4x",
+      "margin": 0.2649843380377415,
+      "flopRaiseFrequency": 0.5764795918367347,
+      "riverFoldFrequency": 0.025149615813022712
+    },
+    "A4s": {
+      "label": "A4s",
+      "ev4x": 0.5901045086688835,
+      "ev3x": 0.4094317891001081,
+      "evCheck": 0.27410500028509305,
+      "optimalAction": "raise4x",
+      "margin": 0.3159995083837905,
+      "flopRaiseFrequency": 0.6246938775510205,
+      "riverFoldFrequency": 0.03478638448904076
+    },
+    "A4o": {
+      "label": "A4o",
+      "ev4x": 0.2493951648597956,
+      "ev3x": 0.11480161232940987,
+      "evCheck": 0.03373172482628076,
+      "optimalAction": "raise4x",
+      "margin": 0.21566344003351484,
+      "flopRaiseFrequency": 0.5608673469387755,
+      "riverFoldFrequency": 0.03420680020389284
+    },
+    "A3s": {
+      "label": "A3s",
+      "ev4x": 0.4967138545487403,
+      "ev3x": 0.3323074426411495,
+      "evCheck": 0.22137183255271425,
+      "optimalAction": "raise4x",
+      "margin": 0.27534202199602603,
+      "flopRaiseFrequency": 0.6044897959183674,
+      "riverFoldFrequency": 0.04297466442636259
+    },
+    "A3o": {
+      "label": "A3o",
+      "ev4x": 0.14744684498315902,
+      "ev3x": 0.030554798250342317,
+      "evCheck": -0.023205877565894928,
+      "optimalAction": "raise4x",
+      "margin": 0.17065272254905395,
+      "flopRaiseFrequency": 0.5451530612244898,
+      "riverFoldFrequency": 0.04299779116086768
+    },
+    "A2s": {
+      "label": "A2s",
+      "ev4x": 0.39985491943019935,
+      "ev3x": 0.25227696216839646,
+      "evCheck": 0.16651751667785053,
+      "optimalAction": "raise4x",
+      "margin": 0.23333740275234882,
+      "flopRaiseFrequency": 0.5760204081632653,
+      "riverFoldFrequency": 0.049367554607411886
+    },
+    "KK": {
+      "label": "KK",
+      "ev4x": 3.289359145863713,
+      "ev3x": 2.6414455500972274,
+      "evCheck": 1.9935319543678462,
+      "optimalAction": "raise4x",
+      "margin": 1.2958271914958666,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "KQs": {
+      "label": "KQs",
+      "ev4x": 1.3126203140823205,
+      "ev3x": 1.0446122481851658,
+      "evCheck": 0.8164077785348363,
+      "optimalAction": "raise4x",
+      "margin": 0.49621253554748423,
+      "flopRaiseFrequency": 0.6882142857142857,
+      "riverFoldFrequency": 0.05664964413147312
+    },
+    "KQo": {
+      "label": "KQo",
+      "ev4x": 0.7829415058560011,
+      "ev3x": 0.5538255049020482,
+      "evCheck": 0.3704903968034687,
+      "optimalAction": "raise4x",
+      "margin": 0.4124511090525324,
+      "flopRaiseFrequency": 0.6341326530612245,
+      "riverFoldFrequency": 0.05562593214899281
+    },
+    "KJs": {
+      "label": "KJs",
+      "ev4x": 1.2275003751925122,
+      "ev3x": 0.9761535725771194,
+      "evCheck": 0.7675870945860992,
+      "optimalAction": "raise4x",
+      "margin": 0.459913280606413,
+      "flopRaiseFrequency": 0.6687755102040817,
+      "riverFoldFrequency": 0.05330665106005399
+    },
+    "KJo": {
+      "label": "KJo",
+      "ev4x": 0.69199111696901,
+      "ev3x": 0.4806174137283753,
+      "evCheck": 0.31864897674092285,
+      "optimalAction": "raise4x",
+      "margin": 0.3733421402280871,
+      "flopRaiseFrequency": 0.6165306122448979,
+      "riverFoldFrequency": 0.053097094526987486
+    },
+    "KTs": {
+      "label": "KTs",
+      "ev4x": 1.1484691353184733,
+      "ev3x": 0.9126979719491383,
+      "evCheck": 0.7212971193747544,
+      "optimalAction": "raise4x",
+      "margin": 0.4271720159437189,
+      "flopRaiseFrequency": 0.6606632653061224,
+      "riverFoldFrequency": 0.04816543638732088
+    },
+    "KTo": {
+      "label": "KTo",
+      "ev4x": 0.6074844355783832,
+      "ev3x": 0.4127061328122549,
+      "evCheck": 0.26936643211934,
+      "optimalAction": "raise4x",
+      "margin": 0.33811800345904314,
+      "flopRaiseFrequency": 0.6031122448979592,
+      "riverFoldFrequency": 0.04884083142970417
+    },
+    "K9s": {
+      "label": "K9s",
+      "ev4x": 0.694570631745729,
+      "ev3x": 0.49480112152402117,
+      "evCheck": 0.34475050935071516,
+      "optimalAction": "raise4x",
+      "margin": 0.3498201223950138,
+      "flopRaiseFrequency": 0.6196428571428572,
+      "riverFoldFrequency": 0.04595376540995677
+    },
+    "K9o": {
+      "label": "K9o",
+      "ev4x": 0.37102442518808676,
+      "ev3x": 0.21478593206212615,
+      "evCheck": 0.11622767142626472,
+      "optimalAction": "raise4x",
+      "margin": 0.25479675376182204,
+      "flopRaiseFrequency": 0.538826530612245,
+      "riverFoldFrequency": 0.04608450225603655
+    },
+    "K8s": {
+      "label": "K8s",
+      "ev4x": 0.48161109647517225,
+      "ev3x": 0.3153640978023703,
+      "evCheck": 0.20908557039556785,
+      "optimalAction": "raise4x",
+      "margin": 0.2725255260796044,
+      "flopRaiseFrequency": 0.5470918367346939,
+      "riverFoldFrequency": 0.042566878740395324
+    },
+    "K8o": {
+      "label": "K8o",
+      "ev4x": 0.16625885452127478,
+      "ev3x": 0.04585540337137848,
+      "evCheck": -0.003953671062794147,
+      "optimalAction": "raise4x",
+      "margin": 0.17021252558406894,
+      "flopRaiseFrequency": 0.44112244897959185,
+      "riverFoldFrequency": 0.0421954350657932
+    },
+    "K7s": {
+      "label": "K7s",
+      "ev4x": 0.40389877841781247,
+      "ev3x": 0.25314402830706884,
+      "evCheck": 0.16717183440247466,
+      "optimalAction": "raise4x",
+      "margin": 0.2367269440153378,
+      "flopRaiseFrequency": 0.5242857142857142,
+      "riverFoldFrequency": 0.05246842492778795
+    },
+    "K7o": {
+      "label": "K7o",
+      "ev4x": 0.08135426243205023,
+      "ev3x": -0.022392741008365927,
+      "evCheck": -0.049437234824408864,
+      "optimalAction": "raise4x",
+      "margin": 0.13079149725645908,
+      "flopRaiseFrequency": 0.4166326530612245,
+      "riverFoldFrequency": 0.05213993090298099
+    },
+    "K6s": {
+      "label": "K6s",
+      "ev4x": 0.3091488880194197,
+      "ev3x": 0.1763341775469947,
+      "evCheck": 0.1164798519946193,
+      "optimalAction": "raise4x",
+      "margin": 0.1926690360248004,
+      "flopRaiseFrequency": 0.5010204081632653,
+      "riverFoldFrequency": 0.06214767127942759
+    },
+    "K6o": {
+      "label": "K6o",
+      "ev4x": -0.02077434871792275,
+      "ev3x": -0.10523992759529496,
+      "evCheck": -0.10298990518754131,
+      "optimalAction": "raise4x",
+      "margin": 0.08221555646961856,
+      "flopRaiseFrequency": 0.3948979591836735,
+      "riverFoldFrequency": 0.06352300402121996
+    },
+    "K5s": {
+      "label": "K5s",
+      "ev4x": 0.21914830997003987,
+      "ev3x": 0.10328995723812653,
+      "evCheck": 0.07063821920997823,
+      "optimalAction": "raise4x",
+      "margin": 0.14851009076006164,
+      "flopRaiseFrequency": 0.4893877551020408,
+      "riverFoldFrequency": 0.07221912816930658
+    },
+    "K4s": {
+      "label": "K4s",
+      "ev4x": 0.11701624578088718,
+      "ev3x": 0.01932351441069998,
+      "evCheck": 0.018917021934498686,
+      "optimalAction": "raise4x",
+      "margin": 0.0980992238463885,
+      "flopRaiseFrequency": 0.4736224489795918,
+      "riverFoldFrequency": 0.08556702977213088
+    },
+    "K3s": {
+      "label": "K3s",
+      "ev4x": 0.02200040651854686,
+      "ev3x": -0.05909912263448339,
+      "evCheck": -0.030194612543529373,
+      "optimalAction": "raise4x",
+      "margin": 0.05219501906207623,
+      "flopRaiseFrequency": 0.4603061224489796,
+      "riverFoldFrequency": 0.09732343446166626
+    },
+    "K3o": {
+      "label": "K3o",
+      "ev4x": -0.3324120776459777,
+      "ev3x": -0.3609258705459657,
+      "evCheck": -0.2583165826838691,
+      "optimalAction": "check",
+      "margin": 0.0740954949621086,
+      "flopRaiseFrequency": 0.3712244897959184,
+      "riverFoldFrequency": 0.10208990164058222
+    },
+    "K2o": {
+      "label": "K2o",
+      "ev4x": -0.43770245737233626,
+      "ev3x": -0.4478769328792482,
+      "evCheck": -0.3112957215207475,
+      "optimalAction": "check",
+      "margin": 0.12640673585158874,
+      "flopRaiseFrequency": 0.3625510204081633,
+      "riverFoldFrequency": 0.11347203081047405
+    },
+    "QQ": {
+      "label": "QQ",
+      "ev4x": 3.0186485267485796,
+      "ev3x": 2.420145245526065,
+      "evCheck": 1.8216419643012125,
+      "optimalAction": "raise4x",
+      "margin": 1.1970065624473671,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "QJs": {
+      "label": "QJs",
+      "ev4x": 1.0241563742903645,
+      "ev3x": 0.8189722714680848,
+      "evCheck": 0.6935980730391001,
+      "optimalAction": "raise4x",
+      "margin": 0.3305583012512644,
+      "flopRaiseFrequency": 0.5850510204081633,
+      "riverFoldFrequency": 0.09169372651928487
+    },
+    "QJo": {
+      "label": "QJo",
+      "ev4x": 0.45568102750543765,
+      "ev3x": 0.2929872339575196,
+      "evCheck": 0.22429717262679796,
+      "optimalAction": "raise4x",
+      "margin": 0.2313838548786397,
+      "flopRaiseFrequency": 0.5133163265306122,
+      "riverFoldFrequency": 0.09463176574977818
+    },
+    "QTs": {
+      "label": "QTs",
+      "ev4x": 0.9435947567272469,
+      "ev3x": 0.7542435705669903,
+      "evCheck": 0.6480229414727258,
+      "optimalAction": "raise4x",
+      "margin": 0.29557181525452114,
+      "flopRaiseFrequency": 0.5796938775510204,
+      "riverFoldFrequency": 0.0879882572825615
+    },
+    "QTo": {
+      "label": "QTo",
+      "ev4x": 0.3694949962139043,
+      "ev3x": 0.22367934427482147,
+      "evCheck": 0.17589602652094435,
+      "optimalAction": "raise4x",
+      "margin": 0.19359896969295995,
+      "flopRaiseFrequency": 0.5087244897959183,
+      "riverFoldFrequency": 0.09178009779304877
+    },
+    "Q9s": {
+      "label": "Q9s",
+      "ev4x": 0.48919867533509276,
+      "ev3x": 0.33591224097919836,
+      "evCheck": 0.27409331062899134,
+      "optimalAction": "raise4x",
+      "margin": 0.21510536470610142,
+      "flopRaiseFrequency": 0.5285714285714286,
+      "riverFoldFrequency": 0.0830636787554985
+    },
+    "Q9o": {
+      "label": "Q9o",
+      "ev4x": 0.13250515667488955,
+      "ev3x": 0.02529645818222727,
+      "evCheck": 0.02618642979856062,
+      "optimalAction": "raise4x",
+      "margin": 0.10631872687632893,
+      "flopRaiseFrequency": 0.4505612244897959,
+      "riverFoldFrequency": 0.08594649700768374
+    },
+    "Q8s": {
+      "label": "Q8s",
+      "ev4x": 0.27893151697682,
+      "ev3x": 0.15857685746670136,
+      "evCheck": 0.1401992697367674,
+      "optimalAction": "raise4x",
+      "margin": 0.1387322472400526,
+      "flopRaiseFrequency": 0.4753061224489796,
+      "riverFoldFrequency": 0.07875644244746928
+    },
+    "Q7s": {
+      "label": "Q7s",
+      "ev4x": 0.06277568750437272,
+      "ev3x": -0.0232695765349994,
+      "evCheck": 0.007849858245655417,
+      "optimalAction": "raise4x",
+      "margin": 0.05492582925871731,
+      "flopRaiseFrequency": 0.45035714285714284,
+      "riverFoldFrequency": 0.08155713719345277
+    },
+    "Q6o": {
+      "label": "Q6o",
+      "ev4x": -0.352995258233586,
+      "ev3x": -0.3734763043211152,
+      "evCheck": -0.24872999759149986,
+      "optimalAction": "check",
+      "margin": 0.10426526064208616,
+      "flopRaiseFrequency": 0.3535204081632653,
+      "riverFoldFrequency": 0.08983933999131567
+    },
+    "Q5o": {
+      "label": "Q5o",
+      "ev4x": -0.44934704995277347,
+      "ev3x": -0.4517487057884988,
+      "evCheck": -0.29752454923606036,
+      "optimalAction": "check",
+      "margin": 0.1518225007167131,
+      "flopRaiseFrequency": 0.3486734693877551,
+      "riverFoldFrequency": 0.09506503804111839
+    },
+    "Q4s": {
+      "label": "Q4s",
+      "ev4x": -0.19844777467569724,
+      "ev3x": -0.2355538154485103,
+      "evCheck": -0.12444930697028542,
+      "optimalAction": "check",
+      "margin": 0.07399846770541182,
+      "flopRaiseFrequency": 0.43642857142857144,
+      "riverFoldFrequency": 0.11192442749532745
+    },
+    "Q4o": {
+      "label": "Q4o",
+      "ev4x": -0.5612151213467383,
+      "ev3x": -0.5437688034032799,
+      "evCheck": -0.3503434529840307,
+      "optimalAction": "check",
+      "margin": 0.21087166836270765,
+      "flopRaiseFrequency": 0.3407142857142857,
+      "riverFoldFrequency": 0.11782363269081916
+    },
+    "Q3s": {
+      "label": "Q3s",
+      "ev4x": -0.29416010717971347,
+      "ev3x": -0.3145450369196439,
+      "evCheck": -0.17211494649720002,
+      "optimalAction": "check",
+      "margin": 0.12204516068251345,
+      "flopRaiseFrequency": 0.42709183673469386,
+      "riverFoldFrequency": 0.12865638392267176
+    },
+    "Q3o": {
+      "label": "Q3o",
+      "ev4x": -0.6655171778566026,
+      "ev3x": -0.6299058983627335,
+      "evCheck": -0.4008844106644403,
+      "optimalAction": "check",
+      "margin": 0.2646327671921623,
+      "flopRaiseFrequency": 0.3356122448979592,
+      "riverFoldFrequency": 0.13582755951594327
+    },
+    "Q2s": {
+      "label": "Q2s",
+      "ev4x": -0.3914267385960233,
+      "ev3x": -0.3948074438340476,
+      "evCheck": -0.2204399799024813,
+      "optimalAction": "check",
+      "margin": 0.170986758693542,
+      "flopRaiseFrequency": 0.4221938775510204,
+      "riverFoldFrequency": 0.14432356661443485
+    },
+    "Q2o": {
+      "label": "Q2o",
+      "ev4x": -0.771572227255709,
+      "ev3x": -0.7174809649032595,
+      "evCheck": -0.4522182999738193,
+      "optimalAction": "check",
+      "margin": 0.31935392728188966,
+      "flopRaiseFrequency": 0.33341836734693875,
+      "riverFoldFrequency": 0.15269969227283883
+    },
+    "JJ": {
+      "label": "JJ",
+      "ev4x": 2.749738853361271,
+      "ev3x": 2.200349395334511,
+      "evCheck": 1.6509599373065842,
+      "optimalAction": "raise4x",
+      "margin": 1.098778916054687,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "JTs": {
+      "label": "JTs",
+      "ev4x": 0.7788410280851984,
+      "ev3x": 0.62828388593379,
+      "evCheck": 0.6019045305420644,
+      "optimalAction": "raise4x",
+      "margin": 0.176936497543134,
+      "flopRaiseFrequency": 0.5396428571428571,
+      "riverFoldFrequency": 0.15432847514584003
+    },
+    "J9s": {
+      "label": "J9s",
+      "ev4x": 0.317836845819052,
+      "ev3x": 0.20458743474164784,
+      "evCheck": 0.22819617320479693,
+      "optimalAction": "raise4x",
+      "margin": 0.0896406726142551,
+      "flopRaiseFrequency": 0.4931122448979592,
+      "riverFoldFrequency": 0.1525769789877098
+    },
+    "J8o": {
+      "label": "J8o",
+      "ev4x": -0.2721453064027481,
+      "ev3x": -0.3019485665899074,
+      "evCheck": -0.1549439939713176,
+      "optimalAction": "check",
+      "margin": 0.11720131243143048,
+      "flopRaiseFrequency": 0.37081632653061225,
+      "riverFoldFrequency": 0.16041835790745532
+    },
+    "J7o": {
+      "label": "J7o",
+      "ev4x": -0.4780516846534657,
+      "ev3x": -0.4716903566706839,
+      "evCheck": -0.26982916265488444,
+      "optimalAction": "check",
+      "margin": 0.20822252199858127,
+      "flopRaiseFrequency": 0.34474489795918367,
+      "riverFoldFrequency": 0.16333657422265854
+    },
+    "J6s": {
+      "label": "J6s",
+      "ev4x": -0.32272907957892616,
+      "ev3x": -0.33484722243585185,
+      "evCheck": -0.16364430705705438,
+      "optimalAction": "check",
+      "margin": 0.15908477252187178,
+      "flopRaiseFrequency": 0.42928571428571427,
+      "riverFoldFrequency": 0.16056702977213086
+    },
+    "J6o": {
+      "label": "J6o",
+      "ev4x": -0.6861593237506182,
+      "ev3x": -0.6430447847717807,
+      "evCheck": -0.3828948467285304,
+      "optimalAction": "check",
+      "margin": 0.30326447702208775,
+      "flopRaiseFrequency": 0.33591836734693875,
+      "riverFoldFrequency": 0.1700032094243803
+    },
+    "J5s": {
+      "label": "J5s",
+      "ev4x": -0.38480706530266434,
+      "ev3x": -0.3845440555454872,
+      "evCheck": -0.19406184372945076,
+      "optimalAction": "check",
+      "margin": 0.19074522157321358,
+      "flopRaiseFrequency": 0.42331632653061224,
+      "riverFoldFrequency": 0.1580212010798769
+    },
+    "J5o": {
+      "label": "J5o",
+      "ev4x": -0.7540158244364418,
+      "ev3x": -0.6976335889526777,
+      "evCheck": -0.41585453427018604,
+      "optimalAction": "check",
+      "margin": 0.33816129016625573,
+      "flopRaiseFrequency": 0.33341836734693875,
+      "riverFoldFrequency": 0.1664322528271253
+    },
+    "J4s": {
+      "label": "J4s",
+      "ev4x": -0.48785673786668166,
+      "ev3x": -0.46926580579350335,
+      "evCheck": -0.24252602842218415,
+      "optimalAction": "check",
+      "margin": 0.2453307094444975,
+      "flopRaiseFrequency": 0.4136734693877551,
+      "riverFoldFrequency": 0.16518010534463554
+    },
+    "J4o": {
+      "label": "J4o",
+      "ev4x": -0.8661489164805923,
+      "ev3x": -0.7898766071200863,
+      "evCheck": -0.46702301984904,
+      "optimalAction": "check",
+      "margin": 0.39912589663155235,
+      "flopRaiseFrequency": 0.3281122448979592,
+      "riverFoldFrequency": 0.17560035114878514
+    },
+    "J3s": {
+      "label": "J3s",
+      "ev4x": -0.5839073595273346,
+      "ev3x": -0.5485398399114233,
+      "evCheck": -0.28909636039260966,
+      "optimalAction": "check",
+      "margin": 0.29481099913472497,
+      "flopRaiseFrequency": 0.40158163265306124,
+      "riverFoldFrequency": 0.17699597878004117
+    },
+    "J3o": {
+      "label": "J3o",
+      "ev4x": -0.9707701247881219,
+      "ev3x": -0.8762810225298615,
+      "evCheck": -0.5167116760784978,
+      "optimalAction": "check",
+      "margin": 0.4540584487096241,
+      "flopRaiseFrequency": 0.32392857142857145,
+      "riverFoldFrequency": 0.18800194453359512
+    },
+    "J2s": {
+      "label": "J2s",
+      "ev4x": -0.6815664069573353,
+      "ev3x": -0.6291294550792746,
+      "evCheck": -0.33622026605612987,
+      "optimalAction": "check",
+      "margin": 0.3453461409012054,
+      "flopRaiseFrequency": 0.3953061224489796,
+      "riverFoldFrequency": 0.1889171024561536
+    },
+    "J2o": {
+      "label": "J2o",
+      "ev4x": -1.0771984571326414,
+      "ev3x": -0.9641678094195043,
+      "evCheck": -0.5672160913253761,
+      "optimalAction": "check",
+      "margin": 0.5099823658072653,
+      "flopRaiseFrequency": 0.3221428571428571,
+      "riverFoldFrequency": 0.20058477600105723
+    },
+    "TT": {
+      "label": "TT",
+      "ev4x": 2.4808030583244842,
+      "ev3x": 1.9805674593246119,
+      "evCheck": 1.480331860297181,
+      "optimalAction": "raise4x",
+      "margin": 1.0004711980273033,
+      "flopRaiseFrequency": 1,
+      "riverFoldFrequency": 0
+    },
+    "T9s": {
+      "label": "T9s",
+      "ev4x": 0.18516906734490873,
+      "ev3x": 0.10461849421761345,
+      "evCheck": 0.20548471814369879,
+      "optimalAction": "check",
+      "margin": 0.020315650798790053,
+      "flopRaiseFrequency": 0.4771938775510204,
+      "riverFoldFrequency": 0.2548419830466877
+    },
+    "T9o": {
+      "label": "T9o",
+      "ev4x": -0.2315057179913903,
+      "ev3x": -0.2621391659706812,
+      "evCheck": -0.07945994912976624,
+      "optimalAction": "check",
+      "margin": 0.15204576886162408,
+      "flopRaiseFrequency": 0.4051530612244898,
+      "riverFoldFrequency": 0.2735349921652287
+    },
+    "T8s": {
+      "label": "T8s",
+      "ev4x": -0.030267350961457103,
+      "ev3x": -0.07695476542224082,
+      "evCheck": 0.07541122037074788,
+      "optimalAction": "check",
+      "margin": 0.10567857133220498,
+      "flopRaiseFrequency": 0.44566326530612244,
+      "riverFoldFrequency": 0.2525467726406011
+    },
+    "T8o": {
+      "label": "T8o",
+      "ev4x": -0.43896341075159623,
+      "ev3x": -0.4333888842170598,
+      "evCheck": -0.1934615004945712,
+      "optimalAction": "check",
+      "margin": 0.24550191025702503,
+      "flopRaiseFrequency": 0.3714795918367347,
+      "riverFoldFrequency": 0.2708319960731749
+    },
+    "T7s": {
+      "label": "T7s",
+      "ev4x": -0.2448989121902075,
+      "ev3x": -0.257679662927804,
+      "evCheck": -0.05343486160477551,
+      "optimalAction": "check",
+      "margin": 0.191464050585432,
+      "flopRaiseFrequency": 0.4246938775510204,
+      "riverFoldFrequency": 0.25429118918612775
+    },
+    "T7o": {
+      "label": "T7o",
+      "ev4x": -0.6455667432514816,
+      "ev3x": -0.6037294536303985,
+      "evCheck": -0.30584546292656734,
+      "optimalAction": "check",
+      "margin": 0.3397212803249142,
+      "flopRaiseFrequency": 0.3407142857142857,
+      "riverFoldFrequency": 0.2726198342426702
+    },
+    "T6s": {
+      "label": "T6s",
+      "ev4x": -0.4592530553420835,
+      "ev3x": -0.43806656900090374,
+      "evCheck": -0.18096044889797147,
+      "optimalAction": "check",
+      "margin": 0.278292606444112,
+      "flopRaiseFrequency": 0.41918367346938773,
+      "riverFoldFrequency": 0.26043912477109254
+    },
+    "T6o": {
+      "label": "T6o",
+      "ev4x": -0.8518236857996381,
+      "ev3x": -0.7736637514896363,
+      "evCheck": -0.4167288876894085,
+      "optimalAction": "check",
+      "margin": 0.43509479811022955,
+      "flopRaiseFrequency": 0.33341836734693875,
+      "riverFoldFrequency": 0.279173667616908
+    },
+    "T5s": {
+      "label": "T5s",
+      "ev4x": -0.6762606790095376,
+      "ev3x": -0.6205858584444003,
+      "evCheck": -0.30800359305833713,
+      "optimalAction": "check",
+      "margin": 0.36825708595120044,
+      "flopRaiseFrequency": 0.40938775510204084,
+      "riverFoldFrequency": 0.2699838584832638
+    },
+    "T5o": {
+      "label": "T5o",
+      "ev4x": -1.060580545393795,
+      "ev3x": -0.9455995364004,
+      "evCheck": -0.5272588053218078,
+      "optimalAction": "check",
+      "margin": 0.5333217400719873,
+      "flopRaiseFrequency": 0.3262244897959184,
+      "riverFoldFrequency": 0.2890898450036814
+    },
+    "T4s": {
+      "label": "T4s",
+      "ev4x": -0.7511395749650044,
+      "ev3x": -0.6817494471240426,
+      "evCheck": -0.3393843474008308,
+      "optimalAction": "check",
+      "margin": 0.4117552275641736,
+      "flopRaiseFrequency": 0.39285714285714285,
+      "riverFoldFrequency": 0.270710226736393
+    },
+    "T4o": {
+      "label": "T4o",
+      "ev4x": -1.1435249190917467,
+      "ev3x": -1.0136070793096636,
+      "evCheck": -0.5616517848919007,
+      "optimalAction": "check",
+      "margin": 0.581873134199846,
+      "flopRaiseFrequency": 0.3224489795918367,
+      "riverFoldFrequency": 0.2902296626328607
+    },
+    "T3s": {
+      "label": "T3s",
+      "ev4x": -0.8471702817002218,
+      "ev3x": -0.76102052210554,
+      "evCheck": -0.38425014411897856,
+      "optimalAction": "check",
+      "margin": 0.46292013758124323,
+      "flopRaiseFrequency": 0.374030612244898,
+      "riverFoldFrequency": 0.2765296682965508
+    },
+    "T3o": {
+      "label": "T3o",
+      "ev4x": -1.2480828127809982,
+      "ev3x": -1.0999738297485877,
+      "evCheck": -0.6100154819447443,
+      "optimalAction": "check",
+      "margin": 0.6380673308362539,
+      "flopRaiseFrequency": 0.3190816326530612,
+      "riverFoldFrequency": 0.296055239857275
+    },
+    "T2s": {
+      "label": "T2s",
+      "ev4x": -0.9448546207478626,
+      "ev3x": -0.8416442753080988,
+      "evCheck": -0.4298413679070119,
+      "optimalAction": "check",
+      "margin": 0.5150132528408508,
+      "flopRaiseFrequency": 0.36331632653061224,
+      "riverFoldFrequency": 0.28002699692272837
+    },
+    "T2o": {
+      "label": "T2o",
+      "ev4x": -1.3544930413379994,
+      "ev3x": -1.1878600531281989,
+      "evCheck": -0.6594542085412722,
+      "optimalAction": "check",
+      "margin": 0.6950388327967272,
+      "flopRaiseFrequency": 0.3166326530612245,
+      "riverFoldFrequency": 0.2993430119503861
+    },
+    "98s": {
+      "label": "98s",
+      "ev4x": -0.17047555903168907,
+      "ev3x": -0.18649066678122972,
+      "evCheck": 0.051068794383450286,
+      "optimalAction": "check",
+      "margin": 0.22154435341513934,
+      "flopRaiseFrequency": 0.4142857142857143,
+      "riverFoldFrequency": 0.3414379165172082
+    },
+    "98o": {
+      "label": "98o",
+      "ev4x": -0.6093633576133629,
+      "ev3x": -0.5713040129140196,
+      "evCheck": -0.2361106637844775,
+      "optimalAction": "check",
+      "margin": 0.3732526938288854,
+      "flopRaiseFrequency": 0.3442857142857143,
+      "riverFoldFrequency": 0.3675885895523797
+    },
+    "97s": {
+      "label": "97s",
+      "ev4x": -0.38345300572297275,
+      "ev3x": -0.36580762766543806,
+      "evCheck": -0.07168506298042532,
+      "optimalAction": "check",
+      "margin": 0.31176794274254743,
+      "flopRaiseFrequency": 0.3983673469387755,
+      "riverFoldFrequency": 0.34473418414544355
+    },
+    "97o": {
+      "label": "97o",
+      "ev4x": -0.8141929396559976,
+      "ev3x": -0.7401490677998525,
+      "evCheck": -0.34195540206383734,
+      "optimalAction": "check",
+      "margin": 0.47223753759216025,
+      "flopRaiseFrequency": 0.33698979591836736,
+      "riverFoldFrequency": 0.37075081651532027
+    },
+    "96s": {
+      "label": "96s",
+      "ev4x": -0.597023806423366,
+      "ev3x": -0.5455896218412217,
+      "evCheck": -0.19658492870138677,
+      "optimalAction": "check",
+      "margin": 0.4004388777219793,
+      "flopRaiseFrequency": 0.3905612244897959,
+      "riverFoldFrequency": 0.35161603957031473
+    },
+    "96o": {
+      "label": "96o",
+      "ev4x": -1.019603985300628,
+      "ev3x": -0.9094308904430515,
+      "evCheck": -0.4500325201647403,
+      "optimalAction": "check",
+      "margin": 0.5695714651358876,
+      "flopRaiseFrequency": 0.33198979591836736,
+      "riverFoldFrequency": 0.37798334875115636
+    },
+    "95s": {
+      "label": "95s",
+      "ev4x": -0.8124760125063185,
+      "ev3x": -0.7269135036786148,
+      "evCheck": -0.32348703019738384,
+      "optimalAction": "check",
+      "margin": 0.48898898230893467,
+      "flopRaiseFrequency": 0.38137755102040816,
+      "riverFoldFrequency": 0.35902697804376144
+    },
+    "95o": {
+      "label": "95o",
+      "ev4x": -1.2267344261891846,
+      "ev3x": -1.0801172824858651,
+      "evCheck": -0.5605232215584087,
+      "optimalAction": "check",
+      "margin": 0.6662112046307759,
+      "flopRaiseFrequency": 0.3251530612244898,
+      "riverFoldFrequency": 0.3858624856047877
+    },
+    "94s": {
+      "label": "94s",
+      "ev4x": -1.0492282325984832,
+      "ev3x": -0.9264676489829569,
+      "evCheck": -0.4524715050121797,
+      "optimalAction": "check",
+      "margin": 0.5967567275863035,
+      "flopRaiseFrequency": 0.3539795918367347,
+      "riverFoldFrequency": 0.3724980649058883
+    },
+    "94o": {
+      "label": "94o",
+      "ev4x": -1.4579848941121887,
+      "ev3x": -1.271405964580509,
+      "evCheck": -0.6746778117408416,
+      "optimalAction": "check",
+      "margin": 0.783307082371347,
+      "flopRaiseFrequency": 0.3169387755102041,
+      "riverFoldFrequency": 0.39994808284090694
+    },
+    "93s": {
+      "label": "93s",
+      "ev4x": -1.1161414507086302,
+      "ev3x": -0.9814266065375997,
+      "evCheck": -0.4825009247356566,
+      "optimalAction": "check",
+      "margin": 0.6336405259729736,
+      "flopRaiseFrequency": 0.34311224489795916,
+      "riverFoldFrequency": 0.37416177386773397
+    },
+    "93o": {
+      "label": "93o",
+      "ev4x": -1.5323399542779166,
+      "ev3x": -1.3327302411584419,
+      "evCheck": -0.7086657587599755,
+      "optimalAction": "check",
+      "margin": 0.8236741955179411,
+      "flopRaiseFrequency": 0.3147448979591837,
+      "riverFoldFrequency": 0.4013743887934452
+    },
+    "92s": {
+      "label": "92s",
+      "ev4x": -1.2135061397657383,
+      "ev3x": -1.0618095771095544,
+      "evCheck": -0.5279027859538942,
+      "optimalAction": "check",
+      "margin": 0.6856033538118441,
+      "flopRaiseFrequency": 0.3330102040816327,
+      "riverFoldFrequency": 0.3789844059733051
+    },
+    "92o": {
+      "label": "92o",
+      "ev4x": -1.6383637875910462,
+      "ev3x": -1.4203225133044473,
+      "evCheck": -0.758210973790462,
+      "optimalAction": "check",
+      "margin": 0.8801528138005842,
+      "flopRaiseFrequency": 0.3106122448979592,
+      "riverFoldFrequency": 0.40596764145065983
+    },
+    "87s": {
+      "label": "87s",
+      "ev4x": -0.47468508095438483,
+      "ev3x": -0.43341188580623685,
+      "evCheck": -0.05275362685931743,
+      "optimalAction": "check",
+      "margin": 0.4219314540950674,
+      "flopRaiseFrequency": 0.37479591836734694,
+      "riverFoldFrequency": 0.3806122448979592
+    },
+    "87o": {
+      "label": "87o",
+      "ev4x": -0.932875595615095,
+      "ev3x": -0.8338918408729035,
+      "evCheck": -0.34019656680264937,
+      "optimalAction": "check",
+      "margin": 0.5926790288124457,
+      "flopRaiseFrequency": 0.33846938775510205,
+      "riverFoldFrequency": 0.40994496781136136
+    },
+    "86s": {
+      "label": "86s",
+      "ev4x": -0.688214740763462,
+      "ev3x": -0.6130801261017461,
+      "evCheck": -0.17497693638608075,
+      "optimalAction": "check",
+      "margin": 0.5132378043773813,
+      "flopRaiseFrequency": 0.3601020408163265,
+      "riverFoldFrequency": 0.3889959221431403
+    },
+    "86o": {
+      "label": "86o",
+      "ev4x": -1.1382643359521551,
+      "ev3x": -1.0030823732235639,
+      "evCheck": -0.4462643042976721,
+      "optimalAction": "check",
+      "margin": 0.692000031654483,
+      "flopRaiseFrequency": 0.3339795918367347,
+      "riverFoldFrequency": 0.4188728312786724
+    },
+    "85s": {
+      "label": "85s",
+      "ev4x": -0.9030024050647704,
+      "ev3x": -0.7939022591074936,
+      "evCheck": -0.3007403171876209,
+      "optimalAction": "check",
+      "margin": 0.6022620878771494,
+      "flopRaiseFrequency": 0.34494897959183674,
+      "riverFoldFrequency": 0.39735552870546925
+    },
+    "85o": {
+      "label": "85o",
+      "ev4x": -1.3446777279323523,
+      "ev3x": -1.1732282475685387,
+      "evCheck": -0.5561678847414234,
+      "optimalAction": "check",
+      "margin": 0.7885098431909289,
+      "flopRaiseFrequency": 0.3273469387755102,
+      "riverFoldFrequency": 0.4276222885083728
+    },
+    "84s": {
+      "label": "84s",
+      "ev4x": -1.1382902251676656,
+      "ev3x": -0.9923227710750963,
+      "evCheck": -0.42952482498339745,
+      "optimalAction": "check",
+      "margin": 0.7087654001842683,
+      "flopRaiseFrequency": 0.3323979591836735,
+      "riverFoldFrequency": 0.4095565330665106
+    },
+    "84o": {
+      "label": "84o",
+      "ev4x": -1.5743882184985456,
+      "ev3x": -1.363324047835709,
+      "evCheck": -0.670508026373726,
+      "optimalAction": "check",
+      "margin": 0.9038801921248196,
+      "flopRaiseFrequency": 0.3223979591836735,
+      "riverFoldFrequency": 0.4403231135192282
+    },
+    "83s": {
+      "label": "83s",
+      "ev4x": -1.372776024086824,
+      "ev3x": -1.190246106162782,
+      "evCheck": -0.557778002609107,
+      "optimalAction": "check",
+      "margin": 0.814998021477717,
+      "flopRaiseFrequency": 0.3218367346938775,
+      "riverFoldFrequency": 0.4249830089297514
+    },
+    "83o": {
+      "label": "83o",
+      "ev4x": -1.8031279740381074,
+      "ev3x": -1.552804225969284,
+      "evCheck": -0.7849046073928113,
+      "optimalAction": "check",
+      "margin": 1.0182233666452962,
+      "flopRaiseFrequency": 0.31316326530612243,
+      "riverFoldFrequency": 0.45608044327814384
+    },
+    "82s": {
+      "label": "82s",
+      "ev4x": -1.44033225098722,
+      "ev3x": -1.2457649397446462,
+      "evCheck": -0.5887118262521076,
+      "optimalAction": "check",
+      "margin": 0.8516204247351125,
+      "flopRaiseFrequency": 0.31801020408163266,
+      "riverFoldFrequency": 0.4261015877211199
+    },
+    "82o": {
+      "label": "82o",
+      "ev4x": -1.8782139469917414,
+      "ev3x": -1.6147674290060452,
+      "evCheck": -0.8200607105146929,
+      "optimalAction": "check",
+      "margin": 1.0581532364770485,
+      "flopRaiseFrequency": 0.30887755102040815,
+      "riverFoldFrequency": 0.45690828597859123
+    },
+    "76s": {
+      "label": "76s",
+      "ev4x": -0.7463244153085082,
+      "ev3x": -0.6537597481724201,
+      "evCheck": -0.14096196650947834,
+      "optimalAction": "check",
+      "margin": 0.6053624487990299,
+      "flopRaiseFrequency": 0.35551020408163264,
+      "riverFoldFrequency": 0.38710755347467385
+    },
+    "76o": {
+      "label": "76o",
+      "ev4x": -1.2218706100441485,
+      "ev3x": -1.0683255476655253,
+      "evCheck": -0.4309226486771097,
+      "optimalAction": "check",
+      "margin": 0.7909479613670388,
+      "flopRaiseFrequency": 0.33540816326530615,
+      "riverFoldFrequency": 0.4166007476070909
+    },
+    "75s": {
+      "label": "75s",
+      "ev4x": -0.9605767109643346,
+      "ev3x": -0.8340874436554114,
+      "evCheck": -0.2641652142257375,
+      "optimalAction": "check",
+      "margin": 0.696411496738597,
+      "flopRaiseFrequency": 0.34448979591836737,
+      "riverFoldFrequency": 0.3955705223810153
+    },
+    "75o": {
+      "label": "75o",
+      "ev4x": -1.4277367007694977,
+      "ev3x": -1.2379760779667544,
+      "evCheck": -0.5386155017104506,
+      "optimalAction": "check",
+      "margin": 0.8891211990590471,
+      "flopRaiseFrequency": 0.3296938775510204,
+      "riverFoldFrequency": 0.425444599671506
+    },
+    "74s": {
+      "label": "74s",
+      "ev4x": -1.1941314571556856,
+      "ev3x": -1.031117694673866,
+      "evCheck": -0.3921040661576224,
+      "optimalAction": "check",
+      "margin": 0.8020273909980632,
+      "flopRaiseFrequency": 0.33438775510204083,
+      "riverFoldFrequency": 0.4079541807472295
+    },
+    "74o": {
+      "label": "74o",
+      "ev4x": -1.655568777031564,
+      "ev3x": -1.4265653338118267,
+      "evCheck": -0.6522036849359739,
+      "optimalAction": "check",
+      "margin": 1.0033650920955899,
+      "flopRaiseFrequency": 0.32418367346938776,
+      "riverFoldFrequency": 0.43826719401914327
+    },
+    "73s": {
+      "label": "73s",
+      "ev4x": -1.4273125120748167,
+      "ev3x": -1.2280312295762377,
+      "evCheck": -0.5208795897581435,
+      "optimalAction": "check",
+      "margin": 0.9064329223166732,
+      "flopRaiseFrequency": 0.32596938775510204,
+      "riverFoldFrequency": 0.4212850912798052
+    },
+    "73o": {
+      "label": "73o",
+      "ev4x": -1.882941708235829,
+      "ev3x": -1.6149868481291636,
+      "evCheck": -0.7670264260723461,
+      "optimalAction": "check",
+      "margin": 1.115915282163483,
+      "flopRaiseFrequency": 0.31948979591836735,
+      "riverFoldFrequency": 0.45180907700730616
+    },
+    "72s": {
+      "label": "72s",
+      "ev4x": -1.6672915278166796,
+      "ev3x": -1.4304093973106031,
+      "evCheck": -0.6503523585645996,
+      "optimalAction": "check",
+      "margin": 1.01693916925208,
+      "flopRaiseFrequency": 0.3125,
+      "riverFoldFrequency": 0.4366011251864298
+    },
+    "72o": {
+      "label": "72o",
+      "ev4x": -2.1175788261261084,
+      "ev3x": -1.8092517724317436,
+      "evCheck": -0.8828064839621256,
+      "optimalAction": "check",
+      "margin": 1.234772342163983,
+      "flopRaiseFrequency": 0.3053571428571429,
+      "riverFoldFrequency": 0.46740499159885973
+    },
+    "65s": {
+      "label": "65s",
+      "ev4x": -0.9845393217448568,
+      "ev3x": -0.8472070461094509,
+      "evCheck": -0.22688829339096855,
+      "optimalAction": "check",
+      "margin": 0.7576510283538882,
+      "flopRaiseFrequency": 0.34831632653061223,
+      "riverFoldFrequency": 0.38843899261832393
+    },
+    "65o": {
+      "label": "65o",
+      "ev4x": -1.475095449390523,
+      "ev3x": -1.2739814954698607,
+      "evCheck": -0.5205721469256565,
+      "optimalAction": "check",
+      "margin": 0.9545233024648666,
+      "flopRaiseFrequency": 0.3320408163265306,
+      "riverFoldFrequency": 0.417558383205271
+    },
+    "64s": {
+      "label": "64s",
+      "ev4x": -1.2145873780114849,
+      "ev3x": -1.0412537586334554,
+      "evCheck": -0.35184872812971657,
+      "optimalAction": "check",
+      "margin": 0.8627386498817683,
+      "flopRaiseFrequency": 0.33698979591836736,
+      "riverFoldFrequency": 0.40142158621080254
+    },
+    "64o": {
+      "label": "64o",
+      "ev4x": -1.6992007303338748,
+      "ev3x": -1.4594104952012594,
+      "evCheck": -0.6311462542604028,
+      "optimalAction": "check",
+      "margin": 1.0680544760734718,
+      "flopRaiseFrequency": 0.32693877551020406,
+      "riverFoldFrequency": 0.431023806377315
+    },
+    "63s": {
+      "label": "63s",
+      "ev4x": -1.4463057468278622,
+      "ev3x": -1.236976945589355,
+      "evCheck": -0.47982243626012766,
+      "optimalAction": "check",
+      "margin": 0.9664833105677345,
+      "flopRaiseFrequency": 0.32474489795918365,
+      "riverFoldFrequency": 0.4147057713001944
+    },
+    "63o": {
+      "label": "63o",
+      "ev4x": -1.9249938533751723,
+      "ev3x": -1.6465464724855154,
+      "evCheck": -0.7451543183920636,
+      "optimalAction": "check",
+      "margin": 1.1798395349831088,
+      "flopRaiseFrequency": 0.31974489795918365,
+      "riverFoldFrequency": 0.44456002567539504
+    },
+    "62s": {
+      "label": "62s",
+      "ev4x": -1.6849058199395086,
+      "ev3x": -1.43828510210315,
+      "evCheck": -0.6096730622981142,
+      "optimalAction": "check",
+      "margin": 1.0752327576413943,
+      "flopRaiseFrequency": 0.3158673469387755,
+      "riverFoldFrequency": 0.4284133172232815
+    },
+    "62o": {
+      "label": "62o",
+      "ev4x": -2.158188987189212,
+      "ev3x": -1.8396917539069924,
+      "evCheck": -0.861363462162264,
+      "optimalAction": "check",
+      "margin": 1.2968255250269483,
+      "flopRaiseFrequency": 0.3121938775510204,
+      "riverFoldFrequency": 0.45840680397968625
+    },
+    "54s": {
+      "label": "54s",
+      "ev4x": -1.166242007907269,
+      "ev3x": -0.9953104152725928,
+      "evCheck": -0.2989838271136683,
+      "optimalAction": "check",
+      "margin": 0.8672581807936008,
+      "flopRaiseFrequency": 0.33790816326530615,
+      "riverFoldFrequency": 0.39127225358228396
+    },
+    "54o": {
+      "label": "54o",
+      "ev4x": -1.6699510782074032,
+      "ev3x": -1.433056819874912,
+      "evCheck": -0.5977044879118416,
+      "optimalAction": "check",
+      "margin": 1.0722465902955616,
+      "flopRaiseFrequency": 0.33010204081632655,
+      "riverFoldFrequency": 0.41979082104627236
+    },
+    "53s": {
+      "label": "53s",
+      "ev4x": -1.3931302526216556,
+      "ev3x": -1.1869895005782543,
+      "evCheck": -0.4236566078005228,
+      "optimalAction": "check",
+      "margin": 0.9694736448211327,
+      "flopRaiseFrequency": 0.3270408163265306,
+      "riverFoldFrequency": 0.4063150144424097
+    },
+    "53o": {
+      "label": "53o",
+      "ev4x": -1.8906065340098699,
+      "ev3x": -1.6159019564705919,
+      "evCheck": -0.7083363844318283,
+      "optimalAction": "check",
+      "margin": 1.1822701495780414,
+      "flopRaiseFrequency": 0.32285714285714284,
+      "riverFoldFrequency": 0.4351932262266609
+    },
+    "52s": {
+      "label": "52s",
+      "ev4x": -1.6294759677912194,
+      "ev3x": -1.3864625275878957,
+      "evCheck": -0.5523983299456078,
+      "optimalAction": "check",
+      "margin": 1.0770776378456115,
+      "flopRaiseFrequency": 0.31785714285714284,
+      "riverFoldFrequency": 0.420223621363439
+    },
+    "52o": {
+      "label": "52o",
+      "ev4x": -2.1213968907570653,
+      "ev3x": -1.8070898008093457,
+      "evCheck": -0.8233239267450384,
+      "optimalAction": "check",
+      "margin": 1.298072964012027,
+      "flopRaiseFrequency": 0.3143367346938776,
+      "riverFoldFrequency": 0.4491740451962469
+    },
+    "43s": {
+      "label": "43s",
+      "ev4x": -1.5118550694593986,
+      "ev3x": -1.2846940370208837,
+      "evCheck": -0.4726585564340974,
+      "optimalAction": "check",
+      "margin": 1.0391965130253014,
+      "flopRaiseFrequency": 0.3265816326530612,
+      "riverFoldFrequency": 0.4102215446770753
+    },
+    "43o": {
+      "label": "43o",
+      "ev4x": -2.0169258324496737,
+      "ev3x": -1.7198437002696798,
+      "evCheck": -0.760050744708503,
+      "optimalAction": "check",
+      "margin": 1.2568750877411707,
+      "flopRaiseFrequency": 0.32316326530612244,
+      "riverFoldFrequency": 0.43888123241896204
+    },
+    "42s": {
+      "label": "42s",
+      "ev4x": -1.7444967408501526,
+      "ev3x": -1.4810770352913558,
+      "evCheck": -0.599060723339038,
+      "optimalAction": "check",
+      "margin": 1.1454360175111145,
+      "flopRaiseFrequency": 0.31326530612244896,
+      "riverFoldFrequency": 0.42611669089467424
+    },
+    "42o": {
+      "label": "42o",
+      "ev4x": -2.243692522124829,
+      "ev3x": -1.9076875246377816,
+      "evCheck": -0.8725602011163013,
+      "optimalAction": "check",
+      "margin": 1.3711323210085276,
+      "flopRaiseFrequency": 0.3103061224489796,
+      "riverFoldFrequency": 0.45493401801053446
+    },
+    "32s": {
+      "label": "32s",
+      "ev4x": -1.8428056097114673,
+      "ev3x": -1.5624942216530042,
+      "evCheck": -0.6492684543332066,
+      "optimalAction": "check",
+      "margin": 1.1935371553782608,
+      "flopRaiseFrequency": 0.30607142857142855,
+      "riverFoldFrequency": 0.4306731295663501
+    },
+    "32o": {
+      "label": "32o",
+      "ev4x": -2.348116416621728,
+      "ev3x": -1.9941809791647884,
+      "evCheck": -0.9258374060413875,
+      "optimalAction": "check",
+      "margin": 1.4222790105803402,
+      "flopRaiseFrequency": 0.30428571428571427,
+      "riverFoldFrequency": 0.45900715512847134
+    }
+  }
+}

@@ -1,0 +1,18 @@
+The bundled fonts — Nunito, Inter, Playfair Display and Oswald — are each
+licensed under the SIL Open Font License, Version 1.1, which permits bundling
+and redistribution with software.
+
+They are bundled rather than linked because spec §13 requires the app to be
+fully functional offline, with no network required. A webfont served from a CDN
+would make the typography the one part of the product that stops working on a
+plane.
+
+Full licence text: https://openfontlicense.org/open-font-license-official-text/
+
+Copyright notices:
+  Nunito           © The Nunito Project Authors
+  Inter            © The Inter Project Authors
+  Playfair Display © The Playfair Display Project Authors
+  Oswald           © The Oswald Project Authors
+
+These are variable fonts: one file per family covers every weight used.

@@ -1,0 +1,1815 @@
+/*
+ * Spec §10.1: primary actions along the bottom edge, reachable one-handed on a
+ * phone; the rule badge pinned and non-dismissible; dealing fast rather than
+ * cinematic, because this is a drilling tool and not a casino simulator.
+ *
+ * Spec §13: card ranks legible without depending on colour, so every card shows
+ * its rank and suit glyph and carries a screen-reader label.
+ */
+
+:root {
+  color-scheme: dark;
+  /* Warmed a step and softened: the first version read as an instrument panel.
+     Same family, less glare — lower contrast on the lines, a touch of warmth in
+     the greys, and ink that is not quite white. */
+  --bg: #12161c;
+  --panel: #1b2129;
+  --panel-2: #222a33;
+  --line: #2c3540;
+  --ink: #e6e9ee;
+  --muted: #8e9aa8;
+  --felt: #14532d;
+
+  --optimal: #34d399;
+  --negligible: #94a3b8;
+  --minor: #fbbf24;
+  --significant: #fb923c;
+  --blunder: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* --- Rule badge (§10.1, always visible) --- */
+.rules {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.rules-main { display: flex; flex-direction: column; min-width: 0; }
+.rules-name { font-weight: 600; font-size: 14px; }
+.rules-sub { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rules-badge { color: var(--muted); font-size: 12px; }
+.rules-change { font-size: 11px; flex: none; }
+
+/* --- Session stats (§9.2: accuracy first, units last and quiet) ---
+ *
+ * Pinned under the rules bar, for the same reason the dock is pinned to the
+ * bottom: these four figures are what the session is *for*, and a player who
+ * has scrolled down to read a hand log should not have to scroll back to see
+ * what it did to their accuracy.
+ *
+ * `--rules-h` is measured rather than guessed. The bar above is two lines of
+ * text whose height depends on the language and the font, so a hardcoded offset
+ * would leave a gap in one locale and overlap in another. `pinStrip()` in
+ * app.js sets it and keeps it current.
+ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: var(--rules-h, 52px);
+  z-index: 4; /* under the rules bar, over the felt */
+}
+.stat {
+  background: var(--panel);
+  padding: 10px 8px;
+  text-align: center;
+  min-width: 0;
+}
+.stat-value { display: block; font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.stat-label { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-quiet .stat-value { color: var(--muted); font-weight: 500; }
+
+/*
+ * Short screens: the strip gives way first.
+ *
+ * Pinned strip at the top plus pinned dock at the bottom leaves the felt what
+ * is left, and on a 768px-high laptop that is not much. Idan's decision: the
+ * strip shrinks to one compact line of figures before the cards shrink, with
+ * the labels behind the "?" — which is where the full explanation already
+ * lives, so nothing is lost that was not one tap away before.
+ */
+@media (max-height: 800px) {
+  .stat { padding: 5px 6px; }
+  .stat-value { font-size: 15px; }
+  .stat-label { display: none; }
+  .stat-more { opacity: 0.7; }
+}
+
+/* --- Table --- */
+.table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 14px;
+  background: radial-gradient(120% 80% at 50% 0%, #17362a 0%, var(--bg) 65%);
+}
+.seat-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.seat-total {
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.cards { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.card {
+  width: 52px;
+  height: 74px;
+  border-radius: 7px;
+  background: #f7fafc;
+  color: #10151b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.card.red { color: #c0233a; }
+.card-rank { font-size: 20px; line-height: 1; }
+.card-suit { font-size: 16px; line-height: 1; }
+.card.back {
+  background: repeating-linear-gradient(45deg, #2d4c72, #2d4c72 5px, #24405f 5px, #24405f 10px);
+  box-shadow: inset 0 0 0 2px #3d5f88, 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+.hand { padding: 8px; border-radius: 10px; border: 1px solid transparent; }
+.hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
+/* Four times what it was. It is the number the player is actually reading, and
+   it had ended up the smallest thing on a felt whose cards had already grown. */
+.hand-total {
+  margin-top: 4px;
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: 48px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  letter-spacing: var(--display-tracking);
+}
+.hand-total.bust { color: var(--blunder); }
+.hand-meta { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.hand-net { font-weight: 600; }
+.hand-net.win { color: var(--optimal); }
+.hand-net.loss { color: var(--blunder); }
+
+.empty { color: var(--muted); text-align: center; margin: auto 0; }
+
+/* --- Feedback card (§7.1) --- */
+.feedback {
+  margin: 0 14px 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border-inline-start: 4px solid var(--negligible);
+}
+.feedback.optimal { border-inline-start-color: var(--optimal); }
+.feedback.negligible { border-inline-start-color: var(--negligible); }
+.feedback.minor { border-inline-start-color: var(--minor); }
+.feedback.significant { border-inline-start-color: var(--significant); }
+.feedback.blunder { border-inline-start-color: var(--blunder); }
+
+.verdict { font-weight: 700; font-size: 15px; margin: 0 0 2px; }
+.feedback.optimal .verdict { color: var(--optimal); }
+.feedback.minor .verdict { color: var(--minor); }
+.feedback.significant .verdict { color: var(--significant); }
+.feedback.blunder .verdict { color: var(--blunder); }
+
+.did { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
+.evs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ev {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #101820;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.ev.best { color: var(--ink); border-color: #3f7d5c; background: rgba(52, 211, 153, 0.1); }
+.ev.chosen { outline: 1px dashed #6b7c8d; }
+.reason { margin: 0; font-size: 13.5px; }
+.sensitivity {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* --- Actions (§10.1: bottom edge, one-handed) --- */
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+button.action {
+  flex: 1 1 0;
+  min-width: 84px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.action:hover { background: #26313d; }
+button.action:active { transform: translateY(1px); }
+button.action.primary { background: #1f6f4a; border-color: #2c8f61; }
+button.action.primary:hover { background: #248055; }
+
+/* --- Chrome --- */
+.link {
+  background: none;
+  border: none;
+  color: #7dd3a8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.footer-note { color: var(--muted); font-size: 11.5px; text-align: end; }
+.muted { color: var(--muted); font-size: 13px; }
+.legend { display: block; margin-top: 4px; font-size: 12px; }
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  max-width: min(720px, 94vw);
+  padding: 18px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+dialog h2 { margin: 0 0 6px; font-size: 17px; }
+dialog menu { display: flex; justify-content: flex-end; padding: 0; margin: 14px 0 0; }
+dialog menu button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.preset {
+  display: block;
+  width: 100%;
+  text-align: start;
+  margin-top: 8px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.preset.current { border-color: #2c8f61; }
+.preset-note { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+/* --- Reference chart --- */
+.chart-grid { overflow-x: auto; }
+table.chart { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; margin-bottom: 14px; }
+table.chart th, table.chart td { border: 1px solid var(--line); padding: 3px 6px; text-align: center; }
+table.chart th { color: var(--muted); font-weight: 600; }
+td.H { background: #4a2323; }
+td.S { background: #23402f; }
+td.D { background: #2c3a52; }
+td.P { background: #402c4f; }
+td.R { background: #4a3d21; }
+
+@media (max-width: 420px) {
+  .card { width: 46px; height: 66px; }
+  .stat-value { font-size: 16px; }
+}
+
+
+/* --- Guided reveal (§3.4) -------------------------------------------------
+ * The reasoning arrives a step at a time, in the order a competent player
+ * thinks: read the dealer, read your hand, then combine them. Steps stack
+ * rather than replace, so by the third the whole chain is on screen.
+ */
+.reveal { margin: 12px 14px; }
+.step {
+  display: flex;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  margin-bottom: 7px;
+}
+.step-n {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #101820;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.step.latest .step-n { border-color: #3f7d5c; color: var(--optimal); }
+.step p { margin: 0; font-size: 13.5px; }
+.step-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.reveal-controls { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.reveal-next {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #2f9e6c;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reveal-next .key { font-size: 10px; color: var(--muted); margin-inline-start: 7px; letter-spacing: 0.08em; }
+.reveal-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 6px;
+}
+
+/* The evaluated hand, so every step has a referent even after a split has
+ * replaced it on the board with two others. */
+.anchor {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.anchor b { color: var(--ink); font-weight: 600; }
+
+.dealer-note { color: var(--minor); font-size: 12px; margin-top: 4px; }
+
+/* Accuracy tooltip, so the number is not mysterious. */
+.stat { position: relative; }
+.tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 6px);
+  width: 210px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0b1016;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  z-index: 20;
+}
+.stat:hover .tip, .stat:focus .tip, .stat:focus-within .tip { display: block; }
+
+
+/* --- Hand log --------------------------------------------------------------
+ * Every finished hand, kept rather than counted. Tapping one reopens its
+ * reasoning, which is the ground §8's Replay mode is built on.
+ */
+.panel { margin: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 8px;
+}
+.panel-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel-note { font-size: 11.5px; color: var(--muted); }
+
+.log { max-height: 280px; overflow-y: auto; }
+.log-row {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 13px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.log-row:hover { background: var(--panel-2); }
+.log-tier { align-self: stretch; border-radius: 2px; background: var(--negligible); }
+.log-tier.optimal { background: var(--optimal); }
+.log-tier.negligible { background: var(--negligible); }
+.log-tier.minor { background: var(--minor); }
+.log-tier.significant { background: var(--significant); }
+.log-tier.blunder { background: var(--blunder); }
+.log-hand { font-size: 13px; }
+.log-detail { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.log-net { text-align: end; font-variant-numeric: tabular-nums; font-size: 13px; }
+.log-net.win { color: var(--optimal); }
+.log-net.loss { color: var(--blunder); }
+.log-steps { padding: 2px 13px 12px 26px; }
+.log-steps p { margin: 0 0 5px; font-size: 12.5px; color: var(--muted); }
+
+/* One block per decision, so three decisions read as three, not as one that
+   changed its mind. The separator is what makes them visibly separate. */
+.log-decision { padding: 8px 0; }
+.log-decision + .log-decision { border-top: 1px solid var(--line); }
+.log-decision-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--negligible); flex: none; }
+.log-dot.optimal { background: var(--optimal); }
+.log-dot.negligible { background: var(--negligible); }
+.log-dot.minor { background: var(--minor); }
+.log-dot.significant { background: var(--significant); }
+.log-dot.blunder { background: var(--blunder); }
+.log-step-title {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+/* ===========================================================================
+ * Casino dressing, ported from the approved mockup.
+ *
+ * The palette above is unchanged; what follows is the room the game is played
+ * in — felt, a brass rail, chips, and the dealer who works the table. Nothing
+ * flashes and nothing counts down: §16 rules out anything that pressures a
+ * return, and a drilling tool should not fidget while you think.
+ * ======================================================================== */
+
+:root {
+  --brass: #c9a227;
+  --brass-dim: #8a6d1b;
+  --felt-hi: #1c6a40;
+  --felt-lo: #0c3a22;
+  --voice: #f2c879;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --display: ui-serif, Georgia, "Times New Roman", serif;
+}
+
+.shell {
+  max-width: 540px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  border-inline: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+hr.brass {
+  height: 3px;
+  border: none;
+  margin: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--brass-dim) 12%,
+    var(--brass) 50%,
+    var(--brass-dim) 88%,
+    transparent
+  );
+  opacity: 0.85;
+}
+
+/* --- Felt ----------------------------------------------------------------- */
+
+.felt {
+  position: relative;
+  background: radial-gradient(120% 90% at 50% -10%, var(--felt-hi) 0%, var(--felt-lo) 55%, #08281a 100%);
+  border-top: 1px solid rgba(201, 162, 39, 0.28);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image:
+    repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 3px);
+}
+/* The dealer's arc, the way it is painted on a real table. */
+.felt::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -46%;
+  width: 150%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.16);
+  pointer-events: none;
+}
+
+/* --- The dealer ----------------------------------------------------------- */
+
+.dealer-zone { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 4px; }
+.avatar {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #24313d 0%, #18222c 100%);
+  border: 2px solid var(--brass-dim);
+  box-shadow: 0 3px 10px var(--shadow);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.avatar svg { width: 100%; height: 100%; display: block; }
+
+.speech {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--voice);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.speech::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -7px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: var(--panel-2);
+  border-inline-start: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.speech-who {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--voice);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.speech p { margin: 0; font-size: 14px; }
+
+.asks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.ask {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--brass-dim);
+  color: var(--voice);
+  cursor: pointer;
+}
+.ask:hover { background: rgba(201, 162, 39, 0.12); }
+.ask[aria-pressed="true"] { background: rgba(201, 162, 39, 0.2); color: var(--ink); }
+
+.chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10151b;
+  background: var(--brass);
+  border: 3px dashed rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.hand-row { display: flex; align-items: center; gap: 10px; }
+
+/* --- Home screen ---------------------------------------------------------- */
+
+.crest {
+  padding: 26px 16px 20px;
+  text-align: center;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(201, 162, 39, 0.12) 0%, transparent 60%),
+    var(--panel);
+}
+.who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.initial {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 22px;
+  color: #10151b;
+  background: linear-gradient(180deg, var(--brass) 0%, var(--brass-dim) 100%);
+  box-shadow: 0 3px 10px var(--shadow);
+}
+.who-name {
+  font-family: var(--display);
+  font-size: 26px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  text-align: start;
+  padding: 0;
+  width: 100%;
+}
+.who-name:focus { outline: 1px dashed var(--brass-dim); outline-offset: 3px; }
+.who-since { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+.rating-block { margin-top: 18px; }
+.rating-value {
+  font-family: var(--display);
+  font-size: 60px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--brass);
+  text-shadow: 0 2px 14px rgba(201, 162, 39, 0.25);
+}
+.rating-value.provisional { opacity: 0.55; }
+.rating-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.rating-side {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.rating-side .up { color: var(--optimal); }
+.rating-side .down { color: var(--blunder); }
+
+.games { padding: 12px 16px 0; display: grid; gap: 10px; }
+.game {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 15px 16px;
+  background:
+    radial-gradient(140% 100% at 100% 0%, rgba(28, 106, 64, 0.35) 0%, transparent 62%),
+    var(--panel);
+  position: relative;
+  overflow: hidden;
+}
+.game:hover { border-color: var(--brass-dim); }
+.game-title { font-family: var(--display); font-size: 21px; }
+.game-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.game-foot {
+  margin-top: 11px;
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.game-foot b { color: var(--ink); font-weight: 600; }
+.game .pip { position: absolute; right: 14px; top: 12px; font-size: 34px; opacity: 0.18; line-height: 1; }
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--brass-dim);
+  color: var(--voice);
+  vertical-align: 2px;
+  margin-inline-start: 7px;
+}
+
+.modes { display: flex; gap: 6px; margin-top: 11px; }
+.mode {
+  flex: 1;
+  font: inherit;
+  font-size: 11.5px;
+  padding: 7px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #101820;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+}
+.mode[aria-pressed="true"] {
+  border-color: var(--brass-dim);
+  color: var(--ink);
+  background: rgba(201, 162, 39, 0.12);
+}
+.mode small { display: block; font-size: 9.5px; opacity: 0.75; margin-top: 1px; }
+
+.ladder-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.ladder-row:first-child { border-top: none; }
+.ladder-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--optimal), var(--minor), var(--blunder));
+  margin-top: 4px;
+}
+.ladder-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ladder-score { font-family: var(--display); font-size: 16px; color: var(--brass); }
+
+.back { color: var(--brass); text-decoration: none; font-size: 13px; white-space: nowrap; }
+.topbar-title { display: flex; flex-direction: column; min-width: 0; }
+
+/* ===========================================================================
+ * Home: a greeting and two doors, with everything measured behind a tab.
+ *
+ * The first version put four figures across the top of the front page, which
+ * read as an instrument panel rather than an invitation. Numbers are not the
+ * welcome; they are what you look up when you want them.
+ * ======================================================================== */
+
+.hero {
+  padding: 34px 22px 26px;
+  text-align: center;
+  background:
+    radial-gradient(130% 90% at 50% -10%, rgba(201, 162, 39, 0.13) 0%, transparent 62%),
+    linear-gradient(180deg, #1d2530 0%, var(--bg) 100%);
+}
+.hero-top { display: flex; align-items: center; justify-content: center; gap: 13px; }
+.hero .initial {
+  width: 42px;
+  height: 42px;
+  font-size: 19px;
+}
+.hero .who-name {
+  font-family: var(--display);
+  font-size: 30px;
+  letter-spacing: 0.01em;
+  width: auto;
+  max-width: 240px;
+  text-align: start;
+}
+.hero-line {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- The two doors -------------------------------------------------------- */
+
+.doors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 18px 20px; }
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 22px 18px 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--ink);
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  background:
+    radial-gradient(140% 120% at 20% 0%, rgba(28, 106, 64, 0.55) 0%, transparent 70%),
+    linear-gradient(180deg, #1f2731 0%, #171d25 100%);
+}
+/* The lift and its transition live in the reduced-motion regime at the end of
+   this file; the colour change stays here, since it is not motion. */
+.door:hover { border-color: var(--brass); }
+.door.secondary {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #1e242c 0%, #171c23 100%);
+}
+.door-title { font-family: var(--display); font-size: 23px; line-height: 1.15; }
+.door-sub { font-size: 12.5px; color: var(--muted); }
+.door-pip {
+  position: absolute;
+  inset-inline-end: 12px;
+  bottom: 4px;
+  font-size: 54px;
+  line-height: 1;
+  opacity: 0.13;
+}
+
+/* --- Tabs ----------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 11px 6px 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brass); }
+.tab-body { padding: 18px; }
+
+/* --- Standing ------------------------------------------------------------- */
+
+.standing { text-align: center; padding: 6px 0 18px; }
+.standing-value {
+  font-family: var(--display);
+  font-size: 54px;
+  line-height: 1;
+  color: var(--brass);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 18px rgba(201, 162, 39, 0.22);
+}
+.standing-value.provisional { opacity: 0.5; }
+.standing-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.standing-note { margin: 12px auto 0; max-width: 34ch; font-size: 13px; color: var(--muted); }
+
+.ladder { margin-top: 20px; }
+.ladder-head {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* --- Stats, written rather than tabulated --------------------------------- */
+
+.figure { padding: 15px 0; border-top: 1px solid var(--line); }
+.figure:first-child { border-top: none; padding-top: 4px; }
+.figure-value { font-family: var(--display); font-size: 27px; color: var(--ink); }
+.figure-value.quiet { color: var(--muted); font-size: 22px; }
+.figure-label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.figure-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; max-width: 42ch; }
+
+.empty-note { color: var(--muted); font-size: 13.5px; text-align: center; padding: 26px 10px; }
+
+/* --- Reveal: a card that does not move under the cursor ------------------- */
+
+.step.pending { opacity: 0.35; }
+/* Unrevealed steps keep their slot so the card's height never changes. Two
+   lines is the median step length; a rule stands in for the text. */
+.step.pending p::after {
+  content: "";
+  display: block;
+  height: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--line) 0 60px,
+    transparent 60px 72px
+  );
+}
+.step.pending p { min-height: 2.9em; }
+.step p { min-height: 2.9em; }
+
+.reveal-skip.pref {
+  display: block;
+  margin: 4px auto 0;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--line);
+}
+
+/* --- Softer surfaces ------------------------------------------------------ */
+
+.feedback {
+  border-radius: 14px;
+  padding: 15px 16px;
+}
+.step {
+  border-radius: 12px;
+  padding: 12px 13px;
+}
+.ev {
+  padding: 4px 10px;
+  font-size: 12.5px;
+  border-color: rgba(255, 255, 255, 0.07);
+}
+.action { border-radius: 12px; }
+.card { border-radius: 9px; }
+
+/* ===========================================================================
+ * Centre the table.
+ *
+ * The shell centres the page, but inside the felt everything was still packed
+ * against the left edge, so the cards sat in a corner of a wide green field
+ * instead of on a table. A real table deals to the middle; so does this one.
+ * ======================================================================== */
+
+.felt .seat { text-align: center; }
+.felt .cards { justify-content: center; }
+.felt .hand-row { justify-content: center; }
+.felt .hand-meta { text-align: center; }
+.felt .seat-title { text-align: center; }
+
+/* The dealer keeps her speech bubble left-aligned — it is prose, and centred
+   prose is harder to read than the tidiness is worth. */
+.felt .dealer-zone { justify-content: center; }
+.felt .speech { text-align: start; max-width: 400px; }
+
+/* Give the felt a little more room to breathe around the cards. */
+.felt .seat { padding: 14px 16px; }
+
+/* --- Step text: shorter lines, figures that read as figures ---------------- */
+
+.step p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(230, 233, 238, 0.88);
+}
+/* The words the copy leans on. */
+.step p b {
+  color: var(--ink);
+  font-weight: 650;
+}
+/* Figures in the display face: a number set in the body font disappears into
+   the sentence, which is the opposite of what these sentences are for. */
+.num {
+  font-family: var(--display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.06em;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.step p b .num, .step p .num { color: #f4f7fa; }
+
+/* ===========================================================================
+ * Typography.
+ *
+ * Bundled rather than linked: §13 requires the app to work offline, and a
+ * webfont from a CDN would make the typography the one part of the product that
+ * stops working on a plane. Four variable fonts, one file each, 152 KB total —
+ * against a 150 MB app budget. Licences in public/fonts/OFL.txt.
+ *
+ * The pairing is chosen by a `data-font` attribute on <html> so the candidates
+ * can be compared on real hands rather than from a description.
+ * ======================================================================== */
+
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/playfair.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Oswald';
+  src: url('/fonts/oswald.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Rubik carries both scripts in one warm, slightly rounded family, so Hebrew
+   does not land in a different voice from the English it sits beside. Split by
+   unicode-range: an English player never downloads the Hebrew subset, and a
+   Hebrew player gets the Latin one anyway because card ranks (A, K, T) and the
+   figures stay Latin in both languages. */
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-latin.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-hebrew.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+200F, U+20AA;
+}
+
+:root,
+:root[data-font='warm'] {
+  /* Warm and soft: rounded humanist throughout, figures only a little heavier.
+     Least formal, and the easiest to sit in front of for an hour. */
+  --body: 'Nunito', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Nunito', 'Rubik', system-ui, sans-serif;
+  --display-weight: 800;
+  --display-tracking: -0.01em;
+}
+
+:root[data-font='elegant'] {
+  /* The card-room look: engraved figures, quiet body copy. */
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Playfair Display', 'Rubik', ui-serif, Georgia, serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
+
+:root[data-font='deco'] {
+  /* Signage on an old table rather than a modern app. */
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Oswald', 'Rubik', 'Arial Narrow', sans-serif;
+  --display-weight: 500;
+  --display-tracking: 0.02em;
+}
+
+:root[data-font='system'] {
+  /* Nothing downloaded. The floor, kept for comparison. */
+  --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: ui-serif, Georgia, 'Times New Roman', serif;
+  --display-weight: 600;
+  --display-tracking: 0;
+}
+
+body { font-family: var(--body); }
+
+/* The one shape logical properties cannot mirror: the speech tail is a rotated
+   square whose two lit borders make the point. Flipping which borders are lit
+   would need a second rule anyway, so rotating the same square the other way is
+   fewer moving parts. */
+:root[dir='rtl'] .speech::before { transform: rotate(-135deg); }
+
+:root[lang='he'] {
+  --body: 'Rubik', system-ui, 'Segoe UI', sans-serif;
+  --display: 'Rubik', system-ui, sans-serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
+
+/* Everything set in the display face picks up its weight and tracking, so a
+   condensed deco face and a rounded sans both land right without per-rule
+   overrides. */
+.card-rank,
+.standing-value,
+.rating-value,
+.figure-value,
+.door-title,
+.who-name,
+.hero .who-name,
+.ladder-score,
+.stat-value,
+.num,
+.seat-total {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+}
+
+/* --- The switcher (temporary) --------------------------------------------- */
+
+.fontbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.fontbar button {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fontbar button[aria-pressed='true'] {
+  border-color: var(--brass-dim);
+  background: rgba(201, 162, 39, 0.14);
+  color: var(--ink);
+}
+.fontbar-sep {
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--line);
+  margin-inline-start: 2px;
+}
+
+/* ===========================================================================
+ * Scale.
+ *
+ * The first pass was sized for a phone held close. On a monitor at arm's length
+ * the cards read as icons and the figures — which are the entire point of the
+ * feedback card — sat smaller than the prose explaining them. Everything on the
+ * felt goes up: the cards most, then the headline, then the numbers, so the
+ * order things are noticed in matches the order they matter in.
+ * ======================================================================== */
+
+.card { width: 78px; height: 110px; border-radius: 11px; gap: 2px; }
+.card-rank { font-size: 34px; }
+.card-suit { font-size: 26px; }
+.cards { gap: 10px; }
+
+.seat-title { font-size: 14px; margin-bottom: 10px; }
+.seat-total { font-size: 20px; }
+
+/* The verdict is the answer, so it is the largest thing on the card. */
+.verdict { font-size: 21px; line-height: 1.25; margin-bottom: 4px; }
+.did { font-size: 15px; }
+.step p { font-size: 15.5px; }
+.step-head { font-size: 11.5px; }
+.step-n { width: 24px; height: 24px; font-size: 12.5px; }
+
+/* Figures carry the argument; they are set to be read, not scanned past. */
+.num { font-size: 1.18em; }
+.ev { font-size: 15px; padding: 6px 12px; }
+.stat-value { font-size: 25px; }
+.stat-label { font-size: 11px; }
+.standing-value { font-size: 54px; }
+.figure-value { font-size: 30px; }
+
+/* A phone has less room, so it keeps a smaller step of the same scale rather
+   than the old one — the cards still come out bigger than they were. */
+@media (max-width: 560px) {
+  .card { width: 60px; height: 86px; }
+  .card-rank { font-size: 27px; }
+  .card-suit { font-size: 20px; }
+  .verdict { font-size: 18px; }
+  .stat-value { font-size: 20px; }
+  .standing-value { font-size: 44px; }
+}
+
+/* --- What a figure means, opened where the figure is ----------------------- */
+
+.stat {
+  font: inherit;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  text-align: center;
+}
+.stat[aria-expanded='true'] { background: var(--panel-2); }
+.stat-more {
+  position: absolute;
+  top: 5px;
+  inset-inline-end: 7px;
+  font-size: 10px;
+  color: var(--line);
+}
+.stat:hover .stat-more,
+.stat[aria-expanded='true'] .stat-more { color: var(--voice); }
+
+.stat-info {
+  padding: 12px 16px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.stat-info-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--voice);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.stat-info p { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(230, 233, 238, 0.84); }
+.stat-info-detail {
+  margin-top: 7px !important;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+/* --- House restrictions, and the instructions ------------------------------ */
+
+.sub-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 7px;
+  cursor: pointer;
+}
+.check:hover { border-color: var(--brass-dim); }
+.check input { margin-top: 2px; accent-color: var(--voice); flex: none; }
+.check strong { display: block; font-size: 14px; font-weight: 600; }
+.check small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+.fine { font-size: 12px; margin-top: 10px; }
+
+.howto { margin: 0; padding-inline-start: 22px; }
+.howto li { font-size: 14.5px; line-height: 1.6; margin-bottom: 9px; color: rgba(230, 233, 238, 0.88); }
+.howto li b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * The dock.
+ *
+ * The buttons were already pinned to the bottom edge (§10.1). The verdict is
+ * looked at in the same instant and from the same place, so it is pinned with
+ * them rather than sitting up the page where a fast player has to go and find
+ * it. One band, always in view: what the hand cost, what each play was worth,
+ * and what to do next.
+ *
+ * It reads as part of the bar rather than as another card — no radius, no
+ * shadow, just a rule down its leading edge in the severity colour, which is
+ * the one thing worth seeing from across the room.
+ * ======================================================================== */
+
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+/* The bar no longer pins itself; the dock around it does. */
+.actions {
+  position: static;
+  border-top: none;
+}
+
+.quickcard {
+  padding: 10px 14px 11px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  border-inline-start: 3px solid var(--line);
+  text-align: start;
+  /* A long reveal must never push the buttons off the screen. */
+  max-height: 42dvh;
+  overflow-y: auto;
+}
+.quickcard.optimal { border-inline-start-color: var(--optimal); }
+.quickcard.negligible { border-inline-start-color: var(--negligible); }
+.quickcard.minor { border-inline-start-color: var(--minor); }
+.quickcard.significant { border-inline-start-color: var(--significant); }
+.quickcard.blunder { border-inline-start-color: var(--blunder); }
+.quickcard.thinking { border-inline-start-color: var(--brass-dim); }
+
+.quickcard .anchor {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.quickcard .anchor b { color: var(--ink); font-weight: var(--display-weight); }
+.quickcard .verdict { margin: 2px 0 0; font-size: 19px; }
+.quickcard.optimal .verdict { color: var(--optimal); }
+.quickcard.minor .verdict { color: var(--minor); }
+.quickcard.significant .verdict { color: var(--significant); }
+.quickcard.blunder .verdict { color: var(--blunder); }
+.quickcard .did { margin: 1px 0 0; font-size: 14px; }
+.quickcard .evs { margin: 9px 0 0; }
+
+/* The feedback card below is now reasoning only, so it starts with a step
+   rather than a heading and needs no top padding of its own. */
+.feedback .reveal { margin-top: 0; }
+
+/* ===========================================================================
+ * Where a card came from.
+ *
+ * Three cards totalling sixteen say nothing about how the hand got there, and
+ * 10+6 is a different lesson from 5+4 then 7. The opening two sit flush and
+ * plain; every card taken since is stepped down and carries the number of the
+ * draw that brought it. Shape and badge, never colour alone (§13).
+ * ======================================================================== */
+
+.card { position: relative; }
+.card.drawn {
+  transform: translateY(7px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.card.drawn::after {
+  content: attr(data-draw);
+  position: absolute;
+  top: -7px;
+  inset-inline-end: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--voice);
+  color: #16110a;
+  font-family: var(--display);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 19px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+/* The cards sit lower now, so the row needs the headroom back. */
+.felt .cards { align-items: flex-start; padding-bottom: 9px; }
+
+/* --- Seat headers: readable from where the player actually sits ----------- */
+
+.seat-title {
+  font-size: 18px;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.seat-total { font-size: 24px; letter-spacing: 0; }
+
+/* ===========================================================================
+ * The rail.
+ *
+ * Real denominations broken high to low, because a stack of two hundred ones is
+ * a bar chart and a stack with a black chip in it is money. The colours are the
+ * ones every table uses, so the stack reads before the figure beside it does.
+ *
+ * §3.1 still holds: the balance is the arithmetic of settled hands, and the
+ * swing from the last one appears only once the grade is out.
+ * ======================================================================== */
+
+/*
+ * Laid out the way a table is, from the player's seat.
+ *
+ * Furthest away are the cards, then the betting circle with whatever is riding
+ * on this hand, and nearest the player their own stack. Side by side, the wager
+ * and the stack read as two statistics; stacked in that order they read as a
+ * table, and the wager is visibly in front of the money it came out of.
+ */
+.rail {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* The betting circle: a spot printed on the felt, empty between hands. */
+.rail-bet .chips {
+  min-width: 74px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.22);
+  margin-bottom: 6px;
+}
+.rail-spot {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  position: relative;
+}
+.rail-value {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+}
+.rail-bank .rail-value { font-size: 31px; }
+.rail-bank .chips { margin-bottom: 7px; }
+.rail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+}
+.rail-delta {
+  position: absolute;
+  top: -13px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.rail-delta.win { color: var(--optimal); }
+.rail-delta.loss { color: var(--blunder); }
+
+/*
+ * Chips, laid out in a row and marked with what they are worth.
+ *
+ * A stack seen from the side shows one face and hides the rest, which looks
+ * right and reads as nothing: a player cannot tell 201 from 61 by counting
+ * edges. Spread along the rail instead, each chip overlapping the last just
+ * enough to look handled, every denomination stays visible and the total can be
+ * read off the row.
+ */
+.chips {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+  row-gap: 3px;
+  max-width: 300px;
+}
+.chip {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  margin-inline-start: -7px;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.chip:first-child { margin-inline-start: 0; }
+
+/* The colours every table uses, and text picked to stay legible on each. */
+.chip-purple { background: #5b3a86; border: 2px dashed #a385cd; color: #f3ecfb; }
+.chip-white { background: #eef2f6; border: 2px dashed #aeb9c4; color: #1b2530; }
+.chip-red { background: #b6283a; border: 2px dashed #e2818c; color: #fff4f5; }
+.chip-green { background: #1f7a4c; border: 2px dashed #6cc396; color: #eafaf1; }
+.chip-black { background: #1a1f26; border: 2px dashed #78838f; color: #e6e9ee; }
+.chip-half {
+  background: #eef2f6;
+  border: 2px dashed #aeb9c4;
+  color: #1b2530;
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+/* The wager riding with each hand, so a double or a split reads as money. */
+.hand-wager { display: flex; justify-content: center; min-height: 22px; margin-top: 8px; }
+.hand-wager .chip { width: 22px; height: 22px; font-size: 9px; border-width: 2px; }
+
+@media (max-width: 560px) {
+  .rail { gap: 12px; }
+  .hand-total { font-size: 38px; }
+  .rail-bank .rail-value { font-size: 24px; }
+  .seat-title { font-size: 15px; }
+  .seat-total { font-size: 20px; }
+}
+
+/* ===========================================================================
+ * Playing well.
+ *
+ * The rating the decision was worth, the run it belongs to, and how hard the
+ * spot was — all of it about the decision, none of it about the money, and
+ * none of it louder at fifty than at one (§16).
+ * ======================================================================== */
+
+.quickcard .anchor { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.quickcard .rating-side {
+  display: flex;
+  margin-top: 0;
+  flex: none;
+  font-family: var(--display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.quickcard .rating-side .unrated { color: var(--line); }
+
+/* A run, worn beside the verdict rather than kept as a score of its own. */
+.streak {
+  margin-inline-start: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: 2px;
+  cursor: help;
+}
+
+.quickcard .spot { margin: 6px 0 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.quickcard .spot .tag { margin-inline-start: 0; }
+.spot-note { font-size: 12.5px; color: var(--muted); }
+
+.quickcard .milestone {
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickcard .milestone b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * Motion.
+ *
+ * Built the way round that makes stillness the default: every animated rule
+ * lives inside `prefers-reduced-motion: no-preference`, so a player who has
+ * asked for less gets a page with none, and nothing needs an override to
+ * undo. Nothing in the input path waits on any of it.
+ *
+ * Vertical only. The app runs right-to-left in Hebrew, and a deal that slid
+ * in from the left would arrive from the wrong side of the table.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes deal-in {
+    from { opacity: 0; transform: translate3d(0, -14px, 0) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Only cards that were not on the felt a moment ago carry `.arriving`, so
+     stepping through the reveal does not re-deal the hand. */
+  .card.arriving {
+    animation: deal-in 180ms ease-out backwards;
+    animation-delay: calc(var(--deal-index, 0) * 70ms);
+  }
+
+  @keyframes affirm-sweep {
+    from { transform: scaleY(0); opacity: 0.9; }
+    to { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* The leading rule brightens once down its length. That is the entire
+     celebration, and it is the same at the fiftieth as at the first. */
+  .quickcard.affirm { position: relative; }
+  .quickcard.affirm::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -3px;
+    width: 3px;
+    background: var(--optimal);
+    transform-origin: top;
+    animation: affirm-sweep 260ms ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes affirm-settle {
+    from { transform: scale(1.03); }
+    to { transform: none; }
+  }
+  .quickcard.affirm .verdict {
+    animation: affirm-settle 260ms ease-out;
+    transform-origin: inline-start;
+  }
+
+  .door { transition: transform 0.12s ease, border-color 0.12s ease; }
+  .door:hover { transform: translateY(-2px); }
+}
+
+/* --- The door's code field, and the way back out of it -------------------- */
+
+.welcome-code { max-width: 8ch; letter-spacing: 0.28em; text-align: center; }
+.welcome-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: -4px 0 0; max-width: 36ch; }
+.welcome-error {
+  margin: 4px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--blunder);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 40ch;
+}
+.switch-player { display: block; margin: 18px auto 0; }
+
+/* ===========================================================================
+ * Ultimate Texas Hold'em (round 4a).
+ *
+ * The Blackjack table's pieces, reused: the same cards, the same dock, the same
+ * feedback card and severity colours. What is new is only what the game has
+ * and Blackjack does not — a board of five, and three separate stakes.
+ * ======================================================================== */
+
+.uth-felt .seat { padding: 10px 16px; }
+.uth-board .cards { gap: 7px; }
+.uth-board .card { width: 62px; height: 88px; }
+.uth-board .card-rank { font-size: 26px; }
+.uth-board .card-suit { font-size: 20px; }
+
+/* Ante, Blind, Play, then the stack, in one row under the hand. */
+.uth-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.uth-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.uth-spot.bank { border-color: rgba(201, 162, 39, 0.35); }
+.uth-spot .rail-value { font-size: 20px; font-weight: 650; }
+.uth-spot .rail-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.uth-spot .rail-delta { font-size: 12px; }
+
+/* Honest about where the money lives: nowhere, yet. */
+.uth-memory { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+.uth-keys { margin: 8px 14px 14px; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+/* The result: under the grade, smaller and quieter than it (§3.1). */
+.uth-result { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
+.uth-result p { margin: 0 0 2px; font-size: 13px; color: var(--muted); }
+.uth-result .uth-net { margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.uth-waiting { margin: 0; padding: 14px 0; width: 100%; text-align: center; color: var(--muted); }
+/*
+ * The key hint sits in the button with a gap, not a margin. In Hebrew the label
+ * ("Check") and the hint ("C") are both left-to-right runs inside a
+ * right-to-left button, so the browser lays them out as one run and a margin on
+ * the hint's inline-start side ends up facing away from the label. A flex gap
+ * spaces children whichever way the text runs.
+ */
+.uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.uth .actions .action .key { opacity: 0.55; font-size: 12px; }
+
+/* ===========================================================================
+ * Decision buttons in rows (round 4b).
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in Hebrew and English alike. Each row is laid out left to right with
+ * `direction: ltr`, so a right-to-left page does not mirror it; the label inside
+ * each button keeps the page's own direction, so Hebrew still reads right to
+ * left. A row takes as many equal columns as it has buttons, which is how a
+ * lone Double, a lone Surrender, Split or Raise 3x comes to fill its row.
+ * ======================================================================== */
+.actions.rows { flex-direction: column; flex-wrap: nowrap; }
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: 8px;
+  direction: ltr;
+}
+.action-row > .action { min-width: 0; }
+[dir="rtl"] .action-row > .action { direction: rtl; }
+
+/* ===========================================================================
+ * Portrait phone first (round 5).
+ *
+ * Most of the people this is played by hold a phone. Measured before this
+ * block at 360, 390 and 412 px wide, nothing overflowed and every decision
+ * button already sat in the bottom third, because the dock is pinned there. What
+ * was wrong was the table itself: on a 390x844 screen, UTH's five-card board
+ * wrapped to two rows and pushed the player's own cards under the dock, and the
+ * two-line stat labels and loose spacing did the same to Blackjack's rail.
+ *
+ * So on a phone the chrome gets tighter, the strip becomes one line of figures
+ * with the labels behind the "?" (round 3's rule for when the strip and the dock
+ * do not both fit), and UTH's board is sized so five cards share a row.
+ * ======================================================================== */
+
+html { -webkit-text-size-adjust: 100%; }
+/* No double-tap zoom delay and no grey flash on a tap. */
+button,
+.stat,
+.link,
+.log-row { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.action-row > .action { -webkit-user-select: none; user-select: none; }
+
+@media (max-width: 560px) {
+  .fontbar { padding: 3px 12px; }
+  .fontbar button { padding: 2px 9px; }
+
+  .rules { padding: 6px 12px; gap: 8px; }
+  .rules-name { font-size: 13px; }
+  .rules-sub { flex-wrap: nowrap; }
+  .rules-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+  .stat { padding: 6px 4px; }
+  .stat-value { font-size: 17px; }
+  .stat-label { display: none; }
+
+  .table { gap: 8px; padding: 8px 10px; }
+  .dealer-zone { padding: 6px 8px 0; gap: 8px; }
+  .avatar { width: 40px; height: 40px; }
+  .speech p { font-size: 13px; }
+  .felt .seat { padding: 4px 8px; }
+  .seat-title { margin-bottom: 4px; font-size: 12px; }
+  .hand { padding: 4px; }
+  .hand-total { font-size: 32px; }
+
+  .rail { gap: 4px; margin-top: 6px; padding-top: 6px; }
+  .rail-bet .chips { height: 34px; min-width: 56px; margin-bottom: 2px; }
+  .rail-bank .rail-value { font-size: 21px; }
+  .rail-value { font-size: 19px; }
+
+  /* Five community cards on one row, whatever the phone's width. */
+  .uth-board .cards { flex-wrap: nowrap; gap: 5px; justify-content: center; }
+  .uth-board .card {
+    width: min(58px, calc((100vw - 36px - 4 * 5px) / 5));
+    height: auto;
+    aspect-ratio: 5 / 7;
+  }
+  .uth-board .card-rank { font-size: 22px; }
+  .uth-board .card-suit { font-size: 16px; }
+  .uth-felt .seat { padding: 4px 8px; }
+  .uth-rail { margin-top: 6px; gap: 5px; }
+  .uth-spot { padding: 3px 2px; }
+  .uth-spot .rail-value { font-size: 17px; }
+}
+
+/* --- UTH showdown: the five cards that make each hand (round 5) --------------- */
+.uth .card.best-you { outline: 3px solid var(--brass); outline-offset: 2px; }
+.uth .card.best-dealer { box-shadow: inset 0 0 0 3px #9aa6b2, 0 3px 10px var(--shadow); }
+.uth-hand-name { color: var(--ink) !important; font-size: 13.5px; }
+.uth-legend { font-size: 11.5px !important; opacity: 0.8; }
+.uth-note { margin-top: 6px; color: var(--muted); font-size: 13.5px; }

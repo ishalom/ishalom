@@ -1,0 +1,24 @@
+{
+  "name": "@evtrainer/game-engine",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Blackjack game engine: the state machine and dealing layer above the EV engine.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node ../ev-engine/scripts/test.ts",
+    "test:slow": "node ../ev-engine/scripts/test.ts --slow",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "simulate": "node scripts/simulate.ts"
+  },
+  "dependencies": {
+    "@evtrainer/ev-engine": "0.1.0"
+  },
+  "license": "UNLICENSED"
+}

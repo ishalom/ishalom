@@ -1,0 +1,5 @@
+{
+  "url": "https://YOUR-PROJECT-REF.supabase.co",
+  "key": "YOUR-PUBLISHABLE-ANON-KEY",
+  "table": "players"
+}

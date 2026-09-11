@@ -1,0 +1,20 @@
+{
+  "name": "@evtrainer/trainer-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local web client for the EV Trainer, for playing and testing the engines.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "node ../ev-engine/scripts/test.ts",
+    "build:artifact": "node scripts/build-artifact.ts"
+  },
+  "dependencies": {
+    "@evtrainer/ev-engine": "0.1.0",
+    "@evtrainer/game-engine": "0.1.0"
+  }
+}

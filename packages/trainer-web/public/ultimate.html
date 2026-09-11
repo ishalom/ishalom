@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="i18n-title" content="ui.ultimateTitle" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Ultimate Texas Hold'em</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+  </head>
+  <body>
+    <div class="shell uth">
+      <!-- The rules are a statement, as on the Blackjack table. There is one
+           paytable and it is the one the pre-flop table was solved against, so
+           nothing here offers to change it. -->
+      <header class="rules" id="rules-bar">
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
+        <div class="rules-main">
+          <span class="rules-name" data-i18n="ui.ultimateTitle">Ultimate Texas Hold’em</span>
+          <span class="rules-badge" data-i18n="uth.rulesLine">Blind pays a straight or better · dealer qualifies with a pair</span>
+        </div>
+      </header>
+
+      <!-- The same strip as the Blackjack table, reading this game's figures. -->
+      <section class="stats" id="uth-stats" data-i18n-attr="aria-label:ui.sessionStats">
+        <button class="stat" type="button" data-info="accuracy"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-accuracy">—</span>
+          <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEvLost"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-evlost">—</span>
+          <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEdge"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-edge">—</span>
+          <span class="stat-label" data-i18n="ui.yourEdge">house edge you face</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat stat-quiet" type="button" data-info="units"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-units">—</span>
+          <span class="stat-label" data-i18n="ui.units">units</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+      </section>
+      <section class="stat-info" id="uth-stat-info" hidden aria-live="polite"></section>
+
+      <main class="table felt uth-felt" id="uth-table">
+        <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+          <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span></h2>
+          <div class="cards" id="uth-dealer"></div>
+        </section>
+
+        <section class="seat uth-board" data-i18n-attr="aria-label:uth.board">
+          <h2 class="seat-title"><span data-i18n="uth.board">Board</span></h2>
+          <div class="cards" id="uth-board"></div>
+        </section>
+
+        <section class="seat" data-i18n-attr="aria-label:ui.yourHand">
+          <h2 class="seat-title">
+            <span data-i18n="ui.you">You</span>
+            <span class="seat-total" id="uth-class"></span>
+          </h2>
+          <div class="cards" id="uth-hole"></div>
+          <!-- Ante, Blind and Play, and the stack behind them. -->
+          <div class="uth-rail" id="uth-rail"></div>
+        </section>
+
+        <p class="empty" id="uth-empty" data-i18n="uth.pressDeal">Deal to post Ante 1 and Blind 1.</p>
+      </main>
+
+      <!-- Every finished hand, kept: one block per decision, the result quietest. -->
+      <section class="panel" id="uth-log-panel">
+        <div class="panel-head">
+          <h2 class="panel-title" data-i18n="uth.logTitle">Hands</h2>
+        </div>
+        <div id="uth-hands"></div>
+      </section>
+
+      <div class="dock">
+        <!-- The grade first; the result under it, later and quieter (§3.1). -->
+        <section class="quickcard" id="uth-card" hidden aria-live="polite"></section>
+        <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
+      </div>
+
+      <dialog id="uth-howto">
+        <form method="dialog">
+          <h2 data-i18n="howto.title">How this works</h2>
+          <ol class="howto" id="uth-howto-list"></ol>
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <footer class="footer">
+        <button class="link" id="uth-open-howto" type="button" data-i18n="howto.open">How to play</button>
+      </footer>
+    </div>
+
+    <script src="/ultimate.js"></script>
+  </body>
+</html>

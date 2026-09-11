@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <!--
+        The front of the app is a greeting and two doors. Everything measured
+        lives behind a tab, because a wall of figures is not a welcome — and
+        §3.1 would rather you came here to play than to check a scoreboard.
+      -->
+      <section class="hero">
+        <div class="hero-top">
+          <div class="initial" id="initial">P</div>
+          <input class="who-name" id="name" value="Player" data-i18n-value="ui.defaultName"
+                 data-i18n-attr="aria-label:ui.yourName" spellcheck="false" />
+        </div>
+        <p class="hero-line" id="greeting" data-i18n="ui.greeting">Good to see you.</p>
+      </section>
+
+      <section class="doors">
+        <a class="door" href="/table.html">
+          <span class="door-pip">♠</span>
+          <span class="door-title" data-i18n="ui.blackjack">Blackjack</span>
+          <span class="door-sub" id="bj-sub" data-i18n="ui.playAHand">Play a hand</span>
+        </a>
+        <a class="door secondary" href="/ultimate.html">
+          <span class="door-pip">♦</span>
+          <span class="door-title" data-i18n="ui.ultimate">Ultimate</span>
+          <span class="door-sub" data-i18n="ui.playAHand">Play a hand</span>
+        </a>
+      </section>
+
+      <nav class="tabs" role="tablist" data-i18n-attr="aria-label:ui.yourPlay">
+        <button class="tab" role="tab" data-tab="standing" aria-selected="true" data-i18n="ui.tab.standing">Standing</button>
+        <button class="tab" role="tab" data-tab="hands" aria-selected="false" data-i18n="ui.tab.hands">Hands</button>
+        <button class="tab" role="tab" data-tab="stats" aria-selected="false" data-i18n="ui.tab.stats">Stats</button>
+      </nav>
+
+      <section class="tab-body" id="panel-standing" role="tabpanel">
+        <div class="standing">
+          <div class="standing-value" id="rating">—</div>
+          <div class="standing-label" id="rating-label" data-i18n="ui.rating">rating</div>
+          <div class="rating-side" id="rating-swing" hidden></div>
+          <p class="standing-note" id="rating-note"></p>
+        </div>
+        <div class="modes" role="group" data-i18n-attr="aria-label:ui.drilledOn">
+          <button class="mode" type="button" data-mode="basic" aria-pressed="true">
+            <span data-i18n="ui.mode.basic">Basic</span><small data-i18n="ui.mode.basicNote">the costly hands</small>
+          </button>
+          <button class="mode" type="button" data-mode="recall" aria-pressed="false">
+            <span data-i18n="ui.mode.recall">Recall</span><small data-i18n="ui.mode.recallNote">thin and rare</small>
+          </button>
+          <button class="mode" type="button" data-mode="value" aria-pressed="false">
+            <span data-i18n="ui.mode.value">Value</span><small data-i18n="ui.mode.valueNote">your own leaks</small>
+          </button>
+        </div>
+        <div id="ladder" class="ladder"></div>
+      </section>
+
+      <section class="tab-body" id="panel-hands" role="tabpanel" hidden>
+        <div id="hands"></div>
+      </section>
+
+      <section class="tab-body" id="panel-stats" role="tabpanel" hidden>
+        <div id="stats"></div>
+      </section>
+
+      <p class="footer" id="footer"></p>
+    </div>
+
+    <script src="/home.js"></script>
+  </body>
+</html>
