@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="37bd12c2ee3388dc54d2c6d79dcb9b2dbc4b5458-dirty" />
-<meta name="ev-build-at" content="2026-09-11T22:32:57.556Z" />
+<meta name="ev-build-commit" content="0ac097b7d81d8800cd866f3bf8c260708600c854-dirty" />
+<meta name="ev-build-at" content="2026-09-11T22:38:12.916Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -13776,6 +13776,9 @@ async function connect() {
         if (reachable === backendReachable) return;
         backendReachable = reachable;
         renderSocial();
+        // Back from offline: what was played meanwhile is only in this browser.
+        // Send it now, not at the next hand — the offline line promises as much.
+        if (reachable) void publish();
       },
     );
     void publish();
