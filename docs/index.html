@@ -6,8 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="57cc5289cb22598c7ee776a413fd90f3c0ac0f11-dirty" />
-<meta name="ev-build-at" content="2026-09-11T12:26:57.105Z" />
+<meta name="ev-build-commit" content="c5cc9c53880f1966d2bd7804f6724d4bd723b2ae-dirty" />
+<meta name="ev-build-at" content="2026-09-11T13:16:44.005Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -1681,6 +1681,63 @@ body { font-family: var(--body); }
 .switch-player { display: block; margin: 18px auto 0; }
 
 /* ===========================================================================
+ * Ultimate Texas Hold'em (round 4a).
+ *
+ * The Blackjack table's pieces, reused: the same cards, the same dock, the same
+ * feedback card and severity colours. What is new is only what the game has
+ * and Blackjack does not — a board of five, and three separate stakes.
+ * ======================================================================== */
+
+.uth-felt .seat { padding: 10px 16px; }
+.uth-board .cards { gap: 7px; }
+.uth-board .card { width: 62px; height: 88px; }
+.uth-board .card-rank { font-size: 26px; }
+.uth-board .card-suit { font-size: 20px; }
+
+/* Ante, Blind, Play, then the stack, in one row under the hand. */
+.uth-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.uth-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.uth-spot.bank { border-color: rgba(201, 162, 39, 0.35); }
+.uth-spot .rail-value { font-size: 20px; font-weight: 650; }
+.uth-spot .rail-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.uth-spot .rail-delta { font-size: 12px; }
+
+/* Honest about where the money lives: nowhere, yet. */
+.uth-memory { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+.uth-keys { margin: 8px 14px 14px; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+/* The result: under the grade, smaller and quieter than it (§3.1). */
+.uth-result { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
+.uth-result p { margin: 0 0 2px; font-size: 13px; color: var(--muted); }
+.uth-result .uth-net { margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.uth-waiting { margin: 0; padding: 14px 0; width: 100%; text-align: center; color: var(--muted); }
+/*
+ * The key hint sits in the button with a gap, not a margin. In Hebrew the label
+ * ("Check") and the hint ("C") are both left-to-right runs inside a
+ * right-to-left button, so the browser lays them out as one run and a margin on
+ * the hint's inline-start side ends up facing away from the label. A flex gap
+ * spaces children whichever way the text runs.
+ */
+.uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.uth .actions .action .key { opacity: 0.55; font-size: 12px; }
+
+/* ===========================================================================
  * The shared build only.
  *
  * Same palette, same faces, same restraint as the rest of the app — these are
@@ -1824,10 +1881,6 @@ body { background: var(--bg); }
 }
 .feed-verdict { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 
-/* --- A door that is not open yet ------------------------------------------ */
-
-.door-locked { opacity: 0.5; cursor: default; }
-.door-locked:hover { border-color: var(--line); }
 
 </style>
   </head>
@@ -3959,22 +4012,36 @@ class DealingShoe {
                      
  
 
-/** Spec §11, Decision. One graded choice. */
-                                 
+/**
+ * Spec §11, Decision. One graded choice.
+ *
+ * Generic over the action vocabulary because two games grade through it and
+ * they do not share one. Everything downstream of a decision — the severity
+ * colour, the EV chips, the cost, the accuracy denominator — works on this
+ * shape alone and never on what the actions are called, which is why Ultimate
+ * Texas Hold'em could be added without any of it changing. Letting `raise4x`
+ * into `GradedAction` instead would have put a poker action inside a blackjack
+ * chart cell, where nothing could ever produce one and every reader would have
+ * to know that.
+ */
+                                                          
                         
-                                                
+                                                                                    
                     
                       
-                               
+                         
                                                                                
-                                                    
-                              
-                             
+                                              
+                        
+                       
                                      
                  
                              
                                 
  
+
+/** A graded Blackjack decision. */
+                                                            
 
 /** Spec §11, Hand. */
                              
@@ -4590,6 +4657,2103 @@ class BlackjackTable {
   }
 }
 
+/* ===== packages/ev-engine/src/poker/handValue.ts ===== */
+/**
+ * Poker hand values as comparable integers (spec §6.4).
+ *
+ * A hand's strength is one non-negative integer: bigger is better, equal means a
+ * tie. That is all the UTH solvers need — they compare millions of showdowns and
+ * never ask *why* one hand beat another — so the representation is built for
+ * comparison speed, with the human-readable decomposition available separately.
+ *
+ * Layout, 24 bits:
+ *
+ *     cccc rrrr rrrr rrrr rrrr rrrr
+ *     │    │
+ *     │    └── five significant ranks, four bits each, most significant first
+ *     └─────── category, 0 (high card) .. 8 (straight flush)
+ *
+ * "Significant ranks" means whatever decides the hand within its category: the
+ * pair rank then three kickers for a pair, the trips rank then the pair rank for
+ * a full house, the high card for a straight. Unused slots are zero. Two hands in
+ * different categories never compare on their rank slots, because the category
+ * outranks every one of them.
+ */
+
+/** 0 = deuce .. 12 = ace, matching `core/cards`. */
+                          
+
+const HIGH_CARD = 0;
+const PAIR = 1;
+const TWO_PAIR = 2;
+const THREE_OF_A_KIND = 3;
+const STRAIGHT = 4;
+const FLUSH = 5;
+const FULL_HOUSE = 6;
+const FOUR_OF_A_KIND = 7;
+const STRAIGHT_FLUSH = 8;
+
+                                                             
+
+const CATEGORY_NAMES                    = [
+  'high card',
+  'pair',
+  'two pair',
+  'three of a kind',
+  'straight',
+  'flush',
+  'full house',
+  'four of a kind',
+  'straight flush',
+];
+
+const CATEGORY_SHIFT = 20;
+
+/** Every possible value is strictly below this. */
+const MAX_HAND_VALUE = (STRAIGHT_FLUSH + 1) << CATEGORY_SHIFT;
+
+function categoryOf(value        )               {
+  return (value >>> CATEGORY_SHIFT)                ;
+}
+
+/**
+ * How many rank slots each category actually uses.
+ *
+ * This has to be a table rather than "read until you hit a zero": rank 0 is the
+ * deuce, so an unused slot and a deuce look identical. The count is fixed per
+ * category — a seven-card hand with one pair always has three kickers, a flush
+ * always has five ranks — which is also why comparing two values in the same
+ * category is sound despite the ambiguity.
+ */
+const SIGNIFICANT_RANK_COUNT                    = [
+  5, // high card: five ranks
+  4, // pair: the pair, then three kickers
+  3, // two pair: both pairs, then one kicker
+  3, // trips: the trips, then two kickers
+  1, // straight: the high card
+  5, // flush: five ranks
+  2, // full house: trips then pair
+  2, // quads: the quads, then one kicker
+  1, // straight flush: the high card
+];
+
+/** The ranks that decide this hand within its category, most significant first. */
+function significantRanks(value        )         {
+  const count = SIGNIFICANT_RANK_COUNT[categoryOf(value)] ;
+  const ranks         = [];
+  for (let i = 0; i < count; i++) {
+    ranks.push((value >>> (16 - 4 * i)) & 0xf);
+  }
+  return ranks;
+}
+
+const RANK_NAMES = '23456789TJQKA';
+
+/** Human-readable form, for feedback copy and for test failure messages. */
+function describeHandValue(value        )         {
+  const category = categoryOf(value);
+  const ranks = significantRanks(value)
+    .map((r) => RANK_NAMES[r] ?? '?')
+    .join('');
+  return ranks.length > 0 ? `${CATEGORY_NAMES[category]} (${ranks})` : CATEGORY_NAMES[category] ;
+}
+
+/** Assemble a value from a category and up to five significant ranks. */
+function makeHandValue(category              , ...ranks        )         {
+  let value = category << CATEGORY_SHIFT;
+  for (let i = 0; i < ranks.length && i < 5; i++) {
+    value |= ranks[i]  << (16 - 4 * i);
+  }
+  return value;
+}
+
+/* ===== packages/ev-engine/src/poker/evaluator.ts ===== */
+/**
+ * Seven-card poker hand evaluator (spec §6.4).
+ *
+ * Both UTH modules lean on this. The flop decision alone enumerates
+ * C(45,2) × C(43,2) ≈ 894,000 outcomes, two showdowns each, inside a 200 ms
+ * budget — so this runs a couple of million times per decision and its cost
+ * dominates everything above it.
+ *
+ * Scheme
+ * ------
+ * The spec calls for "a standard perfect-hash or lookup-table evaluator" and
+ * §6.5 budgets 10–130 MB for its tables, which §17 leaves open pending a
+ * benchmark. What is implemented here needs neither: the hand is decomposed with
+ * bit arithmetic over four 13-bit suit masks, and the only tables are two of 8192
+ * entries each (64 KB total, computed at load in about a millisecond). No asset
+ * to ship, no first-run wait, and the §13 app-size budget stays free for
+ * everything else. `test/poker-evaluator.bench.ts` reports the throughput this
+ * buys.
+ *
+ * The trick that makes it work is computing rank multiplicities without ever
+ * touching a counter array: a rank appears at least twice exactly when two suit
+ * masks share its bit, at least three times when three do, and so on. Six ANDs
+ * and a few ORs replace a thirteen-element histogram, and the function stays
+ * pure — no scratch buffer, no module state, nothing to reset between calls.
+ *
+ * Two facts about seven-card hands keep the branching short, and both are
+ * asserted in the test suite rather than merely believed:
+ *
+ *   - A flush and a full house cannot coexist. A flush uses five cards of one
+ *     suit with five distinct ranks; trips would need both remaining cards to
+ *     match one of them, and then nothing is left to make the pair.
+ *   - A flush and four of a kind cannot coexist either: quads take one card of
+ *     each suit, leaving at most four cards in any single suit.
+ *
+ * So once a flush is found, the answer is a straight flush or that flush, and
+ * the rank-based path never has to run.
+ */
+
+const MASK_COUNT = 1 << 13;
+
+/**
+ * For each 13-bit rank mask, the rank of the highest straight's top card, or -1.
+ *
+ * The wheel is the awkward case: A-2-3-4-5 is a straight whose top card is the
+ * five, so it maps to rank 3 and sorts below every other straight, which is
+ * exactly right.
+ */
+const straightHigh = new Int8Array(MASK_COUNT).fill(-1);
+
+/**
+ * For each 13-bit rank mask, its top five ranks packed into the significant-rank
+ * slots of a hand value: `r1<<16 | r2<<12 | r3<<8 | r4<<4 | r5`. Masks with fewer
+ * than five bits pack what they have and leave the rest zero.
+ *
+ * Packing them in place means kickers can be taken by shifting: the top three
+ * ranks of a mask, positioned for a pair's kicker slots, are one shift and one
+ * mask away.
+ */
+const topFive = new Int32Array(MASK_COUNT);
+
+(function buildTables()       {
+  const WHEEL = (1 << 12) | (1 << 3) | (1 << 2) | (1 << 1) | 1; // A,5,4,3,2
+
+  for (let mask = 0; mask < MASK_COUNT; mask++) {
+    for (let high = 12; high >= 4; high--) {
+      const run = 0b11111 << (high - 4);
+      if ((mask & run) === run) {
+        straightHigh[mask] = high;
+        break;
+      }
+    }
+    if (straightHigh[mask] === -1 && (mask & WHEEL) === WHEEL) {
+      straightHigh[mask] = 3; // five-high
+    }
+
+    let packed = 0;
+    let taken = 0;
+    for (let rank = 12; rank >= 0 && taken < 5; rank--) {
+      if (mask & (1 << rank)) {
+        packed |= rank << (16 - 4 * taken);
+        taken++;
+      }
+    }
+    topFive[mask] = packed;
+  }
+})();
+
+function highestRank(mask        )         {
+  return 31 - Math.clz32(mask);
+}
+
+/** Top three ranks of `mask`, positioned as a pair's three kickers. */
+function threeKickers(mask        )         {
+  return (topFive[mask]  >>> 4) & 0x0fff0;
+}
+
+/** Top two ranks of `mask`, positioned as a trips hand's two kickers. */
+function twoKickers(mask        )         {
+  return (topFive[mask]  >>> 4) & 0x0ff00;
+}
+
+/** Top rank of `mask`, positioned as a quads hand's single kicker. */
+function oneKicker(mask        )         {
+  return (topFive[mask]  >>> 4) & 0x0f000;
+}
+
+/** Top rank of `mask`, positioned as a two-pair hand's single kicker. */
+function twoPairKicker(mask        )         {
+  return (topFive[mask]  >>> 8) & 0x00f00;
+}
+
+/**
+ * Evaluate seven cards into a comparable integer (see `handValue.ts`).
+ *
+ * `cards` must hold at least seven cards starting at `offset`. Callers in a hot
+ * loop are expected to reuse one array rather than allocate per showdown; this
+ * function neither reads nor writes anything outside its arguments.
+ */
+function evaluate7(cards                 , offset = 0)         {
+  let s0 = 0;
+  let s1 = 0;
+  let s2 = 0;
+  let s3 = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const card = cards[offset + i] ;
+    const bit = 1 << (card >> 2); // rankOf, inlined
+    const suit = card & 3; // suitOf, inlined
+
+    // Deal each card's bit into its suit's mask without branching.
+    //
+    // `(x - 1) >> 31` is −1 when x is zero and 0 otherwise — the borrow out of
+    // the subtraction, smeared across all 32 bits by the arithmetic shift. Xor
+    // the suit against each candidate first and the expression becomes an
+    // all-ones mask exactly for the matching suit, so the bit ORs into that
+    // accumulator and vanishes from the other three.
+    //
+    // This is three times faster than the equivalent switch, and mask building
+    // is most of what this function costs — §6.4 warns that the evaluator
+    // dominates runtime, and it is not wrong.
+    s0 |= bit & ((suit - 1) >> 31);
+    s1 |= bit & (((suit ^ 1) - 1) >> 31);
+    s2 |= bit & (((suit ^ 2) - 1) >> 31);
+    s3 |= bit & (((suit ^ 3) - 1) >> 31);
+  }
+
+  return evaluateSuitMasks(s0, s1, s2, s3);
+}
+
+/**
+ * The evaluator proper, over four 13-bit rank masks — one per suit.
+ *
+ * Exposed because the UTH solvers build these masks incrementally as they walk
+ * boards, which saves re-reading seven cards for every dealer holding.
+ */
+function evaluateSuitMasks(s0        , s1        , s2        , s3        )         {
+  // --- Flush, and with it straight flush -----------------------------------
+  // Only one suit can hold five of seven cards, so at most one of these fires.
+  let flushMask = 0;
+  if (popcount(s0) >= 5) flushMask = s0;
+  else if (popcount(s1) >= 5) flushMask = s1;
+  else if (popcount(s2) >= 5) flushMask = s2;
+  else if (popcount(s3) >= 5) flushMask = s3;
+
+  if (flushMask !== 0) {
+    const high = straightHigh[flushMask] ;
+    if (high >= 0) return (STRAIGHT_FLUSH << CATEGORY_SHIFT) | (high << 16);
+    // Neither a full house nor quads can share seven cards with a flush, so this
+    // flush is the whole answer.
+    return (FLUSH << CATEGORY_SHIFT) | topFive[flushMask] ;
+  }
+
+  // --- Rank multiplicities, without a histogram -----------------------------
+  const atLeast1 = s0 | s1 | s2 | s3;
+  const atLeast2 =
+    (s0 & s1) | (s0 & s2) | (s0 & s3) | (s1 & s2) | (s1 & s3) | (s2 & s3);
+  const atLeast3 =
+    (s0 & s1 & s2) | (s0 & s1 & s3) | (s0 & s2 & s3) | (s1 & s2 & s3);
+  const quads = s0 & s1 & s2 & s3;
+
+  if (quads !== 0) {
+    const q = highestRank(quads);
+    return (
+      (FOUR_OF_A_KIND << CATEGORY_SHIFT) |
+      (q << 16) |
+      oneKicker(atLeast1 & ~(1 << q))
+    );
+  }
+
+  const trips = atLeast3;
+  const pairs = atLeast2 & ~atLeast3;
+
+  if (trips !== 0) {
+    const t = highestRank(trips);
+    // The pair of a full house may be a second set of trips, played as a pair.
+    const paired = (trips & ~(1 << t)) | pairs;
+    if (paired !== 0) {
+      return (FULL_HOUSE << CATEGORY_SHIFT) | (t << 16) | (highestRank(paired) << 12);
+    }
+  }
+
+  const straight = straightHigh[atLeast1] ;
+  if (straight >= 0) return (STRAIGHT << CATEGORY_SHIFT) | (straight << 16);
+
+  if (trips !== 0) {
+    const t = highestRank(trips);
+    return (
+      (THREE_OF_A_KIND << CATEGORY_SHIFT) |
+      (t << 16) |
+      twoKickers(atLeast1 & ~(1 << t))
+    );
+  }
+
+  if (pairs !== 0) {
+    const high = highestRank(pairs);
+    const rest = pairs & ~(1 << high);
+    if (rest !== 0) {
+      const low = highestRank(rest);
+      return (
+        (TWO_PAIR << CATEGORY_SHIFT) |
+        (high << 16) |
+        (low << 12) |
+        twoPairKicker(atLeast1 & ~(1 << high) & ~(1 << low))
+      );
+    }
+    return (PAIR << CATEGORY_SHIFT) | (high << 16) | threeKickers(atLeast1 & ~(1 << high));
+  }
+
+  return (HIGH_CARD << CATEGORY_SHIFT) | topFive[atLeast1] ;
+}
+
+/** Population count for a 13-bit mask. */
+function popcount(x        )         {
+  let n = x - ((x >> 1) & 0x5555);
+  n = (n & 0x3333) + ((n >> 2) & 0x3333);
+  n = (n + (n >> 4)) & 0x0f0f;
+  return (n + (n >> 8)) & 0x1f;
+}
+
+/** Exposed for the table-integrity tests; not part of the hot path. */
+const internals = { straightHigh, topFive, popcount };
+
+/* ===== packages/ev-engine/src/uth/rules.ts ===== */
+/**
+ * Ultimate Texas Hold'em rules and paytables (spec §5.2).
+ *
+ * Three bets are always live. The Ante and Blind are equal and mandatory, and
+ * the Play bet is made once, at whichever decision point the player chooses:
+ * 4x the ante before the flop, 2x after the flop, 1x after the river. Checking
+ * costs nothing but shrinks the raise the player will be allowed later, which is
+ * the whole strategic shape of the game.
+ *
+ * All EVs in this module are in units of the ante, so an unraised hand still has
+ * two units at risk and folding is exactly -2.
+ */
+
+/** The Play bet multiple available at each decision point. */
+const PREFLOP_RAISE = 4;
+const FLOP_RAISE = 2;
+const RIVER_RAISE = 1;
+
+/**
+ * The 3x pre-flop raise, where a casino offers one alongside 4x.
+ *
+ * Spec §5.2.3: raising 3x is never correct, because any hand strong enough to
+ * raise pre-flop is strong enough to raise the maximum. It is modelled so the
+ * trainer can grade someone who takes it and show them what it cost, not because
+ * it is ever the answer.
+ */
+const PREFLOP_RAISE_SMALL = 3;
+
+/** Folding forfeits the Ante and the Blind. */
+const FOLD_RESULT = -2;
+
+/**
+ * Blind paytable: what a winning hand of each strength pays, on top of the bet.
+ * Anything below a straight pushes, which is a zero here rather than a loss.
+ *
+ * The royal flush is a straight flush to the ace; the evaluator keeps the
+ * straight's high card in the score, so the two are told apart without a
+ * separate category.
+ */
+                                
+               
+                     
+                        
+                      
+                    
+                
+                   
+ 
+
+/** The default paytable from spec §5.2.2. */
+const DEFAULT_BLIND_PAYTABLE                = {
+  name: 'standard',
+  royalFlush: 500,
+  straightFlush: 50,
+  fourOfAKind: 10,
+  fullHouse: 3,
+  flush: 1.5,
+  straight: 1,
+};
+
+const ACE_RANK = 12;
+
+/** Blind payout multiple for a winning hand. Zero means the Blind pushes. */
+function blindPayout(score        , paytable               )         {
+  switch (categoryOf(score)) {
+    case STRAIGHT_FLUSH: {
+      const high = (score >>> 16) & 0xf;
+      return high === ACE_RANK ? paytable.royalFlush : paytable.straightFlush;
+    }
+    case FOUR_OF_A_KIND:
+      return paytable.fourOfAKind;
+    case FULL_HOUSE:
+      return paytable.fullHouse;
+    case FLUSH:
+      return paytable.flush;
+    case STRAIGHT:
+      return paytable.straight;
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Trips paytables (spec §5.2.2). These vary by casino, and whether the bet is
+ * worth making at all depends entirely on which one is in play, so several ship
+ * as selectable options rather than one being baked in.
+ */
+                                
+             
+               
+                     
+                        
+                      
+                    
+                
+                   
+                       
+ 
+
+const TRIPS_PAYTABLES                           = [
+  {
+    id: 'trips-a',
+    name: 'Trips pay table I',
+    royalFlush: 50,
+    straightFlush: 40,
+    fourOfAKind: 30,
+    fullHouse: 8,
+    flush: 7,
+    straight: 4,
+    threeOfAKind: 3,
+  },
+  {
+    id: 'trips-b',
+    name: 'Trips pay table II',
+    royalFlush: 50,
+    straightFlush: 40,
+    fourOfAKind: 30,
+    fullHouse: 9,
+    flush: 7,
+    straight: 4,
+    threeOfAKind: 3,
+  },
+  {
+    id: 'trips-c',
+    name: 'Trips pay table III',
+    royalFlush: 50,
+    straightFlush: 40,
+    fourOfAKind: 20,
+    fullHouse: 7,
+    flush: 6,
+    straight: 5,
+    threeOfAKind: 3,
+  },
+];
+
+function getTripsPaytable(id        )                {
+  const found = TRIPS_PAYTABLES.find((p) => p.id === id);
+  if (!found) throw new Error(`Unknown Trips paytable: ${id}`);
+  return found;
+}
+
+                           
+                       
+                                                         
+                              
+                                                                               
+                                 
+ 
+
+const DEFAULT_UTH_RULES           = {
+  blind: DEFAULT_BLIND_PAYTABLE,
+  trips: TRIPS_PAYTABLES[0] ,
+  offersThreeTimesRaise: false,
+};
+
+function makeUthRules(overrides                    = {})           {
+  return { ...DEFAULT_UTH_RULES, ...overrides };
+}
+
+/* ===== packages/ev-engine/src/uth/showdown.ts ===== */
+/**
+ * Settling one Ultimate Texas Hold'em hand (spec §5.2.1).
+ *
+ * Three bets resolve independently and by different rules, which is where the
+ * game hides its complexity:
+ *
+ *   Ante   pushes whenever the dealer fails to qualify — on a losing hand as
+ *          well as a winning one. It only wins or loses when the dealer has a
+ *          pair or better.
+ *   Play   ignores qualification entirely. It wins, loses or pushes purely on
+ *          who has the better hand.
+ *   Blind  pays a premium on a player win with a straight or better, pushes on a
+ *          player win with less, and is lost outright when the player loses.
+ *          Qualification never touches it.
+ *
+ * Getting any of those three couplings backwards produces EVs that look
+ * plausible and are wrong, so `settle` is written as one small function with the
+ * three rules side by side rather than spread across the solvers.
+ */
+
+
+
+
+/** The dealer qualifies with a pair or better, board cards included. */
+function dealerQualifies(dealerScore        )          {
+  return categoryOf(dealerScore) >= PAIR;
+}
+
+/**
+ * Net units won or lost on the Ante, Blind and Play bets together, in units of
+ * the ante. The Trips side bet is settled separately: it does not depend on the
+ * dealer at all.
+ *
+ * @param playBet 4, 3, 2 or 1 — whichever raise the player made.
+ */
+function settle(
+  playerScore        ,
+  dealerScore        ,
+  playBet        ,
+  paytable               ,
+)         {
+  if (playerScore === dealerScore) return 0; // every bet pushes on a tie
+
+  const qualified = dealerQualifies(dealerScore);
+
+  if (playerScore > dealerScore) {
+    const play = playBet;
+    const ante = qualified ? 1 : 0;
+    const blind = blindPayout(playerScore, paytable);
+    return play + ante + blind;
+  }
+
+  const play = -playBet;
+  const ante = qualified ? -1 : 0;
+  const blind = -1;
+  return play + ante + blind;
+}
+
+/** Folding forfeits the Ante and the Blind and is always exactly -2. */
+const foldResult = FOLD_RESULT;
+
+/**
+ * The Trips side bet, which depends only on the player's seven cards and the
+ * active paytable — the dealer is irrelevant, and so is whether the player
+ * folded.
+ */
+function tripsResult(playerScore        , paytable               )         {
+  switch (categoryOf(playerScore)) {
+    case STRAIGHT_FLUSH: {
+      const high = (playerScore >>> 16) & 0xf;
+      return high === 12 ? paytable.royalFlush : paytable.straightFlush;
+    }
+    case FOUR_OF_A_KIND:
+      return paytable.fourOfAKind;
+    case FULL_HOUSE:
+      return paytable.fullHouse;
+    case FLUSH:
+      return paytable.flush;
+    case STRAIGHT:
+      return paytable.straight;
+    case THREE_OF_A_KIND:
+      return paytable.threeOfAKind;
+    default:
+      return -1;
+  }
+}
+
+/** Convenience wrapper that scores both hands from cards before settling. */
+function settleHands(
+  playerHole                 ,
+  dealerHole                 ,
+  board                 ,
+  playBet        ,
+  paytable               ,
+)         {
+  return settle(
+    evaluate7([...playerHole, ...board]),
+    evaluate7([...dealerHole, ...board]),
+    playBet,
+    paytable,
+  );
+}
+
+/* ===== packages/ev-engine/src/uth/river.ts ===== */
+/**
+ * The river decision: bet 1x or fold (spec §6.3).
+ *
+ * This one is trivially exact. Seven cards are visible — the player's two and
+ * the five community cards — leaving 45 unseen, so the dealer holds one of
+ * C(45,2) = 990 possible two-card combinations. Enumerate all of them, settle
+ * each showdown, and compare the average against the -2 that folding costs.
+ *
+ * Every holding is equally likely, so the EV is a plain mean. There is no
+ * sampling, no approximation and no table: it is the exact answer, and it takes
+ * well under a millisecond.
+ */
+
+
+
+
+/**
+ * Solve the river decision exactly.
+ *
+ * @param playerHole the player's two hole cards
+ * @param board      all five community cards
+ */
+function solveRiver(
+  playerHole                 ,
+  board                 ,
+  paytable               ,
+)                {
+  if (playerHole.length !== 2) throw new Error('The player holds exactly two cards');
+  if (board.length !== 5) throw new Error('The river is dealt when all five community cards are out');
+
+  const unseen = unseenCards([...playerHole, ...board]);
+  if (unseen.length !== 45) throw new Error(`Expected 45 unseen cards, found ${unseen.length}`);
+
+  // The player's hand is fixed now, so it is scored once rather than 990 times.
+  const playerScore = evaluate7([...playerHole, ...board]);
+
+  // Reused buffer: the dealer's seven cards are the board plus two unseen cards,
+  // and only the last two change.
+  const dealerCards         = [
+    board[0] ,
+    board[1] ,
+    board[2] ,
+    board[3] ,
+    board[4] ,
+    0,
+    0,
+  ];
+
+  let total = 0;
+  let count = 0;
+  let wins = 0;
+  let ties = 0;
+  let losses = 0;
+
+  for (let i = 0; i < unseen.length; i++) {
+    dealerCards[5] = unseen[i] ;
+    for (let j = i + 1; j < unseen.length; j++) {
+      dealerCards[6] = unseen[j] ;
+      const dealerScore = evaluate7(dealerCards);
+      if (playerScore > dealerScore) wins++;
+      else if (playerScore === dealerScore) ties++;
+      else losses++;
+      total += settle(playerScore, dealerScore, RIVER_RAISE, paytable);
+      count++;
+    }
+  }
+
+  const evPlay = total / count;
+  const optimalAction = evPlay >= FOLD_RESULT ? 'play' : 'fold';
+
+  return {
+    evPlay,
+    evFold: FOLD_RESULT,
+    optimalAction,
+    margin: Math.abs(evPlay - FOLD_RESULT),
+    wins,
+    ties,
+    losses,
+  };
+}
+
+/* ===== packages/ev-engine/src/uth/flop.ts ===== */
+/**
+ * The flop decision: bet 2x, or check and keep the river option (spec §6.3).
+ *
+ * Two things about this decision are worth stating before the code.
+ *
+ * The size of it. The spec puts the enumeration at C(45,2) x C(43,2) = 893,970,
+ * but 45 and 43 are the river's numbers, where seven cards are already visible.
+ * At the flop the player has seen only five — two hole cards and three community
+ * cards — so 47 are unseen. The turn and river are two of those 47, and the
+ * dealer holds two of the 45 that remain:
+ *
+ *     C(47,2) x C(45,2) = 1081 x 990 = 1,070,190
+ *
+ * about twenty per cent more than the spec's figure. It is still exact, still
+ * enumerated in full, and still inside the 200 ms target.
+ *
+ * The shape of it. Checking the flop is not the end of the hand: the player
+ * still gets the river decision, and will fold there if the board has gone badly
+ * and bet 1x if it has not. So the value of checking is not the value of showing
+ * down passively — it is the average, over every turn and river, of playing the
+ * river *correctly*. Treating a check as terminal would undervalue it and push
+ * the trainer toward recommending 2x too often.
+ *
+ * The player's hand only changes with the turn and river, so it is scored 1,081
+ * times rather than 1,070,190; the dealer's is the inner loop.
+ */
+
+
+
+
+/**
+ * Solve the flop decision exactly.
+ *
+ * @param playerHole the player's two hole cards
+ * @param flop       the three community cards on the table
+ */
+function solveFlop(
+  playerHole                 ,
+  flop                 ,
+  paytable               ,
+)               {
+  if (playerHole.length !== 2) throw new Error('The player holds exactly two cards');
+  if (flop.length !== 3) throw new Error('The flop is three community cards');
+
+  const unseen = unseenCards([...playerHole, ...flop]);
+  if (unseen.length !== 47) throw new Error(`Expected 47 unseen cards, found ${unseen.length}`);
+
+  // Reused buffers. The player's seven cards are hole + flop + turn + river; the
+  // dealer's are flop + turn + river + two unseen.
+  const playerCards         = [
+    playerHole[0] , playerHole[1] , flop[0] , flop[1] , flop[2] , 0, 0,
+  ];
+  const dealerCards         = [flop[0] , flop[1] , flop[2] , 0, 0, 0, 0];
+  const remaining         = new Array      (45);
+
+  let playTotal = 0;
+  let checkTotal = 0;
+  let riverFolds = 0;
+  let boards = 0;
+  let outcomes = 0;
+
+  for (let i = 0; i < unseen.length; i++) {
+    const turn = unseen[i] ;
+    for (let j = i + 1; j < unseen.length; j++) {
+      const river = unseen[j] ;
+
+      playerCards[5] = turn;
+      playerCards[6] = river;
+      const playerScore = evaluate7(playerCards);
+      const blind = blindPayout(playerScore, paytable);
+
+      dealerCards[3] = turn;
+      dealerCards[4] = river;
+
+      // The 45 cards the dealer could hold, once the turn and river are spoken for.
+      let n = 0;
+      for (let k = 0; k < unseen.length; k++) {
+        if (k === i || k === j) continue;
+        remaining[n++] = unseen[k] ;
+      }
+
+      // Settlement splits cleanly into a part that does not depend on the raise
+      // size and a part that is exactly the raise: the ante and blind are the
+      // same whether the player bet 1x or 2x, and the play bet is the multiple.
+      // So one pass yields both, and the river's value comes free.
+      let anteAndBlind = 0;
+      let net = 0; // wins minus losses, i.e. the play bet per unit raised
+      for (let a = 0; a < n; a++) {
+        dealerCards[5] = remaining[a] ;
+        for (let b = a + 1; b < n; b++) {
+          dealerCards[6] = remaining[b] ;
+          const dealerScore = evaluate7(dealerCards);
+          if (playerScore > dealerScore) {
+            anteAndBlind += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+            net += 1;
+          } else if (playerScore < dealerScore) {
+            anteAndBlind += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+            net -= 1;
+          }
+          outcomes++;
+        }
+      }
+
+      const holdings = (n * (n - 1)) / 2;
+      const evRiverPlay = (anteAndBlind + net * RIVER_RAISE) / holdings;
+      const evFlopPlay = (anteAndBlind + net * FLOP_RAISE) / holdings;
+
+      playTotal += evFlopPlay;
+      // At the river the player takes the better of betting and folding.
+      if (evRiverPlay >= FOLD_RESULT) {
+        checkTotal += evRiverPlay;
+      } else {
+        checkTotal += FOLD_RESULT;
+        riverFolds++;
+      }
+      boards++;
+    }
+  }
+
+  const evPlay = playTotal / boards;
+  const evCheck = checkTotal / boards;
+
+  return {
+    evPlay,
+    evCheck,
+    optimalAction: evPlay >= evCheck ? 'play' : 'check',
+    margin: Math.abs(evPlay - evCheck),
+    riverFoldFrequency: riverFolds / boards,
+    boards,
+    outcomes,
+  };
+}
+
+/* ===== packages/ev-engine/src/uth/trips.ts ===== */
+/**
+ * The Trips side bet (spec §5.2.4, §6.3).
+ *
+ * Trips depends only on the player's own seven cards. The dealer is irrelevant,
+ * the board is shared, and the bet is placed before anything is dealt — so its
+ * EV is a single number per paytable, obtained by weighting each payout by how
+ * often a random seven-card hand reaches it.
+ *
+ * That distribution is the same exhaustive C(52,7) enumeration §14.1 already
+ * demands of the evaluator, so this module needs no table of its own beyond ten
+ * integers. Spec §6.5 budgeted under 5 KB per paytable for precomputed Trips
+ * tables; the real cost is one shared frequency vector.
+ *
+ * Spec §6.3 is pointed about what to do with the answer: "For most common
+ * paytables this bet is negative-EV, and the app should say so rather than
+ * presenting 'make the Trips bet' as a live strategic choice with a defensible
+ * upside." `describeTrips` exists so the product can do exactly that.
+ */
+
+/** Every seven-card hand there is. */
+const TOTAL_SEVEN_CARD_HANDS = 133_784_560;
+
+/**
+ * How many of those 133,784,560 hands land on each payable category.
+ *
+ * Produced by the exhaustive enumeration in `test/poker-evaluator.test.ts`,
+ * which regenerates and re-checks these counts, so they cannot drift away from
+ * the evaluator unnoticed. The royal flush is split out of the straight-flush
+ * category because it pays differently; the two sum to the published 41,584.
+ */
+const SEVEN_CARD_FREQUENCIES = {
+  royalFlush: 4_324,
+  straightFlush: 37_260,
+  fourOfAKind: 224_848,
+  fullHouse: 3_473_184,
+  flush: 4_047_644,
+  straight: 6_180_020,
+  threeOfAKind: 6_461_620,
+  /** Everything below trips, which loses the bet. */
+  losing: 23_294_460 + 58_627_800 + 31_433_400,
+}         ;
+
+                                
+                          
+                                                                          
+             
+                                                                            
+                           
+                                          
+                         
+ 
+
+/**
+ * Exact EV of one unit on Trips. A win pays the multiple and returns the stake;
+ * a loss forfeits it, which is the -1 below.
+ */
+function tripsEv(paytable               )         {
+  const f = SEVEN_CARD_FREQUENCIES;
+  const paid =
+    f.royalFlush * paytable.royalFlush +
+    f.straightFlush * paytable.straightFlush +
+    f.fourOfAKind * paytable.fourOfAKind +
+    f.fullHouse * paytable.fullHouse +
+    f.flush * paytable.flush +
+    f.straight * paytable.straight +
+    f.threeOfAKind * paytable.threeOfAKind;
+  return (paid - f.losing) / TOTAL_SEVEN_CARD_HANDS;
+}
+
+function analyseTrips(paytable               )                {
+  const f = SEVEN_CARD_FREQUENCIES;
+  const winning = TOTAL_SEVEN_CARD_HANDS - f.losing;
+  const ev = tripsEv(paytable);
+  return {
+    paytable,
+    ev,
+    houseEdgePercent: -ev * 100,
+    winProbability: winning / TOTAL_SEVEN_CARD_HANDS,
+  };
+}
+
+/**
+ * Plain-language verdict for the feedback layer, phrased the way §16 requires:
+ * honest about the number, and not dressed up as a live strategic choice when it
+ * is not one.
+ */
+function describeTrips(paytable               )         {
+  const { ev, houseEdgePercent } = analyseTrips(paytable);
+  if (ev < 0) {
+    return (
+      `On ${paytable.name}, Trips costs ${houseEdgePercent.toFixed(2)}% of the bet. ` +
+      'It pays often enough to feel live, but it loses money every time you make it.'
+    );
+  }
+  return (
+    `On ${paytable.name}, Trips returns ${(ev * 100).toFixed(2)}% of the bet. ` +
+    'This paytable is unusually generous; check it against the table felt before trusting it.'
+  );
+}
+
+/** Category constants, re-exported so callers can map a score to a Trips payout. */
+const TRIPS_PAYING_CATEGORIES                    = [
+  THREE_OF_A_KIND,
+  STRAIGHT,
+  FLUSH,
+  FULL_HOUSE,
+  FOUR_OF_A_KIND,
+  STRAIGHT_FLUSH,
+];
+
+/* ===== packages/ev-engine/src/uth/preflop.ts ===== */
+/**
+ * The pre-flop decision: raise 4x, or check (spec §6.3, §5.2.3).
+ *
+ * This is the one decision the spec says cannot be solved at runtime. Fully
+ * exact means every board against every dealer holding:
+ *
+ *     C(50,5) x C(45,2) = 2,118,760 x 990 = 2,097,572,400
+ *
+ * outcomes, for one pair of hole cards. So it is an offline job whose output
+ * ships as a lookup asset, keyed on the equivalence class of the player's two
+ * cards — rank pair plus suitedness, 169 classes — with runtime lookup O(1).
+ *
+ * Two structural facts make the job tractable rather than merely large.
+ *
+ * The board is fixed across the dealer's 990 holdings, so its four suit masks
+ * are built once and each dealer hand costs two ORs and a score. The player's
+ * seven cards are that same board plus the two hole cards, which is the
+ * identical operation — so one function and one set of masks serve both.
+ *
+ * And settlement splits into a part independent of the raise size (the ante and
+ * the blind) and a part that is exactly the raise (the play bet). One pass over
+ * a board therefore yields its value at every raise size at once: 4x, 3x, the 2x
+ * available on the flop and the 1x available on the river. That is what lets the
+ * check branch — which needs optimal play at both later streets — fall out of
+ * the same enumeration instead of a second, far larger one.
+ */
+
+
+
+
+/** One of the 169 pre-flop equivalence classes, such as AKs, AKo or AA. */
+                            
+                                                                               
+                
+                                                                            
+                      
+                   
+                  
+                  
+                                                                          
+                       
+ 
+
+const SPADES = 3;
+const HEARTS = 2;
+
+/**
+ * All 169 classes: 13 pairs, 78 suited and 78 offsuit.
+ *
+ * Suits matter only through whether the two cards share one, so a single
+ * representative stands for the whole class. Spades and hearts are used
+ * throughout, which keeps representatives comparable when debugging.
+ */
+function allHoleClasses()              {
+  const out              = [];
+  for (let high = 12; high >= 0; high--) {
+    for (let low = high; low >= 0; low--) {
+      if (high === low) {
+        out.push({
+          label: `${RANK_CHARS[high]}${RANK_CHARS[low]}`,
+          cards: [makeCard(high, SPADES), makeCard(low, HEARTS)],
+          highRank: high,
+          lowRank: low,
+          suited: false,
+          combinations: 6,
+        });
+        continue;
+      }
+      out.push({
+        label: `${RANK_CHARS[high]}${RANK_CHARS[low]}s`,
+        cards: [makeCard(high, SPADES), makeCard(low, SPADES)],
+        highRank: high,
+        lowRank: low,
+        suited: true,
+        combinations: 4,
+      });
+      out.push({
+        label: `${RANK_CHARS[high]}${RANK_CHARS[low]}o`,
+        cards: [makeCard(high, SPADES), makeCard(low, HEARTS)],
+        highRank: high,
+        lowRank: low,
+        suited: false,
+        combinations: 12,
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The class a pair of hole cards belongs to: AA, AKs, AKo.
+ *
+ * Lives here rather than in the app because it is the key into the solved
+ * table, and a label built by one rule and looked up in a table built by
+ * another is a grading bug that shows as a missing row rather than as a wrong
+ * answer — which is the good case only by luck.
+ */
+function holeClassLabel(a      , b      )         {
+  const high = Math.max(rankOf(a), rankOf(b));
+  const low = Math.min(rankOf(a), rankOf(b));
+  const label = `${RANK_CHARS[high]}${RANK_CHARS[low]}`;
+  if (high === low) return label;
+  return label + (suitOf(a) === suitOf(b) ? 's' : 'o');
+}
+
+                                
+                
+                                                                
+               
+     
+                                                                                
+                                                                                   
+     
+               
+                                                                   
+                  
+                                     
+                                               
+                 
+                                                                      
+                             
+                                                               
+                             
+ 
+
+/**
+ * Binomial coefficients up to C(50,5), for ranking five-card boards.
+ *
+ * A board has to be addressable by index, because the check branch revisits each
+ * one through all ten of its flop splittings and must find the value the board
+ * enumeration stored. The combinatorial number system gives that addressing for
+ * free: the colex rank of five sorted indices is a bijection onto
+ * [0, C(50,5)), so no hash map and no sorting is needed in the inner loop.
+ */
+const CHOOSE_N = 50;
+const CHOOSE_K = 5;
+const CHOOSE_WIDTH = CHOOSE_K + 1;
+
+const BINOMIAL             = (() => {
+  const table = new Int32Array((CHOOSE_N + 1) * CHOOSE_WIDTH);
+  for (let i = 0; i <= CHOOSE_N; i++) {
+    table[i * CHOOSE_WIDTH] = 1;
+    for (let j = 1; j <= CHOOSE_K; j++) {
+      if (j > i) break;
+      table[i * CHOOSE_WIDTH + j] =
+        table[(i - 1) * CHOOSE_WIDTH + j - 1]  +
+        (j <= i - 1 ? table[(i - 1) * CHOOSE_WIDTH + j]  : 0);
+    }
+  }
+  return table;
+})();
+
+function choose(n        , k        )         {
+  return n < k ? 0 : BINOMIAL[n * CHOOSE_WIDTH + k] ;
+}
+
+/**
+ * Colex rank of five sorted card indices drawn from the 50 available.
+ * Bijective onto [0, 2118760), which `preflop.test.ts` verifies exhaustively.
+ */
+function boardIndex(a        , b        , c        , d        , e        )         {
+  return choose(a, 1) + choose(b, 2) + choose(c, 3) + choose(d, 4) + choose(e, 5);
+}
+
+/**
+ * Score a board's four suit masks plus two more cards, without disturbing the
+ * masks.
+ *
+ * The board is fixed across the dealer's 990 holdings, so its masks are built
+ * once per board and each hand costs two ORs and a score. The player's seven
+ * cards are the same board plus the two hole cards, so this one helper serves
+ * both sides of every showdown.
+ */
+function scoreWithTwo(masks            , a      , b      )         {
+  let s0 = masks[0] ;
+  let s1 = masks[1] ;
+  let s2 = masks[2] ;
+  let s3 = masks[3] ;
+
+  const bitA = 1 << ((a / 4) | 0);
+  switch (a % 4) {
+    case 0: s0 |= bitA; break;
+    case 1: s1 |= bitA; break;
+    case 2: s2 |= bitA; break;
+    default: s3 |= bitA;
+  }
+
+  const bitB = 1 << ((b / 4) | 0);
+  switch (b % 4) {
+    case 0: s0 |= bitB; break;
+    case 1: s1 |= bitB; break;
+    case 2: s2 |= bitB; break;
+    default: s3 |= bitB;
+  }
+
+  return evaluateSuitMasks(s0, s1, s2, s3);
+}
+
+                                      
+                                                                           
+                                          
+ 
+
+/** Boards in the enumeration: C(50,5). */
+const PREFLOP_BOARDS = 2_118_760;
+/** Dealer holdings per board: C(45,2). */
+const HOLDINGS = 990;
+
+/**
+ * Solve one hole-card class exactly.
+ *
+ * This is the multi-billion-outcome job. It takes minutes per class and belongs
+ * to the offline script; the app reads the table it produces and never calls it.
+ */
+function solvePreflop(
+  holeClass           ,
+  paytable               ,
+  options                      = {},
+)                {
+  const holeA = holeClass.cards[0];
+  const holeB = holeClass.cards[1];
+  const available = unseenCards([holeA, holeB]);
+  if (available.length !== 50) throw new Error('Expected 50 available cards');
+
+  // Per-board value, stored so any raise size can be recovered from it:
+  //   value(bet) = anteAndBlind + bet * net
+  const anteAndBlind = new Float64Array(PREFLOP_BOARDS);
+  const net = new Float64Array(PREFLOP_BOARDS);
+
+  // Board suit masks after 0..5 cards, reused rather than reallocated.
+  const masks = [
+    new Int32Array(4), new Int32Array(4), new Int32Array(4),
+    new Int32Array(4), new Int32Array(4), new Int32Array(4),
+  ];
+  const extend = (to        , from        , card      )       => {
+    const target = masks[to] ;
+    const source = masks[from] ;
+    target[0] = source[0] ;
+    target[1] = source[1] ;
+    target[2] = source[2] ;
+    target[3] = source[3] ;
+    target[card % 4]  |= 1 << ((card / 4) | 0);
+  };
+
+  const dealerPool = new Int32Array(45);
+
+  for (let i0 = 0; i0 < 46; i0++) {
+    extend(1, 0, available[i0] );
+    const rank0 = choose(i0, 1);
+    for (let i1 = i0 + 1; i1 < 47; i1++) {
+      extend(2, 1, available[i1] );
+      const rank1 = rank0 + choose(i1, 2);
+      for (let i2 = i1 + 1; i2 < 48; i2++) {
+        extend(3, 2, available[i2] );
+        const rank2 = rank1 + choose(i2, 3);
+        for (let i3 = i2 + 1; i3 < 49; i3++) {
+          extend(4, 3, available[i3] );
+          const rank3 = rank2 + choose(i3, 4);
+          for (let i4 = i3 + 1; i4 < 50; i4++) {
+            extend(5, 4, available[i4] );
+            const index = rank3 + choose(i4, 5); // === boardIndex(i0..i4), accumulated
+            const board = masks[5] ;
+
+            // The player's seven cards are this board plus the two hole cards —
+            // exactly the operation the dealer's hand needs.
+            const playerScore = scoreWithTwo(board, holeA, holeB);
+            const blind = blindPayout(playerScore, paytable);
+
+            let n = 0;
+            for (let k = 0; k < 50; k++) {
+              if (k === i0 || k === i1 || k === i2 || k === i3 || k === i4) continue;
+              dealerPool[n++] = available[k] ;
+            }
+
+            let ab = 0;
+            let sign = 0;
+            for (let a = 0; a < 45; a++) {
+              const cardA = dealerPool[a] ;
+              for (let b = a + 1; b < 45; b++) {
+                const dealerScore = scoreWithTwo(board, cardA, dealerPool[b] );
+                if (playerScore > dealerScore) {
+                  ab += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+                  sign++;
+                } else if (playerScore < dealerScore) {
+                  ab += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+                  sign--;
+                }
+              }
+            }
+            anteAndBlind[index] = ab / HOLDINGS;
+            net[index] = sign / HOLDINGS;
+          }
+        }
+      }
+    }
+    options.onProgress?.((i0 + 1) / 46);
+  }
+
+  return summarise(holeClass.label, anteAndBlind, net);
+}
+
+/**
+ * Turn per-board values into the three pre-flop EVs.
+ *
+ * The raise branches are a straight average over boards, because raising ends
+ * the decisions. Checking does not: the hand still faces the flop and then the
+ * river, and it plays both correctly. So the check branch averages over flops
+ * the better of raising 2x and checking again, where checking again averages
+ * over turn-and-river the better of betting 1x and folding.
+ */
+function summarise(
+  label        ,
+  anteAndBlind              ,
+  net              ,
+)                {
+  let sum4 = 0;
+  let sum3 = 0;
+  let riverFolds = 0;
+  for (let i = 0; i < PREFLOP_BOARDS; i++) {
+    const ab = anteAndBlind[i] ;
+    const nt = net[i] ;
+    sum4 += ab + PREFLOP_RAISE * nt;
+    sum3 += ab + PREFLOP_RAISE_SMALL * nt;
+    if (ab + RIVER_RAISE * nt < FOLD_RESULT) riverFolds++;
+  }
+
+  const remaining = new Int32Array(47);
+  const merged = new Int32Array(5);
+  let checkSum = 0;
+  let flops = 0;
+  let flopRaises = 0;
+
+  for (let f0 = 0; f0 < 48; f0++) {
+    for (let f1 = f0 + 1; f1 < 49; f1++) {
+      for (let f2 = f1 + 1; f2 < 50; f2++) {
+        let m = 0;
+        for (let k = 0; k < 50; k++) {
+          if (k === f0 || k === f1 || k === f2) continue;
+          remaining[m++] = k;
+        }
+
+        let betTotal = 0;
+        let checkTotal = 0;
+        let completions = 0;
+        for (let t = 0; t < 47; t++) {
+          const turn = remaining[t] ;
+          for (let r = t + 1; r < 47; r++) {
+            const index = rankFive(f0, f1, f2, turn, remaining[r] , merged);
+            const ab = anteAndBlind[index] ;
+            const nt = net[index] ;
+            betTotal += ab + FLOP_RAISE * nt;
+            const river = ab + RIVER_RAISE * nt;
+            checkTotal += river >= FOLD_RESULT ? river : FOLD_RESULT;
+            completions++;
+          }
+        }
+
+        const evFlopBet = betTotal / completions;
+        const evFlopCheck = checkTotal / completions;
+        if (evFlopBet >= evFlopCheck) {
+          checkSum += evFlopBet;
+          flopRaises++;
+        } else {
+          checkSum += evFlopCheck;
+        }
+        flops++;
+      }
+    }
+  }
+
+  const ev4x = sum4 / PREFLOP_BOARDS;
+  const ev3x = sum3 / PREFLOP_BOARDS;
+  const evCheck = checkSum / flops;
+
+  return {
+    label,
+    ev4x,
+    ev3x,
+    evCheck,
+    optimalAction: ev4x >= evCheck ? 'raise4x' : 'check',
+    margin: Math.abs(ev4x - evCheck),
+    flopRaiseFrequency: flopRaises / flops,
+    riverFoldFrequency: riverFolds / PREFLOP_BOARDS,
+  };
+}
+
+/**
+ * Colex rank of the five board indices, given a sorted flop plus two further
+ * sorted cards. The two runs are merged rather than sorted, since both are
+ * already ordered.
+ */
+function rankFive(
+  f0        ,
+  f1        ,
+  f2        ,
+  turn        ,
+  river        ,
+  merged            ,
+)         {
+  let i = 0;
+  let j = 0;
+  for (let k = 0; k < 5; k++) {
+    const left = i === 0 ? f0 : i === 1 ? f1 : i === 2 ? f2 : Infinity;
+    const right = j === 0 ? turn : j === 1 ? river : Infinity;
+    if (left < right) {
+      merged[k] = left;
+      i++;
+    } else {
+      merged[k] = right;
+      j++;
+    }
+  }
+  return boardIndex(merged[0] , merged[1] , merged[2] , merged[3] , merged[4] );
+}
+
+/* ===== packages/ev-engine/src/uth/preflop-table.ts ===== */
+/**
+ * The solved pre-flop table: all 169 hole-card classes.
+ *
+ * GENERATED FILE — do not edit. Produced by `scripts/emit-preflop-module.ts`
+ * from `assets/uth-preflop.json`, which `scripts/generate-preflop.ts` takes
+ * hours to compute. `test/uth-preflop.test.ts` checks the two agree.
+ *
+ * It is source rather than an asset because the shared build has no runtime to
+ * read a file with, and because grading from a table that might not have loaded
+ * is worse than not grading at all.
+ *
+ * Solved against the **standard** blind paytable and no other.
+ * Offering a second paytable means re-running the offline job, not flipping a
+ * switch, so nothing in the app may present the paytable as configurable.
+ */
+
+/** What the solver knows about one of the 169 starting classes. */
+                             
+                                             
+                
+                                                                
+               
+                                                                    
+               
+                                                                   
+                  
+                                                 
+                                                        
+                 
+                                                            
+                             
+                                                            
+                             
+ 
+
+/** The blind paytable these numbers were solved against. */
+const PREFLOP_TABLE_PAYTABLE = "standard";
+
+const PREFLOP_TABLE                                       = {
+  "22": { label: "22", ev4x: -0.2878776990023634, ev3x: -0.29455808056962934, evCheck: -0.1794784366918627, optimalAction: "check", margin: 0.10839926231050068, flopRaiseFrequency: 0.14438775510204083, riverFoldFrequency: 0.06359757594064452 },
+  "33": { label: "33", ev4x: 0.08845558179425665, ev3x: 0.0145940540597555, evCheck: 0.007454228326048681, optimalAction: "raise4x", margin: 0.08100135346820797, flopRaiseFrequency: 0.33948979591836737, riverFoldFrequency: 0.04857463799580887 },
+  "44": { label: "44", ev4x: 0.46156950244178907, ev3x: 0.3211130786258267, evCheck: 0.2106180341617795, optimalAction: "raise4x", margin: 0.2509514682800096, flopRaiseFrequency: 0.5747959183673469, riverFoldFrequency: 0.036004077856859676 },
+  "55": { label: "55", ev4x: 0.8316433516145525, ev3x: 0.6251449413662831, evCheck: 0.4298843196068029, optimalAction: "raise4x", margin: 0.4017590320077496, flopRaiseFrequency: 0.8212244897959183, riverFoldFrequency: 0.026030319620910344 },
+  "66": { label: "66", ev4x: 1.159873092821814, ev3x: 0.8941781284808331, evCheck: 0.6325584940953576, optimalAction: "raise4x", margin: 0.5273145987264564, flopRaiseFrequency: 0.9318367346938775, riverFoldFrequency: 0.017972776529668298 },
+  "77": { label: "77", ev4x: 1.4869482507584562, ev3x: 1.1622277948501232, evCheck: 0.8386095612242053, optimalAction: "raise4x", margin: 0.6483386895342509, flopRaiseFrequency: 0.9745918367346939, riverFoldFrequency: 0.011798410390983406 },
+  "88": { label: "88", ev4x: 1.8114612859255144, ev3x: 1.4282005765288983, evCheck: 1.0451773466317353, optimalAction: "raise4x", margin: 0.766283939293779, flopRaiseFrequency: 0.9953061224489796, riverFoldFrequency: 0.001081764805829825 },
+  "99": { label: "99", ev4x: 2.1325134054904105, ev3x: 1.6913683665889787, evCheck: 1.2502816821960505, optimalAction: "raise4x", margin: 0.88223172329436, flopRaiseFrequency: 0.9990816326530613, riverFoldFrequency: 0.000388906719024335 },
+  "A2o": { label: "A2o", ev4x: 0.04172992932349652, ev3x: -0.05684124419356213, evCheck: -0.08232740996210702, optimalAction: "raise4x", margin: 0.12405733928560354, flopRaiseFrequency: 0.515, riverFoldFrequency: 0.049865015386358055 },
+  "K5o": { label: "K5o", ev4x: -0.11758213470919712, ev3x: -0.18386159138010777, evCheck: -0.15109970158836616, optimalAction: "raise4x", margin: 0.03351756687916904, flopRaiseFrequency: 0.39464285714285713, riverFoldFrequency: 0.0741150484245502 },
+  "K4o": { label: "K4o", ev4x: -0.22881163934891227, ev3x: -0.27536108145903315, evCheck: -0.20601432408244946, optimalAction: "check", margin: 0.02279731526646281, flopRaiseFrequency: 0.3807142857142857, riverFoldFrequency: 0.08985538711321717 },
+  "K2s": { label: "K2s", ev4x: -0.07450668448882375, ev3x: -0.13874125107798377, evCheck: -0.0799197399813249, optimalAction: "raise4x", margin: 0.005413055492501151, flopRaiseFrequency: 0.45005102040816325, riverFoldFrequency: 0.10810568445694652 },
+  "Q8o": { label: "Q8o", ev4x: -0.06942854034551268, ev3x: -0.1414243818228927, evCheck: -0.0925628876028314, optimalAction: "raise4x", margin: 0.02313434725731872, flopRaiseFrequency: 0.3939285714285714, riverFoldFrequency: 0.08086427910664729 },
+  "Q7o": { label: "Q7o", ev4x: -0.2776057994472402, ev3x: -0.3129191183102297, evCheck: -0.20938796753809472, optimalAction: "check", margin: 0.06821783190914546, flopRaiseFrequency: 0.3634183673469388, riverFoldFrequency: 0.08312597934641017 },
+  "Q6s": { label: "Q6s", ev4x: -0.006073839453488858, ev3x: -0.07832516818022242, evCheck: -0.028120218067324846, optimalAction: "raise4x", margin: 0.022046378613835987, flopRaiseFrequency: 0.44673469387755105, riverFoldFrequency: 0.08602437274632332 },
+  "Q5s": { label: "Q5s", ev4x: -0.09568226441235636, ev3x: -0.15107048223898753, evCheck: -0.0744700579107548, optimalAction: "check", margin: 0.021212206501601563, flopRaiseFrequency: 0.44224489795918365, riverFoldFrequency: 0.09315920632822972 },
+  "JTo": { label: "JTo", ev4x: 0.17402375217105207, ev3x: 0.06906969051511944, evCheck: 0.11028687186196572, optimalAction: "raise4x", margin: 0.06373688030908635, flopRaiseFrequency: 0.46596938775510205, riverFoldFrequency: 0.16379108535180956 },
+  "J9o": { label: "J9o", ev4x: -0.07000007341853272, ev3x: -0.13502401108986248, evCheck: -0.03854835027386967, optimalAction: "check", margin: 0.031451723144663046, flopRaiseFrequency: 0.42, riverFoldFrequency: 0.16213445600256754 },
+  "J8s": { label: "J8s", ev4x: 0.10738602657993926, ev3x: 0.02707314298254699, evCheck: 0.09631778965055236, optimalAction: "raise4x", margin: 0.011068236929386896, flopRaiseFrequency: 0.4574489795918367, riverFoldFrequency: 0.1516283108988276 },
+  "J7s": { label: "J7s", ev4x: -0.10660755309312663, ev3x: -0.15310317679553848, evCheck: -0.03444510945128834, optimalAction: "check", margin: 0.07216244364183828, flopRaiseFrequency: 0.4328061224489796, riverFoldFrequency: 0.1542548471747626 },
+  "AA": { label: "AA", ev4x: 3.6010726380495988, ev3x: 2.8969983720247803, evCheck: 2.1929241059807616, optimalAction: "raise4x", margin: 1.4081485320688372, flopRaiseFrequency: 1, riverFoldFrequency: 0 },
+  "AKs": { label: "AKs", ev4x: 1.6583264053227311, ev3x: 1.317433759139855, evCheck: 0.9867402297055493, optimalAction: "raise4x", margin: 0.6715861756171818, flopRaiseFrequency: 0.8682142857142857, riverFoldFrequency: 0.023436349562951916 },
+  "AKo": { label: "AKo", ev4x: 1.17191350153165, ev3x: 0.8655120657575303, evCheck: 0.5689276916019729, optimalAction: "raise4x", margin: 0.6029858099296771, flopRaiseFrequency: 0.8614285714285714, riverFoldFrequency: 0.021901489550491798 },
+  "AQs": { label: "AQs", ev4x: 1.5727046518166679, ev3x: 1.2485274038697174, evCheck: 0.935690706599695, optimalAction: "raise4x", margin: 0.6370139452169729, flopRaiseFrequency: 0.8607142857142858, riverFoldFrequency: 0.02753544526043535 },
+  "AQo": { label: "AQo", ev4x: 1.080609022841694, ev3x: 0.7919722353801811, evCheck: 0.5144081797605607, optimalAction: "raise4x", margin: 0.5662008430811333, flopRaiseFrequency: 0.8467346938775511, riverFoldFrequency: 0.023558118899733808 },
+  "AJs": { label: "AJs", ev4x: 1.4895067805528217, ev3x: 1.1816531999088011, evCheck: 0.8860204801512479, optimalAction: "raise4x", margin: 0.6034863004015738, flopRaiseFrequency: 0.8443367346938776, riverFoldFrequency: 0.025143952122939833 },
+  "AJo": { label: "AJo", ev4x: 0.9917668110044442, ev3x: 0.720501652768407, evCheck: 0.4612609109463863, optimalAction: "raise4x", margin: 0.5305059000580579, flopRaiseFrequency: 0.8278571428571428, riverFoldFrequency: 0.023606260265438276 },
+  "ATs": { label: "ATs", ev4x: 1.4093121376893036, ev3x: 1.1172644019332898, evCheck: 0.8378836690929017, optimalAction: "raise4x", margin: 0.571428468596402, flopRaiseFrequency: 0.818469387755102, riverFoldFrequency: 0.02362466725820763 },
+  "ATo": { label: "ATo", ev4x: 0.906070676034354, ev3x: 0.651637583284524, evCheck: 0.40963711631598376, optimalAction: "raise4x", margin: 0.4964335597183702, flopRaiseFrequency: 0.8020408163265306, riverFoldFrequency: 0.02320697011459533 },
+  "A9s": { label: "A9s", ev4x: 0.9535638512406284, ev3x: 0.697939572909332, evCheck: 0.4582399185839779, optimalAction: "raise4x", margin: 0.4953239326566505, flopRaiseFrequency: 0.7731632653061224, riverFoldFrequency: 0.02329050954331779 },
+  "A9o": { label: "A9o", ev4x: 0.6676953944477301, ev3x: 0.45223926668761383, evCheck: 0.252452110306181, optimalAction: "raise4x", margin: 0.4152432841415491, flopRaiseFrequency: 0.7261224489795919, riverFoldFrequency: 0.022474466197209688 },
+  "A8s": { label: "A8s", ev4x: 0.8688901884859006, ev3x: 0.6300139756801245, evCheck: 0.40961910516175576, optimalAction: "raise4x", margin: 0.45927108332414485, flopRaiseFrequency: 0.7238775510204082, riverFoldFrequency: 0.021541845230229003 },
+  "A8o": { label: "A8o", ev4x: 0.5753141638879533, ev3x: 0.3778620621156635, evCheck: 0.19946807218668697, optimalAction: "raise4x", margin: 0.37584609170126637, flopRaiseFrequency: 0.6270408163265306, riverFoldFrequency: 0.020279786290094207 },
+  "A7s": { label: "A7s", ev4x: 0.7674309344459117, ev3x: 0.54775176341958, evCheck: 0.351950992537848, optimalAction: "raise4x", margin: 0.4154799419080637, flopRaiseFrequency: 0.6856122448979591, riverFoldFrequency: 0.02111423662897166 },
+  "A7o": { label: "A7o", ev4x: 0.4659964969511885, ev3x: 0.28917258851176475, evCheck: 0.13919819168101244, optimalAction: "raise4x", margin: 0.32679830527017606, flopRaiseFrequency: 0.5585714285714286, riverFoldFrequency: 0.019126281409881252 },
+  "A6s": { label: "A6s", ev4x: 0.6492745628235149, ev3x: 0.45115800198353095, evCheck: 0.2856993079237654, optimalAction: "raise4x", margin: 0.3635752548997495, flopRaiseFrequency: 0.637704081632653, riverFoldFrequency: 0.01956380146878363 },
+  "A6o": { label: "A6o", ev4x: 0.33976286134470407, ev3x: 0.18611381542741756, evCheck: 0.07090996596827769, optimalAction: "raise4x", margin: 0.26885289537642637, flopRaiseFrequency: 0.5222448979591837, riverFoldFrequency: 0.017431894126753385 },
+  "A5s": { label: "A5s", ev4x: 0.6902166761918456, ev3x: 0.4917581638663082, evCheck: 0.3297471682979829, optimalAction: "raise4x", margin: 0.3604695078938627, flopRaiseFrequency: 0.645969387755102, riverFoldFrequency: 0.026453680454605524 },
+  "A5o": { label: "A5o", ev4x: 0.35854077766290077, ev3x: 0.20461009045524642, evCheck: 0.09355643962515924, optimalAction: "raise4x", margin: 0.2649843380377415, flopRaiseFrequency: 0.5764795918367347, riverFoldFrequency: 0.025149615813022712 },
+  "A4s": { label: "A4s", ev4x: 0.5901045086688835, ev3x: 0.4094317891001081, evCheck: 0.27410500028509305, optimalAction: "raise4x", margin: 0.3159995083837905, flopRaiseFrequency: 0.6246938775510205, riverFoldFrequency: 0.03478638448904076 },
+  "A4o": { label: "A4o", ev4x: 0.2493951648597956, ev3x: 0.11480161232940987, evCheck: 0.03373172482628076, optimalAction: "raise4x", margin: 0.21566344003351484, flopRaiseFrequency: 0.5608673469387755, riverFoldFrequency: 0.03420680020389284 },
+  "A3s": { label: "A3s", ev4x: 0.4967138545487403, ev3x: 0.3323074426411495, evCheck: 0.22137183255271425, optimalAction: "raise4x", margin: 0.27534202199602603, flopRaiseFrequency: 0.6044897959183674, riverFoldFrequency: 0.04297466442636259 },
+  "A3o": { label: "A3o", ev4x: 0.14744684498315902, ev3x: 0.030554798250342317, evCheck: -0.023205877565894928, optimalAction: "raise4x", margin: 0.17065272254905395, flopRaiseFrequency: 0.5451530612244898, riverFoldFrequency: 0.04299779116086768 },
+  "A2s": { label: "A2s", ev4x: 0.39985491943019935, ev3x: 0.25227696216839646, evCheck: 0.16651751667785053, optimalAction: "raise4x", margin: 0.23333740275234882, flopRaiseFrequency: 0.5760204081632653, riverFoldFrequency: 0.049367554607411886 },
+  "KK": { label: "KK", ev4x: 3.289359145863713, ev3x: 2.6414455500972274, evCheck: 1.9935319543678462, optimalAction: "raise4x", margin: 1.2958271914958666, flopRaiseFrequency: 1, riverFoldFrequency: 0 },
+  "KQs": { label: "KQs", ev4x: 1.3126203140823205, ev3x: 1.0446122481851658, evCheck: 0.8164077785348363, optimalAction: "raise4x", margin: 0.49621253554748423, flopRaiseFrequency: 0.6882142857142857, riverFoldFrequency: 0.05664964413147312 },
+  "KQo": { label: "KQo", ev4x: 0.7829415058560011, ev3x: 0.5538255049020482, evCheck: 0.3704903968034687, optimalAction: "raise4x", margin: 0.4124511090525324, flopRaiseFrequency: 0.6341326530612245, riverFoldFrequency: 0.05562593214899281 },
+  "KJs": { label: "KJs", ev4x: 1.2275003751925122, ev3x: 0.9761535725771194, evCheck: 0.7675870945860992, optimalAction: "raise4x", margin: 0.459913280606413, flopRaiseFrequency: 0.6687755102040817, riverFoldFrequency: 0.05330665106005399 },
+  "KJo": { label: "KJo", ev4x: 0.69199111696901, ev3x: 0.4806174137283753, evCheck: 0.31864897674092285, optimalAction: "raise4x", margin: 0.3733421402280871, flopRaiseFrequency: 0.6165306122448979, riverFoldFrequency: 0.053097094526987486 },
+  "KTs": { label: "KTs", ev4x: 1.1484691353184733, ev3x: 0.9126979719491383, evCheck: 0.7212971193747544, optimalAction: "raise4x", margin: 0.4271720159437189, flopRaiseFrequency: 0.6606632653061224, riverFoldFrequency: 0.04816543638732088 },
+  "KTo": { label: "KTo", ev4x: 0.6074844355783832, ev3x: 0.4127061328122549, evCheck: 0.26936643211934, optimalAction: "raise4x", margin: 0.33811800345904314, flopRaiseFrequency: 0.6031122448979592, riverFoldFrequency: 0.04884083142970417 },
+  "K9s": { label: "K9s", ev4x: 0.694570631745729, ev3x: 0.49480112152402117, evCheck: 0.34475050935071516, optimalAction: "raise4x", margin: 0.3498201223950138, flopRaiseFrequency: 0.6196428571428572, riverFoldFrequency: 0.04595376540995677 },
+  "K9o": { label: "K9o", ev4x: 0.37102442518808676, ev3x: 0.21478593206212615, evCheck: 0.11622767142626472, optimalAction: "raise4x", margin: 0.25479675376182204, flopRaiseFrequency: 0.538826530612245, riverFoldFrequency: 0.04608450225603655 },
+  "K8s": { label: "K8s", ev4x: 0.48161109647517225, ev3x: 0.3153640978023703, evCheck: 0.20908557039556785, optimalAction: "raise4x", margin: 0.2725255260796044, flopRaiseFrequency: 0.5470918367346939, riverFoldFrequency: 0.042566878740395324 },
+  "K8o": { label: "K8o", ev4x: 0.16625885452127478, ev3x: 0.04585540337137848, evCheck: -0.003953671062794147, optimalAction: "raise4x", margin: 0.17021252558406894, flopRaiseFrequency: 0.44112244897959185, riverFoldFrequency: 0.0421954350657932 },
+  "K7s": { label: "K7s", ev4x: 0.40389877841781247, ev3x: 0.25314402830706884, evCheck: 0.16717183440247466, optimalAction: "raise4x", margin: 0.2367269440153378, flopRaiseFrequency: 0.5242857142857142, riverFoldFrequency: 0.05246842492778795 },
+  "K7o": { label: "K7o", ev4x: 0.08135426243205023, ev3x: -0.022392741008365927, evCheck: -0.049437234824408864, optimalAction: "raise4x", margin: 0.13079149725645908, flopRaiseFrequency: 0.4166326530612245, riverFoldFrequency: 0.05213993090298099 },
+  "K6s": { label: "K6s", ev4x: 0.3091488880194197, ev3x: 0.1763341775469947, evCheck: 0.1164798519946193, optimalAction: "raise4x", margin: 0.1926690360248004, flopRaiseFrequency: 0.5010204081632653, riverFoldFrequency: 0.06214767127942759 },
+  "K6o": { label: "K6o", ev4x: -0.02077434871792275, ev3x: -0.10523992759529496, evCheck: -0.10298990518754131, optimalAction: "raise4x", margin: 0.08221555646961856, flopRaiseFrequency: 0.3948979591836735, riverFoldFrequency: 0.06352300402121996 },
+  "K5s": { label: "K5s", ev4x: 0.21914830997003987, ev3x: 0.10328995723812653, evCheck: 0.07063821920997823, optimalAction: "raise4x", margin: 0.14851009076006164, flopRaiseFrequency: 0.4893877551020408, riverFoldFrequency: 0.07221912816930658 },
+  "K4s": { label: "K4s", ev4x: 0.11701624578088718, ev3x: 0.01932351441069998, evCheck: 0.018917021934498686, optimalAction: "raise4x", margin: 0.0980992238463885, flopRaiseFrequency: 0.4736224489795918, riverFoldFrequency: 0.08556702977213088 },
+  "K3s": { label: "K3s", ev4x: 0.02200040651854686, ev3x: -0.05909912263448339, evCheck: -0.030194612543529373, optimalAction: "raise4x", margin: 0.05219501906207623, flopRaiseFrequency: 0.4603061224489796, riverFoldFrequency: 0.09732343446166626 },
+  "K3o": { label: "K3o", ev4x: -0.3324120776459777, ev3x: -0.3609258705459657, evCheck: -0.2583165826838691, optimalAction: "check", margin: 0.0740954949621086, flopRaiseFrequency: 0.3712244897959184, riverFoldFrequency: 0.10208990164058222 },
+  "K2o": { label: "K2o", ev4x: -0.43770245737233626, ev3x: -0.4478769328792482, evCheck: -0.3112957215207475, optimalAction: "check", margin: 0.12640673585158874, flopRaiseFrequency: 0.3625510204081633, riverFoldFrequency: 0.11347203081047405 },
+  "QQ": { label: "QQ", ev4x: 3.0186485267485796, ev3x: 2.420145245526065, evCheck: 1.8216419643012125, optimalAction: "raise4x", margin: 1.1970065624473671, flopRaiseFrequency: 1, riverFoldFrequency: 0 },
+  "QJs": { label: "QJs", ev4x: 1.0241563742903645, ev3x: 0.8189722714680848, evCheck: 0.6935980730391001, optimalAction: "raise4x", margin: 0.3305583012512644, flopRaiseFrequency: 0.5850510204081633, riverFoldFrequency: 0.09169372651928487 },
+  "QJo": { label: "QJo", ev4x: 0.45568102750543765, ev3x: 0.2929872339575196, evCheck: 0.22429717262679796, optimalAction: "raise4x", margin: 0.2313838548786397, flopRaiseFrequency: 0.5133163265306122, riverFoldFrequency: 0.09463176574977818 },
+  "QTs": { label: "QTs", ev4x: 0.9435947567272469, ev3x: 0.7542435705669903, evCheck: 0.6480229414727258, optimalAction: "raise4x", margin: 0.29557181525452114, flopRaiseFrequency: 0.5796938775510204, riverFoldFrequency: 0.0879882572825615 },
+  "QTo": { label: "QTo", ev4x: 0.3694949962139043, ev3x: 0.22367934427482147, evCheck: 0.17589602652094435, optimalAction: "raise4x", margin: 0.19359896969295995, flopRaiseFrequency: 0.5087244897959183, riverFoldFrequency: 0.09178009779304877 },
+  "Q9s": { label: "Q9s", ev4x: 0.48919867533509276, ev3x: 0.33591224097919836, evCheck: 0.27409331062899134, optimalAction: "raise4x", margin: 0.21510536470610142, flopRaiseFrequency: 0.5285714285714286, riverFoldFrequency: 0.0830636787554985 },
+  "Q9o": { label: "Q9o", ev4x: 0.13250515667488955, ev3x: 0.02529645818222727, evCheck: 0.02618642979856062, optimalAction: "raise4x", margin: 0.10631872687632893, flopRaiseFrequency: 0.4505612244897959, riverFoldFrequency: 0.08594649700768374 },
+  "Q8s": { label: "Q8s", ev4x: 0.27893151697682, ev3x: 0.15857685746670136, evCheck: 0.1401992697367674, optimalAction: "raise4x", margin: 0.1387322472400526, flopRaiseFrequency: 0.4753061224489796, riverFoldFrequency: 0.07875644244746928 },
+  "Q7s": { label: "Q7s", ev4x: 0.06277568750437272, ev3x: -0.0232695765349994, evCheck: 0.007849858245655417, optimalAction: "raise4x", margin: 0.05492582925871731, flopRaiseFrequency: 0.45035714285714284, riverFoldFrequency: 0.08155713719345277 },
+  "Q6o": { label: "Q6o", ev4x: -0.352995258233586, ev3x: -0.3734763043211152, evCheck: -0.24872999759149986, optimalAction: "check", margin: 0.10426526064208616, flopRaiseFrequency: 0.3535204081632653, riverFoldFrequency: 0.08983933999131567 },
+  "Q5o": { label: "Q5o", ev4x: -0.44934704995277347, ev3x: -0.4517487057884988, evCheck: -0.29752454923606036, optimalAction: "check", margin: 0.1518225007167131, flopRaiseFrequency: 0.3486734693877551, riverFoldFrequency: 0.09506503804111839 },
+  "Q4s": { label: "Q4s", ev4x: -0.19844777467569724, ev3x: -0.2355538154485103, evCheck: -0.12444930697028542, optimalAction: "check", margin: 0.07399846770541182, flopRaiseFrequency: 0.43642857142857144, riverFoldFrequency: 0.11192442749532745 },
+  "Q4o": { label: "Q4o", ev4x: -0.5612151213467383, ev3x: -0.5437688034032799, evCheck: -0.3503434529840307, optimalAction: "check", margin: 0.21087166836270765, flopRaiseFrequency: 0.3407142857142857, riverFoldFrequency: 0.11782363269081916 },
+  "Q3s": { label: "Q3s", ev4x: -0.29416010717971347, ev3x: -0.3145450369196439, evCheck: -0.17211494649720002, optimalAction: "check", margin: 0.12204516068251345, flopRaiseFrequency: 0.42709183673469386, riverFoldFrequency: 0.12865638392267176 },
+  "Q3o": { label: "Q3o", ev4x: -0.6655171778566026, ev3x: -0.6299058983627335, evCheck: -0.4008844106644403, optimalAction: "check", margin: 0.2646327671921623, flopRaiseFrequency: 0.3356122448979592, riverFoldFrequency: 0.13582755951594327 },
+  "Q2s": { label: "Q2s", ev4x: -0.3914267385960233, ev3x: -0.3948074438340476, evCheck: -0.2204399799024813, optimalAction: "check", margin: 0.170986758693542, flopRaiseFrequency: 0.4221938775510204, riverFoldFrequency: 0.14432356661443485 },
+  "Q2o": { label: "Q2o", ev4x: -0.771572227255709, ev3x: -0.7174809649032595, evCheck: -0.4522182999738193, optimalAction: "check", margin: 0.31935392728188966, flopRaiseFrequency: 0.33341836734693875, riverFoldFrequency: 0.15269969227283883 },
+  "JJ": { label: "JJ", ev4x: 2.749738853361271, ev3x: 2.200349395334511, evCheck: 1.6509599373065842, optimalAction: "raise4x", margin: 1.098778916054687, flopRaiseFrequency: 1, riverFoldFrequency: 0 },
+  "JTs": { label: "JTs", ev4x: 0.7788410280851984, ev3x: 0.62828388593379, evCheck: 0.6019045305420644, optimalAction: "raise4x", margin: 0.176936497543134, flopRaiseFrequency: 0.5396428571428571, riverFoldFrequency: 0.15432847514584003 },
+  "J9s": { label: "J9s", ev4x: 0.317836845819052, ev3x: 0.20458743474164784, evCheck: 0.22819617320479693, optimalAction: "raise4x", margin: 0.0896406726142551, flopRaiseFrequency: 0.4931122448979592, riverFoldFrequency: 0.1525769789877098 },
+  "J8o": { label: "J8o", ev4x: -0.2721453064027481, ev3x: -0.3019485665899074, evCheck: -0.1549439939713176, optimalAction: "check", margin: 0.11720131243143048, flopRaiseFrequency: 0.37081632653061225, riverFoldFrequency: 0.16041835790745532 },
+  "J7o": { label: "J7o", ev4x: -0.4780516846534657, ev3x: -0.4716903566706839, evCheck: -0.26982916265488444, optimalAction: "check", margin: 0.20822252199858127, flopRaiseFrequency: 0.34474489795918367, riverFoldFrequency: 0.16333657422265854 },
+  "J6s": { label: "J6s", ev4x: -0.32272907957892616, ev3x: -0.33484722243585185, evCheck: -0.16364430705705438, optimalAction: "check", margin: 0.15908477252187178, flopRaiseFrequency: 0.42928571428571427, riverFoldFrequency: 0.16056702977213086 },
+  "J6o": { label: "J6o", ev4x: -0.6861593237506182, ev3x: -0.6430447847717807, evCheck: -0.3828948467285304, optimalAction: "check", margin: 0.30326447702208775, flopRaiseFrequency: 0.33591836734693875, riverFoldFrequency: 0.1700032094243803 },
+  "J5s": { label: "J5s", ev4x: -0.38480706530266434, ev3x: -0.3845440555454872, evCheck: -0.19406184372945076, optimalAction: "check", margin: 0.19074522157321358, flopRaiseFrequency: 0.42331632653061224, riverFoldFrequency: 0.1580212010798769 },
+  "J5o": { label: "J5o", ev4x: -0.7540158244364418, ev3x: -0.6976335889526777, evCheck: -0.41585453427018604, optimalAction: "check", margin: 0.33816129016625573, flopRaiseFrequency: 0.33341836734693875, riverFoldFrequency: 0.1664322528271253 },
+  "J4s": { label: "J4s", ev4x: -0.48785673786668166, ev3x: -0.46926580579350335, evCheck: -0.24252602842218415, optimalAction: "check", margin: 0.2453307094444975, flopRaiseFrequency: 0.4136734693877551, riverFoldFrequency: 0.16518010534463554 },
+  "J4o": { label: "J4o", ev4x: -0.8661489164805923, ev3x: -0.7898766071200863, evCheck: -0.46702301984904, optimalAction: "check", margin: 0.39912589663155235, flopRaiseFrequency: 0.3281122448979592, riverFoldFrequency: 0.17560035114878514 },
+  "J3s": { label: "J3s", ev4x: -0.5839073595273346, ev3x: -0.5485398399114233, evCheck: -0.28909636039260966, optimalAction: "check", margin: 0.29481099913472497, flopRaiseFrequency: 0.40158163265306124, riverFoldFrequency: 0.17699597878004117 },
+  "J3o": { label: "J3o", ev4x: -0.9707701247881219, ev3x: -0.8762810225298615, evCheck: -0.5167116760784978, optimalAction: "check", margin: 0.4540584487096241, flopRaiseFrequency: 0.32392857142857145, riverFoldFrequency: 0.18800194453359512 },
+  "J2s": { label: "J2s", ev4x: -0.6815664069573353, ev3x: -0.6291294550792746, evCheck: -0.33622026605612987, optimalAction: "check", margin: 0.3453461409012054, flopRaiseFrequency: 0.3953061224489796, riverFoldFrequency: 0.1889171024561536 },
+  "J2o": { label: "J2o", ev4x: -1.0771984571326414, ev3x: -0.9641678094195043, evCheck: -0.5672160913253761, optimalAction: "check", margin: 0.5099823658072653, flopRaiseFrequency: 0.3221428571428571, riverFoldFrequency: 0.20058477600105723 },
+  "TT": { label: "TT", ev4x: 2.4808030583244842, ev3x: 1.9805674593246119, evCheck: 1.480331860297181, optimalAction: "raise4x", margin: 1.0004711980273033, flopRaiseFrequency: 1, riverFoldFrequency: 0 },
+  "T9s": { label: "T9s", ev4x: 0.18516906734490873, ev3x: 0.10461849421761345, evCheck: 0.20548471814369879, optimalAction: "check", margin: 0.020315650798790053, flopRaiseFrequency: 0.4771938775510204, riverFoldFrequency: 0.2548419830466877 },
+  "T9o": { label: "T9o", ev4x: -0.2315057179913903, ev3x: -0.2621391659706812, evCheck: -0.07945994912976624, optimalAction: "check", margin: 0.15204576886162408, flopRaiseFrequency: 0.4051530612244898, riverFoldFrequency: 0.2735349921652287 },
+  "T8s": { label: "T8s", ev4x: -0.030267350961457103, ev3x: -0.07695476542224082, evCheck: 0.07541122037074788, optimalAction: "check", margin: 0.10567857133220498, flopRaiseFrequency: 0.44566326530612244, riverFoldFrequency: 0.2525467726406011 },
+  "T8o": { label: "T8o", ev4x: -0.43896341075159623, ev3x: -0.4333888842170598, evCheck: -0.1934615004945712, optimalAction: "check", margin: 0.24550191025702503, flopRaiseFrequency: 0.3714795918367347, riverFoldFrequency: 0.2708319960731749 },
+  "T7s": { label: "T7s", ev4x: -0.2448989121902075, ev3x: -0.257679662927804, evCheck: -0.05343486160477551, optimalAction: "check", margin: 0.191464050585432, flopRaiseFrequency: 0.4246938775510204, riverFoldFrequency: 0.25429118918612775 },
+  "T7o": { label: "T7o", ev4x: -0.6455667432514816, ev3x: -0.6037294536303985, evCheck: -0.30584546292656734, optimalAction: "check", margin: 0.3397212803249142, flopRaiseFrequency: 0.3407142857142857, riverFoldFrequency: 0.2726198342426702 },
+  "T6s": { label: "T6s", ev4x: -0.4592530553420835, ev3x: -0.43806656900090374, evCheck: -0.18096044889797147, optimalAction: "check", margin: 0.278292606444112, flopRaiseFrequency: 0.41918367346938773, riverFoldFrequency: 0.26043912477109254 },
+  "T6o": { label: "T6o", ev4x: -0.8518236857996381, ev3x: -0.7736637514896363, evCheck: -0.4167288876894085, optimalAction: "check", margin: 0.43509479811022955, flopRaiseFrequency: 0.33341836734693875, riverFoldFrequency: 0.279173667616908 },
+  "T5s": { label: "T5s", ev4x: -0.6762606790095376, ev3x: -0.6205858584444003, evCheck: -0.30800359305833713, optimalAction: "check", margin: 0.36825708595120044, flopRaiseFrequency: 0.40938775510204084, riverFoldFrequency: 0.2699838584832638 },
+  "T5o": { label: "T5o", ev4x: -1.060580545393795, ev3x: -0.9455995364004, evCheck: -0.5272588053218078, optimalAction: "check", margin: 0.5333217400719873, flopRaiseFrequency: 0.3262244897959184, riverFoldFrequency: 0.2890898450036814 },
+  "T4s": { label: "T4s", ev4x: -0.7511395749650044, ev3x: -0.6817494471240426, evCheck: -0.3393843474008308, optimalAction: "check", margin: 0.4117552275641736, flopRaiseFrequency: 0.39285714285714285, riverFoldFrequency: 0.270710226736393 },
+  "T4o": { label: "T4o", ev4x: -1.1435249190917467, ev3x: -1.0136070793096636, evCheck: -0.5616517848919007, optimalAction: "check", margin: 0.581873134199846, flopRaiseFrequency: 0.3224489795918367, riverFoldFrequency: 0.2902296626328607 },
+  "T3s": { label: "T3s", ev4x: -0.8471702817002218, ev3x: -0.76102052210554, evCheck: -0.38425014411897856, optimalAction: "check", margin: 0.46292013758124323, flopRaiseFrequency: 0.374030612244898, riverFoldFrequency: 0.2765296682965508 },
+  "T3o": { label: "T3o", ev4x: -1.2480828127809982, ev3x: -1.0999738297485877, evCheck: -0.6100154819447443, optimalAction: "check", margin: 0.6380673308362539, flopRaiseFrequency: 0.3190816326530612, riverFoldFrequency: 0.296055239857275 },
+  "T2s": { label: "T2s", ev4x: -0.9448546207478626, ev3x: -0.8416442753080988, evCheck: -0.4298413679070119, optimalAction: "check", margin: 0.5150132528408508, flopRaiseFrequency: 0.36331632653061224, riverFoldFrequency: 0.28002699692272837 },
+  "T2o": { label: "T2o", ev4x: -1.3544930413379994, ev3x: -1.1878600531281989, evCheck: -0.6594542085412722, optimalAction: "check", margin: 0.6950388327967272, flopRaiseFrequency: 0.3166326530612245, riverFoldFrequency: 0.2993430119503861 },
+  "98s": { label: "98s", ev4x: -0.17047555903168907, ev3x: -0.18649066678122972, evCheck: 0.051068794383450286, optimalAction: "check", margin: 0.22154435341513934, flopRaiseFrequency: 0.4142857142857143, riverFoldFrequency: 0.3414379165172082 },
+  "98o": { label: "98o", ev4x: -0.6093633576133629, ev3x: -0.5713040129140196, evCheck: -0.2361106637844775, optimalAction: "check", margin: 0.3732526938288854, flopRaiseFrequency: 0.3442857142857143, riverFoldFrequency: 0.3675885895523797 },
+  "97s": { label: "97s", ev4x: -0.38345300572297275, ev3x: -0.36580762766543806, evCheck: -0.07168506298042532, optimalAction: "check", margin: 0.31176794274254743, flopRaiseFrequency: 0.3983673469387755, riverFoldFrequency: 0.34473418414544355 },
+  "97o": { label: "97o", ev4x: -0.8141929396559976, ev3x: -0.7401490677998525, evCheck: -0.34195540206383734, optimalAction: "check", margin: 0.47223753759216025, flopRaiseFrequency: 0.33698979591836736, riverFoldFrequency: 0.37075081651532027 },
+  "96s": { label: "96s", ev4x: -0.597023806423366, ev3x: -0.5455896218412217, evCheck: -0.19658492870138677, optimalAction: "check", margin: 0.4004388777219793, flopRaiseFrequency: 0.3905612244897959, riverFoldFrequency: 0.35161603957031473 },
+  "96o": { label: "96o", ev4x: -1.019603985300628, ev3x: -0.9094308904430515, evCheck: -0.4500325201647403, optimalAction: "check", margin: 0.5695714651358876, flopRaiseFrequency: 0.33198979591836736, riverFoldFrequency: 0.37798334875115636 },
+  "95s": { label: "95s", ev4x: -0.8124760125063185, ev3x: -0.7269135036786148, evCheck: -0.32348703019738384, optimalAction: "check", margin: 0.48898898230893467, flopRaiseFrequency: 0.38137755102040816, riverFoldFrequency: 0.35902697804376144 },
+  "95o": { label: "95o", ev4x: -1.2267344261891846, ev3x: -1.0801172824858651, evCheck: -0.5605232215584087, optimalAction: "check", margin: 0.6662112046307759, flopRaiseFrequency: 0.3251530612244898, riverFoldFrequency: 0.3858624856047877 },
+  "94s": { label: "94s", ev4x: -1.0492282325984832, ev3x: -0.9264676489829569, evCheck: -0.4524715050121797, optimalAction: "check", margin: 0.5967567275863035, flopRaiseFrequency: 0.3539795918367347, riverFoldFrequency: 0.3724980649058883 },
+  "94o": { label: "94o", ev4x: -1.4579848941121887, ev3x: -1.271405964580509, evCheck: -0.6746778117408416, optimalAction: "check", margin: 0.783307082371347, flopRaiseFrequency: 0.3169387755102041, riverFoldFrequency: 0.39994808284090694 },
+  "93s": { label: "93s", ev4x: -1.1161414507086302, ev3x: -0.9814266065375997, evCheck: -0.4825009247356566, optimalAction: "check", margin: 0.6336405259729736, flopRaiseFrequency: 0.34311224489795916, riverFoldFrequency: 0.37416177386773397 },
+  "93o": { label: "93o", ev4x: -1.5323399542779166, ev3x: -1.3327302411584419, evCheck: -0.7086657587599755, optimalAction: "check", margin: 0.8236741955179411, flopRaiseFrequency: 0.3147448979591837, riverFoldFrequency: 0.4013743887934452 },
+  "92s": { label: "92s", ev4x: -1.2135061397657383, ev3x: -1.0618095771095544, evCheck: -0.5279027859538942, optimalAction: "check", margin: 0.6856033538118441, flopRaiseFrequency: 0.3330102040816327, riverFoldFrequency: 0.3789844059733051 },
+  "92o": { label: "92o", ev4x: -1.6383637875910462, ev3x: -1.4203225133044473, evCheck: -0.758210973790462, optimalAction: "check", margin: 0.8801528138005842, flopRaiseFrequency: 0.3106122448979592, riverFoldFrequency: 0.40596764145065983 },
+  "87s": { label: "87s", ev4x: -0.47468508095438483, ev3x: -0.43341188580623685, evCheck: -0.05275362685931743, optimalAction: "check", margin: 0.4219314540950674, flopRaiseFrequency: 0.37479591836734694, riverFoldFrequency: 0.3806122448979592 },
+  "87o": { label: "87o", ev4x: -0.932875595615095, ev3x: -0.8338918408729035, evCheck: -0.34019656680264937, optimalAction: "check", margin: 0.5926790288124457, flopRaiseFrequency: 0.33846938775510205, riverFoldFrequency: 0.40994496781136136 },
+  "86s": { label: "86s", ev4x: -0.688214740763462, ev3x: -0.6130801261017461, evCheck: -0.17497693638608075, optimalAction: "check", margin: 0.5132378043773813, flopRaiseFrequency: 0.3601020408163265, riverFoldFrequency: 0.3889959221431403 },
+  "86o": { label: "86o", ev4x: -1.1382643359521551, ev3x: -1.0030823732235639, evCheck: -0.4462643042976721, optimalAction: "check", margin: 0.692000031654483, flopRaiseFrequency: 0.3339795918367347, riverFoldFrequency: 0.4188728312786724 },
+  "85s": { label: "85s", ev4x: -0.9030024050647704, ev3x: -0.7939022591074936, evCheck: -0.3007403171876209, optimalAction: "check", margin: 0.6022620878771494, flopRaiseFrequency: 0.34494897959183674, riverFoldFrequency: 0.39735552870546925 },
+  "85o": { label: "85o", ev4x: -1.3446777279323523, ev3x: -1.1732282475685387, evCheck: -0.5561678847414234, optimalAction: "check", margin: 0.7885098431909289, flopRaiseFrequency: 0.3273469387755102, riverFoldFrequency: 0.4276222885083728 },
+  "84s": { label: "84s", ev4x: -1.1382902251676656, ev3x: -0.9923227710750963, evCheck: -0.42952482498339745, optimalAction: "check", margin: 0.7087654001842683, flopRaiseFrequency: 0.3323979591836735, riverFoldFrequency: 0.4095565330665106 },
+  "84o": { label: "84o", ev4x: -1.5743882184985456, ev3x: -1.363324047835709, evCheck: -0.670508026373726, optimalAction: "check", margin: 0.9038801921248196, flopRaiseFrequency: 0.3223979591836735, riverFoldFrequency: 0.4403231135192282 },
+  "83s": { label: "83s", ev4x: -1.372776024086824, ev3x: -1.190246106162782, evCheck: -0.557778002609107, optimalAction: "check", margin: 0.814998021477717, flopRaiseFrequency: 0.3218367346938775, riverFoldFrequency: 0.4249830089297514 },
+  "83o": { label: "83o", ev4x: -1.8031279740381074, ev3x: -1.552804225969284, evCheck: -0.7849046073928113, optimalAction: "check", margin: 1.0182233666452962, flopRaiseFrequency: 0.31316326530612243, riverFoldFrequency: 0.45608044327814384 },
+  "82s": { label: "82s", ev4x: -1.44033225098722, ev3x: -1.2457649397446462, evCheck: -0.5887118262521076, optimalAction: "check", margin: 0.8516204247351125, flopRaiseFrequency: 0.31801020408163266, riverFoldFrequency: 0.4261015877211199 },
+  "82o": { label: "82o", ev4x: -1.8782139469917414, ev3x: -1.6147674290060452, evCheck: -0.8200607105146929, optimalAction: "check", margin: 1.0581532364770485, flopRaiseFrequency: 0.30887755102040815, riverFoldFrequency: 0.45690828597859123 },
+  "76s": { label: "76s", ev4x: -0.7463244153085082, ev3x: -0.6537597481724201, evCheck: -0.14096196650947834, optimalAction: "check", margin: 0.6053624487990299, flopRaiseFrequency: 0.35551020408163264, riverFoldFrequency: 0.38710755347467385 },
+  "76o": { label: "76o", ev4x: -1.2218706100441485, ev3x: -1.0683255476655253, evCheck: -0.4309226486771097, optimalAction: "check", margin: 0.7909479613670388, flopRaiseFrequency: 0.33540816326530615, riverFoldFrequency: 0.4166007476070909 },
+  "75s": { label: "75s", ev4x: -0.9605767109643346, ev3x: -0.8340874436554114, evCheck: -0.2641652142257375, optimalAction: "check", margin: 0.696411496738597, flopRaiseFrequency: 0.34448979591836737, riverFoldFrequency: 0.3955705223810153 },
+  "75o": { label: "75o", ev4x: -1.4277367007694977, ev3x: -1.2379760779667544, evCheck: -0.5386155017104506, optimalAction: "check", margin: 0.8891211990590471, flopRaiseFrequency: 0.3296938775510204, riverFoldFrequency: 0.425444599671506 },
+  "74s": { label: "74s", ev4x: -1.1941314571556856, ev3x: -1.031117694673866, evCheck: -0.3921040661576224, optimalAction: "check", margin: 0.8020273909980632, flopRaiseFrequency: 0.33438775510204083, riverFoldFrequency: 0.4079541807472295 },
+  "74o": { label: "74o", ev4x: -1.655568777031564, ev3x: -1.4265653338118267, evCheck: -0.6522036849359739, optimalAction: "check", margin: 1.0033650920955899, flopRaiseFrequency: 0.32418367346938776, riverFoldFrequency: 0.43826719401914327 },
+  "73s": { label: "73s", ev4x: -1.4273125120748167, ev3x: -1.2280312295762377, evCheck: -0.5208795897581435, optimalAction: "check", margin: 0.9064329223166732, flopRaiseFrequency: 0.32596938775510204, riverFoldFrequency: 0.4212850912798052 },
+  "73o": { label: "73o", ev4x: -1.882941708235829, ev3x: -1.6149868481291636, evCheck: -0.7670264260723461, optimalAction: "check", margin: 1.115915282163483, flopRaiseFrequency: 0.31948979591836735, riverFoldFrequency: 0.45180907700730616 },
+  "72s": { label: "72s", ev4x: -1.6672915278166796, ev3x: -1.4304093973106031, evCheck: -0.6503523585645996, optimalAction: "check", margin: 1.01693916925208, flopRaiseFrequency: 0.3125, riverFoldFrequency: 0.4366011251864298 },
+  "72o": { label: "72o", ev4x: -2.1175788261261084, ev3x: -1.8092517724317436, evCheck: -0.8828064839621256, optimalAction: "check", margin: 1.234772342163983, flopRaiseFrequency: 0.3053571428571429, riverFoldFrequency: 0.46740499159885973 },
+  "65s": { label: "65s", ev4x: -0.9845393217448568, ev3x: -0.8472070461094509, evCheck: -0.22688829339096855, optimalAction: "check", margin: 0.7576510283538882, flopRaiseFrequency: 0.34831632653061223, riverFoldFrequency: 0.38843899261832393 },
+  "65o": { label: "65o", ev4x: -1.475095449390523, ev3x: -1.2739814954698607, evCheck: -0.5205721469256565, optimalAction: "check", margin: 0.9545233024648666, flopRaiseFrequency: 0.3320408163265306, riverFoldFrequency: 0.417558383205271 },
+  "64s": { label: "64s", ev4x: -1.2145873780114849, ev3x: -1.0412537586334554, evCheck: -0.35184872812971657, optimalAction: "check", margin: 0.8627386498817683, flopRaiseFrequency: 0.33698979591836736, riverFoldFrequency: 0.40142158621080254 },
+  "64o": { label: "64o", ev4x: -1.6992007303338748, ev3x: -1.4594104952012594, evCheck: -0.6311462542604028, optimalAction: "check", margin: 1.0680544760734718, flopRaiseFrequency: 0.32693877551020406, riverFoldFrequency: 0.431023806377315 },
+  "63s": { label: "63s", ev4x: -1.4463057468278622, ev3x: -1.236976945589355, evCheck: -0.47982243626012766, optimalAction: "check", margin: 0.9664833105677345, flopRaiseFrequency: 0.32474489795918365, riverFoldFrequency: 0.4147057713001944 },
+  "63o": { label: "63o", ev4x: -1.9249938533751723, ev3x: -1.6465464724855154, evCheck: -0.7451543183920636, optimalAction: "check", margin: 1.1798395349831088, flopRaiseFrequency: 0.31974489795918365, riverFoldFrequency: 0.44456002567539504 },
+  "62s": { label: "62s", ev4x: -1.6849058199395086, ev3x: -1.43828510210315, evCheck: -0.6096730622981142, optimalAction: "check", margin: 1.0752327576413943, flopRaiseFrequency: 0.3158673469387755, riverFoldFrequency: 0.4284133172232815 },
+  "62o": { label: "62o", ev4x: -2.158188987189212, ev3x: -1.8396917539069924, evCheck: -0.861363462162264, optimalAction: "check", margin: 1.2968255250269483, flopRaiseFrequency: 0.3121938775510204, riverFoldFrequency: 0.45840680397968625 },
+  "54s": { label: "54s", ev4x: -1.166242007907269, ev3x: -0.9953104152725928, evCheck: -0.2989838271136683, optimalAction: "check", margin: 0.8672581807936008, flopRaiseFrequency: 0.33790816326530615, riverFoldFrequency: 0.39127225358228396 },
+  "54o": { label: "54o", ev4x: -1.6699510782074032, ev3x: -1.433056819874912, evCheck: -0.5977044879118416, optimalAction: "check", margin: 1.0722465902955616, flopRaiseFrequency: 0.33010204081632655, riverFoldFrequency: 0.41979082104627236 },
+  "53s": { label: "53s", ev4x: -1.3931302526216556, ev3x: -1.1869895005782543, evCheck: -0.4236566078005228, optimalAction: "check", margin: 0.9694736448211327, flopRaiseFrequency: 0.3270408163265306, riverFoldFrequency: 0.4063150144424097 },
+  "53o": { label: "53o", ev4x: -1.8906065340098699, ev3x: -1.6159019564705919, evCheck: -0.7083363844318283, optimalAction: "check", margin: 1.1822701495780414, flopRaiseFrequency: 0.32285714285714284, riverFoldFrequency: 0.4351932262266609 },
+  "52s": { label: "52s", ev4x: -1.6294759677912194, ev3x: -1.3864625275878957, evCheck: -0.5523983299456078, optimalAction: "check", margin: 1.0770776378456115, flopRaiseFrequency: 0.31785714285714284, riverFoldFrequency: 0.420223621363439 },
+  "52o": { label: "52o", ev4x: -2.1213968907570653, ev3x: -1.8070898008093457, evCheck: -0.8233239267450384, optimalAction: "check", margin: 1.298072964012027, flopRaiseFrequency: 0.3143367346938776, riverFoldFrequency: 0.4491740451962469 },
+  "43s": { label: "43s", ev4x: -1.5118550694593986, ev3x: -1.2846940370208837, evCheck: -0.4726585564340974, optimalAction: "check", margin: 1.0391965130253014, flopRaiseFrequency: 0.3265816326530612, riverFoldFrequency: 0.4102215446770753 },
+  "43o": { label: "43o", ev4x: -2.0169258324496737, ev3x: -1.7198437002696798, evCheck: -0.760050744708503, optimalAction: "check", margin: 1.2568750877411707, flopRaiseFrequency: 0.32316326530612244, riverFoldFrequency: 0.43888123241896204 },
+  "42s": { label: "42s", ev4x: -1.7444967408501526, ev3x: -1.4810770352913558, evCheck: -0.599060723339038, optimalAction: "check", margin: 1.1454360175111145, flopRaiseFrequency: 0.31326530612244896, riverFoldFrequency: 0.42611669089467424 },
+  "42o": { label: "42o", ev4x: -2.243692522124829, ev3x: -1.9076875246377816, evCheck: -0.8725602011163013, optimalAction: "check", margin: 1.3711323210085276, flopRaiseFrequency: 0.3103061224489796, riverFoldFrequency: 0.45493401801053446 },
+  "32s": { label: "32s", ev4x: -1.8428056097114673, ev3x: -1.5624942216530042, evCheck: -0.6492684543332066, optimalAction: "check", margin: 1.1935371553782608, flopRaiseFrequency: 0.30607142857142855, riverFoldFrequency: 0.4306731295663501 },
+  "32o": { label: "32o", ev4x: -2.348116416621728, ev3x: -1.9941809791647884, evCheck: -0.9258374060413875, optimalAction: "check", margin: 1.4222790105803402, flopRaiseFrequency: 0.30428571428571427, riverFoldFrequency: 0.45900715512847134 },
+};
+
+/**
+ * The solved row for a class label.
+ *
+ * Throws rather than returning null: every two-card hand belongs to one of the
+ * 169 classes by construction, so a miss means the label was built wrongly, and
+ * grading a decision against a silently absent row is the one outcome worse
+ * than crashing.
+ */
+function preflopRow(label        )             {
+  const row = PREFLOP_TABLE[label];
+  if (!row) throw new Error(`No solved pre-flop row for ${label}`);
+  return row;
+}
+
+/* ===== packages/ev-engine/src/uth/index.ts ===== */
+
+
+/* ===== packages/ev-engine/src/uth-entry.ts ===== */
+/**
+ * The Ultimate Texas Hold'em half of the engine, flat.
+ *
+ * `index.ts` exports UTH under the `uth` namespace and the evaluator under
+ * `poker`, which reads well from Node and does not survive the shared build:
+ * `scripts/bundle.ts` folds every module into one scope and has no namespace
+ * objects to hand out. `blackjack-browser.ts` exists for the same reason on the
+ * Blackjack side. This is its counterpart, imported as `@evtrainer/ev-engine/uth`
+ * by the state machine, so that one import line resolves to the same file under
+ * Node, under the type checker and inside the bundle.
+ *
+ * It carries only what grading and settling a hand need. The pre-flop *solver*
+ * comes along because it shares a module with the class labels; the table it
+ * produced is what is actually read.
+ */
+
+/* ===== packages/game-engine/src/uth-table.ts ===== */
+/**
+ * The Ultimate Texas Hold'em state machine (spec §5.2.1).
+ *
+ * The same shape as `BlackjackTable`, and here for the same reasons: the EV
+ * engine is pure and cannot shuffle, legality is a property of where the hand
+ * has got to rather than of the cards, and a decision should be graded beside
+ * the state that produced it rather than beside the screen that drew it.
+ *
+ * What it does not do is decide anything. Every number it grades against comes
+ * from the solvers — the 169-class table before the flop, `solveFlop` and
+ * `solveRiver` after it — and every unit it pays out comes from `settle()`.
+ * There is no EV arithmetic and no settlement rule in this file.
+ *
+ * The shape of the game
+ * ---------------------
+ * The Play bet is made exactly once, and the later it is made the smaller it is
+ * allowed to be: 4x before the flop, 2x after it, 1x after the river. Checking
+ * costs nothing in chips and everything in leverage, which is the whole
+ * strategic shape of the game and the reason a trainer for it is worth having.
+ *
+ * The cards
+ * ---------
+ * All nine cards are dealt at the start and revealed street by street — the
+ * same choice `BlackjackTable` makes with the hole card. An unknown card now
+ * and an unknown card after the player acts are the same random card from the
+ * same deck, so this keeps one dealing path and puts the whole hand in
+ * `dealtCards` for replay.
+ */
+
+/**
+ * Milliseconds, from whichever high-resolution clock the runtime has.
+ *
+ * Read off `globalThis` rather than named directly: this package compiles
+ * against the bare ES library, with neither the DOM's types nor Node's, because
+ * it must not come to depend on either.
+ */
+const clock = (globalThis                                       ).performance;
+const now = ()         => (clock ? clock.now() : Date.now());
+                                                   
+
+/** Everything a player can do, across all three decision points. */
+                                                                                         
+
+                      
+                             
+          
+                                                                           
+             
+                                                      
+          
+                                        
+           
+                         
+              
+
+                                                            
+
+const UTH_SCENARIO_KEYS = {
+  preflop: 'uth:preflop',
+  flop: 'uth:flop',
+  river: 'uth:river',
+}         ;
+
+/** How many community cards are face up in each phase. */
+const REVEALED                           = {
+  idle: 0,
+  preflop: 0,
+  flop: 3,
+  river: 5,
+  settled: 5,
+};
+
+const LEGAL                                         = {
+  preflop: ['raise4x', 'raise3x', 'check'],
+  flop: ['raise2x', 'check'],
+  river: ['raise1x', 'fold'],
+};
+
+/** The Play bet each raise makes, in units of the ante. */
+const RAISE_SIZE                                     = {
+  raise4x: PREFLOP_RAISE,
+  raise3x: PREFLOP_RAISE_SMALL,
+  raise2x: FLOP_RAISE,
+  raise1x: RIVER_RAISE,
+};
+
+/**
+ * What each of the three bets did, kept apart rather than summed.
+ *
+ * The Ante, the Play and the Blind resolve by three different rules — the Ante
+ * on whether the dealer qualified, the Play on who won, the Blind on the
+ * player's own hand — and a single net figure hides all three. A player who
+ * wins with a straight against a dealer who did not qualify sees `+2.0` and
+ * learns nothing; three lines tell them why.
+ */
+                                
+                           
+                                                                               
+               
+                                                   
+                  
+               
+                                                                                     
+                
+                                                                          
+                       
+                                                              
+              
+                  
+ 
+
+                                  
+                                                                                        
+                           
+                
+ 
+
+                          
+                  
+               
+                                         
+                     
+                          
+                                                     
+                
+                                                                        
+               
+                
+                  
+                            
+                                   
+                          
+ 
+
+/**
+ * Everything the solvers said about one decision point.
+ *
+ * The EVs grade the decision; the rest is what the card's one sentence is made
+ * of. Kept together so a sentence can never quote a figure from a different
+ * solve than the grade it sits under.
+ */
+                                
+                                      
+                                                 
+                           
+                                                          
+                     
+                                                                          
+                              
+                                                                          
+                              
+                                                                     
+                
+                
+                  
+                                                                           
+                  
+ 
+
+                                
+             
+                          
+                                                                         
+                     
+               
+                     
+                
+                    
+                            
+                   
+                                 
+ 
+
+class UthTable {
+           paytable               ;
+
+                   rng;
+          deck         = [];
+          phase           = 'idle';
+          handId = 0;
+
+          hole         = [];
+          dealerHole         = [];
+          board         = [];
+          dealtCards         = [];
+
+          playBet = 0;
+          folded = false;
+  /**
+   * How much of the board a folded hand shows.
+   *
+   * A fold ends the hand with the cards where they were. Turning the rest over
+   * afterwards would show the player the hand they just gave up — exactly the
+   * information §3.1 keeps away from a decision, arriving a second too late to
+   * be anything but a reproach.
+   */
+          foldedAt                = null;
+          settlement                       = null;
+          decisions                      = [];
+  /** Cards to deal first on the next hand, for tests and drills. */
+          stacked                = null;
+  /**
+   * The current decision point's evaluation, once computed.
+   *
+   * The flop solve is ~80 ms in a browser tab. Computed at the moment of the
+   * click, that is a freeze between the player's decision and the card that
+   * grades it — the worst moment to have one. Cached, it can be computed while
+   * the flop is still being turned over (see `evaluate()`), and the click then
+   * costs nothing.
+   */
+          evaluation                       = null;
+
+  constructor(options                  = {}) {
+    this.paytable = options.paytable ?? DEFAULT_BLIND_PAYTABLE;
+    this.rng = makeRng(options.seed ?? Date.now() % 2147483647);
+  }
+
+  // --- Reading the table ---------------------------------------------------
+
+  get view()          {
+    return {
+      phase: this.phase,
+      hole: [...this.hole],
+      // The dealer's cards stay down until there is nothing left to decide.
+      dealerHole: this.phase === 'settled' && !this.folded ? [...this.dealerHole] : [],
+      dealerRevealed: this.phase === 'settled' && !this.folded,
+      board: this.board.slice(0, this.foldedAt ?? REVEALED[this.phase]),
+      ante: this.phase === 'idle' ? 0 : 1,
+      blind: this.phase === 'idle' ? 0 : 1,
+      playBet: this.playBet,
+      legalActions: LEGAL[this.phase] ?? [],
+      settlement: this.settlement,
+      netUnits: this.settlement?.net ?? null,
+    };
+  }
+
+  get handRecord()                {
+    if (this.phase !== 'settled' || !this.settlement) {
+      throw new Error('The hand is not finished');
+    }
+    return {
+      id: this.handId,
+      paytable: this.paytable,
+      dealtCards: [...this.dealtCards],
+      hole: [...this.hole],
+      dealerHole: [...this.dealerHole],
+      board: [...this.board],
+      holeClass: holeClassLabel(this.hole[0] , this.hole[1] ),
+      settlement: this.settlement,
+      netUnits: this.settlement.net,
+      decisions: [...this.decisions],
+    };
+  }
+
+  /** The class the pre-flop decision is graded against. */
+  get holeClass()         {
+    if (this.hole.length !== 2) throw new Error('No hand in progress');
+    return holeClassLabel(this.hole[0] , this.hole[1] );
+  }
+
+  // --- Playing a hand ------------------------------------------------------
+
+  /**
+   * Shuffle and deal. Ante and Blind are posted here: they are mandatory, so
+   * there is no decision to make about them and no point pretending otherwise.
+   */
+  startHand()       {
+    if (this.phase !== 'idle' && this.phase !== 'settled') {
+      throw new Error('A hand is already in progress');
+    }
+    this.handId++;
+    this.deck = fullDeck();
+    shuffleInPlace(this.deck, this.rng);
+    if (this.stacked) {
+      // The named cards move to the front in the order given; everything else
+      // keeps its shuffled order, so the rest of the deal stays honest.
+      const wanted = this.stacked;
+      this.deck = [...wanted, ...this.deck.filter((card) => !wanted.includes(card))];
+      this.stacked = null;
+    }
+
+    this.hole = [this.deck[0] , this.deck[1] ];
+    this.dealerHole = [this.deck[2] , this.deck[3] ];
+    this.board = this.deck.slice(4, 9);
+    this.dealtCards = this.deck.slice(0, 9);
+
+    this.playBet = 0;
+    this.folded = false;
+    this.foldedAt = null;
+    this.settlement = null;
+    this.decisions = [];
+    this.evaluation = null;
+    this.phase = 'preflop';
+  }
+
+  /**
+   * Force the next hand's cards, in dealing order: player, player, dealer,
+   * dealer, then the five community cards. Fewer than nine is fine; the rest
+   * come from the shuffle.
+   *
+   * The Blackjack shoe has the same facility for the same reason (spec §8):
+   * waiting for a dealer who fails to qualify against a player straight to turn
+   * up on its own is no way to test a settlement rule, and no way to drill one.
+   */
+  stackNextHand(cards                 )       {
+    if (cards.length > 9) throw new Error('A hand uses nine cards');
+    if (new Set(cards).size !== cards.length) throw new Error('A card cannot be dealt twice');
+    this.stacked = [...cards];
+  }
+
+  legalActions()              {
+    return LEGAL[this.phase] ?? [];
+  }
+
+  /** Play one action, graded. Spec §5.2.4. */
+  act(action           , timeToDecideMs                = null)                    {
+    const legal = this.legalActions();
+    if (legal.length === 0) throw new Error(`Nothing to decide while ${this.phase}`);
+    if (!legal.includes(action)) {
+      throw new Error(`${action} is not legal here; legal actions are ${legal.join(', ')}`);
+    }
+
+    const record = this.grade(action, legal, timeToDecideMs);
+    this.decisions.push(record);
+
+    if (action === 'fold') {
+      this.folded = true;
+      this.foldedAt = REVEALED[this.phase];
+      this.settleFold();
+      return record;
+    }
+
+    const raise = RAISE_SIZE[action];
+    if (raise !== undefined) {
+      this.playBet = raise;
+      this.showdown();
+      return record;
+    }
+
+    // A check: the next street, and nothing staked.
+    this.phase = this.phase === 'preflop' ? 'flop' : 'river';
+    this.evaluation = null;
+    return record;
+  }
+
+  // --- Grading -------------------------------------------------------------
+
+  /**
+   * The EV of every legal action at this decision point.
+   *
+   * Pre-flop is a lookup because solving it live is 2.1 billion outcomes per
+   * class; the flop and the river are solved here and now, exactly, for the
+   * actual cards on the table. There is no chart-versus-shoe question in this
+   * game: every grade is exact for what the player can see.
+   *
+   * Memoised per decision point, so a caller can compute it early — while the
+   * flop is being revealed — and the grading click that follows is free.
+   */
+  evaluate()                {
+    const legal = this.legalActions();
+    if (legal.length === 0) throw new Error(`Nothing to decide while ${this.phase}`);
+    if (this.evaluation) return this.evaluation;
+
+    const started = now();
+    let evaluation                                                  ;
+    if (this.phase === 'preflop') {
+      const row = preflopRow(this.holeClass);
+      evaluation = {
+        phase: 'preflop',
+        evByAction: { raise4x: row.ev4x, raise3x: row.ev3x, check: row.evCheck },
+        holeClass: row.label,
+        flopRaiseFrequency: row.flopRaiseFrequency,
+        riverFoldFrequency: row.riverFoldFrequency,
+      };
+    } else if (this.phase === 'flop') {
+      const solved = solveFlop(this.hole, this.board.slice(0, 3), this.paytable);
+      evaluation = {
+        phase: 'flop',
+        evByAction: { raise2x: solved.evPlay, check: solved.evCheck },
+        riverFoldFrequency: solved.riverFoldFrequency,
+      };
+    } else {
+      const solved = solveRiver(this.hole, this.board, this.paytable);
+      evaluation = {
+        phase: 'river',
+        evByAction: { raise1x: solved.evPlay, fold: solved.evFold },
+        wins: solved.wins,
+        ties: solved.ties,
+        losses: solved.losses,
+      };
+    }
+    const solveMs = this.phase === 'preflop' ? 0 : now() - started;
+
+    let optimalAction = legal[0] ;
+    let optimalEv = -Infinity;
+    for (const candidate of legal) {
+      const ev = evaluation.evByAction[candidate];
+      if (ev === undefined) throw new Error(`${candidate} is legal but has no EV`);
+      if (ev > optimalEv) {
+        optimalEv = ev;
+        optimalAction = candidate;
+      }
+    }
+    this.evaluation = { ...evaluation, optimalAction, solveMs };
+    return this.evaluation;
+  }
+
+          grade(
+    action           ,
+    legal             ,
+    timeToDecideMs               ,
+  )                    {
+    const { evByAction, optimalAction } = this.evaluate();
+    const best = evByAction[optimalAction] ;
+    const chosen = evByAction[action] ;
+    // Never negative: the best action is the best by construction, and floating
+    // point is not entitled to say otherwise.
+    const evCost = Math.max(0, best - chosen);
+
+    return {
+      sequenceIndex: this.decisions.length,
+      handIndex: 0,
+      scenarioKey: UTH_SCENARIO_KEYS[this.phase                                ],
+      legalActions: [...legal],
+      evByAction,
+      optimalAction,
+      chosenAction: action,
+      evCost,
+      severityTier: severityForCost(evCost),
+      timeToDecideMs,
+    };
+  }
+
+  // --- Resolving -----------------------------------------------------------
+
+          settleFold()       {
+    this.settlement = {
+      dealerQualified: false,
+      ante: -1,
+      playBet: 0,
+      play: 0,
+      blind: -1,
+      blindPushed: false,
+      net: FOLD_RESULT,
+      folded: true,
+    };
+    this.phase = 'settled';
+  }
+
+  /**
+   * Pay the hand out, and check the three lines against `settle()`.
+   *
+   * The breakdown exists because one net figure teaches nothing: the Ante, the
+   * Play and the Blind resolve by three unrelated rules and a player needs to
+   * see which one did what. But re-deriving the three here is exactly how a
+   * second, quietly different settlement rule gets written, so `settle()` stays
+   * the authority and the parts are required to add up to it. A mismatch is a
+   * bug in this file and throws rather than paying out.
+   */
+          showdown()       {
+    const playerScore = evaluate7([...this.hole, ...this.board]);
+    const dealerScore = evaluate7([...this.dealerHole, ...this.board]);
+    const qualified = dealerQualifies(dealerScore);
+    const tie = playerScore === dealerScore;
+    const won = playerScore > dealerScore;
+
+    const blindMultiple = blindPayout(playerScore, this.paytable);
+    const settlement                = {
+      dealerQualified: qualified,
+      ante: tie ? 0 : !qualified ? 0 : won ? 1 : -1,
+      playBet: this.playBet,
+      play: tie ? 0 : won ? this.playBet : -this.playBet,
+      blind: tie ? 0 : won ? blindMultiple : -1,
+      blindPushed: !tie && won && blindMultiple === 0,
+      net: 0,
+      folded: false,
+    };
+    settlement.net = settlement.ante + settlement.play + settlement.blind;
+
+    const authority = settle(playerScore, dealerScore, this.playBet, this.paytable);
+    if (Math.abs(settlement.net - authority) > 1e-9) {
+      throw new Error(
+        `Settlement breakdown does not match settle(): ${settlement.net} vs ${authority}`,
+      );
+    }
+
+    this.settlement = settlement;
+    this.phase = 'settled';
+  }
+}
+
 /* ===== packages/game-engine/src/index.ts ===== */
 /**
  * @evtrainer/game-engine
@@ -4807,7 +6971,6 @@ const EN            = {
   // --- Ultimate ---
   'ui.ultimateTitle': 'Ultimate Texas Hold’em',
   'ui.solverPreview': 'Solver preview',
-  'ui.notPlayableYet': 'Not playable yet — the tables are still being computed.',
 
   // --- The dealer at the table (§7: asked, not lectured) ---
   'coach.q.odds': 'My odds?',
@@ -4928,6 +7091,76 @@ const EN            = {
   'uth.raise2': 'Raise 2×',
   'uth.raise1': 'Raise 1×',
   'uth.check': 'Check',
+  'uth.board':
+    'Board',
+  'uth.ante':
+    'Ante',
+  'uth.blind':
+    'Blind',
+  'uth.play':
+    'Play',
+  'uth.atRisk':
+    'in play',
+  'uth.memoryOnly':
+    'Practice stack — it resets when you close the tab.',
+  'uth.pressDeal':
+    'Deal to post Ante 1 and Blind 1.',
+  'uth.nextHand':
+    'Next hand',
+  'uth.keys':
+    'Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.',
+  'uth.rulesLine':
+    'Blind pays a straight or better · dealer qualifies with a pair',
+  'uth.readingFlop':
+    'Reading the flop…',
+  'uth.h.preflop':
+    '{class} · before the flop',
+  'uth.h.flop':
+    '{class} · on the flop',
+  'uth.h.river':
+    '{class} · on the river',
+  'uth.s.threeX':
+    '3× is the best play on **none of the 169 starting hands** — any hand worth raising is worth raising the maximum. Here it gives up **{cost}** against {best}.',
+  'uth.s.preRaise':
+    '{class} is strong enough to raise the maximum: 4× is worth **{gap}** more than checking.',
+  'uth.s.preCheck':
+    '{class} is worth more checked. Checked, it goes on to raise the flop in {flopRaise} of cases and to fold the river in {riverFold} of cases.',
+  'uth.s.flopRaise':
+    '2× beats checking by **{gap}**. Checked, this hand ends up folding the river in {riverFold} of cases.',
+  'uth.s.flopCheck':
+    'Checking beats 2× by **{gap}**. You keep a 1× decision on the river, and fold it in {riverFold} of cases.',
+  'uth.s.riverRaise':
+    'Your hand beats **{wins}** and ties {ties} of the 990 hands the dealer could hold — worth more than folding for −2.',
+  'uth.s.riverFold':
+    'Your hand beats only **{wins}** of the 990 hands the dealer could hold, so 1× loses more than folding for −2.',
+  'uth.line.dealerQualified':
+    'Dealer qualifies with a pair or better — Ante {ante}',
+  'uth.line.dealerNotQualified':
+    'Dealer does not qualify — the Ante pushes',
+  'uth.line.tie':
+    'A tie — every bet pushes',
+  'uth.line.playWin':
+    'Play {bet}× wins {play}',
+  'uth.line.playLose':
+    'Play {bet}× loses {play}',
+  'uth.line.playPush':
+    'Play {bet}× pushes',
+  'uth.line.blindPaid':
+    'Blind pays {blind} on a straight or better',
+  'uth.line.blindPush':
+    'Blind pushes — the win was below a straight',
+  'uth.line.blindLose':
+    'Blind loses −1',
+  'uth.line.blindTie':
+    'Blind pushes',
+  'uth.line.folded':
+    'You folded — the dealer keeps their cards down',
+  'uth.line.foldPlay':
+    'No Play bet was made',
+  'uth.line.forfeit':
+    'Ante and Blind are forfeit: −2',
+  'uth.line.net':
+    'Hand {net}',
   'uth.fold': 'Fold',
   'uth.threeXNever': 'The 3× raise loses to both alternatives here — as it does everywhere.',
   'uth.stillComputing': 'This class is still being computed by the offline job. The flop and river below are exact.',
@@ -5209,7 +7442,6 @@ const HE            = {
   // --- Ultimate ---
   'ui.ultimateTitle': 'אולטימייט טקסס הולדם',
   'ui.solverPreview': 'תצוגה מקדימה של הפותר',
-  'ui.notPlayableYet': 'עדיין לא ניתן לשחק — הטבלאות עדיין בחישוב.',
 
   // --- The dealer at the table (§7: asked, not lectured) ---
   'coach.q.odds': 'מה הסיכויים שלי?',
@@ -5330,6 +7562,76 @@ const HE            = {
   'uth.raise2': 'העלאה 2×',
   'uth.raise1': 'העלאה 1×',
   'uth.check': 'צ׳ק',
+  'uth.board':
+    'הלוח',
+  'uth.ante':
+    'אנטה',
+  'uth.blind':
+    'בליינד',
+  'uth.play':
+    'פליי',
+  'uth.atRisk':
+    'במשחק',
+  'uth.memoryOnly':
+    'קופת אימון — היא מתאפסת כשסוגרים את הלשונית.',
+  'uth.pressDeal':
+    'חלק כדי להניח אנטה 1 ובליינד 1.',
+  'uth.nextHand':
+    'היד הבאה',
+  'uth.keys':
+    'מקשים: 4 · 3 · C לפני הפלופ, 2 · C בפלופ, 1 · F בריבר, N ליד הבאה.',
+  'uth.rulesLine':
+    'הבליינד משלם על רצף ומעלה · הדילר מתאים עם זוג',
+  'uth.readingFlop':
+    'קורא את הפלופ…',
+  'uth.h.preflop':
+    '{class} · לפני הפלופ',
+  'uth.h.flop':
+    '{class} · בפלופ',
+  'uth.h.river':
+    '{class} · בריבר',
+  'uth.s.threeX':
+    '3× הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
+  'uth.s.preRaise':
+    '{class} חזקה מספיק להעלאה המקסימלית: 4× שווה **{gap}** יותר מצ׳ק.',
+  'uth.s.preCheck':
+    '{class} שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
+  'uth.s.flopRaise':
+    '2× עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
+  'uth.s.flopCheck':
+    'צ׳ק עדיף על 2× ב-**{gap}**. נשארת לך החלטת 1× בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
+  'uth.s.riverRaise':
+    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-−2.',
+  'uth.s.riverFold':
+    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן 1× מפסיד יותר מפרישה ב-−2.',
+  'uth.line.dealerQualified':
+    'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
+  'uth.line.dealerNotQualified':
+    'הדילר לא מתאים — האנטה בתיקו',
+  'uth.line.tie':
+    'תיקו — כל ההימורים חוזרים',
+  'uth.line.playWin':
+    'פליי {bet}× מנצח {play}',
+  'uth.line.playLose':
+    'פליי {bet}× מפסיד {play}',
+  'uth.line.playPush':
+    'פליי {bet}× בתיקו',
+  'uth.line.blindPaid':
+    'הבליינד משלם {blind} על רצף ומעלה',
+  'uth.line.blindPush':
+    'הבליינד בתיקו — הניצחון היה מתחת לרצף',
+  'uth.line.blindLose':
+    'הבליינד מפסיד −1',
+  'uth.line.blindTie':
+    'הבליינד בתיקו',
+  'uth.line.folded':
+    'פרשת — הקלפים של הדילר נשארים סגורים',
+  'uth.line.foldPlay':
+    'לא הונח הימור פליי',
+  'uth.line.forfeit':
+    'האנטה והבליינד אבודים: −2',
+  'uth.line.net':
+    'היד {net}',
   'uth.fold': 'פרישה',
   'uth.threeXNever': 'ההעלאה של 3× מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
@@ -7501,14 +9803,353 @@ function describeScenarioKey(key        , locale         = 'en')         {
   return t(locale, 'label.vs', { hand: String(scenario.total), up });
 }
 
+/* ===== packages/trainer-web/src/uth-session.ts ===== */
+/**
+ * An Ultimate Texas Hold'em session: the table, the practice stack, and the card
+ * that grades each decision (spec §5.2, §7.1).
+ *
+ * A sibling of `TrainerSession` rather than a mode inside it. The two games
+ * share the grading vocabulary — severity tiers, EV chips, a cost in units — and
+ * nothing else: not a board, not a rating, not a history. Folding them into one
+ * class would put two games' worth of branches in the object that has to stay
+ * readable, and would make it possible for a UTH hand to touch the Blackjack
+ * rating by accident. Kept apart, it is not possible at all.
+ *
+ * Round 4a scope: in memory only. No stats panel, no saved progress, no hand
+ * log. The stack is honest about that on screen.
+ */
+
+
+/*
+ * Named for the game rather than generically. The shared build folds every
+ * module into one scope, and `session.ts` and `explain.ts` already declare
+ * `RANKS`, `cardView`, `units` and `percent` — the bundler refuses the page
+ * rather than let one silently shadow the other, which is what it did here.
+ */
+const POKER_RANKS = '23456789TJQKA';
+const POKER_SUITS = ['♣', '♦', '♥', '♠'];
+
+                                
+               
+               
+               
+                
+ 
+
+function pokerCardView(card      )                {
+  const suit = suitOf(card);
+  const rank = POKER_RANKS[rankOf(card)] ;
+  return {
+    rank: rank === 'T' ? '10' : rank,
+    suit: POKER_SUITS[suit] ,
+    red: suit === 1 || suit === 2,
+    label: formatCard(card),
+  };
+}
+
+/** The label key for each action, and the physical key that plays it. */
+const ACTIONS                                                                  = {
+  raise4x: { label: 'uth.raise4', key: '4', code: 'Digit4' },
+  raise3x: { label: 'uth.raise3', key: '3', code: 'Digit3' },
+  check: { label: 'uth.check', key: 'C', code: 'KeyC' },
+  raise2x: { label: 'uth.raise2', key: '2', code: 'Digit2' },
+  raise1x: { label: 'uth.raise1', key: '1', code: 'Digit1' },
+  fold: { label: 'uth.fold', key: 'F', code: 'KeyF' },
+};
+
+const uthUnits = (value        )         =>
+  `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
+const uthPercent = (value        )         => `${Math.round(value * 100)}%`;
+/** A settlement figure: whole units where it is whole, otherwise one place. */
+const money = (value        )         => {
+  const text = Math.abs(value) % 1 === 0 ? Math.abs(value).toFixed(0) : Math.abs(value).toFixed(1);
+  return `${value < 0 ? '−' : value > 0 ? '+' : ''}${text}`;
+};
+
+                              
+                                      
+                   
+                   
+                                              
+                  
+                                                           
+                          
+                    
+                     
+                 
+                                        
+                                                                  
+                                                              
+                   
+                                                                      
+                  
+ 
+
+class UthSession {
+  /** The practice stack a session opens with. Round 4a keeps it in memory only. */
+  static          STARTING_STACK = 200;
+
+                   table          ;
+          locale         = 'en';
+          balance = UthSession.STARTING_STACK;
+          lastNet                = null;
+          hands = 0;
+
+  /** The last graded decision, kept so a language change can re-word the card. */
+          last                                                                                     =
+    null;
+
+  constructor(seed         ) {
+    this.table = new UthTable(seed === undefined ? {} : { seed });
+  }
+
+  setLocale(locale        )       {
+    this.locale = locale;
+  }
+
+  /** Post Ante and Blind and deal. */
+  deal()          {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') {
+      throw new Error('Finish the hand before dealing another');
+    }
+    this.table.startHand();
+    this.balance -= 2; // Ante 1 + Blind 1, onto the felt
+    this.lastNet = null;
+    this.last = null;
+    return this.view;
+  }
+
+  /**
+   * Compute the current decision point's evaluation now, so the grading click
+   * that follows is instant.
+   *
+   * The page calls this straight after the flop is drawn. The solve runs while
+   * the cards are still animating in — CSS transforms run on the compositor, so
+   * the turn-over does not stall — and by the time the player can press a
+   * button the answer is already cached on the table.
+   */
+  prepare()                                     {
+    const legal = this.table.legalActions();
+    if (legal.length === 0) return { solveMs: 0, phase: this.table.view.phase };
+    const evaluation = this.table.evaluate();
+    return { solveMs: evaluation.solveMs, phase: evaluation.phase };
+  }
+
+  act(action           )          {
+    const holeClass = this.table.holeClass;
+    // Read before acting: `act()` moves the phase on and clears the cache.
+    const evaluation = this.table.evaluate();
+    const record = this.table.act(action);
+    this.last = { record, evaluation, holeClass };
+
+    const raise = { raise4x: 4, raise3x: 3, raise2x: 2, raise1x: 1 }[action          ];
+    if (raise !== undefined) this.balance -= raise;
+
+    const view = this.table.view;
+    if (view.phase === 'settled' && view.settlement) {
+      const settlement = view.settlement;
+      // Everything staked comes back, plus or minus what it won.
+      const staked = 2 + settlement.playBet;
+      this.balance += staked + settlement.net;
+      this.lastNet = settlement.net;
+      this.hands++;
+    }
+    return this.view;
+  }
+
+  // --- What the page draws -------------------------------------------------
+
+  get view()          {
+    const table = this.table.view;
+    const settled = table.phase === 'settled';
+    const inHand = table.phase !== 'idle';
+    return {
+      game: 'uth',
+      phase: table.phase,
+      hole: table.hole.map(pokerCardView),
+      dealerHole: table.dealerHole.map(pokerCardView),
+      dealerRevealed: table.dealerRevealed,
+      board: table.board.map(pokerCardView),
+      boardHidden: inHand ? 5 - table.board.length : 0,
+      holeClass: inHand ? this.table.holeClass : null,
+      stake: {
+        ante: table.ante,
+        blind: table.blind,
+        play: table.playBet,
+        total: table.ante + table.blind + table.playBet,
+      },
+      stack: {
+        start: UthSession.STARTING_STACK,
+        balance: this.balance,
+        lastNet: this.lastNet,
+        memoryOnly: true,
+      },
+      hands: this.hands,
+      legalActions: table.legalActions.map((action) => ({
+        action,
+        label: t(this.locale, ACTIONS[action].label),
+        key: ACTIONS[action].key,
+        code: ACTIONS[action].code,
+      })),
+      // The flop is the one decision point that costs a solve. The page asks for
+      // it to be done early; this tells the page whether it still needs asking.
+      needsPrepare: table.phase === 'flop' || table.phase === 'river',
+      feedback: this.last ? this.compose(this.last) : null,
+      settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+    };
+  }
+
+  // --- The card ------------------------------------------------------------
+
+          label(action           )         {
+    return t(this.locale, ACTIONS[action].label);
+  }
+
+          compose(last   
+                              
+                              
+                      
+   )              {
+    const { record, evaluation, holeClass } = last;
+    const phase = evaluation.phase;
+    const correct = record.evCost === 0;
+    const ranked = record.legalActions
+      .map((action) => ({ action, label: this.label(action), ev: record.evByAction[action] ?? 0 }))
+      .sort((a, b) => b.ev - a.ev);
+
+    return {
+      phase,
+      headline: t(this.locale, `uth.h.${phase}`, { class: holeClass }),
+      correct,
+      severity: record.severityTier,
+      verdict: correct
+        ? t(this.locale, 'fb.correct', { action: this.label(record.optimalAction) })
+        : t(this.locale, 'fb.wrong', {
+            severity: t(this.locale, `fb.${record.severityTier}`),
+            cost: record.evCost.toFixed(3),
+          }),
+      youChose: correct
+        ? null
+        : t(this.locale, 'fb.youChose', {
+            chosen: this.label(record.chosenAction).toLowerCase(),
+            best: this.label(record.optimalAction).toLowerCase(),
+          }),
+      chosen: record.chosenAction,
+      optimal: record.optimalAction,
+      evCost: record.evCost,
+      ranked,
+      sentence: this.sentence(record, evaluation, holeClass),
+      solveMs: evaluation.solveMs,
+    };
+  }
+
+  /**
+   * The one sentence, and only facts the solve itself produced.
+   *
+   * Each describes the spot rather than the choice, so it reads true whether
+   * the player got it right or not — with one exception. A 3× raise gets its
+   * own sentence, because §5.2.3 is the lesson the button exists to teach and it
+   * is a claim about the choice, not the spot: 3× is the best play on none of
+   * the 169 starting hands.
+   */
+          sentence(record                   , evaluation               , holeClass        )         {
+    const ev = record.evByAction;
+    const L = this.locale;
+
+    if (evaluation.phase === 'preflop') {
+      if (record.chosenAction === 'raise3x') {
+        return t(L, 'uth.s.threeX', {
+          cost: uthUnits(-record.evCost).replace('−', ''),
+          best: this.label(record.optimalAction).toLowerCase(),
+        });
+      }
+      if (record.optimalAction === 'raise4x') {
+        return t(L, 'uth.s.preRaise', {
+          class: holeClass,
+          gap: uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', ''),
+        });
+      }
+      return t(L, 'uth.s.preCheck', {
+        class: holeClass,
+        flopRaise: uthPercent(evaluation.flopRaiseFrequency ?? 0),
+        riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
+      });
+    }
+
+    if (evaluation.phase === 'flop') {
+      const gap = Math.abs((ev.raise2x ?? 0) - (ev.check ?? 0));
+      return t(L, record.optimalAction === 'raise2x' ? 'uth.s.flopRaise' : 'uth.s.flopCheck', {
+        gap: gap.toFixed(3),
+        riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
+      });
+    }
+
+    return t(L, record.optimalAction === 'raise1x' ? 'uth.s.riverRaise' : 'uth.s.riverFold', {
+      wins: evaluation.wins ?? 0,
+      ties: evaluation.ties ?? 0,
+    });
+  }
+
+  /**
+   * Showdown, as three separate lines.
+   *
+   * The Ante, the Play and the Blind resolve by three unrelated rules, and one
+   * net figure explains none of them. So the dealer's line carries the Ante
+   * (which is the only bet qualification touches), then the Play, then the
+   * Blind — and the total comes last and quietest.
+   */
+          lines(s               )                                                    {
+    const L = this.locale;
+    if (s.folded) {
+      return {
+        lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit')],
+        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        folded: true,
+      };
+    }
+    const tie = s.ante === 0 && s.play === 0 && s.blind === 0 && s.dealerQualified;
+    if (tie) {
+      return {
+        lines: [t(L, 'uth.line.tie'), t(L, 'uth.line.playPush', { bet: s.playBet }), t(L, 'uth.line.blindTie')],
+        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        folded: false,
+      };
+    }
+    const dealer = s.dealerQualified
+      ? t(L, 'uth.line.dealerQualified', { ante: money(s.ante) })
+      : t(L, 'uth.line.dealerNotQualified');
+    const play =
+      s.play > 0
+        ? t(L, 'uth.line.playWin', { bet: s.playBet, play: money(s.play) })
+        : s.play < 0
+          ? t(L, 'uth.line.playLose', { bet: s.playBet, play: money(s.play) })
+          : t(L, 'uth.line.playPush', { bet: s.playBet });
+    const blind =
+      s.blind > 0
+        ? t(L, 'uth.line.blindPaid', { blind: money(s.blind) })
+        : s.blindPushed
+          ? t(L, 'uth.line.blindPush')
+          : s.blind < 0
+            ? t(L, 'uth.line.blindLose')
+            : t(L, 'uth.line.blindTie');
+    return {
+      lines: [dealer, play, blind],
+      net: t(L, 'uth.line.net', { net: money(s.net) }),
+      folded: false,
+    };
+  }
+}
+
 </script>
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\"><span data-i18n=\"ui.lookAround\">Look around</span> <span class=\"tag\" data-i18n=\"ui.preview\">preview</span></span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n            <span class=\"seat-total\" id=\"uth-class\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n          <p class=\"uth-memory\" data-i18n=\"uth.memoryOnly\">Practice stack — it resets when you close the tab.</p>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\" data-i18n=\"uth.pressDeal\">Deal to post Ante 1 and Blind 1.</p>\n      </main>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <p class=\"uth-keys\" data-i18n=\"uth.keys\">Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.</p>\n    </div>";
 
-/* The two screen scripts, unchanged but for their transport. */
+/* The three screen scripts, unchanged but for their transport. */
 function initHome() {
 /*
  * Home (§10, screen 1).
@@ -9116,6 +11757,341 @@ Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));
 
 }
 
+function initUltimate() {
+/*
+ * Ultimate Texas Hold'em, playable (round 4a).
+ *
+ * Draws what `UthSession.view` describes and sends the player's choices back.
+ * It decides nothing: the grade, the EVs, the sentence and the settlement lines
+ * all arrive composed, in the current language, from the session — the same
+ * division of labour as the Blackjack table, and for the same reason. A page
+ * that computed its own verdict would be a second grader, and the day the two
+ * disagreed the app would be teaching two answers.
+ */
+
+const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
+const el = (id) => document.getElementById(id);
+
+const uthState = {
+  view: null,
+  busy: false,
+  /** The decision the card was last drawn for, so the result waits its turn. */
+  cardToken: null,
+  /** Measured solve times on this page, for anyone checking the flop is quick. */
+  timings: [],
+};
+
+
+/** Every call that changes the table goes through here, one at a time. */
+async function uthSend(path, body) {
+  if (uthState.busy) return;
+  uthState.busy = true;
+  try {
+    uthState.view = await api(path, body ?? {});
+    uthRender();
+    if (uthState.view.needsPrepare) await uthPrepare();
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
+  } finally {
+    uthState.busy = false;
+    uthRenderActions();
+  }
+}
+
+/**
+ * Solve the flop while it is being turned over.
+ *
+ * The flop solve is about 80 ms of main-thread work. Done at the moment of the
+ * click, it would sit between the player's decision and the card that grades it.
+ * Done here, it runs while the new cards animate in — transforms run on the
+ * compositor, so the turn-over does not stall — and the buttons come back only
+ * once the answer is cached, so the grading click itself is instant.
+ *
+ * Waiting two frames first lets the browser paint the flop before the solve
+ * takes the thread — but never waiting on frames alone. A tab in the background
+ * gets no animation frames at all, so a player who clicked Check and switched
+ * away would come back to "Reading the flop…" still waiting to start. Whichever
+ * comes first, two frames or 50 ms, the solve goes ahead.
+ */
+async function uthPrepare() {
+  uthRenderActions(T('uth.readingFlop'));
+  await Promise.race([
+    new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    new Promise((resolve) => setTimeout(resolve, 50)),
+  ]);
+  const started = performance.now();
+  const result = await api('/api/uth/prepare', {});
+  const wall = performance.now() - started;
+  uthState.timings.push({ phase: result.phase, solveMs: result.solveMs, wallMs: wall });
+  window.EV_UTH_TIMINGS = uthState.timings;
+}
+
+// --- Drawing ----------------------------------------------------------------
+
+function uthCard(card) {
+  const node = document.createElement('div');
+  node.className = 'card dealt' + (card.red ? ' red' : '');
+  node.setAttribute('role', 'img');
+  node.setAttribute('aria-label', card.label);
+  const rank = document.createElement('span');
+  rank.className = 'card-rank';
+  rank.textContent = card.rank;
+  const suit = document.createElement('span');
+  suit.className = 'card-suit';
+  suit.textContent = card.suit;
+  node.append(rank, suit);
+  return node;
+}
+
+function uthBack() {
+  const node = document.createElement('div');
+  node.className = 'card back dealt';
+  node.setAttribute('role', 'img');
+  node.setAttribute('aria-label', 'face-down card');
+  return node;
+}
+
+/** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
+function uthRich(target, text) {
+  target.replaceChildren();
+  text.split(/(\*\*[^*]+\*\*)/).forEach((part) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const b = document.createElement('b');
+      b.textContent = part.slice(2, -2);
+      target.appendChild(b);
+    } else if (part) {
+      target.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+function uthRender() {
+  const view = uthState.view;
+  if (!view) return;
+  const inHand = view.phase !== 'idle';
+
+  el('uth-empty').hidden = inHand;
+
+  el('uth-dealer').replaceChildren(
+    ...(view.dealerRevealed
+      ? view.dealerHole.map(uthCard)
+      : inHand ? [uthBack(), uthBack()] : []),
+  );
+
+  const board = view.board.map(uthCard);
+  for (let i = 0; i < view.boardHidden; i++) board.push(uthBack());
+  el('uth-board').replaceChildren(...board);
+
+  el('uth-hole').replaceChildren(...view.hole.map(uthCard));
+  el('uth-class').textContent = view.holeClass ?? '';
+
+  uthRenderRail(view);
+  uthRenderCard(view);
+  uthRenderActions();
+}
+
+function uthRenderRail(view) {
+  const rail = el('uth-rail');
+  rail.replaceChildren();
+  const spot = (label, value, extra) => {
+    const div = document.createElement('div');
+    div.className = 'uth-spot' + (extra ? ` ${extra}` : '');
+    const figure = document.createElement('span');
+    figure.className = 'rail-value';
+    figure.textContent = value;
+    const name = document.createElement('span');
+    name.className = 'rail-label';
+    name.textContent = label;
+    div.append(figure, name);
+    return div;
+  };
+  const stake = view.stake;
+  rail.append(
+    spot(T('uth.ante'), stake.ante || '—'),
+    spot(T('uth.blind'), stake.blind || '—'),
+    spot(T('uth.play'), stake.play || '—'),
+  );
+
+  const bank = spot(T('ui.stack'), view.stack.balance.toFixed(view.stack.balance % 1 === 0 ? 0 : 1), 'bank');
+  // The swing from the hand, drawn only once the card above has had its moment.
+  if (view.stack.lastNet !== null && view.settlement) {
+    const delta = document.createElement('span');
+    const net = view.stack.lastNet;
+    delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
+    delta.textContent = `${net > 0 ? '+' : ''}${net}`;
+    delta.hidden = true;
+    bank.appendChild(delta);
+  }
+  rail.appendChild(bank);
+}
+
+/**
+ * The card: the grade, then — later and quieter — what the cards did.
+ *
+ * §3.1 keeps the result behind the decision. With no three-step reveal in 4a
+ * the separation is made in time and in weight instead: the verdict is drawn at
+ * once and large, and the settlement lines appear a moment later, small and
+ * muted, underneath it.
+ */
+function uthRenderCard(view) {
+  const box = el('uth-card');
+  const feedback = view.feedback;
+  if (!feedback) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.className = `quickcard ${feedback.severity}`;
+  box.dataset.solveMs = String(feedback.solveMs);
+  box.replaceChildren();
+
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  const head = document.createElement('b');
+  head.textContent = feedback.headline;
+  anchor.appendChild(head);
+  box.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = feedback.verdict;
+  box.appendChild(verdict);
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    box.appendChild(did);
+  }
+
+  const evs = document.createElement('div');
+  evs.className = 'evs';
+  feedback.ranked.forEach((entry, index) => {
+    const chip = document.createElement('span');
+    chip.className =
+      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
+    chip.textContent = `${entry.label}: ${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`;
+    evs.appendChild(chip);
+  });
+  box.appendChild(evs);
+
+  const sentence = document.createElement('p');
+  sentence.className = 'reason';
+  uthRich(sentence, feedback.sentence);
+  box.appendChild(sentence);
+
+  if (view.settlement) {
+    const result = document.createElement('div');
+    result.className = 'uth-result uth-late';
+    result.hidden = true;
+    for (const line of view.settlement.lines) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      result.appendChild(p);
+    }
+    const net = document.createElement('p');
+    net.className = 'uth-net';
+    net.textContent = view.settlement.net;
+    result.appendChild(net);
+    box.appendChild(result);
+  }
+
+  // One token per graded decision: the result is revealed once, after a beat,
+  // and not again on an unrelated re-render.
+  const token = `${view.hands}:${feedback.phase}:${feedback.chosen}`;
+  const reduced =
+    window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reveal = () => {
+    for (const node of document.querySelectorAll('.uth-late')) node.hidden = false;
+  };
+  if (uthState.cardToken === token || reduced) reveal();
+  else {
+    uthState.cardToken = token;
+    setTimeout(reveal, 450);
+  }
+}
+
+function uthRenderActions(waiting) {
+  const box = el('uth-actions');
+  const view = uthState.view;
+  box.replaceChildren();
+  if (!view) return;
+
+  const add = (label, key, handler, primary) => {
+    const button = document.createElement('button');
+    button.className = 'action' + (primary ? ' primary' : '');
+    button.type = 'button';
+    button.disabled = uthState.busy;
+    const text = document.createElement('span');
+    text.textContent = label;
+    const hint = document.createElement('span');
+    hint.className = 'key';
+    hint.textContent = key;
+    button.append(text, hint);
+    button.addEventListener('click', handler);
+    box.appendChild(button);
+  };
+
+  if (waiting) {
+    const note = document.createElement('p');
+    note.className = 'uth-waiting';
+    note.textContent = waiting;
+    box.appendChild(note);
+    return;
+  }
+
+  if (view.legalActions.length > 0) {
+    // All decision buttons look the same. Colouring the first one — raise, as
+    // it happens — would be the page quietly suggesting an answer to a decision
+    // it is about to grade.
+    for (const entry of view.legalActions) {
+      add(entry.label, entry.key, () => uthSend('/api/uth/act', { action: entry.action }), false);
+    }
+    return;
+  }
+  add(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true);
+}
+
+// --- Keyboard ---------------------------------------------------------------
+
+/*
+ * Physical keys, not characters: a Hebrew layout turns C into ב and F into כ,
+ * and a shortcut that only works in English is not a shortcut for the person
+ * this app is mostly played by.
+ *
+ * Space and Enter do nothing here at all. Every action on this table places or
+ * resolves a bet — dealing posts the Ante and the Blind — and round 2 found a
+ * "carry on" key resolving a bet the player never chose. N deals; a held key
+ * never repeats.
+ */
+document.addEventListener('keydown', (event) => {
+  if (document.querySelector('dialog[open]')) return;
+  if (event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
+  const view = uthState.view;
+  if (!view || uthState.busy) return;
+  if (event.code === 'Space' || event.code === 'Enter' || event.code === 'NumpadEnter') {
+    event.preventDefault();
+    return;
+  }
+  const entry = view.legalActions.find((candidate) => candidate.code === event.code);
+  if (entry) {
+    event.preventDefault();
+    uthSend('/api/uth/act', { action: entry.action });
+    return;
+  }
+  if (view.legalActions.length === 0 && event.code === 'KeyN') {
+    event.preventDefault();
+    uthSend('/api/uth/deal');
+  }
+});
+
+Promise.resolve(window.EV && window.EV.ready).then(() => uthSend('/api/uth/state'));
+
+}
+
 
 /*
  * Who is playing, on more than one device.
@@ -9880,6 +12856,13 @@ let session = new TrainerSession(
 );
 let lastSavedHandId = -1;
 
+/*
+ * Ultimate Texas Hold'em. Its own session, held in memory for the life of the
+ * tab (round 4a): it is never saved, never published, and never restored, so it
+ * cannot reach the Blackjack record in either direction.
+ */
+const uthSession = new UthSession();
+
 /**
  * The server's routes, answered in the page.
  *
@@ -9919,6 +12902,15 @@ async function api(path, body) {
       saveProgressLocally();
       return session.view;
     }
+
+    case '/api/uth/state':
+      return uthSession.view;
+    case '/api/uth/deal':
+      return uthSession.deal();
+    case '/api/uth/act':
+      return uthSession.act(b.action);
+    case '/api/uth/prepare':
+      return uthSession.prepare();
 
     case '/api/deal':
       session.deal();
@@ -10034,6 +13026,7 @@ function setLocale(code) {
   messages = catalogue(code);
   store.set('ev:locale', code);
   session.setLocale(code);
+  uthSession.setLocale(code);
   applyLanguage();
   // Re-mounting redraws every generated sentence in the new language. The local
   // app reloads instead, because there the prose is composed on the server and
@@ -10078,10 +13071,10 @@ const app = () => document.getElementById('app');
  * opens the screen it was copied from, and the browser's back button walks the
  * screens instead of leaving the app.
  *
- * `#ultimate` is deliberately absent: the door is locked, so a link to it lands
- * on the home screen rather than on nothing.
+ * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
-const SCREENS = { '#home': 'home', '#table': 'table' };
+const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate' };
+const SCREEN_HTML = { home: () => HOME_HTML, table: () => TABLE_HTML, ultimate: () => ULTIMATE_HTML };
 const screenFromHash = () => SCREENS[location.hash] ?? null;
 
 function mount(name) {
@@ -10089,7 +13082,7 @@ function mount(name) {
   // Set before the markup, and only when it differs: `hashchange` fires after
   // this returns, sees the screen it names is already mounted, and does nothing.
   if (location.hash !== `#${name}`) location.hash = `#${name}`;
-  app().innerHTML = name === 'table' ? TABLE_HTML : HOME_HTML;
+  app().innerHTML = SCREEN_HTML[name]();
   sweep(app());
   applyLanguage();
 
@@ -10100,6 +13093,8 @@ function mount(name) {
     if (saved === 'table' || saved === 'feed') {
       app().querySelector(`.tab[data-tab="${saved}"]`)?.click();
     }
+  } else if (name === 'ultimate') {
+    initUltimate();
   } else {
     initTable();
   }
@@ -10113,13 +13108,6 @@ function mount(name) {
         event.preventDefault();
         mount(SCREENS[target]);
       });
-    } else if (target === '#ultimate') {
-      // Ultimate is solved but not yet playable; the door says so rather than
-      // opening onto nothing.
-      link.classList.add('door-locked');
-      link.addEventListener('click', (event) => event.preventDefault());
-      const sub = link.querySelector('.door-sub');
-      if (sub) sub.textContent = tr('uth.notPlayableYet');
     }
   }
 
@@ -10447,6 +13435,13 @@ function switchPlayer() {
 /* --- Boot ----------------------------------------------------------------- */
 
 session.setLocale(locale);
+/*
+ * The UTH session composes its own prose, so it has to be told the language at
+ * boot as well as on a switch. Without this line a Hebrew player opened
+ * Ultimate onto English buttons and an English card — found by looking at the
+ * built page, not by the session tests, which set the locale themselves.
+ */
+uthSession.setLocale(locale);
 if (me.name) session.setPlayerName(me.name);
 applyLanguage();
 /*
