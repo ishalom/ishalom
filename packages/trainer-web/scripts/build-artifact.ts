@@ -20,7 +20,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -215,6 +215,52 @@ const artifactPage = `${head}
 ${scripts}
 `;
 
+/*
+ * What makes the hosted page installable (round 5).
+ *
+ * A manifest, an original icon, a theme colour, and a service worker that keeps
+ * the page for offline play. Only the hosted copy gets these: the artifact is a
+ * fragment inside claude.ai's own document, where a manifest link and a service
+ * worker registration would be someone else's page claiming to be an app.
+ *
+ * Every path is relative. The site lives under /ishalom/, and round 3 found what
+ * a root-relative href does there.
+ */
+const THEME = '#12161c';
+const installTags = `<link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="${THEME}" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="EV Trainer" />`;
+
+const registerWorker = `<script>
+    /* Offline play for the installed app. Secure pages only, which is what the
+       browser requires; a page opened from disk simply plays online. */
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+    </script>`;
+
+const manifest = {
+  name: 'EV Trainer',
+  short_name: 'EV Trainer',
+  description: 'Blackjack and Ultimate Texas Hold’em: play real hands and see what the maths says about every decision.',
+  start_url: './',
+  scope: './',
+  display: 'standalone',
+  orientation: 'portrait',
+  background_color: THEME,
+  theme_color: THEME,
+  icons: [
+    { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    { src: 'icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+  ],
+};
+
 const hostedPage = `<!doctype html>
 <html lang="en">
   <head>
@@ -222,7 +268,9 @@ const hostedPage = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
+    ${installTags}
     ${head}
+    ${registerWorker}
   </head>
   <body>
     <div id="app"></div>
@@ -244,6 +292,24 @@ writeFileSync(artifactTarget, artifactPage, 'utf8');
 const hostedTarget = join(ROOT, 'docs', 'index.html');
 mkdirSync(dirname(hostedTarget), { recursive: true });
 writeFileSync(hostedTarget, hostedPage, 'utf8');
+
+const siteDir = dirname(hostedTarget);
+writeFileSync(join(siteDir, 'manifest.webmanifest'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+// Each build gets its own cache, named by the stamp, so a deploy replaces the old one.
+const buildId = `${stamp.commit.slice(0, 12)}-${stamp.at.replace(/[^0-9]/g, '').slice(0, 14)}`;
+// The first build replaced the token in the comment and left the constant alone,
+// so every deploy would have shared one cache. The token is now unique, and the
+// build refuses a worker that still carries it.
+const worker = read(ARTIFACT, 'sw.js').replaceAll('__EV_BUILD_ID__', buildId);
+if (worker.includes('__EV_BUILD_ID__') || !worker.includes(`ev-trainer-${buildId}`)) {
+  throw new Error('sw.js: the cache name was not stamped with this build');
+}
+writeFileSync(join(siteDir, 'sw.js'), worker, 'utf8');
+const iconsFrom = join(PUBLIC, 'icons');
+mkdirSync(join(siteDir, 'icons'), { recursive: true });
+for (const file of readdirSync(iconsFrom).filter((f) => f.endsWith('.png'))) {
+  copyFileSync(join(iconsFrom, file), join(siteDir, 'icons', file));
+}
 
 console.log(
   `${relative(ROOT, artifactTarget)}  ${kb(artifactPage.length)}\n` +

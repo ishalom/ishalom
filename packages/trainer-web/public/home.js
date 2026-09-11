@@ -235,7 +235,10 @@ function renderHands(view) {
     row.className = 'log-row';
     row.innerHTML =
       `<div class="log-tier ${worst ? worst.severity : 'optimal'}"></div>` +
-      `<div><div class="log-hand">${cards} <span class="muted">${T('log.vs')}</span> ${dealer}</div>` +
+      // Each run of cards is its own left-to-right island. In Hebrew a suit is a
+      // neutral character, and without this "7♠ 2♦" drew as "♠7 ♦2":
+      // 26 of 27 cards measured suit-first on a 390px phone.
+      `<div><div class="log-hand"><bdi dir="ltr">${cards}</bdi> <span class="muted">${T('log.vs')}</span> <bdi dir="ltr">${dealer}</bdi></div>` +
       `<div class="log-detail">${detail}</div></div>` +
       `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
         hand.netUnits > 0 ? '+' : ''

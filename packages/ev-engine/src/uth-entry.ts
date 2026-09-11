@@ -17,10 +17,13 @@
 
 export * from './core/cards.ts';
 export { evaluate7 } from './poker/evaluator.ts';
+export { bestFive, evaluateCards, type BestFive } from './poker/best-five.ts';
+export { categoryOf, significantRanks, type HandCategory } from './poker/handValue.ts';
 export { severityForCost, type SeverityTier } from './blackjack/feedback.ts';
 export * from './uth/rules.ts';
 export * from './uth/showdown.ts';
 export * from './uth/river.ts';
+export * from './uth/river-odds.ts';
 export * from './uth/flop.ts';
 export * from './uth/trips.ts';
 export * from './uth/hole-class.ts';

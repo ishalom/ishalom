@@ -452,6 +452,8 @@ const EN: Catalogue = {
   'social.table': 'Table',
   'social.feed': 'Feed',
   'social.connecting': 'Looking for the others…',
+  'social.offlineNow':
+    'Offline — the shared table cannot be reached right now. The games play as usual; your record is kept on this device and joins the table when the connection is back.',
   'social.offline': 'Playing on your own here — the shared table needs a connection this page could not get. Everything else works.',
   'social.noPlayers': 'Nobody has played a rated hand yet. Be first.',
   'social.noFeed': 'Nothing on the feed yet. Hands land here when someone drops a big one or holds a hard spot.',
@@ -536,6 +538,8 @@ const EN: Catalogue = {
 
   // --- The door ---
   'welcome.codeLabel': 'Pick a 4-digit code',
+  'welcome.installed':
+    'Opened from your home screen? It keeps its own storage, so type the same name and code you use in the browser and your record comes back.',
   'welcome.codeHint': 'So you are the same player on your phone as on here. Four digits, and remember them.',
   'welcome.badCode': 'Four digits, please.',
   'welcome.wrongCode': 'That name is taken and the code does not match it. Try the code you used before, or a different name.',
@@ -939,6 +943,8 @@ const HE: Catalogue = {
   'social.table': 'השולחן',
   'social.feed': 'פיד',
   'social.connecting': 'מחפש את האחרים…',
+  'social.offlineNow':
+    'אין חיבור — אי אפשר להגיע לשולחן המשותף כרגע. המשחקים עובדים כרגיל; הרשומה שלך נשמרת במכשיר הזה ומצטרפת לשולחן כשהחיבור חוזר.',
   'social.offline': 'כאן אתה משחק לבד — השולחן המשותף דורש חיבור שהדף הזה לא הצליח לקבל. כל השאר עובד.',
   'social.noPlayers': 'אף אחד עוד לא שיחק יד מדורגת. תהיה הראשון.',
   'social.noFeed': 'עוד אין כלום בפיד. ידיים מגיעות לכאן כשמישהו עושה טעות גדולה או מחזיק מצב קשה.',
@@ -1015,6 +1021,8 @@ const HE: Catalogue = {
 
   // --- The door ---
   'welcome.codeLabel': 'בחר קוד בן 4 ספרות',
+  'welcome.installed':
+    'פתחת מהמסך הראשי? לאפליקציה יש אחסון משלה, אז הקלד את אותו שם ואותו קוד שאתה משתמש בהם בדפדפן והרשומה שלך תחזור.',
   'welcome.codeHint': 'כדי שתהיה אותו שחקן בטלפון ובמחשב. ארבע ספרות, ושווה לזכור אותן.',
   'welcome.badCode': 'ארבע ספרות, בבקשה.',
   'welcome.wrongCode': 'השם הזה כבר תפוס והקוד לא מתאים לו. נסה את הקוד שהשתמשת בו קודם, או שם אחר.',

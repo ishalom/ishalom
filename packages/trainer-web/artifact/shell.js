@@ -73,6 +73,13 @@ const me = {
 
 let backend = null;
 let backendReady = false;
+/*
+ * Whether the shared table answered the last time it was asked. A configured
+ * table is not a reachable one: on a phone with no signal the page still has a
+ * backend object, and without this it showed "nobody has played yet" — false —
+ * where it should have said it was offline.
+ */
+let backendReachable = true;
 /* Held so the poll can be stopped — a browser tab never needs to, but anything
    that loads this page without being a browser tab does. */
 let stopWatching = null;
@@ -88,7 +95,8 @@ async function connect() {
 
   if (backend) {
     await restoreMine();
-    stopWatching = backend.watch((rows) => {
+    stopWatching = backend.watch(
+      (rows) => {
       leaderboard = rows;
       feed = rows
         .flatMap((row) =>
@@ -97,7 +105,13 @@ async function connect() {
         .sort((a, b) => b.at - a.at)
         .slice(0, 40);
       renderSocial();
-    });
+      },
+      (reachable) => {
+        if (reachable === backendReachable) return;
+        backendReachable = reachable;
+        renderSocial();
+      },
+    );
     void publish();
   } else {
     // No table to join, but the local copy is still worth reading back.

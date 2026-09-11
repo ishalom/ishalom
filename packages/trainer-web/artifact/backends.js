@@ -212,7 +212,13 @@ function httpBackend({ url, key, table = 'players' }) {
       if (!response.ok) throw new Error(`save failed: ${response.status}`);
     },
 
-    watch(onRows) {
+    /**
+     * @param onRows   the leaderboard rows, whenever the table answers
+     * @param onStatus true when a poll reached the table, false when it did not
+     *                 — so the page can say it is offline instead of showing an
+     *                 empty or stale leaderboard as if it were live
+     */
+    watch(onRows, onStatus = () => {}) {
       // Polling rather than a socket: fifteen people watching a leaderboard do
       // not need sub-second news, and a poll has no connection to lose, no
       // reconnect to get wrong, and nothing to clean up on a backgrounded tab.
@@ -228,9 +234,15 @@ function httpBackend({ url, key, table = 'players' }) {
             `${endpoint}?select=${LIST}&merged_into=is.null&order=rating.desc&limit=60`,
             { headers },
           );
-          if (response.ok) onRows((await response.json()).map(rowToRecord));
+          if (response.ok) {
+            onRows((await response.json()).map(rowToRecord));
+            onStatus(true);
+          } else {
+            onStatus(false);
+          }
         } catch {
-          // Offline, or the project is asleep. Try again on the next tick.
+          // Offline, or the project is asleep. Say so, and try again next tick.
+          onStatus(false);
         }
         if (!stopped) timer = setTimeout(tick, POLL_MS);
       };

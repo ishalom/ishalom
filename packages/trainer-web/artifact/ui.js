@@ -250,6 +250,7 @@ function renderLeaderboard(box) {
   box.replaceChildren();
   if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
 
   const rated = leaderboard.filter((p) => p.decisions > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
@@ -290,6 +291,7 @@ function renderFeed(box) {
   box.replaceChildren();
   if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
   if (feed.length === 0) return void box.appendChild(emptyNote(tr('social.noFeed')));
 
   for (const item of feed) {
@@ -352,6 +354,14 @@ function askName() {
   const canMatch = Boolean(backend);
 
   const wrap = document.createElement('div');
+  /*
+   * Opened from a home-screen icon. On iPhone that app keeps its storage apart
+   * from Safari's, so a player who has been playing in Safari arrives here as a
+   * stranger — exactly the case name and code exist for. One line says so.
+   */
+  const installed =
+    (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
+    navigator.standalone === true;
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
     <h1 class="welcome-title">${tr('ui.appName')}</h1>
@@ -365,7 +375,8 @@ function askName() {
           ? `<label class="welcome-label" for="welcome-code">${tr('welcome.codeLabel')}</label>
       <input class="welcome-input welcome-code" id="welcome-code" inputmode="numeric"
              maxlength="4" autocomplete="off" pattern="[0-9]{4}" placeholder="0000" />
-      <p class="welcome-hint">${tr('welcome.codeHint')}</p>`
+      <p class="welcome-hint">${tr('welcome.codeHint')}</p>
+      ${installed ? `<p class="welcome-hint welcome-installed">${tr('welcome.installed')}</p>` : ''}`
           : ''
       }
       <p class="welcome-error" id="welcome-error" hidden></p>

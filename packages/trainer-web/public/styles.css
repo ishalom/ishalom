@@ -1741,3 +1741,68 @@ body { font-family: var(--body); }
 }
 .action-row > .action { min-width: 0; }
 [dir="rtl"] .action-row > .action { direction: rtl; }
+
+/* ===========================================================================
+ * Portrait phone first (round 5).
+ *
+ * Most of the people this is played by hold a phone. Measured before this
+ * block at 360, 390 and 412 px wide, nothing overflowed and every decision
+ * button already sat in the bottom third, because the dock is pinned there. What
+ * was wrong was the table itself: on a 390x844 screen, UTH's five-card board
+ * wrapped to two rows and pushed the player's own cards under the dock, and the
+ * two-line stat labels and loose spacing did the same to Blackjack's rail.
+ *
+ * So on a phone the chrome gets tighter, the strip becomes one line of figures
+ * with the labels behind the "?" (round 3's rule for when the strip and the dock
+ * do not both fit), and UTH's board is sized so five cards share a row.
+ * ======================================================================== */
+
+html { -webkit-text-size-adjust: 100%; }
+/* No double-tap zoom delay and no grey flash on a tap. */
+button,
+.stat,
+.link,
+.log-row { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.action-row > .action { -webkit-user-select: none; user-select: none; }
+
+@media (max-width: 560px) {
+  .fontbar { padding: 3px 12px; }
+  .fontbar button { padding: 2px 9px; }
+
+  .rules { padding: 6px 12px; gap: 8px; }
+  .rules-name { font-size: 13px; }
+  .rules-sub { flex-wrap: nowrap; }
+  .rules-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+  .stat { padding: 6px 4px; }
+  .stat-value { font-size: 17px; }
+  .stat-label { display: none; }
+
+  .table { gap: 8px; padding: 8px 10px; }
+  .dealer-zone { padding: 6px 8px 0; gap: 8px; }
+  .avatar { width: 40px; height: 40px; }
+  .speech p { font-size: 13px; }
+  .felt .seat { padding: 4px 8px; }
+  .seat-title { margin-bottom: 4px; font-size: 12px; }
+  .hand { padding: 4px; }
+  .hand-total { font-size: 32px; }
+
+  .rail { gap: 4px; margin-top: 6px; padding-top: 6px; }
+  .rail-bet .chips { height: 34px; min-width: 56px; margin-bottom: 2px; }
+  .rail-bank .rail-value { font-size: 21px; }
+  .rail-value { font-size: 19px; }
+
+  /* Five community cards on one row, whatever the phone's width. */
+  .uth-board .cards { flex-wrap: nowrap; gap: 5px; justify-content: center; }
+  .uth-board .card {
+    width: min(58px, calc((100vw - 36px - 4 * 5px) / 5));
+    height: auto;
+    aspect-ratio: 5 / 7;
+  }
+  .uth-board .card-rank { font-size: 22px; }
+  .uth-board .card-suit { font-size: 16px; }
+  .uth-felt .seat { padding: 4px 8px; }
+  .uth-rail { margin-top: 6px; gap: 5px; }
+  .uth-spot { padding: 3px 2px; }
+  .uth-spot .rail-value { font-size: 17px; }
+}
