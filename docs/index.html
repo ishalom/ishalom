@@ -5,9 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="theme-color" content="#12161c" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="86af48c952f220d7eaa67d68d96798ee72fbe145-dirty" />
-<meta name="ev-build-at" content="2026-09-11T21:19:50.980Z" />
+<meta name="ev-build-commit" content="fd0693d9a61201e541a9a1f3f41f924e987b77c6-dirty" />
+<meta name="ev-build-at" content="2026-09-11T22:12:58.882Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -1758,6 +1766,71 @@ body { font-family: var(--body); }
 [dir="rtl"] .action-row > .action { direction: rtl; }
 
 /* ===========================================================================
+ * Portrait phone first (round 5).
+ *
+ * Most of the people this is played by hold a phone. Measured before this
+ * block at 360, 390 and 412 px wide, nothing overflowed and every decision
+ * button already sat in the bottom third, because the dock is pinned there. What
+ * was wrong was the table itself: on a 390x844 screen, UTH's five-card board
+ * wrapped to two rows and pushed the player's own cards under the dock, and the
+ * two-line stat labels and loose spacing did the same to Blackjack's rail.
+ *
+ * So on a phone the chrome gets tighter, the strip becomes one line of figures
+ * with the labels behind the "?" (round 3's rule for when the strip and the dock
+ * do not both fit), and UTH's board is sized so five cards share a row.
+ * ======================================================================== */
+
+html { -webkit-text-size-adjust: 100%; }
+/* No double-tap zoom delay and no grey flash on a tap. */
+button,
+.stat,
+.link,
+.log-row { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.action-row > .action { -webkit-user-select: none; user-select: none; }
+
+@media (max-width: 560px) {
+  .fontbar { padding: 3px 12px; }
+  .fontbar button { padding: 2px 9px; }
+
+  .rules { padding: 6px 12px; gap: 8px; }
+  .rules-name { font-size: 13px; }
+  .rules-sub { flex-wrap: nowrap; }
+  .rules-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+  .stat { padding: 6px 4px; }
+  .stat-value { font-size: 17px; }
+  .stat-label { display: none; }
+
+  .table { gap: 8px; padding: 8px 10px; }
+  .dealer-zone { padding: 6px 8px 0; gap: 8px; }
+  .avatar { width: 40px; height: 40px; }
+  .speech p { font-size: 13px; }
+  .felt .seat { padding: 4px 8px; }
+  .seat-title { margin-bottom: 4px; font-size: 12px; }
+  .hand { padding: 4px; }
+  .hand-total { font-size: 32px; }
+
+  .rail { gap: 4px; margin-top: 6px; padding-top: 6px; }
+  .rail-bet .chips { height: 34px; min-width: 56px; margin-bottom: 2px; }
+  .rail-bank .rail-value { font-size: 21px; }
+  .rail-value { font-size: 19px; }
+
+  /* Five community cards on one row, whatever the phone's width. */
+  .uth-board .cards { flex-wrap: nowrap; gap: 5px; justify-content: center; }
+  .uth-board .card {
+    width: min(58px, calc((100vw - 36px - 4 * 5px) / 5));
+    height: auto;
+    aspect-ratio: 5 / 7;
+  }
+  .uth-board .card-rank { font-size: 22px; }
+  .uth-board .card-suit { font-size: 16px; }
+  .uth-felt .seat { padding: 4px 8px; }
+  .uth-rail { margin-top: 6px; gap: 5px; }
+  .uth-spot { padding: 3px 2px; }
+  .uth-spot .rail-value { font-size: 17px; }
+}
+
+/* ===========================================================================
  * The shared build only.
  *
  * Same palette, same faces, same restraint as the rest of the app — these are
@@ -1903,6 +1976,13 @@ body { background: var(--bg); }
 
 
 </style>
+    <script>
+    /* Offline play for the installed app. Secure pages only, which is what the
+       browser requires; a page opened from disk simply plays online. */
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+    </script>
   </head>
   <body>
     <div id="app"></div>
@@ -5030,6 +5110,70 @@ function popcount(x        )         {
 /** Exposed for the table-integrity tests; not part of the hot path. */
 const internals = { straightHigh, topFive, popcount };
 
+/* ===== packages/ev-engine/src/poker/best-five.ts ===== */
+/**
+ * Which five cards make a seven-card hand (spec §6.4).
+ *
+ * `evaluate7` answers "how strong", which is all the solvers need. A player at
+ * showdown needs "which cards": the five that are highlighted on the felt and
+ * named in words. This finds them by the only honest route — the same evaluator,
+ * asked about each of the 21 five-card subsets, keeping one whose value equals
+ * the seven-card value. Nothing about poker hand shapes is re-implemented here,
+ * so the cards shown can never disagree with the hand that was scored.
+ */
+
+/** The value of any set of up to seven cards, by the same evaluator as `evaluate7`. */
+function evaluateCards(cards                 )         {
+  let s0 = 0;
+  let s1 = 0;
+  let s2 = 0;
+  let s3 = 0;
+  for (const card of cards) {
+    const bit = 1 << (card >> 2);
+    switch (card & 3) {
+      case 0:
+        s0 |= bit;
+        break;
+      case 1:
+        s1 |= bit;
+        break;
+      case 2:
+        s2 |= bit;
+        break;
+      default:
+        s3 |= bit;
+    }
+  }
+  return evaluateSuitMasks(s0, s1, s2, s3);
+}
+
+                           
+                                                        
+                
+                                                               
+                
+ 
+
+/**
+ * The five cards that make the hand.
+ *
+ * When more than one subset scores the same — a kicker that plays from either
+ * the board or the hand — the one keeping the earlier cards is returned, so the
+ * answer is deterministic. Any of them is a correct "best five".
+ */
+function bestFive(seven                 )           {
+  if (seven.length !== 7) throw new Error(`Expected seven cards, got ${seven.length}`);
+  const value = evaluate7(seven);
+  // Drop two cards, latest first, so the earliest cards are kept longest.
+  for (let a = 6; a >= 1; a--) {
+    for (let b = a - 1; b >= 0; b--) {
+      const five = seven.filter((_, index) => index !== a && index !== b);
+      if (evaluateCards(five) === value) return { value, cards: five };
+    }
+  }
+  throw new Error('No five of these seven cards make the seven-card hand');
+}
+
 /* ===== packages/ev-engine/src/uth/rules.ts ===== */
 /**
  * Ultimate Texas Hold'em rules and paytables (spec §5.2).
@@ -5374,6 +5518,105 @@ function solveRiver(
     ties,
     losses,
   };
+}
+
+/* ===== packages/ev-engine/src/uth/river-odds.ts ===== */
+/**
+ * The river, counted the way a player can read it (spec §5.2, §6.3).
+ *
+ * `solveRiver` grades the decision and returns how many of the dealer's 990
+ * possible holdings the player beats, ties and loses to. That is enough to
+ * grade and not enough to explain: "you lose to 165 of 990" does not tell a
+ * player what to be afraid of. This walks the same 990 holdings and, for the
+ * ones that win, groups them by what they are — a pair of nines, two pair aces
+ * and sevens, a flush to the king — so the card can name the few that beat the
+ * player most narrowly.
+ *
+ * It does not grade anything and does not replace the solver. It is the same
+ * enumeration, asked a second question, and a test holds its counts to
+ * `solveRiver`'s.
+ */
+
+
+
+/** How many of a category's significant ranks a plain description names. */
+const NAMED_RANKS                                         = {
+  0: 1, // high card: the top card
+  1: 1, // pair: the pair
+  2: 2, // two pair: both pairs
+  3: 1, // three of a kind
+  4: 1, // straight: its high card
+  5: 1, // flush: its top card
+  6: 2, // full house: the three, then the two
+  7: 1, // four of a kind
+  8: 1, // straight flush: its high card
+};
+
+/** Dealer holdings that beat the player and share one plain description. */
+                              
+                         
+                                                                 
+                
+                                                                             
+                 
+                                                        
+                
+ 
+
+                            
+                      
+               
+               
+                 
+                   
+                                                                                 
+                         
+ 
+
+function riverOdds(
+  playerHole                 ,
+  board                 ,
+  limit = 3,
+)            {
+  if (playerHole.length !== 2) throw new Error('The player holds exactly two cards');
+  if (board.length !== 5) throw new Error('The river is dealt when all five community cards are out');
+
+  const unseen = unseenCards([...playerHole, ...board]);
+  const playerValue = evaluate7([...playerHole, ...board]);
+  const dealerCards         = [board[0] , board[1] , board[2] , board[3] , board[4] , 0, 0];
+
+  let wins = 0;
+  let ties = 0;
+  let losses = 0;
+  const groups = new Map                     ();
+
+  for (let i = 0; i < unseen.length; i++) {
+    dealerCards[5] = unseen[i] ;
+    for (let j = i + 1; j < unseen.length; j++) {
+      dealerCards[6] = unseen[j] ;
+      const dealer = evaluate7(dealerCards);
+      if (playerValue > dealer) {
+        wins++;
+      } else if (playerValue === dealer) {
+        ties++;
+      } else {
+        losses++;
+        const category = categoryOf(dealer);
+        const ranks = significantRanks(dealer).slice(0, NAMED_RANKS[category]);
+        const key = `${category}:${ranks.join(',')}`;
+        const group = groups.get(key);
+        if (group) {
+          group.count++;
+          if (dealer < group.lowest) group.lowest = dealer;
+        } else {
+          groups.set(key, { category, ranks, lowest: dealer, count: 1 });
+        }
+      }
+    }
+  }
+
+  const closest = [...groups.values()].sort((a, b) => a.lowest - b.lowest).slice(0, limit);
+  return { playerValue, wins, ties, losses, holdings: wins + ties + losses, closest };
 }
 
 /* ===== packages/ev-engine/src/uth/flop.ts ===== */
@@ -6847,6 +7090,8 @@ const EN            = {
   'social.table': 'Table',
   'social.feed': 'Feed',
   'social.connecting': 'Looking for the others…',
+  'social.offlineNow':
+    'Offline — the shared table cannot be reached right now. The games play as usual; your record is kept on this device and joins the table when the connection is back.',
   'social.offline': 'Playing on your own here — the shared table needs a connection this page could not get. Everything else works.',
   'social.noPlayers': 'Nobody has played a rated hand yet. Be first.',
   'social.noFeed': 'Nothing on the feed yet. Hands land here when someone drops a big one or holds a hard spot.',
@@ -6931,6 +7176,8 @@ const EN            = {
 
   // --- The door ---
   'welcome.codeLabel': 'Pick a 4-digit code',
+  'welcome.installed':
+    'Opened from your home screen? It keeps its own storage, so type the same name and code you use in the browser and your record comes back.',
   'welcome.codeHint': 'So you are the same player on your phone as on here. Four digits, and remember them.',
   'welcome.badCode': 'Four digits, please.',
   'welcome.wrongCode': 'That name is taken and the code does not match it. Try the code you used before, or a different name.',
@@ -7334,6 +7581,8 @@ const HE            = {
   'social.table': 'השולחן',
   'social.feed': 'פיד',
   'social.connecting': 'מחפש את האחרים…',
+  'social.offlineNow':
+    'אין חיבור — אי אפשר להגיע לשולחן המשותף כרגע. המשחקים עובדים כרגיל; הרשומה שלך נשמרת במכשיר הזה ומצטרפת לשולחן כשהחיבור חוזר.',
   'social.offline': 'כאן אתה משחק לבד — השולחן המשותף דורש חיבור שהדף הזה לא הצליח לקבל. כל השאר עובד.',
   'social.noPlayers': 'אף אחד עוד לא שיחק יד מדורגת. תהיה הראשון.',
   'social.noFeed': 'עוד אין כלום בפיד. ידיים מגיעות לכאן כשמישהו עושה טעות גדולה או מחזיק מצב קשה.',
@@ -7410,6 +7659,8 @@ const HE            = {
 
   // --- The door ---
   'welcome.codeLabel': 'בחר קוד בן 4 ספרות',
+  'welcome.installed':
+    'פתחת מהמסך הראשי? לאפליקציה יש אחסון משלה, אז הקלד את אותו שם ואותו קוד שאתה משתמש בהם בדפדפן והרשומה שלך תחזור.',
   'welcome.codeHint': 'כדי שתהיה אותו שחקן בטלפון ובמחשב. ארבע ספרות, ושווה לזכור אותן.',
   'welcome.badCode': 'ארבע ספרות, בבקשה.',
   'welcome.wrongCode': 'השם הזה כבר תפוס והקוד לא מתאים לו. נסה את הקוד שהשתמשת בו קודם, או שם אחר.',
@@ -10488,7 +10739,10 @@ function renderHands(view) {
     row.className = 'log-row';
     row.innerHTML =
       `<div class="log-tier ${worst ? worst.severity : 'optimal'}"></div>` +
-      `<div><div class="log-hand">${cards} <span class="muted">${T('log.vs')}</span> ${dealer}</div>` +
+      // Each run of cards is its own left-to-right island. In Hebrew a suit is a
+      // neutral character, and without this "7♠ 2♦" drew as "♠7 ♦2":
+      // 26 of 27 cards measured suit-first on a 390px phone.
+      `<div><div class="log-hand"><bdi dir="ltr">${cards}</bdi> <span class="muted">${T('log.vs')}</span> <bdi dir="ltr">${dealer}</bdi></div>` +
       `<div class="log-detail">${detail}</div></div>` +
       `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
         hand.netUnits > 0 ? '+' : ''
@@ -12807,7 +13061,13 @@ function httpBackend({ url, key, table = 'players' }) {
       if (!response.ok) throw new Error(`save failed: ${response.status}`);
     },
 
-    watch(onRows) {
+    /**
+     * @param onRows   the leaderboard rows, whenever the table answers
+     * @param onStatus true when a poll reached the table, false when it did not
+     *                 — so the page can say it is offline instead of showing an
+     *                 empty or stale leaderboard as if it were live
+     */
+    watch(onRows, onStatus = () => {}) {
       // Polling rather than a socket: fifteen people watching a leaderboard do
       // not need sub-second news, and a poll has no connection to lose, no
       // reconnect to get wrong, and nothing to clean up on a backgrounded tab.
@@ -12823,9 +13083,15 @@ function httpBackend({ url, key, table = 'players' }) {
             `${endpoint}?select=${LIST}&merged_into=is.null&order=rating.desc&limit=60`,
             { headers },
           );
-          if (response.ok) onRows((await response.json()).map(rowToRecord));
+          if (response.ok) {
+            onRows((await response.json()).map(rowToRecord));
+            onStatus(true);
+          } else {
+            onStatus(false);
+          }
         } catch {
-          // Offline, or the project is asleep. Try again on the next tick.
+          // Offline, or the project is asleep. Say so, and try again next tick.
+          onStatus(false);
         }
         if (!stopped) timer = setTimeout(tick, POLL_MS);
       };
@@ -12940,6 +13206,13 @@ const me = {
 
 let backend = null;
 let backendReady = false;
+/*
+ * Whether the shared table answered the last time it was asked. A configured
+ * table is not a reachable one: on a phone with no signal the page still has a
+ * backend object, and without this it showed "nobody has played yet" — false —
+ * where it should have said it was offline.
+ */
+let backendReachable = true;
 /* Held so the poll can be stopped — a browser tab never needs to, but anything
    that loads this page without being a browser tab does. */
 let stopWatching = null;
@@ -12955,7 +13228,8 @@ async function connect() {
 
   if (backend) {
     await restoreMine();
-    stopWatching = backend.watch((rows) => {
+    stopWatching = backend.watch(
+      (rows) => {
       leaderboard = rows;
       feed = rows
         .flatMap((row) =>
@@ -12964,7 +13238,13 @@ async function connect() {
         .sort((a, b) => b.at - a.at)
         .slice(0, 40);
       renderSocial();
-    });
+      },
+      (reachable) => {
+        if (reachable === backendReachable) return;
+        backendReachable = reachable;
+        renderSocial();
+      },
+    );
     void publish();
   } else {
     // No table to join, but the local copy is still worth reading back.
@@ -13643,6 +13923,7 @@ function renderLeaderboard(box) {
   box.replaceChildren();
   if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
 
   const rated = leaderboard.filter((p) => p.decisions > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
@@ -13683,6 +13964,7 @@ function renderFeed(box) {
   box.replaceChildren();
   if (!backendReady) return void box.appendChild(emptyNote(tr('social.connecting')));
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
+  if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
   if (feed.length === 0) return void box.appendChild(emptyNote(tr('social.noFeed')));
 
   for (const item of feed) {
@@ -13745,6 +14027,14 @@ function askName() {
   const canMatch = Boolean(backend);
 
   const wrap = document.createElement('div');
+  /*
+   * Opened from a home-screen icon. On iPhone that app keeps its storage apart
+   * from Safari's, so a player who has been playing in Safari arrives here as a
+   * stranger — exactly the case name and code exist for. One line says so.
+   */
+  const installed =
+    (typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) ||
+    navigator.standalone === true;
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
     <h1 class="welcome-title">${tr('ui.appName')}</h1>
@@ -13758,7 +14048,8 @@ function askName() {
           ? `<label class="welcome-label" for="welcome-code">${tr('welcome.codeLabel')}</label>
       <input class="welcome-input welcome-code" id="welcome-code" inputmode="numeric"
              maxlength="4" autocomplete="off" pattern="[0-9]{4}" placeholder="0000" />
-      <p class="welcome-hint">${tr('welcome.codeHint')}</p>`
+      <p class="welcome-hint">${tr('welcome.codeHint')}</p>
+      ${installed ? `<p class="welcome-hint welcome-installed">${tr('welcome.installed')}</p>` : ''}`
           : ''
       }
       <p class="welcome-error" id="welcome-error" hidden></p>
