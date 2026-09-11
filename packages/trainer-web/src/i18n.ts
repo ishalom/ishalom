@@ -369,11 +369,11 @@ const EN: Catalogue = {
   'uth.line.tie':
     'A tie — every bet pushes',
   'uth.line.playWin':
-    'Play {bet}× wins {play}',
+    'Play {bet} wins {play}',
   'uth.line.playLose':
-    'Play {bet}× loses {play}',
+    'Play {bet} loses {play}',
   'uth.line.playPush':
-    'Play {bet}× pushes',
+    'Play {bet} pushes',
   'uth.line.blindPaid':
     'Blind pays {blind} on a straight or better',
   'uth.line.blindPush':
@@ -779,17 +779,17 @@ const HE: Catalogue = {
   // --- Ultimate preview ---
   'uth.blindPays': 'הבליינד משלם על רצף ומעלה',
   'uth.yourHand': 'היד שלך',
-  'uth.preflopStreet': 'פרה-פלופ · העלאה 4× או צ׳ק',
-  'uth.flopStreet': 'פלופ · העלאה 2× או צ׳ק',
-  'uth.riverStreet': 'ריבר · העלאה 1× או פרישה',
+  'uth.preflopStreet': 'פרה-פלופ · העלאה ⁦4×⁩ או צ׳ק',
+  'uth.flopStreet': 'פלופ · העלאה ⁦2×⁩ או צ׳ק',
+  'uth.riverStreet': 'ריבר · העלאה ⁦1×⁩ או פרישה',
   'uth.tripsPanel': 'הימור צד טריפס',
   'uth.preflopPanel': 'טבלת פרה-פלופ',
   'uth.dealAnother': 'חלק עוד אחת',
   'uth.solving': 'מחשב…',
-  'uth.raise4': 'העלאה 4×',
-  'uth.raise3': 'העלאה 3×',
-  'uth.raise2': 'העלאה 2×',
-  'uth.raise1': 'העלאה 1×',
+  'uth.raise4': 'העלאה ⁦4×⁩',
+  'uth.raise3': 'העלאה ⁦3×⁩',
+  'uth.raise2': 'העלאה ⁦2×⁩',
+  'uth.raise1': 'העלאה ⁦1×⁩',
   'uth.check': 'צ׳ק',
   'uth.board':
     'הלוח',
@@ -820,19 +820,19 @@ const HE: Catalogue = {
   'uth.h.river':
     '{class} · בריבר',
   'uth.s.threeX':
-    '3× הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
+    '⁦3×⁩ הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
   'uth.s.preRaise':
-    '{class} חזקה מספיק להעלאה המקסימלית: 4× שווה **{gap}** יותר מצ׳ק.',
+    '{class} חזקה מספיק להעלאה המקסימלית: ⁦4×⁩ שווה **{gap}** יותר מצ׳ק.',
   'uth.s.preCheck':
     '{class} שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopRaise':
-    '2× עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
+    '⁦2×⁩ עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopCheck':
-    'צ׳ק עדיף על 2× ב-**{gap}**. נשארת לך החלטת 1× בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
+    'צ׳ק עדיף על ⁦2×⁩ ב-**{gap}**. נשארת לך החלטת ⁦1×⁩ בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
   'uth.s.riverRaise':
-    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-−2.',
+    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-⁦−2⁩.',
   'uth.s.riverFold':
-    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן 1× מפסיד יותר מפרישה ב-−2.',
+    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-⁦−2⁩.',
   'uth.line.dealerQualified':
     'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
   'uth.line.dealerNotQualified':
@@ -840,17 +840,17 @@ const HE: Catalogue = {
   'uth.line.tie':
     'תיקו — כל ההימורים חוזרים',
   'uth.line.playWin':
-    'פליי {bet}× מנצח {play}',
+    'פליי {bet} מנצח {play}',
   'uth.line.playLose':
-    'פליי {bet}× מפסיד {play}',
+    'פליי {bet} מפסיד {play}',
   'uth.line.playPush':
-    'פליי {bet}× בתיקו',
+    'פליי {bet} בתיקו',
   'uth.line.blindPaid':
     'הבליינד משלם {blind} על רצף ומעלה',
   'uth.line.blindPush':
     'הבליינד בתיקו — הניצחון היה מתחת לרצף',
   'uth.line.blindLose':
-    'הבליינד מפסיד −1',
+    'הבליינד מפסיד ⁦−1⁩',
   'uth.line.blindTie':
     'הבליינד בתיקו',
   'uth.line.folded':
@@ -858,11 +858,11 @@ const HE: Catalogue = {
   'uth.line.foldPlay':
     'לא הונח הימור פליי',
   'uth.line.forfeit':
-    'האנטה והבליינד אבודים: −2',
+    'האנטה והבליינד אבודים: ⁦−2⁩',
   'uth.line.net':
     'היד {net}',
   'uth.fold': 'פרישה',
-  'uth.threeXNever': 'ההעלאה של 3× מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
+  'uth.threeXNever': 'ההעלאה של ⁦3×⁩ מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
 
   // --- House restrictions (real rules, not display filters) ---

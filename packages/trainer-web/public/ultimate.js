@@ -13,6 +13,14 @@ const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 
 const el = (id) => document.getElementById(id);
 
+/**
+ * A figure kept in one piece inside right-to-left text: in Hebrew, "−0.416"
+ * next to a Hebrew label otherwise draws as "0.416−". See `isolateFor` in
+ * uth-session.ts, which does the same for the prose composed there.
+ */
+const uthFigure = (text) =>
+  document.documentElement.getAttribute('dir') === 'rtl' ? `\u2066${text}\u2069` : text;
+
 const uthState = {
   view: null,
   busy: false,
@@ -170,7 +178,7 @@ function uthRenderRail(view) {
     const delta = document.createElement('span');
     const net = view.stack.lastNet;
     delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
-    delta.textContent = `${net > 0 ? '+' : ''}${net}`;
+    delta.textContent = uthFigure(`${net > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net)}`);
     delta.hidden = true;
     bank.appendChild(delta);
   }
@@ -223,7 +231,8 @@ function uthRenderCard(view) {
     const chip = document.createElement('span');
     chip.className =
       'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    chip.textContent = `${entry.label}: ${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`;
+    chip.textContent =
+      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`);
     evs.appendChild(chip);
   });
   box.appendChild(evs);

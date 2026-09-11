@@ -66,6 +66,22 @@ const ACTIONS: Record<UthAction, { label: string; key: string; code: string }> =
   fold: { label: 'uth.fold', key: 'F', code: 'KeyF' },
 };
 
+/**
+ * Keep a figure in one piece inside right-to-left text.
+ *
+ * In a Hebrew sentence a signed number or a raise size is a left-to-right run
+ * beside right-to-left words, and the bidirectional algorithm treats the sign
+ * and the × as neutral characters that belong to whichever side they touch. On
+ * the live page that turned "אנטה −1" into "אנטה 1−" and "העלאה 1×" into
+ * "העלאה ×1" — a player reading the settlement saw the minus on the wrong side
+ * of every loss. A left-to-right isolate (U+2066 … U+2069) makes each figure an
+ * island the algorithm cannot split. English needs none, and gets none.
+ */
+const LRI = '\u2066';
+const PDI = '\u2069';
+const isolateFor = (locale: Locale) => (text: string): string =>
+  locale === 'he' ? `${LRI}${text}${PDI}` : text;
+
 const uthUnits = (value: number): string =>
   `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
 const uthPercent = (value: number): string => `${Math.round(value * 100)}%`;
@@ -229,14 +245,14 @@ export class UthSession {
 
     return {
       phase,
-      headline: t(this.locale, `uth.h.${phase}`, { class: holeClass }),
+      headline: t(this.locale, `uth.h.${phase}`, { class: isolateFor(this.locale)(holeClass) }),
       correct,
       severity: record.severityTier,
       verdict: correct
         ? t(this.locale, 'fb.correct', { action: this.label(record.optimalAction) })
         : t(this.locale, 'fb.wrong', {
             severity: t(this.locale, `fb.${record.severityTier}`),
-            cost: record.evCost.toFixed(3),
+            cost: isolateFor(this.locale)(record.evCost.toFixed(3)),
           }),
       youChose: correct
         ? null
@@ -265,22 +281,23 @@ export class UthSession {
   private sentence(record: UthDecisionRecord, evaluation: UthEvaluation, holeClass: string): string {
     const ev = record.evByAction;
     const L = this.locale;
+    const iso = isolateFor(L);
 
     if (evaluation.phase === 'preflop') {
       if (record.chosenAction === 'raise3x') {
         return t(L, 'uth.s.threeX', {
-          cost: uthUnits(-record.evCost).replace('−', ''),
+          cost: iso(uthUnits(-record.evCost).replace('−', '')),
           best: this.label(record.optimalAction).toLowerCase(),
         });
       }
       if (record.optimalAction === 'raise4x') {
         return t(L, 'uth.s.preRaise', {
-          class: holeClass,
-          gap: uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', ''),
+          class: iso(holeClass),
+          gap: iso(uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
         });
       }
       return t(L, 'uth.s.preCheck', {
-        class: holeClass,
+        class: iso(holeClass),
         flopRaise: uthPercent(evaluation.flopRaiseFrequency ?? 0),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
@@ -289,7 +306,7 @@ export class UthSession {
     if (evaluation.phase === 'flop') {
       const gap = Math.abs((ev.raise2x ?? 0) - (ev.check ?? 0));
       return t(L, record.optimalAction === 'raise2x' ? 'uth.s.flopRaise' : 'uth.s.flopCheck', {
-        gap: gap.toFixed(3),
+        gap: iso(gap.toFixed(3)),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
     }
@@ -310,33 +327,36 @@ export class UthSession {
    */
   private lines(s: UthSettlement): { lines: string[]; net: string; folded: boolean } {
     const L = this.locale;
+    const iso = isolateFor(L);
+    const cash = (value: number) => iso(money(value));
+    const bet = iso(`${s.playBet}×`);
     if (s.folded) {
       return {
         lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit')],
-        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: true,
       };
     }
     const tie = s.ante === 0 && s.play === 0 && s.blind === 0 && s.dealerQualified;
     if (tie) {
       return {
-        lines: [t(L, 'uth.line.tie'), t(L, 'uth.line.playPush', { bet: s.playBet }), t(L, 'uth.line.blindTie')],
-        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        lines: [t(L, 'uth.line.tie'), t(L, 'uth.line.playPush', { bet }), t(L, 'uth.line.blindTie')],
+        net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: false,
       };
     }
     const dealer = s.dealerQualified
-      ? t(L, 'uth.line.dealerQualified', { ante: money(s.ante) })
+      ? t(L, 'uth.line.dealerQualified', { ante: cash(s.ante) })
       : t(L, 'uth.line.dealerNotQualified');
     const play =
       s.play > 0
-        ? t(L, 'uth.line.playWin', { bet: s.playBet, play: money(s.play) })
+        ? t(L, 'uth.line.playWin', { bet, play: cash(s.play) })
         : s.play < 0
-          ? t(L, 'uth.line.playLose', { bet: s.playBet, play: money(s.play) })
-          : t(L, 'uth.line.playPush', { bet: s.playBet });
+          ? t(L, 'uth.line.playLose', { bet, play: cash(s.play) })
+          : t(L, 'uth.line.playPush', { bet });
     const blind =
       s.blind > 0
-        ? t(L, 'uth.line.blindPaid', { blind: money(s.blind) })
+        ? t(L, 'uth.line.blindPaid', { blind: cash(s.blind) })
         : s.blindPushed
           ? t(L, 'uth.line.blindPush')
           : s.blind < 0
@@ -344,7 +364,7 @@ export class UthSession {
             : t(L, 'uth.line.blindTie');
     return {
       lines: [dealer, play, blind],
-      net: t(L, 'uth.line.net', { net: money(s.net) }),
+      net: t(L, 'uth.line.net', { net: cash(s.net) }),
       folded: false,
     };
   }

@@ -261,6 +261,39 @@ test('no raw i18n key reaches the UTH screen, in either language', () => {
   }
 });
 
+test('in Hebrew every signed figure and raise size is kept in one piece', () => {
+  /*
+   * The live page, in Hebrew, drew "אנטה 1−" for a lost Ante and "העלאה ×1" on
+   * the raise button: a sign or a × beside right-to-left words belongs, to the
+   * bidirectional algorithm, to whichever side it touches. Each figure is now a
+   * left-to-right isolate (U+2066 … U+2069), which it cannot split. This checks
+   * the composed strings, because the visual result is only as good as they are.
+   */
+  const LRI = '\u2066';
+  const PDI = '\u2069';
+  // A sign is + or U+2212, or an ASCII hyphen that does not follow a Hebrew
+  // letter: "ב-32%" and "מ-169" use the Hebrew prefix hyphen, which is not a
+  // minus and draws correctly without help.
+  const figure = /(?:[+\u2212]|(?<![\u0590-\u05FF])-)?\d+(?:\.\d+)?×?/g;
+
+  for (const line of everythingShown('he')) {
+    // Strip everything already isolated; what remains must hold no signed
+    // figure and no raise size.
+    const outside = line.replace(new RegExp(`${LRI}[^${PDI}]*${PDI}`, 'g'), '');
+    for (const match of outside.match(figure) ?? []) {
+      assert.ok(
+        !/^[+\u2212-]/.test(match) && !match.endsWith('×'),
+        `a figure is not isolated in "${line}": ${match}`,
+      );
+    }
+  }
+
+  // English needs no isolates and must not carry invisible characters.
+  for (const line of everythingShown('en')) {
+    assert.ok(!line.includes(LRI) && !line.includes(PDI), `English carries an isolate: ${line}`);
+  }
+});
+
 test('every UTH key the session uses exists in both languages', () => {
   const en = Object.keys(catalogue('en')).filter((k) => k.startsWith('uth.'));
   const he = new Set(Object.keys(catalogue('he')).filter((k) => k.startsWith('uth.')));
