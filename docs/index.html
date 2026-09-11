@@ -6,8 +6,8 @@
     <meta name="description" content="Play real blackjack hands and find out what the maths says about every decision you make." />
     <meta name="color-scheme" content="dark" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="c5cc9c53880f1966d2bd7804f6724d4bd723b2ae-dirty" />
-<meta name="ev-build-at" content="2026-09-11T13:16:44.005Z" />
+<meta name="ev-build-commit" content="d627021ae189dce3427089cb9a656529d27371d1-dirty" />
+<meta name="ev-build-at" content="2026-09-11T13:32:56.707Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -7140,11 +7140,11 @@ const EN            = {
   'uth.line.tie':
     'A tie — every bet pushes',
   'uth.line.playWin':
-    'Play {bet}× wins {play}',
+    'Play {bet} wins {play}',
   'uth.line.playLose':
-    'Play {bet}× loses {play}',
+    'Play {bet} loses {play}',
   'uth.line.playPush':
-    'Play {bet}× pushes',
+    'Play {bet} pushes',
   'uth.line.blindPaid':
     'Blind pays {blind} on a straight or better',
   'uth.line.blindPush':
@@ -7550,17 +7550,17 @@ const HE            = {
   // --- Ultimate preview ---
   'uth.blindPays': 'הבליינד משלם על רצף ומעלה',
   'uth.yourHand': 'היד שלך',
-  'uth.preflopStreet': 'פרה-פלופ · העלאה 4× או צ׳ק',
-  'uth.flopStreet': 'פלופ · העלאה 2× או צ׳ק',
-  'uth.riverStreet': 'ריבר · העלאה 1× או פרישה',
+  'uth.preflopStreet': 'פרה-פלופ · העלאה ⁦4×⁩ או צ׳ק',
+  'uth.flopStreet': 'פלופ · העלאה ⁦2×⁩ או צ׳ק',
+  'uth.riverStreet': 'ריבר · העלאה ⁦1×⁩ או פרישה',
   'uth.tripsPanel': 'הימור צד טריפס',
   'uth.preflopPanel': 'טבלת פרה-פלופ',
   'uth.dealAnother': 'חלק עוד אחת',
   'uth.solving': 'מחשב…',
-  'uth.raise4': 'העלאה 4×',
-  'uth.raise3': 'העלאה 3×',
-  'uth.raise2': 'העלאה 2×',
-  'uth.raise1': 'העלאה 1×',
+  'uth.raise4': 'העלאה ⁦4×⁩',
+  'uth.raise3': 'העלאה ⁦3×⁩',
+  'uth.raise2': 'העלאה ⁦2×⁩',
+  'uth.raise1': 'העלאה ⁦1×⁩',
   'uth.check': 'צ׳ק',
   'uth.board':
     'הלוח',
@@ -7591,19 +7591,19 @@ const HE            = {
   'uth.h.river':
     '{class} · בריבר',
   'uth.s.threeX':
-    '3× הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
+    '⁦3×⁩ הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
   'uth.s.preRaise':
-    '{class} חזקה מספיק להעלאה המקסימלית: 4× שווה **{gap}** יותר מצ׳ק.',
+    '{class} חזקה מספיק להעלאה המקסימלית: ⁦4×⁩ שווה **{gap}** יותר מצ׳ק.',
   'uth.s.preCheck':
     '{class} שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopRaise':
-    '2× עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
+    '⁦2×⁩ עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopCheck':
-    'צ׳ק עדיף על 2× ב-**{gap}**. נשארת לך החלטת 1× בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
+    'צ׳ק עדיף על ⁦2×⁩ ב-**{gap}**. נשארת לך החלטת ⁦1×⁩ בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
   'uth.s.riverRaise':
-    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-−2.',
+    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-⁦−2⁩.',
   'uth.s.riverFold':
-    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן 1× מפסיד יותר מפרישה ב-−2.',
+    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-⁦−2⁩.',
   'uth.line.dealerQualified':
     'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
   'uth.line.dealerNotQualified':
@@ -7611,17 +7611,17 @@ const HE            = {
   'uth.line.tie':
     'תיקו — כל ההימורים חוזרים',
   'uth.line.playWin':
-    'פליי {bet}× מנצח {play}',
+    'פליי {bet} מנצח {play}',
   'uth.line.playLose':
-    'פליי {bet}× מפסיד {play}',
+    'פליי {bet} מפסיד {play}',
   'uth.line.playPush':
-    'פליי {bet}× בתיקו',
+    'פליי {bet} בתיקו',
   'uth.line.blindPaid':
     'הבליינד משלם {blind} על רצף ומעלה',
   'uth.line.blindPush':
     'הבליינד בתיקו — הניצחון היה מתחת לרצף',
   'uth.line.blindLose':
-    'הבליינד מפסיד −1',
+    'הבליינד מפסיד ⁦−1⁩',
   'uth.line.blindTie':
     'הבליינד בתיקו',
   'uth.line.folded':
@@ -7629,11 +7629,11 @@ const HE            = {
   'uth.line.foldPlay':
     'לא הונח הימור פליי',
   'uth.line.forfeit':
-    'האנטה והבליינד אבודים: −2',
+    'האנטה והבליינד אבודים: ⁦−2⁩',
   'uth.line.net':
     'היד {net}',
   'uth.fold': 'פרישה',
-  'uth.threeXNever': 'ההעלאה של 3× מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
+  'uth.threeXNever': 'ההעלאה של ⁦3×⁩ מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
 
   // --- House restrictions (real rules, not display filters) ---
@@ -9857,6 +9857,22 @@ const ACTIONS                                                                  =
   fold: { label: 'uth.fold', key: 'F', code: 'KeyF' },
 };
 
+/**
+ * Keep a figure in one piece inside right-to-left text.
+ *
+ * In a Hebrew sentence a signed number or a raise size is a left-to-right run
+ * beside right-to-left words, and the bidirectional algorithm treats the sign
+ * and the × as neutral characters that belong to whichever side they touch. On
+ * the live page that turned "אנטה −1" into "אנטה 1−" and "העלאה 1×" into
+ * "העלאה ×1" — a player reading the settlement saw the minus on the wrong side
+ * of every loss. A left-to-right isolate (U+2066 … U+2069) makes each figure an
+ * island the algorithm cannot split. English needs none, and gets none.
+ */
+const LRI = '\u2066';
+const PDI = '\u2069';
+const isolateFor = (locale        ) => (text        )         =>
+  locale === 'he' ? `${LRI}${text}${PDI}` : text;
+
 const uthUnits = (value        )         =>
   `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
 const uthPercent = (value        )         => `${Math.round(value * 100)}%`;
@@ -10020,14 +10036,14 @@ class UthSession {
 
     return {
       phase,
-      headline: t(this.locale, `uth.h.${phase}`, { class: holeClass }),
+      headline: t(this.locale, `uth.h.${phase}`, { class: isolateFor(this.locale)(holeClass) }),
       correct,
       severity: record.severityTier,
       verdict: correct
         ? t(this.locale, 'fb.correct', { action: this.label(record.optimalAction) })
         : t(this.locale, 'fb.wrong', {
             severity: t(this.locale, `fb.${record.severityTier}`),
-            cost: record.evCost.toFixed(3),
+            cost: isolateFor(this.locale)(record.evCost.toFixed(3)),
           }),
       youChose: correct
         ? null
@@ -10056,22 +10072,23 @@ class UthSession {
           sentence(record                   , evaluation               , holeClass        )         {
     const ev = record.evByAction;
     const L = this.locale;
+    const iso = isolateFor(L);
 
     if (evaluation.phase === 'preflop') {
       if (record.chosenAction === 'raise3x') {
         return t(L, 'uth.s.threeX', {
-          cost: uthUnits(-record.evCost).replace('−', ''),
+          cost: iso(uthUnits(-record.evCost).replace('−', '')),
           best: this.label(record.optimalAction).toLowerCase(),
         });
       }
       if (record.optimalAction === 'raise4x') {
         return t(L, 'uth.s.preRaise', {
-          class: holeClass,
-          gap: uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', ''),
+          class: iso(holeClass),
+          gap: iso(uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
         });
       }
       return t(L, 'uth.s.preCheck', {
-        class: holeClass,
+        class: iso(holeClass),
         flopRaise: uthPercent(evaluation.flopRaiseFrequency ?? 0),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
@@ -10080,7 +10097,7 @@ class UthSession {
     if (evaluation.phase === 'flop') {
       const gap = Math.abs((ev.raise2x ?? 0) - (ev.check ?? 0));
       return t(L, record.optimalAction === 'raise2x' ? 'uth.s.flopRaise' : 'uth.s.flopCheck', {
-        gap: gap.toFixed(3),
+        gap: iso(gap.toFixed(3)),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
     }
@@ -10101,33 +10118,36 @@ class UthSession {
    */
           lines(s               )                                                    {
     const L = this.locale;
+    const iso = isolateFor(L);
+    const cash = (value        ) => iso(money(value));
+    const bet = iso(`${s.playBet}×`);
     if (s.folded) {
       return {
         lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit')],
-        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: true,
       };
     }
     const tie = s.ante === 0 && s.play === 0 && s.blind === 0 && s.dealerQualified;
     if (tie) {
       return {
-        lines: [t(L, 'uth.line.tie'), t(L, 'uth.line.playPush', { bet: s.playBet }), t(L, 'uth.line.blindTie')],
-        net: t(L, 'uth.line.net', { net: money(s.net) }),
+        lines: [t(L, 'uth.line.tie'), t(L, 'uth.line.playPush', { bet }), t(L, 'uth.line.blindTie')],
+        net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: false,
       };
     }
     const dealer = s.dealerQualified
-      ? t(L, 'uth.line.dealerQualified', { ante: money(s.ante) })
+      ? t(L, 'uth.line.dealerQualified', { ante: cash(s.ante) })
       : t(L, 'uth.line.dealerNotQualified');
     const play =
       s.play > 0
-        ? t(L, 'uth.line.playWin', { bet: s.playBet, play: money(s.play) })
+        ? t(L, 'uth.line.playWin', { bet, play: cash(s.play) })
         : s.play < 0
-          ? t(L, 'uth.line.playLose', { bet: s.playBet, play: money(s.play) })
-          : t(L, 'uth.line.playPush', { bet: s.playBet });
+          ? t(L, 'uth.line.playLose', { bet, play: cash(s.play) })
+          : t(L, 'uth.line.playPush', { bet });
     const blind =
       s.blind > 0
-        ? t(L, 'uth.line.blindPaid', { blind: money(s.blind) })
+        ? t(L, 'uth.line.blindPaid', { blind: cash(s.blind) })
         : s.blindPushed
           ? t(L, 'uth.line.blindPush')
           : s.blind < 0
@@ -10135,7 +10155,7 @@ class UthSession {
             : t(L, 'uth.line.blindTie');
     return {
       lines: [dealer, play, blind],
-      net: t(L, 'uth.line.net', { net: money(s.net) }),
+      net: t(L, 'uth.line.net', { net: cash(s.net) }),
       folded: false,
     };
   }
@@ -11773,6 +11793,14 @@ const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 
 const el = (id) => document.getElementById(id);
 
+/**
+ * A figure kept in one piece inside right-to-left text: in Hebrew, "−0.416"
+ * next to a Hebrew label otherwise draws as "0.416−". See `isolateFor` in
+ * uth-session.ts, which does the same for the prose composed there.
+ */
+const uthFigure = (text) =>
+  document.documentElement.getAttribute('dir') === 'rtl' ? `\u2066${text}\u2069` : text;
+
 const uthState = {
   view: null,
   busy: false,
@@ -11920,7 +11948,7 @@ function uthRenderRail(view) {
     const delta = document.createElement('span');
     const net = view.stack.lastNet;
     delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
-    delta.textContent = `${net > 0 ? '+' : ''}${net}`;
+    delta.textContent = uthFigure(`${net > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net)}`);
     delta.hidden = true;
     bank.appendChild(delta);
   }
@@ -11973,7 +12001,8 @@ function uthRenderCard(view) {
     const chip = document.createElement('span');
     chip.className =
       'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    chip.textContent = `${entry.label}: ${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`;
+    chip.textContent =
+      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`);
     evs.appendChild(chip);
   });
   box.appendChild(evs);
