@@ -19,7 +19,7 @@ import { evaluate7 } from '../poker/evaluator.ts';
 import { categoryOf, significantRanks, type HandCategory, type Rank } from '../poker/handValue.ts';
 
 /** How many of a category's significant ranks a plain description names. */
-const NAMED_RANKS: Readonly<Record<HandCategory, number>> = {
+export const NAMED_RANKS: Readonly<Record<HandCategory, number>> = {
   0: 1, // high card: the top card
   1: 1, // pair: the pair
   2: 2, // two pair: both pairs

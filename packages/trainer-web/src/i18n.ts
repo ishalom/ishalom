@@ -338,6 +338,106 @@ const EN: Catalogue = {
     'You are graded on the **decision**, not the result: the card shows what every choice was worth and what yours cost. The cards come after it, and quieter.',
   'uth.howto.trips':
     '**Trips is not offered here.** Under the default Trips paytable it costs **{edge}** of every bet placed on it.',
+  'uth.class.pair':
+    'a pair of {p}',
+  'uth.class.suited':
+    '{hilo}, same suit',
+  'uth.class.offsuit':
+    '{hilo}, different suits',
+  'uth.note.suitFlips':
+    'Because your cards are suited, **{best}** is worth {ev}. With the same cards in different suits the best play is **{offBest}**, at {offEv} — the suit changes the decision.',
+  'uth.note.suitSame':
+    'Being suited adds {gap} here — **{best}** is worth {ev} suited and {offEv} in different suits — but the decision is the same.',
+  'uth.note.connector':
+    'The surprise worth knowing: in Ultimate even suited connectors like these are a check before the flop, not a raise. You are up against the dealer’s hand, where high cards count for more; the flush and straight chances are what make the hand worth keeping, and worth betting later if they arrive.',
+  'uth.note.onlyWith':
+    'The dealer beats you only with {list}.',
+  'uth.note.closest':
+    'The closest hands that beat you: {list}.',
+  'uth.note.nothingBeats':
+    'Nothing the dealer could hold beats you.',
+  'uth.list.or':
+    ' or ',
+  'uth.show.you':
+    'You: {hand} ({five})',
+  'uth.show.dealer':
+    'Dealer: {hand} ({five})',
+  'uth.show.legend':
+    'Gold ring: your five cards. Grey ring: the dealer’s.',
+  'uthHand.0':
+    '{r1} high',
+  'uthHand.1':
+    'a pair of {p1}',
+  'uthHand.2':
+    'two pair, {p1} and {p2}',
+  'uthHand.3':
+    'three {p1}',
+  'uthHand.4':
+    'a straight to the {r1}',
+  'uthHand.5':
+    'a flush to the {r1}',
+  'uthHand.6':
+    'a full house, three {p1} and two {p2}',
+  'uthHand.7':
+    'four {p1}',
+  'uthHand.8':
+    'a straight flush to the {r1}',
+  'uthHand.royal':
+    'a royal flush',
+  'uthHand.kicker':
+    '{hand} with a better kicker',
+  'rankName.0':
+    'two',
+  'rankPlural.0':
+    'twos',
+  'rankName.1':
+    'three',
+  'rankPlural.1':
+    'threes',
+  'rankName.2':
+    'four',
+  'rankPlural.2':
+    'fours',
+  'rankName.3':
+    'five',
+  'rankPlural.3':
+    'fives',
+  'rankName.4':
+    'six',
+  'rankPlural.4':
+    'sixes',
+  'rankName.5':
+    'seven',
+  'rankPlural.5':
+    'sevens',
+  'rankName.6':
+    'eight',
+  'rankPlural.6':
+    'eights',
+  'rankName.7':
+    'nine',
+  'rankPlural.7':
+    'nines',
+  'rankName.8':
+    'ten',
+  'rankPlural.8':
+    'tens',
+  'rankName.9':
+    'jack',
+  'rankPlural.9':
+    'jacks',
+  'rankName.10':
+    'queen',
+  'rankPlural.10':
+    'queens',
+  'rankName.11':
+    'king',
+  'rankPlural.11':
+    'kings',
+  'rankName.12':
+    'ace',
+  'rankPlural.12':
+    'aces',
   'uth.board':
     'Board',
   'uth.ante':
@@ -367,17 +467,17 @@ const EN: Catalogue = {
   'uth.s.threeX':
     '3× is the best play on **none of the 169 starting hands** — any hand worth raising is worth raising the maximum. Here it gives up **{cost}** against {best}.',
   'uth.s.preRaise':
-    '{class} is strong enough to raise the maximum: 4× is worth **{gap}** more than checking.',
+    'This hand is strong enough to raise the maximum: 4× is worth **{gap}** more than checking.',
   'uth.s.preCheck':
-    '{class} is worth more checked. Checked, it goes on to raise the flop in {flopRaise} of cases and to fold the river in {riverFold} of cases.',
+    'This hand is worth more checked. Checked, it goes on to raise the flop in {flopRaise} of cases and to fold the river in {riverFold} of cases.',
   'uth.s.flopRaise':
     '2× beats checking by **{gap}**. Checked, this hand ends up folding the river in {riverFold} of cases.',
   'uth.s.flopCheck':
     'Checking beats 2× by **{gap}**. You keep a 1× decision on the river, and fold it in {riverFold} of cases.',
   'uth.s.riverRaise':
-    'Your hand beats **{wins}** and ties {ties} of the 990 hands the dealer could hold — worth more than folding for −2.',
+    'Your hand beats **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose} — worth more than folding for {fold}.',
   'uth.s.riverFold':
-    'Your hand beats only **{wins}** of the 990 hands the dealer could hold, so 1× loses more than folding for −2.',
+    'Your hand beats only **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose}, so 1× loses more than folding for {fold}.',
   'uth.line.dealerQualified':
     'Dealer qualifies with a pair or better — Ante {ante}',
   'uth.line.dealerNotQualified':
@@ -829,6 +929,106 @@ const HE: Catalogue = {
     'הציון הוא על **ההחלטה**, לא על התוצאה: הכרטיס מראה כמה שווה כל אפשרות וכמה עלתה הבחירה שלך. הקלפים מגיעים אחריו, ובשקט.',
   'uth.howto.trips':
     '**טריפס לא מוצע כאן.** בטבלת התשלומים ברירת המחדל שלו הוא עולה **{edge}** מכל הימור שמונח עליו.',
+  'uth.class.pair':
+    'זוג {p}',
+  'uth.class.suited':
+    '{hilo} באותה צורה',
+  'uth.class.offsuit':
+    '{hilo} בצורות שונות',
+  'uth.note.suitFlips':
+    'בגלל שהקלפים שלך באותה צורה, **{best}** שווה {ev}. עם אותם קלפים בצורות שונות הבחירה הטובה היא **{offBest}**, ב-{offEv} — הצורה משנה את ההחלטה.',
+  'uth.note.suitSame':
+    'הצורה המשותפת מוסיפה כאן {gap} — **{best}** שווה {ev} באותה צורה ו-{offEv} בצורות שונות — אבל ההחלטה זהה.',
+  'uth.note.connector':
+    'ההפתעה שכדאי לדעת: באולטימייט גם קלפים עוקבים באותה צורה כמו אלה הם צ׳ק לפני הפלופ, לא העלאה. אתה מול היד של הדילר, ושם קלפים גבוהים שווים יותר; הסיכוי לפלאש או לרצף הוא מה שהופך את היד לשווה שמירה, ולשווה הימור בהמשך אם הוא מגיע.',
+  'uth.note.onlyWith':
+    'הדילר מנצח אותך רק עם {list}.',
+  'uth.note.closest':
+    'הידיים הקרובות ביותר שמנצחות אותך: {list}.',
+  'uth.note.nothingBeats':
+    'אין לדילר יד שמנצחת אותך.',
+  'uth.list.or':
+    ' או ',
+  'uth.show.you':
+    'אתה: {hand} ({five})',
+  'uth.show.dealer':
+    'הדילר: {hand} ({five})',
+  'uth.show.legend':
+    'טבעת זהב: חמשת הקלפים שלך. טבעת אפורה: של הדילר.',
+  'uthHand.0':
+    'קלף גבוה {r1}',
+  'uthHand.1':
+    'זוג {p1}',
+  'uthHand.2':
+    'שני זוגות, {p1} ו-{p2}',
+  'uthHand.3':
+    'שלישייה של {p1}',
+  'uthHand.4':
+    'רצף עד {r1}',
+  'uthHand.5':
+    'פלאש עד {r1}',
+  'uthHand.6':
+    'פול האוס, שלושה {p1} ושניים {p2}',
+  'uthHand.7':
+    'רביעייה של {p1}',
+  'uthHand.8':
+    'סטרייט פלאש עד {r1}',
+  'uthHand.royal':
+    'רויאל פלאש',
+  'uthHand.kicker':
+    '{hand} עם קלף צד גבוה יותר',
+  'rankName.0':
+    '⁦2⁩',
+  'rankPlural.0':
+    '⁦2⁩',
+  'rankName.1':
+    '⁦3⁩',
+  'rankPlural.1':
+    '⁦3⁩',
+  'rankName.2':
+    '⁦4⁩',
+  'rankPlural.2':
+    '⁦4⁩',
+  'rankName.3':
+    '⁦5⁩',
+  'rankPlural.3':
+    '⁦5⁩',
+  'rankName.4':
+    '⁦6⁩',
+  'rankPlural.4':
+    '⁦6⁩',
+  'rankName.5':
+    '⁦7⁩',
+  'rankPlural.5':
+    '⁦7⁩',
+  'rankName.6':
+    '⁦8⁩',
+  'rankPlural.6':
+    '⁦8⁩',
+  'rankName.7':
+    '⁦9⁩',
+  'rankPlural.7':
+    '⁦9⁩',
+  'rankName.8':
+    '⁦10⁩',
+  'rankPlural.8':
+    '⁦10⁩',
+  'rankName.9':
+    '⁦J⁩',
+  'rankPlural.9':
+    '⁦J⁩',
+  'rankName.10':
+    '⁦Q⁩',
+  'rankPlural.10':
+    '⁦Q⁩',
+  'rankName.11':
+    '⁦K⁩',
+  'rankPlural.11':
+    '⁦K⁩',
+  'rankName.12':
+    '⁦A⁩',
+  'rankPlural.12':
+    '⁦A⁩',
   'uth.board':
     'הלוח',
   'uth.ante':
@@ -858,17 +1058,17 @@ const HE: Catalogue = {
   'uth.s.threeX':
     '⁦3×⁩ הוא המהלך הטוב ביותר **באף אחת מ-169 הידיים הפותחות** — כל יד ששווה להעלות, שווה להעלות את המקסימום. כאן הוא מוותר על **{cost}** מול {best}.',
   'uth.s.preRaise':
-    '{class} חזקה מספיק להעלאה המקסימלית: ⁦4×⁩ שווה **{gap}** יותר מצ׳ק.',
+    'היד הזו חזקה מספיק להעלאה המקסימלית: ⁦4×⁩ שווה **{gap}** יותר מצ׳ק.',
   'uth.s.preCheck':
-    '{class} שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
+    'היד הזו שווה יותר בצ׳ק. אחרי צ׳ק, היא ממשיכה להעלאה בפלופ ב-{flopRaise} מהמקרים ולפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopRaise':
     '⁦2×⁩ עדיף על צ׳ק ב-**{gap}**. אחרי צ׳ק, היד הזו מגיעה לפרישה בריבר ב-{riverFold} מהמקרים.',
   'uth.s.flopCheck':
     'צ׳ק עדיף על ⁦2×⁩ ב-**{gap}**. נשארת לך החלטת ⁦1×⁩ בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
   'uth.s.riverRaise':
-    'היד שלך מנצחת **{wins}** ומשתווה ל-{ties} מתוך 990 הידיים שיכולות להיות לדילר — שווה יותר מפרישה ב-⁦−2⁩.',
+    'היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose} — שווה יותר מפרישה ב-{fold}.',
   'uth.s.riverFold':
-    'היד שלך מנצחת רק **{wins}** מתוך 990 הידיים שיכולות להיות לדילר, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-⁦−2⁩.',
+    'היד שלך מנצחת רק **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose}, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-{fold}.',
   'uth.line.dealerQualified':
     'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
   'uth.line.dealerNotQualified':

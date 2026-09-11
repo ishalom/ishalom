@@ -91,6 +91,7 @@ async function uthPrepare() {
 function uthCard(card) {
   const node = document.createElement('div');
   node.className = 'card dealt' + (card.red ? ' red' : '');
+  if (card.code !== undefined) node.dataset.code = String(card.code);
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', card.label);
   const rank = document.createElement('span');
@@ -111,6 +112,19 @@ function uthBack() {
   return node;
 }
 
+/**
+ * How many decimals each EV chip shows.
+ *
+ * Three, unless two different values would print the same — K4s showed 3× and
+ * check both as +0.019 when they are +0.0193 and +0.0189, and chips that look
+ * equal but are ranked differently read as a bug. Those chips get a fourth
+ * decimal. Truly equal values stay at three: there the chips should look equal.
+ */
+function uthChipDigits(evs) {
+  const three = evs.map((ev) => ev.toFixed(3));
+  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
+}
+
 /** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
 function uthRich(target, text) {
   target.replaceChildren();
@@ -123,6 +137,37 @@ function uthRich(target, text) {
       target.appendChild(document.createTextNode(part));
     }
   });
+}
+
+/*
+ * On a portrait phone the felt, the card and the buttons share one screen. A
+ * long card would otherwise climb over your own two cards, which at showdown are
+ * ringed and are the point of the rings. So the card is capped at the room left
+ * under your hand, and scrolls inside itself past that. A floor keeps it
+ * readable on a short screen, where the page scrolls instead; wider screens keep
+ * the stylesheet's cap.
+ */
+function uthFitCard() {
+  const card = el('uth-card');
+  const hole = el('uth-hole');
+  const actions = el('uth-actions');
+  if (!card || !hole || !actions || !card.style || typeof getComputedStyle !== 'function') return;
+  if (!(window.innerWidth <= 560) || !hole.children.length) {
+    card.style.maxHeight = '';
+    return;
+  }
+  const style = getComputedStyle(card);
+  const chrome =
+    style.boxSizing === 'border-box'
+      ? 0
+      : parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
+  const holeBottom = hole.getBoundingClientRect().bottom + window.scrollY;
+  const room = window.innerHeight - holeBottom - actions.getBoundingClientRect().height - chrome - 8;
+  card.style.maxHeight = `${Math.floor(Math.min(Math.max(150, room), window.innerHeight * 0.42))}px`;
+}
+if (!window.__uthFitBound && typeof window.addEventListener === 'function') {
+  window.__uthFitBound = true;
+  window.addEventListener('resize', () => uthFitCard());
 }
 
 function uthRender() {
@@ -143,10 +188,24 @@ function uthRender() {
   el('uth-board').replaceChildren(...board);
 
   el('uth-hole').replaceChildren(...view.hole.map(uthCard));
-  el('uth-class').textContent = view.holeClass ?? '';
+  // Plain words beside "You"; the notation is there for anyone who hovers.
+  el('uth-class').textContent = view.holeWords ?? '';
+  el('uth-class').title = view.holeClass ?? '';
+
+  /*
+   * At showdown, ring the five cards that make each hand: gold for yours, grey
+   * for the dealer's. A board card in both hands carries both rings.
+   */
+  const shown = view.showdown;
+  for (const node of document.querySelectorAll('#uth-table .card[data-code]')) {
+    const code = Number(node.dataset.code);
+    node.classList.toggle('best-you', !!shown && shown.player.cards.includes(code));
+    node.classList.toggle('best-dealer', !!shown && shown.dealer.cards.includes(code));
+  }
 
   uthRenderRail(view);
   uthRenderCard(view);
+  uthFitCard();
   uthRenderStats(view);
   uthRenderLog(view);
   uthRenderActions();
@@ -297,11 +356,16 @@ function uthRenderLog(view) {
       const sentence = document.createElement('p');
       uthRich(sentence, decision.sentence);
       block.append(head, sentence);
+      for (const line of decision.notes || []) {
+        const note = document.createElement('p');
+        uthRich(note, line);
+        block.appendChild(note);
+      }
       steps.appendChild(block);
     }
     const result = document.createElement('div');
     result.className = 'uth-result';
-    for (const line of [...hand.lines, hand.netLine]) {
+    for (const line of [...(hand.showdown || []), ...hand.lines, hand.netLine]) {
       const p = document.createElement('p');
       p.textContent = line;
       result.appendChild(p);
@@ -407,12 +471,13 @@ function uthRenderCard(view) {
 
   const evs = document.createElement('div');
   evs.className = 'evs';
+  const digits = uthChipDigits(feedback.ranked.map((entry) => entry.ev));
   feedback.ranked.forEach((entry, index) => {
     const chip = document.createElement('span');
     chip.className =
       'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
     chip.textContent =
-      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(3)}`);
+      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(digits[index])}`);
     evs.appendChild(chip);
   });
   box.appendChild(evs);
@@ -421,11 +486,29 @@ function uthRenderCard(view) {
   sentence.className = 'reason';
   uthRich(sentence, feedback.sentence);
   box.appendChild(sentence);
+  for (const line of feedback.notes || []) {
+    const note = document.createElement('p');
+    note.className = 'reason uth-note';
+    uthRich(note, line);
+    box.appendChild(note);
+  }
 
   if (view.settlement) {
     const result = document.createElement('div');
     result.className = 'uth-result uth-late';
     result.hidden = true;
+    if (view.showdown) {
+      for (const line of [view.showdown.player.words, view.showdown.dealer.words]) {
+        const p = document.createElement('p');
+        p.className = 'uth-hand-name';
+        p.textContent = line;
+        result.appendChild(p);
+      }
+      const legend = document.createElement('p');
+      legend.className = 'uth-legend';
+      legend.textContent = view.showdown.legend;
+      result.appendChild(legend);
+    }
     for (const line of view.settlement.lines) {
       const p = document.createElement('p');
       p.textContent = line;

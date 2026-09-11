@@ -578,6 +578,16 @@ function describeSpotLine(feedback) {
  * seeing the answer (§3.4). A player who has chosen to skip the walkthrough
  * gets it immediately, which is the point of that setting.
  */
+/**
+ * How many decimals each EV chip shows: three, unless two different values
+ * would print the same, when both get a fourth. Chips that look equal but are
+ * ranked differently read as a bug. The same rule as the UTH card.
+ */
+function chipDigits(evs) {
+  const three = evs.map((ev) => ev.toFixed(3));
+  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
+}
+
 function renderQuickCard(view) {
   const box = el('quickcard');
   if (!box) return;
@@ -673,7 +683,7 @@ function renderQuickCard(view) {
     chip.className =
       'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
     const sign = entry.ev >= 0 ? '+' : '';
-    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(3)}`;
+    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(chipDigits(feedback.ranked.map((e) => e.ev))[index])}`;
     evs.appendChild(chip);
   });
   box.appendChild(evs);

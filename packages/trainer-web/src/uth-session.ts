@@ -13,16 +13,29 @@
  * Since round 4b this session is saved. It reads and writes the `uth` part of a
  * version 3 progress blob; the shell composes that with the Blackjack part into
  * the one record a browser and a player's row hold.
+ *
+ * Since round 5 it also explains in plain words: percentages on the river and
+ * the hands that beat you, both final hands named at showdown with their five
+ * cards, the starting hand described rather than written as "62s", and what the
+ * suit is worth before the flop. Every figure still comes from the engine.
  */
 
 import {
+  NAMED_RANKS,
   PREFLOP_TABLE,
   TRIPS_PAYTABLES,
   analyseTrips,
+  bestFive,
+  categoryOf,
   formatCard,
+  preflopRow,
   rankOf,
+  riverOdds,
+  significantRanks,
   suitOf,
   type Card,
+  type HandCategory,
+  type PreflopRow,
   type SeverityTier,
 } from '@evtrainer/ev-engine/uth';
 import {
@@ -49,6 +62,8 @@ export interface PokerCardView {
   suit: string;
   red: boolean;
   label: string;
+  /** The engine's card number, so the page can mark the five that make a hand. */
+  code: number;
 }
 
 function pokerCardView(card: Card): PokerCardView {
@@ -59,8 +74,12 @@ function pokerCardView(card: Card): PokerCardView {
     suit: POKER_SUITS[suit]!,
     red: suit === 1 || suit === 2,
     label: formatCard(card),
+    code: card,
   };
 }
+
+/** A rank as it is printed on a card: 2–10, J, Q, K, A. */
+const rankSymbol = (rank: number): string => (rank === 8 ? '10' : POKER_RANKS[rank]!);
 
 /** The label key for each action, and the physical key that plays it. */
 const ACTIONS: Record<UthAction, { label: string; key: string; code: string }> = {
@@ -100,6 +119,27 @@ const money = (value: number): string => {
   return `${value < 0 ? '−' : value > 0 ? '+' : ''}${text}`;
 };
 
+/**
+ * Whole-number percentages that add to exactly 100.
+ *
+ * Rounding each share separately can show 83% + 11% + 5% = 99%, and a player who
+ * adds them up — some will — has caught the page in a small lie. Largest
+ * remainder: round everything down, then hand the missing points to the shares
+ * that lost the most in rounding.
+ */
+export function wholePercents(counts: readonly number[]): number[] {
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (total === 0) return counts.map(() => 0);
+  const exact = counts.map((count) => (count * 100) / total);
+  const floors = exact.map((value) => Math.floor(value));
+  const missing = 100 - floors.reduce((sum, value) => sum + value, 0);
+  const order = exact
+    .map((value, index) => ({ remainder: value - floors[index]!, index }))
+    .sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  for (let k = 0; k < missing; k++) floors[order[k]!.index]!++;
+  return floors;
+}
+
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
 
@@ -131,6 +171,28 @@ export function uthPerfectPlayEdgePercent(): number {
   return perfectPlayEdge;
 }
 
+/** A group of dealer holdings that beat the player, as saved: data, worded later. */
+interface SavedThreat {
+  category: HandCategory;
+  ranks: number[];
+  count: number;
+}
+
+/** The river facts the card words, saved with the decision so the log can word them again. */
+interface RiverFacts {
+  wins?: number;
+  ties?: number;
+  losses?: number;
+  /** The closest groups that beat the player, weakest first. */
+  threats?: SavedThreat[];
+  /** True when those groups are every dealer holding that beats the player. */
+  covered?: boolean;
+  /** The player's river hand, for "the same hand with a better kicker". */
+  playerValue?: number;
+}
+
+type Explained = UthEvaluation & RiverFacts;
+
 export interface UthFeedback {
   phase: 'preflop' | 'flop' | 'river';
   headline: string;
@@ -146,6 +208,8 @@ export interface UthFeedback {
   ranked: Array<{ action: UthAction; label: string; ev: number }>;
   /** One plain sentence, from the same solve as the grade. */
   sentence: string;
+  /** Further lines, each shown only when it is true for this hand. */
+  notes: string[];
   /** How long the solve took. Zero pre-flop, where it is a lookup. */
   solveMs: number;
 }
@@ -162,10 +226,7 @@ export interface UthSavedDecision {
   facts: {
     flopRaiseFrequency?: number;
     riverFoldFrequency?: number;
-    wins?: number;
-    ties?: number;
-    losses?: number;
-  };
+  } & RiverFacts;
 }
 
 export interface UthPlayedHand {
@@ -221,6 +282,13 @@ const zeroSeverity = (): Record<SeverityTier, number> => ({
   blunder: 0,
 });
 
+/** The best play in a pre-flop row, and what it is worth. */
+function bestOf(row: PreflopRow): { action: UthAction; ev: number } {
+  if (row.optimalAction === 'raise4x') return { action: 'raise4x', ev: row.ev4x };
+  if (row.optimalAction === 'raise3x') return { action: 'raise3x', ev: row.ev3x };
+  return { action: 'check', ev: row.evCheck };
+}
+
 export class UthSession {
   /** The stack a new player opens with, in units of the Ante. */
   static readonly STARTING_STACK = 200;
@@ -245,8 +313,7 @@ export class UthSession {
   private lastNet: number | null = null;
 
   /** The last graded decision, kept so a language change can re-word the card. */
-  private last: { record: UthDecisionRecord; evaluation: UthEvaluation; holeClass: string } | null =
-    null;
+  private last: { record: UthDecisionRecord; evaluation: Explained; holeClass: string } | null = null;
 
   constructor(seed?: number) {
     this.table = new UthTable(seed === undefined ? {} : { seed });
@@ -289,7 +356,19 @@ export class UthSession {
   act(action: UthAction): unknown {
     const holeClass = this.table.holeClass;
     // Read before acting: `act()` moves the phase on and clears the cache.
-    const evaluation = this.table.evaluate();
+    const evaluation: Explained = { ...this.table.evaluate() };
+    if (evaluation.phase === 'river') {
+      /*
+       * The same 990 holdings the river was graded on, asked which ones beat the
+       * player most narrowly. Counted again rather than read off the grade, and
+       * held to the solver's counts by a test in the engine.
+       */
+      const view = this.table.view;
+      const odds = riverOdds(view.hole, view.board, 3);
+      evaluation.threats = odds.closest.map((g) => ({ category: g.category, ranks: g.ranks, count: g.count }));
+      evaluation.covered = odds.closest.reduce((sum, g) => sum + g.count, 0) === odds.losses;
+      evaluation.playerValue = odds.playerValue;
+    }
     const record = this.table.act(action);
     this.last = { record, evaluation, holeClass };
     this.count(record, evaluation);
@@ -322,7 +401,7 @@ export class UthSession {
   }
 
   /** The same counters, and the same close-call rule, as Blackjack's `absorb`. */
-  private count(record: UthDecisionRecord, evaluation: UthEvaluation): void {
+  private count(record: UthDecisionRecord, evaluation: Explained): void {
     const evs = record.legalActions
       .map((a) => record.evByAction[a] ?? 0)
       .sort((a, b) => b - a);
@@ -353,6 +432,9 @@ export class UthSession {
         wins: evaluation.wins,
         ties: evaluation.ties,
         losses: evaluation.losses,
+        threats: evaluation.threats,
+        covered: evaluation.covered,
+        playerValue: evaluation.playerValue,
       },
     });
   }
@@ -510,7 +592,9 @@ export class UthSession {
       dealerRevealed: table.dealerRevealed,
       board: table.board.map(pokerCardView),
       boardHidden: inHand ? 5 - table.board.length : 0,
+      // Notation for the tooltip; words for the player.
       holeClass: inHand ? this.table.holeClass : null,
+      holeWords: inHand ? this.classWords(this.table.holeClass) : null,
       stake: {
         ante: table.ante,
         blind: table.blind,
@@ -537,6 +621,10 @@ export class UthSession {
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
       settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+      showdown:
+        settled && table.settlement && !table.settlement.folded
+          ? this.showdown(table.hole, table.dealerHole, table.board)
+          : null,
       history: this.history.map((hand) => this.logEntry(hand)),
       howTo: this.howTo(),
     };
@@ -558,6 +646,73 @@ export class UthSession {
         edge: isolateFor(this.locale)(`${trips.houseEdgePercent.toFixed(2)}%`),
       }),
     ];
+  }
+
+  // --- Plain words ---------------------------------------------------------
+
+  /**
+   * A starting hand in words: "A-K, different suits", "a pair of sevens".
+   *
+   * "62s" is poker notation, and most of the family does not read it. The
+   * notation is kept in the view for a tooltip; everything a player reads first
+   * uses this.
+   */
+  private classWords(label: string): string {
+    const L = this.locale;
+    const hi = POKER_RANKS.indexOf(label[0]!);
+    const lo = POKER_RANKS.indexOf(label[1]!);
+    if (hi === lo) return t(L, 'uth.class.pair', { p: t(L, `rankPlural.${hi}`) });
+    const hilo = isolateFor(L)(`${rankSymbol(hi)}-${rankSymbol(lo)}`);
+    return t(L, label.endsWith('s') ? 'uth.class.suited' : 'uth.class.offsuit', { hilo });
+  }
+
+  /** A hand described from its category and the ranks that decide it. */
+  private handPhrase(category: HandCategory, ranks: readonly number[]): string {
+    const L = this.locale;
+    if (category === 8 && ranks[0] === 12) return t(L, 'uthHand.royal');
+    return t(L, `uthHand.${category}`, {
+      r1: t(L, `rankName.${ranks[0] ?? 0}`),
+      p1: t(L, `rankPlural.${ranks[0] ?? 0}`),
+      p2: t(L, `rankPlural.${ranks[1] ?? 0}`),
+    });
+  }
+
+  /**
+   * Both final hands, named, with the five cards that make each.
+   *
+   * `bestFive` asks the same evaluator which five of the seven scored the hand,
+   * so the cards ringed on the felt and the ranks in brackets can never disagree
+   * with the hand the settlement was paid on.
+   */
+  private showdown(hole: Card[], dealerHole: Card[], board: Card[]) {
+    const L = this.locale;
+    const iso = isolateFor(L);
+    const describe = (cards: Card[], key: string) => {
+      const best = bestFive(cards);
+      const category = categoryOf(best.value);
+      const counts = new Map<number, number>();
+      for (const card of best.cards) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
+      const ordered = [...best.cards].sort((a, b) => {
+        const byCount = counts.get(rankOf(b))! - counts.get(rankOf(a))!;
+        return byCount !== 0 ? byCount : rankOf(b) - rankOf(a);
+      });
+      // A wheel reads 5-4-3-2-A, the way it is played.
+      const ranks = ordered.map((card) => rankOf(card));
+      const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
+      const shown = wheel ? [...ranks.slice(1), 12] : ranks;
+      return {
+        words: t(L, key, {
+          hand: this.handPhrase(category, significantRanks(best.value)),
+          five: iso(shown.map(rankSymbol).join('-')),
+        }),
+        cards: best.cards,
+      };
+    };
+    return {
+      player: describe([...hole, ...board], 'uth.show.you'),
+      dealer: describe([...dealerHole, ...board], 'uth.show.dealer'),
+      legend: t(L, 'uth.show.legend'),
+    };
   }
 
   // --- The hand log ----------------------------------------------------------
@@ -596,7 +751,7 @@ export class UthSession {
         severityTier: d.severityTier,
         timeToDecideMs: null,
       };
-      const evaluation: UthEvaluation = {
+      const evaluation: Explained = {
         phase: d.phase,
         evByAction: d.evByAction,
         optimalAction: d.optimalAction,
@@ -612,6 +767,7 @@ export class UthSession {
         severity: d.severityTier,
         correct: card.correct,
         sentence: card.sentence,
+        notes: card.notes,
       };
     });
 
@@ -627,6 +783,7 @@ export class UthSession {
       'optimal',
     );
     const result = this.lines(hand.settlement);
+    const shown = hand.settlement.folded ? null : this.showdown(hand.hole, hand.dealerHole, hand.board);
 
     return {
       id: hand.id,
@@ -639,6 +796,7 @@ export class UthSession {
       severity: worst,
       net: hand.settlement.net,
       decisions,
+      showdown: shown ? [shown.player.words, shown.dealer.words] : [],
       lines: result.lines,
       netLine: result.net,
     };
@@ -652,7 +810,7 @@ export class UthSession {
 
   private compose(last: {
     record: UthDecisionRecord;
-    evaluation: UthEvaluation;
+    evaluation: Explained;
     holeClass: string;
   }): UthFeedback {
     const { record, evaluation, holeClass } = last;
@@ -664,7 +822,7 @@ export class UthSession {
 
     return {
       phase,
-      headline: t(this.locale, `uth.h.${phase}`, { class: isolateFor(this.locale)(holeClass) }),
+      headline: t(this.locale, `uth.h.${phase}`, { class: this.classWords(holeClass) }),
       correct,
       severity: record.severityTier,
       verdict: correct
@@ -683,7 +841,8 @@ export class UthSession {
       optimal: record.optimalAction,
       evCost: record.evCost,
       ranked,
-      sentence: this.sentence(record, evaluation, holeClass),
+      sentence: this.sentence(record, evaluation),
+      notes: phase === 'preflop' ? this.preflopNotes(holeClass) : phase === 'river' ? this.riverNotes(evaluation) : [],
       solveMs: evaluation.solveMs,
     };
   }
@@ -697,7 +856,7 @@ export class UthSession {
    * is a claim about the choice, not the spot: 3× is the best play on none of
    * the 169 starting hands.
    */
-  private sentence(record: UthDecisionRecord, evaluation: UthEvaluation, holeClass: string): string {
+  private sentence(record: UthDecisionRecord, evaluation: Explained): string {
     const ev = record.evByAction;
     const L = this.locale;
     const iso = isolateFor(L);
@@ -711,12 +870,10 @@ export class UthSession {
       }
       if (record.optimalAction === 'raise4x') {
         return t(L, 'uth.s.preRaise', {
-          class: iso(holeClass),
           gap: iso(uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
         });
       }
       return t(L, 'uth.s.preCheck', {
-        class: iso(holeClass),
         flopRaise: uthPercent(evaluation.flopRaiseFrequency ?? 0),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
@@ -730,10 +887,94 @@ export class UthSession {
       });
     }
 
+    /*
+     * The river, in percentages a player reads at a glance. The counts are the
+     * solver's; the rounding keeps the three shares adding to exactly 100.
+     */
+    const [win, tie, lose] = wholePercents([evaluation.wins ?? 0, evaluation.ties ?? 0, evaluation.losses ?? 0]);
     return t(L, record.optimalAction === 'raise1x' ? 'uth.s.riverRaise' : 'uth.s.riverFold', {
-      wins: evaluation.wins ?? 0,
-      ties: evaluation.ties ?? 0,
+      win: `${win}%`,
+      tie: `${tie}%`,
+      lose: `${lose}%`,
+      fold: iso('−2'),
     });
+  }
+
+  /**
+   * On the river: the dealer holdings that beat the player most narrowly.
+   *
+   * "Only with" is said only when those groups are every holding that beats the
+   * player; otherwise the line says they are the closest, which is what they are.
+   */
+  private riverNotes(evaluation: Explained): string[] {
+    const L = this.locale;
+    const threats = evaluation.threats;
+    if (!threats) return [];
+    if (threats.length === 0) return [t(L, 'uth.note.nothingBeats')];
+    const player = evaluation.playerValue ?? -1;
+    const playerCategory = player >= 0 ? categoryOf(player) : -1;
+    const playerNamed = player >= 0 ? significantRanks(player).slice(0, NAMED_RANKS[categoryOf(player)]) : [];
+    const phrases = threats.map((threat) => {
+      const phrase = this.handPhrase(threat.category, threat.ranks);
+      const sameHand =
+        threat.category === playerCategory &&
+        threat.ranks.length === playerNamed.length &&
+        threat.ranks.every((rank, i) => rank === playerNamed[i]);
+      return sameHand ? t(L, 'uthHand.kicker', { hand: phrase }) : phrase;
+    });
+    // "a full house, three jacks and two fours" has a comma of its own, so a
+    // list of such hands is separated with semicolons or it cannot be read.
+    const sep = phrases.some((phrase) => phrase.includes(',')) ? ';' : ',';
+    const list =
+      phrases.length === 1
+        ? phrases[0]!
+        : `${phrases.slice(0, -1).join(`${sep} `)}${sep === ';' ? ';' : ''}${t(L, 'uth.list.or')}${phrases[phrases.length - 1]}`;
+    return [t(L, evaluation.covered ? 'uth.note.onlyWith' : 'uth.note.closest', { list })];
+  }
+
+  /**
+   * Before the flop: what the suit is worth, and the suited-connector surprise.
+   *
+   * Both come from the table and appear only when true. A suited hand is set
+   * beside the same ranks in different suits — the suit flips the decision in 7
+   * of the 78 suited classes and only adds value in the rest — and a suited
+   * connector gets Idan's line only when the table says check (T9s yes, QJs no).
+   * Pairs have no suited twin, and a hand in different suits is not told what a
+   * suit would have added: that is the same fact from the other side, and on a
+   * hand the player cannot change it is noise.
+   */
+  private preflopNotes(holeClass: string): string[] {
+    const L = this.locale;
+    const iso = isolateFor(L);
+    if (holeClass.length === 2 || !holeClass.endsWith('s')) return [];
+    const suitedRow = preflopRow(holeClass);
+    const offRow = preflopRow(`${holeClass.slice(0, 2)}o`);
+    const suited = bestOf(suitedRow);
+    const off = bestOf(offRow);
+    const notes: string[] = [];
+    if (suited.action !== off.action) {
+      notes.push(
+        t(L, 'uth.note.suitFlips', {
+          best: this.label(suited.action).toLowerCase(),
+          ev: iso(uthUnits(suited.ev)),
+          offBest: this.label(off.action).toLowerCase(),
+          offEv: iso(uthUnits(off.ev)),
+        }),
+      );
+    } else {
+      notes.push(
+        t(L, 'uth.note.suitSame', {
+          best: this.label(suited.action).toLowerCase(),
+          ev: iso(uthUnits(suited.ev)),
+          offEv: iso(uthUnits(off.ev)),
+          gap: iso(uthUnits(suited.ev - off.ev)),
+        }),
+      );
+    }
+    const hi = POKER_RANKS.indexOf(holeClass[0]!);
+    const lo = POKER_RANKS.indexOf(holeClass[1]!);
+    if (hi - lo === 1 && suitedRow.optimalAction === 'check') notes.push(t(L, 'uth.note.connector'));
+    return notes;
   }
 
   /**
