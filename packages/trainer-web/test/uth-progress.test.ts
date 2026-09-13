@@ -90,8 +90,8 @@ test('a version 1 save still opens, and UTH starts at zero there too', () => {
   assert.equal((uth.view as any).stack.balance, 200);
 });
 
-test('a save is now version 3', () => {
-  assert.equal(new TrainerSession('vegas-strip-6d-s17', 1).progress.version, 3);
+test('a save is now version 4', () => {
+  assert.equal(new TrainerSession('vegas-strip-6d-s17', 1).progress.version, 4);
 });
 
 // --- New saves ------------------------------------------------------------------
@@ -104,7 +104,7 @@ test('close the tab and reopen: the UTH stack, stats and log come back exactly',
 
   // What the browser and the player's row hold: one record, through JSON.
   const record = JSON.parse(JSON.stringify({ ...blackjack.progress, uth: uth.progress }));
-  assert.equal(record.version, 3);
+  assert.equal(record.version, 4);
 
   const reopenedBlackjack = new TrainerSession('vegas-strip-6d-s17', 99);
   const reopenedUth = new UthSession(99);

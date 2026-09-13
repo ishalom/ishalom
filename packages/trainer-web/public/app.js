@@ -33,6 +33,10 @@ const state = {
   shown: { dealer: [], hands: [] },
   /** Guards the one-shot verdict effects; see `flashOnce`. */
   flashed: null,
+  /** Hands settled when the chips last moved, so they move once a hand. */
+  chipsSettled: null,
+  /** Whether the chips are open between hands while the last card is still up. */
+  betOpen: false,
 };
 
 /** Identity of a card in its seat: same rank, same suit, same position. */
@@ -185,6 +189,9 @@ async function api(path, body) {
   return data;
 }
 
+/** Building a bet or taking the rebuy: nothing about the last hand changes. */
+const CHIP_PATHS = ['/api/bet', '/api/rebuy'];
+
 /** Every call that changes the table funnels through here. */
 async function send(path, body) {
   if (state.busy) return;
@@ -192,12 +199,19 @@ async function send(path, body) {
   try {
     // A new hand starts an empty felt, so its first cards are new even if they
     // happen to match the last hand's rank, suit and seat.
-    if (path === '/api/deal') state.shown = { dealer: [], hands: [] };
+    if (path === '/api/deal') {
+      state.shown = { dealer: [], hands: [] };
+      state.betOpen = false;
+    }
     state.view = await api(path, body ?? {});
     const feedback = state.view.feedback;
-    state.reveal = feedback
-      ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
-      : null;
+    // A chip placed after a hand leaves that hand's card where the player had
+    // the reveal, rather than starting the reasoning over.
+    if (!CHIP_PATHS.includes(path)) {
+      state.reveal = feedback
+        ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
+        : null;
+    }
     render();
   } catch (error) {
     console.error(error);
@@ -208,6 +222,16 @@ async function send(path, body) {
 }
 
 // --- Rendering -------------------------------------------------------------
+
+/**
+ * A decision that puts more chips out — a double, a split, insurance — moves
+ * them from the stack to the spot, with the one chip click (round 6b).
+ */
+async function sendPlacing(path, body, placesChips) {
+  const from = placesChips ? document.querySelector('#rail .rail-bank .chips')?.getBoundingClientRect() : null;
+  await send(path, body);
+  if (from && window.EVChips) window.EVChips.place(from, document.querySelector('#rail .rail-bet .chips'), 5);
+}
 
 /**
  * One card, marked by where it came from.
@@ -340,26 +364,44 @@ function chipNodes(amount, cap) {
   });
 }
 
-/** The player's rail: what is in play, and what is behind it. */
+/** A chip figure: exact, a real minus sign, one piece in Hebrew. */
+const chipFigure = (value, signed) =>
+  window.EVChips ? window.EVChips.figure(value, signed) : String(value);
+
+/**
+ * The player's rail: what is in play, and what is behind it.
+ *
+ * Between hands the spot holds the bet being built, and a tap takes the last
+ * chip back. During a hand it holds what is in play, in chips. The stack can be
+ * below zero after a hand that needed more than it held; it is drawn like any
+ * other figure, because it is one (round 6b).
+ */
 function renderRail(view) {
   const box = el('rail');
   if (!box) return;
   const stack = view.stack;
+  const chips = view.chips;
   box.replaceChildren();
+
+  const between = view.phase !== 'player' && view.phase !== 'insurance';
+  const onSpot = between && chips ? chips.bet : stack.wager;
 
   const wager = document.createElement('div');
   wager.className = 'rail-spot rail-bet';
   const wagerChips = document.createElement('span');
   wagerChips.className = 'chips';
   wagerChips.setAttribute('aria-hidden', 'true');
-  wagerChips.replaceChildren(...chipNodes(stack.wager, 12));
+  wagerChips.replaceChildren(...chipNodes(onSpot, 12));
   const wagerFigure = document.createElement('span');
   wagerFigure.className = 'rail-value';
-  wagerFigure.textContent = stack.wager > 0 ? stack.wager : '—';
+  wagerFigure.textContent = onSpot > 0 ? chipFigure(onSpot) : '—';
   const wagerLabel = document.createElement('span');
   wagerLabel.className = 'rail-label';
-  wagerLabel.textContent = T('ui.wager');
+  wagerLabel.textContent = between && chips ? T('bet.yourBet') : T('ui.wager');
   wager.append(wagerChips, wagerFigure, wagerLabel);
+  if (between && chips && window.EVChips) {
+    window.EVChips.spot(wager, chips, (op) => send('/api/bet', { op }));
+  }
 
   const bank = document.createElement('div');
   bank.className = 'rail-spot rail-bank';
@@ -369,7 +411,7 @@ function renderRail(view) {
   bankChips.replaceChildren(...chipNodes(stack.balance, 24));
   const bankFigure = document.createElement('span');
   bankFigure.className = 'rail-value';
-  bankFigure.textContent = stack.balance.toFixed(stack.balance % 1 === 0 ? 0 : 1);
+  bankFigure.textContent = chipFigure(stack.balance);
   const bankLabel = document.createElement('span');
   bankLabel.className = 'rail-label';
   bankLabel.textContent = T('ui.stack');
@@ -382,11 +424,12 @@ function renderRail(view) {
     const delta = document.createElement('span');
     delta.className =
       'rail-delta ' + (stack.lastNet > 0 ? 'win' : stack.lastNet < 0 ? 'loss' : '');
-    delta.textContent = `${stack.lastNet > 0 ? '+' : ''}${stack.lastNet}`;
+    delta.textContent = chipFigure(stack.lastNet, true);
     bank.appendChild(delta);
   }
 
   box.append(wager, bank);
+  if (chips && window.EVChips) box.appendChild(window.EVChips.limits(chips));
 }
 
 function renderHands(view) {
@@ -432,7 +475,8 @@ function renderHands(view) {
     if (hand.total > 21) bits.push(T('ui.bust'));
     if (hand.doubled) bits.push(T('hand.doubled'));
     if (hand.surrendered) bits.push(T('hand.surrendered'));
-    if (hand.bet !== 1) bits.push(T('hand.units', { n: hand.bet }));
+    // A doubled or split hand says what it carries, in chips.
+    if (hand.units !== 1) bits.push(T('hand.chips', { n: chipFigure(hand.bet) }));
     meta.textContent = bits.join(' · ');
 
     // §3.1: the result is shown, but afterwards and de-emphasised — and never
@@ -440,7 +484,7 @@ function renderHands(view) {
     if (hand.net !== null && hand.net !== undefined && revealComplete()) {
       const net = document.createElement('span');
       net.className = 'hand-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
-      net.textContent = `  ${hand.net > 0 ? '+' : ''}${hand.net}`;
+      net.textContent = `  ${chipFigure(hand.net, true)}`;
       meta.appendChild(net);
     }
     wrap.appendChild(meta);
@@ -845,7 +889,7 @@ function renderActions(view) {
     // No decision button is primary: colouring one suggests the answer to a
     // decision the page is about to grade.
     row([
-      button(T('action.takeInsurance'), () => send('/api/insurance', { take: true }), false, 'takeInsurance'),
+      button(T('action.takeInsurance'), () => sendPlacing('/api/insurance', { take: true }, true), false, 'takeInsurance'),
       button(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), false, 'declineInsurance'),
     ]);
     return;
@@ -854,13 +898,45 @@ function renderActions(view) {
     for (const actions of blackjackRows(view.legalActions)) {
       row(
         actions.map((action) =>
-          button(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }), false, action),
+          button(
+            LABELS[action] ? T(LABELS[action]) : action,
+            () => sendPlacing('/api/act', { action }, action === 'double' || action === 'split'),
+            false,
+            action,
+          ),
         ),
       );
     }
     return;
   }
-  row([button(T('ui.deal'), () => send('/api/deal'), true, 'deal')]);
+  // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
+  const chips = view.chips;
+  // While the last hand's card is up: one row, Deal at the same bet and the chips a tap away.
+  const compact = Boolean(view.feedback && state.reveal) && !state.betOpen;
+  let shown = null;
+  if (chips && window.EVChips) {
+    shown = window.EVChips.controls(
+      box,
+      chips,
+      (op, chip) => send('/api/bet', { op, chip }),
+      () => send('/api/rebuy'),
+      () => document.querySelector('#rail .rail-bet .chips'),
+      false,
+      compact,
+    );
+    if (shown === 'rebuy') return;
+  }
+  const deal = button(T('ui.deal'), () => send('/api/deal'), true, 'deal');
+  deal.disabled = Boolean(chips && !chips.canDeal);
+  if (shown === 'compact') {
+    const open = () => {
+      state.betOpen = true;
+      render();
+    };
+    row([deal, window.EVChips.toggle(chips, open, false)]);
+    return;
+  }
+  row([deal]);
 }
 
 function renderStats(view) {
@@ -1092,6 +1168,29 @@ async function renderCoach(view) {
 }
 
 /**
+ * The chips go where the hand sends them: once a hand, and only once the reveal
+ * is complete, like everything else that shows a result (§3.1). The click is the
+ * same whichever way they go.
+ */
+function settleChips(view) {
+  if (state.chipsSettled === null) {
+    // What was already settled when the page opened has already moved.
+    state.chipsSettled = view.stats.hands;
+    return;
+  }
+  if (!window.EVChips || view.phase !== 'settled' || !revealComplete()) return;
+  if (state.chipsSettled === view.stats.hands) return;
+  state.chipsSettled = view.stats.hands;
+  const rail = el('rail');
+  window.EVChips.settle(
+    view.stack.lastNet ?? 0,
+    [rail && rail.querySelector('.rail-bet .chips')],
+    rail && rail.querySelector('.rail-bank .chips'),
+    el('dealer-cards'),
+  );
+}
+
+/**
  * The decision track (round 6), drawn by track.js.
  *
  * Held to the rail's gate. While the reveal is still running, the hand being
@@ -1124,6 +1223,7 @@ function render() {
   renderActions(view);
   renderStats(view);
   renderTrack(view);
+  settleChips(view);
   renderCoach(view).catch(() => {});
 }
 
@@ -1297,18 +1397,21 @@ document.addEventListener('keydown', (event) => {
     // Y and N only. Space belongs to the reveal and to the deal, and a key that
     // means "carry on" elsewhere must never resolve a bet here.
     if (carryOn) event.preventDefault();
-    if (code === 'KeyY') send('/api/insurance', { take: true });
+    if (code === 'KeyY') sendPlacing('/api/insurance', { take: true }, true);
     if (code === 'KeyN') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {
     const action = { KeyH: 'hit', KeyS: 'stand', KeyD: 'double', KeyP: 'split', KeyR: 'surrender' }[code];
-    if (action && view.legalActions.includes(action)) send('/api/act', { action });
+    if (action && view.legalActions.includes(action)) {
+      sendPlacing('/api/act', { action }, action === 'double' || action === 'split');
+    }
     return;
   }
   if (carryOn) {
     event.preventDefault();
-    send('/api/deal');
+    // Deal only with a bet inside the limits and chips to bet; otherwise the rail says what to do.
+    if (!view.chips || view.chips.canDeal) send('/api/deal');
   }
 });
 

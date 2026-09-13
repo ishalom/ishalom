@@ -178,8 +178,11 @@ test('checking twice offers 1x or fold; folding shows −2 and says Ante and Bli
     assert.equal(view.stack.balance, 198);
     assert.equal(view.settlement!.folded, true);
     assert.equal(view.settlement!.lines.length, 3);
-    const forfeit = catalogue(locale)['uth.line.forfeit']!;
-    assert.ok(view.settlement!.lines.includes(forfeit), `${locale}: no forfeit line`);
+    // The line carries its figure in chips since round 6b: −2 at a bet of 1.
+    const forfeit = catalogue(locale)['uth.line.forfeit']!.split('{')[0]!;
+    const line = view.settlement!.lines.find((l) => l.startsWith(forfeit));
+    assert.ok(line, `${locale}: no forfeit line`);
+    assert.match(line!, /−2/);
     assert.match(view.settlement!.net, /−2/);
     assert.equal(view.dealerRevealed, false, 'a fold turned the dealer over');
   }

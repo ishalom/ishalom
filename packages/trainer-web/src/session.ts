@@ -48,6 +48,19 @@ import {
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 import { t, type Locale } from './i18n.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
+import {
+  TABLE_LIMITS,
+  applyBet,
+  chipsView,
+  needsRebuy,
+  newChipBook,
+  readChipBook,
+  rebuyBook,
+  roundChips,
+  validBet,
+  type BetOp,
+  type ChipBook,
+} from './chips.ts';
 
 /** House restrictions layered over a preset. See `TrainerSession.restrictions`. */
 export interface Restrictions {
@@ -104,6 +117,8 @@ export interface PlayedHand {
   dealerCards: CardView[];
   netUnits: number;
   insuranceTaken: boolean;
+  /** Chips per unit the hand was dealt at. Absent on hands saved before round 6b, which were 1. */
+  bet?: number;
   decisions: Array<{
     scenarioKey: string;
     headline: string;
@@ -186,7 +201,19 @@ export interface SessionProgressV3 extends Omit<SessionProgressV2, 'version'> {
   uth?: unknown;
 }
 
-export type SessionProgress = SessionProgressV3 | SessionProgressV2 | SessionProgressV1;
+/**
+ * Version 4: version 3, plus the chips (round 6b).
+ *
+ * The stack, the bet ready for the next hand, the last bet dealt, and the table
+ * limits it was built under. Everything graded stays in units exactly as in
+ * version 3; a version 3 save opens at a bet of 1 with the stack it last showed.
+ */
+export interface SessionProgressV4 extends Omit<SessionProgressV3, 'version'> {
+  version: 4;
+  chips: { stack: number; bet: number; lastBet: number; limits: { min: number; max: number } };
+}
+
+export type SessionProgress = SessionProgressV4 | SessionProgressV3 | SessionProgressV2 | SessionProgressV1;
 
 export interface ScenarioStat {
   scenarioKey: string;
@@ -377,6 +404,13 @@ export class TrainerSession {
    * safe to use when deciding which of two saved copies is further along.
    */
   private lifetimeDecisions = 0;
+  /*
+   * The chips (round 6b): the stack, the bet being built, the last bet dealt.
+   * Only ever a multiplier on units — nothing graded reads it.
+   */
+  private chips: ChipBook = newChipBook();
+  /** Chips per unit of the hand on the felt, fixed when it is dealt. */
+  private handBet = 1;
 
   /**
    * Two house restrictions the player can switch on over any preset.
@@ -437,7 +471,16 @@ export class TrainerSession {
   }
 
   deal(): void {
+    /*
+     * The table limits and the free rebuy are held here, not only on the rail.
+     * The hand is still dealt at one unit: the engine and every grade stay in
+     * units, and the bet only says how many chips a unit is.
+     */
+    if (needsRebuy(this.chips)) throw new Error('The stack is below the table minimum: take the free rebuy first');
+    if (!validBet(this.chips.bet)) throw new Error(`A bet is between ${TABLE_LIMITS.min} and ${TABLE_LIMITS.max}`);
     this.table.startHand(1);
+    this.handBet = this.chips.bet;
+    this.chips = { ...this.chips, lastBet: this.chips.bet };
     this.lastFeedback = null;
     this.lastRatingDelta = null;
     // A milestone belongs to the decision that reached it, not to the run.
@@ -675,6 +718,9 @@ export class TrainerSession {
     this.countedHand = record.id;
     this.hands++;
     this.netUnits += record.netUnits;
+    // Exact, and allowed below zero: a hand that needed more than the stack
+    // still played (round 6b, option B).
+    this.chips = { ...this.chips, stack: roundChips(this.chips.stack + record.netUnits * this.handBet) };
 
     this.history.unshift({
       id: record.id,
@@ -683,9 +729,27 @@ export class TrainerSession {
       dealerCards: record.dealerCards.map(cardView),
       netUnits: record.netUnits,
       insuranceTaken: record.insuranceTaken,
+      bet: this.handBet,
       decisions: this.pending,
     });
     this.pending = [];
+  }
+
+  /**
+   * Build the bet between hands: add a chip, take the last one back, clear it,
+   * repeat the last bet or double it. The table limits are enforced here.
+   */
+  placeBet(op: BetOp, chip?: number): void {
+    const phase = this.table.view.phase;
+    if (phase === 'player' || phase === 'insurance') throw new Error('The bet stays until the hand is over');
+    this.chips = applyBet(this.chips, op, chip);
+  }
+
+  /** The free rebuy: only below the table minimum, always back to the starting stack. */
+  rebuy(): void {
+    const phase = this.table.view.phase;
+    if (phase === 'player' || phase === 'insurance') throw new Error('Finish the hand first');
+    this.chips = rebuyBook(this.chips);
   }
 
   get stats(): SessionStats {
@@ -722,11 +786,13 @@ export class TrainerSession {
       hands: view.hands.map((hand, index) => ({
         cards: hand.cards.map(cardView),
         total: totalOf(hand.cards),
-        bet: hand.bet,
+        // In chips at the bet; `units` is what the engine staked.
+        bet: roundChips(hand.bet * this.handBet),
+        units: hand.bet,
         doubled: hand.doubled,
         surrendered: hand.surrendered,
         finished: hand.finished,
-        net: hand.net,
+        net: hand.net === null ? null : roundChips(hand.net * this.handBet),
         active: !settled && index === view.activeHandIndex,
       })),
       dealer: {
@@ -748,19 +814,24 @@ export class TrainerSession {
       netUnits: view.netUnits,
       stack: {
         start: TrainerSession.STARTING_STACK,
-        // Settled hands only. A wager still on the felt has not been lost yet,
-        // and showing it as though it had would misreport the one figure on
-        // screen that is supposed to be simple arithmetic.
-        balance: TrainerSession.STARTING_STACK + this.netUnits,
+        // Settled hands only, in chips. A wager still on the felt has not been
+        // lost yet, and showing it as though it had would misreport the one
+        // figure on screen that is supposed to be simple arithmetic. It can be
+        // below zero after a hand that needed more than the stack held.
+        balance: this.chips.stack,
         // Swept the moment the hand settles, because by then it has already
         // moved into the balance — leaving it on the felt would show the same
         // chips in two places and make the arithmetic look wrong.
         wager: settled
           ? 0
-          : view.hands.reduce((total, hand) => total + hand.bet, 0) +
-            (view.insuranceTaken ? 0.5 : 0),
-        lastNet: view.netUnits,
+          : roundChips(
+              (view.hands.reduce((total, hand) => total + hand.bet, 0) + (view.insuranceTaken ? 0.5 : 0)) *
+                this.handBet,
+            ),
+        lastNet: view.netUnits === null ? null : roundChips(view.netUnits * this.handBet),
       },
+      // The rail between hands: the bet, the limits, what may change.
+      chips: chipsView(this.chips, view.phase !== 'player' && view.phase !== 'insurance'),
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       history: this.history.slice(0, 40),
@@ -770,7 +841,8 @@ export class TrainerSession {
           index,
           id: hand.id,
           dots: hand.decisions.map((d) => trackDot(d.severity, Boolean(d.closeCall))),
-          net: hand.netUnits,
+          // In chips at the bet the hand was dealt at.
+          net: roundChips(hand.netUnits * (hand.bet ?? 1)),
         }),
       ),
       stats: this.stats,
@@ -972,9 +1044,9 @@ export class TrainerSession {
    * boundary where resuming is unambiguous — half a split restored into a
    * freshly shuffled shoe would be a different hand wearing the same cards.
    */
-  get progress(): SessionProgressV3 {
+  get progress(): SessionProgressV4 {
     return {
-      version: 3,
+      version: 4,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -993,6 +1065,12 @@ export class TrainerSession {
       },
       scenarioStats: [...this.scenarioStats.values()],
       history: this.history.slice(0, 40),
+      chips: {
+        stack: this.chips.stack,
+        bet: this.chips.bet,
+        lastBet: this.chips.lastBet,
+        limits: { ...TABLE_LIMITS },
+      },
     };
   }
 
@@ -1006,7 +1084,9 @@ export class TrainerSession {
   restore(saved: SessionProgress | null | undefined): void {
     // Versions 2 and 3 hold the same Blackjack fields; version 3 only adds
     // `uth`, which is `UthSession`'s to read.
-    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3)) return;
+    // Versions 2 to 4 hold the same Blackjack fields; 3 adds `uth`, which is
+    // `UthSession`'s to read, and 4 adds the chips.
+    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4)) return;
     const n = (value: unknown, fallback = 0): number =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -1056,6 +1136,18 @@ export class TrainerSession {
       (saved.scenarioStats ?? []).map((stat) => [stat.scenarioKey, { ...stat }]),
     );
     this.history = [...(saved.history ?? [])];
+    /*
+     * Before version 4 the stack was never saved: it was drawn as the starting
+     * stack plus this session's units, which is what the player last saw, so
+     * that is where it reopens — at a bet of 1, the bet every one of those
+     * hands was played at.
+     */
+    const chips = saved.version === 4 ? saved.chips : undefined;
+    this.chips = readChipBook(
+      chips,
+      chips && typeof chips.stack === 'number' ? chips.stack : TrainerSession.STARTING_STACK + n(saved.netUnits),
+    );
+    this.handBet = 1;
     // A restored session is between hands by construction, so nothing from the
     // previous one is left pointing at a table that no longer exists.
     this.pending = [];

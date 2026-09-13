@@ -260,7 +260,8 @@ test('nothing celebrates: no motion on the track, and the result is smaller and 
   const from = css.indexOf('/* --- The decision track (round 6)');
   assert.ok(from > 0);
   // Rules only: the section's own comment says what it leaves out.
-  const rules = css.slice(from).replace(/\/\*[\s\S]*?\*\//g, '');
+  const until = css.indexOf('/* --- Chips (round 6b)', from);
+  const rules = css.slice(from, until > from ? until : undefined).replace(/\/\*[\s\S]*?\*\//g, '');
   assert.doesNotMatch(rules, /animation|transition|@keyframes/);
   assert.doesNotMatch(source('track.js'), /streak|milestone|animate/i);
   const net = /\.track-net \{([^}]*)\}/.exec(rules)![1]!;

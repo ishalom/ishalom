@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
 import { TrainerSession, type Restrictions } from './session.ts';
 import { UthSession } from './uth-session.ts';
+import { type BetOp } from './chips.ts';
 import { catalogue, LOCALES, type Locale } from './i18n.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -121,6 +122,23 @@ const server = createServer(async (request, response) => {
 
         case '/api/coach':
           return json(session.coach);
+
+        // The chips (round 6b): the bet between hands, and the free rebuy.
+        case '/api/bet':
+          session.placeBet(body.op as BetOp, body.chip as number);
+          return json(session.view);
+
+        case '/api/rebuy':
+          session.rebuy();
+          return json(session.view);
+
+        case '/api/uth/bet':
+          uth.placeBet(body.op as BetOp, body.chip as number);
+          return json(uth.view);
+
+        case '/api/uth/rebuy':
+          uth.rebuy();
+          return json(uth.view);
 
         // Ultimate Texas Hold'em. Its own session, so nothing played here can
         // reach the Blackjack rating, stats or history.

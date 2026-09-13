@@ -328,16 +328,40 @@ const EN: Catalogue = {
     'House edge you face',
   'info.uthEdge.body':
     '**Lower is better.** The floor is the game’s own edge against perfect play, {rulesEdge} of the Ante, solved exactly from every starting hand. Counting cards cannot lower it: the deck is reshuffled for every hand. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes.',
+  'hand.chips':
+    '{n} chips',
+  'bet.yourBet':
+    'bet',
+  'bet.limits':
+    'Table limits {range}',
+  'bet.chip':
+    'Add a {value} chip',
+  'bet.spot':
+    'Your bet: {bet} chips. Tap to take the last chip back.',
+  'bet.change':
+    'Bet {bet} · change',
+  'bet.clear':
+    'Clear',
+  'bet.repeat':
+    'Repeat {bet}',
+  'bet.double':
+    'Double to {bet}',
+  'bet.place':
+    'Tap a chip to place a bet.',
+  'rebuy.line':
+    'Out of chips. Take {n} more — free, as often as you like.',
+  'rebuy.button':
+    'Take {n} chips',
   'track.title':
     'Last hands',
   'track.empty':
     'Your hands line up here as you play, one dot for each decision.',
   'track.row':
-    '{n} decisions, result {net} units. Opens the hand in your log.',
+    '{n} decisions, result {net} chips. Opens the hand in your log.',
   'track.rowOne':
-    'One decision, result {net} units. Opens the hand in your log.',
+    'One decision, result {net} chips. Opens the hand in your log.',
   'track.rowNone':
-    'No decision: the hand ended on the deal. Result {net} units. Opens the hand in your log.',
+    'No decision: the hand ended on the deal. Result {net} chips. Opens the hand in your log.',
   'uth.logTitle':
     'Hands',
   'uth.logEmpty':
@@ -459,7 +483,7 @@ const EN: Catalogue = {
   'uth.atRisk':
     'in play',
   'uth.pressDeal':
-    'Deal to post Ante 1 and Blind 1.',
+    'Deal to post Ante {bet} and Blind {bet}.',
   'uth.nextHand':
     'Next hand',
   'uth.keys':
@@ -485,9 +509,9 @@ const EN: Catalogue = {
   'uth.s.flopCheck':
     'Checking beats 2× by **{gap}**. You keep a 1× decision on the river, and fold it in {riverFold} of cases.',
   'uth.s.riverRaise':
-    'Your hand beats **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose} — worth more than folding for {fold}.',
+    'Your hand beats **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose} — worth more than folding for {fold} units.',
   'uth.s.riverFold':
-    'Your hand beats only **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose}, so 1× loses more than folding for {fold}.',
+    'Your hand beats only **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose}, so 1× loses more than folding for {fold} units.',
   'uth.line.dealerQualified':
     'Dealer qualifies with a pair or better — Ante {ante}',
   'uth.line.dealerNotQualified':
@@ -505,7 +529,7 @@ const EN: Catalogue = {
   'uth.line.blindPush':
     'Blind pushes — the win was below a straight',
   'uth.line.blindLose':
-    'Blind loses −1',
+    'Blind loses {blind}',
   'uth.line.blindTie':
     'Blind pushes',
   'uth.line.folded':
@@ -513,9 +537,9 @@ const EN: Catalogue = {
   'uth.line.foldPlay':
     'No Play bet was made',
   'uth.line.forfeit':
-    'Ante and Blind are forfeit: −2',
+    'Ante and Blind are forfeit: {lost}',
   'uth.line.net':
-    'Hand {net}',
+    'Hand {net} chips',
   'uth.fold': 'Fold',
   'uth.threeXNever': 'The 3× raise loses to both alternatives here — as it does everywhere.',
   'uth.stillComputing': 'This class is still being computed by the offline job. The flop and river below are exact.',
@@ -644,7 +668,7 @@ const EN: Catalogue = {
   'fb.spotAboveYou': 'Rated above you.',
 
   'sound.enable': 'Sound',
-  'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
+  'sound.note': 'Short tones as cards land and when the verdict arrives, and one click whenever chips move — the same click whether a hand wins or loses.',
 
   // --- The door ---
   'welcome.codeLabel': 'Pick a 4-digit code',
@@ -929,16 +953,40 @@ const HE: Catalogue = {
     'יתרון הקזינו מולך',
   'info.uthEdge.body':
     '**כמה שיותר נמוך.** הרצפה היא היתרון של המשחק עצמו מול משחק מושלם, {rulesEdge} מהאנטה, מחושב במדויק מכל הידיים הפותחות. ספירת קלפים לא יכולה להוריד אותו: החפיסה נטרפת לפני כל יד. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים, ולכן כל מה שמעל {rulesEdge} הוא הטעויות שלך.',
+  'hand.chips':
+    '{n} צ׳יפים',
+  'bet.yourBet':
+    'הימור',
+  'bet.limits':
+    'מגבלות השולחן {range}',
+  'bet.chip':
+    'הוסף צ׳יפ של {value}',
+  'bet.spot':
+    'ההימור שלך: {bet} צ׳יפים. הקשה מחזירה את הצ׳יפ האחרון.',
+  'bet.change':
+    'הימור {bet} · שינוי',
+  'bet.clear':
+    'נקה',
+  'bet.repeat':
+    'חזור על {bet}',
+  'bet.double':
+    'הכפל ל-{bet}',
+  'bet.place':
+    'הקש על צ׳יפ כדי להניח הימור.',
+  'rebuy.line':
+    'נגמרו הצ׳יפים. קח עוד {n} — בחינם, כמה פעמים שתרצה.',
+  'rebuy.button':
+    'קח {n} צ׳יפים',
   'track.title':
     'ידיים אחרונות',
   'track.empty':
     'הידיים שלך יסתדרו כאן תוך כדי משחק, נקודה לכל החלטה.',
   'track.row':
-    '{n} החלטות, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    '{n} החלטות, תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'track.rowOne':
-    'החלטה אחת, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    'החלטה אחת, תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'track.rowNone':
-    'בלי החלטה: היד נגמרה בחלוקה. תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    'בלי החלטה: היד נגמרה בחלוקה. תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'uth.logTitle':
     'ידיים',
   'uth.logEmpty':
@@ -1060,7 +1108,7 @@ const HE: Catalogue = {
   'uth.atRisk':
     'במשחק',
   'uth.pressDeal':
-    'חלק כדי להניח אנטה 1 ובליינד 1.',
+    'חלק כדי להניח אנטה {bet} ובליינד {bet}.',
   'uth.nextHand':
     'היד הבאה',
   'uth.keys':
@@ -1086,9 +1134,9 @@ const HE: Catalogue = {
   'uth.s.flopCheck':
     'צ׳ק עדיף על ⁦2×⁩ ב-**{gap}**. נשארת לך החלטת ⁦1×⁩ בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
   'uth.s.riverRaise':
-    'היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose} — שווה יותר מפרישה ב-{fold}.',
+    'היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose} — שווה יותר מפרישה ב-{fold} יחידות.',
   'uth.s.riverFold':
-    'היד שלך מנצחת רק **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose}, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-{fold}.',
+    'היד שלך מנצחת רק **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose}, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-{fold} יחידות.',
   'uth.line.dealerQualified':
     'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
   'uth.line.dealerNotQualified':
@@ -1106,7 +1154,7 @@ const HE: Catalogue = {
   'uth.line.blindPush':
     'הבליינד בתיקו — הניצחון היה מתחת לרצף',
   'uth.line.blindLose':
-    'הבליינד מפסיד ⁦−1⁩',
+    'הבליינד מפסיד {blind}',
   'uth.line.blindTie':
     'הבליינד בתיקו',
   'uth.line.folded':
@@ -1114,9 +1162,9 @@ const HE: Catalogue = {
   'uth.line.foldPlay':
     'לא הונח הימור פליי',
   'uth.line.forfeit':
-    'האנטה והבליינד אבודים: ⁦−2⁩',
+    'האנטה והבליינד אבודים: {lost}',
   'uth.line.net':
-    'היד {net}',
+    'היד {net} צ׳יפים',
   'uth.fold': 'פרישה',
   'uth.threeXNever': 'ההעלאה של ⁦3×⁩ מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
@@ -1237,7 +1285,7 @@ const HE: Catalogue = {
   'fb.spotAboveYou': 'מדורג מעליך.',
 
   'sound.enable': 'צליל',
-  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
+  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון, ונקישה אחת כשצ׳יפים זזים — אותה נקישה בדיוק כשיד מנצחת או מפסידה.',
 
   // --- The door ---
   'welcome.codeLabel': 'בחר קוד בן 4 ספרות',

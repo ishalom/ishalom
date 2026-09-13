@@ -144,16 +144,45 @@ test('right and wrong sound the same except for pitch', () => {
 
 test('money is silent', () => {
   /*
-   * The hardest line in the app. Nothing may sound when a hand wins, loses,
-   * pushes or busts — those are outcomes, and an outcome that makes a noise is
-   * the slot machine this trainer is arguing against.
+   * The hardest line in the app. Nothing may sound *about* a hand winning,
+   * losing, pushing or busting — those are outcomes, and an outcome that makes
+   * a noise is the slot machine this trainer is arguing against.
+   *
+   * Round 6b, updated rather than removed. Chips now make one click when they
+   * move — placed, collected or paid — and that click has to stay a fact about
+   * chips moving, never about the result. So:
+   *   - the outcome renderers still make no sound of any kind, chips included;
+   *   - settlement sounds from exactly one place on each table;
+   *   - the click takes no arguments, and settling makes it before it reads
+   *     the result, so a win and a loss cannot be told apart by ear
+   *     (betting.test.ts plays both and compares every call).
    */
+  const ultimate = readFileSync(join(PUBLIC, 'ultimate.js'), 'utf8');
+  const chips = readFileSync(join(PUBLIC, 'chips.js'), 'utf8');
+  const bodyOf = (code: string, fn: string) => {
+    const from = code.indexOf(fn);
+    assert.ok(from > 0, `${fn} is gone`);
+    return code.slice(from, code.indexOf('\n}\n', from));
+  };
+
   for (const fn of ['function renderHands', 'function renderRail', 'function tableTalk']) {
-    const from = app.indexOf(fn);
-    assert.ok(from > 0, `${fn} is gone from app.js`);
-    const body = app.slice(from, app.indexOf('\n}\n', from));
+    const body = bodyOf(app, fn);
     assert.ok(!/play(Card|Verdict)\s*\(/.test(body), `${fn} makes a sound about the outcome`);
+    assert.ok(!/EVChips\.(settle|place|click)\s*\(/.test(body), `${fn} makes a chip sound`);
   }
+  assert.ok(
+    !/EVChips\.(settle|place|click)\s*\(/.test(bodyOf(ultimate, 'function uthRenderRail')),
+    'the UTH rail makes a chip sound',
+  );
+
+  assert.equal([...app.matchAll(/EVChips\.settle\(/g)].length, 1, 'Blackjack settles chips from more than one place');
+  assert.equal([...ultimate.matchAll(/EVChips\.settle\(/g)].length, 1, 'UTH settles chips from more than one place');
+
+  assert.match(chips, /function click\(\) \{/, 'the chip click takes an argument it could vary on');
+  assert.ok(!/\bclick\([^)]/.test(chips), 'a chip click is passed something');
+  const settle = chips.slice(chips.indexOf('function settle('), chips.indexOf('\n  }\n', chips.indexOf('function settle(')));
+  assert.equal([...settle.matchAll(/click\(\)/g)].length, 1);
+  assert.ok(settle.indexOf('click()') < settle.indexOf('net >'), 'the click waits to see the result');
 });
 
 test('nothing is built until sound is asked for', () => {

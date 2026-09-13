@@ -100,6 +100,8 @@ const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
 const ultimateJs = screenScript(read(PUBLIC, 'ultimate.js'), 'initUltimate');
 // Shared by both tables, and read by home to open the hand a row names.
 const trackJs = read(PUBLIC, 'track.js');
+// The bet rail, the moving chips and their one click, shared by both tables.
+const chipsJs = read(PUBLIC, 'chips.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 const shell = read(ARTIFACT, 'shell.js');
@@ -176,6 +178,9 @@ const ULTIMATE_HTML = ${jsString(ultimateHtml)};
 
 /* The decision track, shared by both tables (round 6). */
 ${trackJs}
+
+/* Chips: the bet rail, the moving chips and their one click (round 6b). */
+${chipsJs}
 
 /* The three screen scripts, unchanged but for their transport. */
 ${homeJs}

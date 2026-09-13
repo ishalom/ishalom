@@ -473,6 +473,27 @@ async function api(path, body) {
       return session.view;
     }
 
+    // The chips (round 6b). A change to the bet is kept in this browser at once
+    // and reaches the shared table with the next hand; a rebuy goes straight away.
+    case '/api/bet':
+      session.placeBet(b.op, b.chip);
+      saveProgressLocally();
+      return session.view;
+    case '/api/rebuy':
+      session.rebuy();
+      saveProgressLocally();
+      void publish();
+      return session.view;
+    case '/api/uth/bet':
+      uthSession.placeBet(b.op, b.chip);
+      saveProgressLocally();
+      return uthSession.view;
+    case '/api/uth/rebuy':
+      uthSession.rebuy();
+      saveProgressLocally();
+      void publish();
+      return uthSession.view;
+
     case '/api/uth/state':
       return uthSession.view;
     case '/api/uth/deal':

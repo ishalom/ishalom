@@ -48,6 +48,19 @@ import {
 
 import { t, type Locale } from './i18n.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
+import {
+  TABLE_LIMITS,
+  applyBet,
+  chipsView,
+  needsRebuy,
+  newChipBook,
+  readChipBook,
+  rebuyBook,
+  roundChips,
+  validBet,
+  type BetOp,
+  type ChipBook,
+} from './chips.ts';
 
 /*
  * Named for the game rather than generically. The shared build folds every
@@ -244,6 +257,8 @@ export interface UthPlayedHand {
   holeClass: string;
   settlement: UthSettlement;
   decisions: UthSavedDecision[];
+  /** Chips per unit the hand was dealt at. Absent on hands saved before round 6b, which were 1. */
+  bet?: number;
 }
 
 /** The `uth` part of a version 3 progress blob. */
@@ -262,6 +277,19 @@ export interface UthProgressV1 {
   /** Only ever rises; the shell uses it to decide which saved copy is newer. */
   lifetimeDecisions: number;
   history: UthPlayedHand[];
+}
+
+/**
+ * The `uth` part since round 6b: version 1, plus the bet.
+ *
+ * `balance` was already the stack, in units at the only bet there was, so it
+ * carries straight over as chips. The Ante the next hand posts is `bet`.
+ */
+export interface UthProgressV2 extends Omit<UthProgressV1, 'version'> {
+  version: 2;
+  bet: number;
+  lastBet: number;
+  limits: { min: number; max: number };
 }
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -303,7 +331,10 @@ export class UthSession {
   private readonly table: UthTable;
   private locale: Locale = 'en';
 
-  private balance = UthSession.STARTING_STACK;
+  /** The stack, the bet being built and the last bet dealt, in chips (round 6b). */
+  private chips: ChipBook = newChipBook();
+  /** Chips per unit of the hand on the felt: the Ante, fixed when it is dealt. */
+  private handBet = 1;
   private hands = 0;
   private decisions = 0;
   private correct = 0;
@@ -336,8 +367,17 @@ export class UthSession {
     if (phase !== 'idle' && phase !== 'settled') {
       throw new Error('Finish the hand before dealing another');
     }
+    if (needsRebuy(this.chips)) throw new Error('The stack is below the table minimum: take the free rebuy first');
+    if (!validBet(this.chips.bet)) throw new Error(`An Ante is between ${TABLE_LIMITS.min} and ${TABLE_LIMITS.max}`);
     this.table.startHand();
-    this.balance -= 2; // Ante 1 + Blind 1, onto the felt
+    // The Ante is the bet, and the Blind always equals it: both onto the felt.
+    // The stack may go below zero here; the hand still plays (option B).
+    this.handBet = this.chips.bet;
+    this.chips = {
+      ...this.chips,
+      lastBet: this.chips.bet,
+      stack: roundChips(this.chips.stack - 2 * this.handBet),
+    };
     this.lastNet = null;
     this.last = null;
     this.pending = [];
@@ -381,14 +421,20 @@ export class UthSession {
     this.count(record, evaluation);
 
     const raise = { raise4x: 4, raise3x: 3, raise2x: 2, raise1x: 1 }[action as string];
-    if (raise !== undefined) this.balance -= raise;
+    // A raise is the rule's multiple of the Ante: 4× on an Ante of 5 is 20.
+    if (raise !== undefined) {
+      this.chips = { ...this.chips, stack: roundChips(this.chips.stack - raise * this.handBet) };
+    }
 
     const view = this.table.view;
     if (view.phase === 'settled' && view.settlement) {
       const settlement = view.settlement;
-      // Everything staked comes back, plus or minus what it won.
-      this.balance += 2 + settlement.playBet + settlement.net;
-      this.lastNet = settlement.net;
+      // Everything staked comes back, plus or minus what it won — in chips, at the bet.
+      this.chips = {
+        ...this.chips,
+        stack: roundChips(this.chips.stack + (2 + settlement.playBet + settlement.net) * this.handBet),
+      };
+      this.lastNet = roundChips(settlement.net * this.handBet);
       this.netUnits += settlement.net;
       this.hands++;
       const hand = this.table.handRecord;
@@ -400,6 +446,7 @@ export class UthSession {
         holeClass: hand.holeClass,
         settlement: { ...settlement },
         decisions: this.pending,
+        bet: this.handBet,
       });
       this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
       this.pending = [];
@@ -446,6 +493,25 @@ export class UthSession {
     });
   }
 
+  // --- The bet -------------------------------------------------------------
+
+  /**
+   * Build the Ante between hands: add a chip, take the last one back, clear it,
+   * repeat the last Ante or double it. The table limits are enforced here.
+   */
+  placeBet(op: BetOp, chip?: number): void {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') throw new Error('The Ante stays until the hand is over');
+    this.chips = applyBet(this.chips, op, chip);
+  }
+
+  /** The free rebuy: only below the table minimum, always back to the starting stack. */
+  rebuy(): void {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') throw new Error('Finish the hand first');
+    this.chips = rebuyBook(this.chips);
+  }
+
   // --- Saving and restoring ------------------------------------------------
 
   get stats(): UthStats {
@@ -476,7 +542,7 @@ export class UthSession {
    * balance, and its decisions are not counted — which is how Blackjack treats a
    * hand in progress too. Closing the tab mid-hand therefore costs nothing.
    */
-  get progress(): UthProgressV1 {
+  get progress(): UthProgressV2 {
     const view = this.table.view;
     const inHand = view.phase !== 'idle' && view.phase !== 'settled';
     const pendingCost = this.pending.reduce((sum, d) => sum + d.evCost, 0);
@@ -502,8 +568,13 @@ export class UthSession {
     }
 
     return {
-      version: 1,
-      balance: inHand ? this.balance + view.ante + view.blind + view.playBet : this.balance,
+      version: 2,
+      balance: inHand
+        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet)
+        : this.chips.stack,
+      bet: this.chips.bet,
+      lastBet: this.chips.lastBet,
+      limits: { ...TABLE_LIMITS },
       hands: this.hands,
       decisions: unwound(this.decisions, this.pending.length),
       correct: unwound(this.correct, pendingCorrect),
@@ -538,13 +609,15 @@ export class UthSession {
       throw new Error('Restore between hands, not during one');
     }
     this.reset();
-    const s = saved as Partial<UthProgressV1> | null | undefined;
-    if (!s || typeof s !== 'object' || s.version !== 1) return;
+    const s = saved as (Partial<Omit<UthProgressV2, 'version'>> & { version?: unknown }) | null | undefined;
+    if (!s || typeof s !== 'object' || (s.version !== 1 && s.version !== 2)) return;
 
     const n = (value: unknown, fallback = 0): number =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
-    this.balance = n(s.balance, UthSession.STARTING_STACK);
+    // A version 1 part has no bet: it opens at 1, the bet all of its hands were played at.
+    this.chips = readChipBook(s.version === 2 ? s : undefined, n(s.balance, UthSession.STARTING_STACK));
+    this.handBet = 1;
     this.hands = n(s.hands);
     this.decisions = n(s.decisions);
     this.correct = n(s.correct);
@@ -568,7 +641,8 @@ export class UthSession {
   }
 
   private reset(): void {
-    this.balance = UthSession.STARTING_STACK;
+    this.chips = newChipBook();
+    this.handBet = 1;
     this.hands = 0;
     this.decisions = 0;
     this.correct = 0;
@@ -602,17 +676,20 @@ export class UthSession {
       // Notation for the tooltip; words for the player.
       holeClass: inHand ? this.table.holeClass : null,
       holeWords: inHand ? this.classWords(this.table.holeClass) : null,
+      // In chips at the bet: an Ante of 5 posts a Blind of 5, and 4× is 20.
       stake: {
-        ante: table.ante,
-        blind: table.blind,
-        play: table.playBet,
-        total: table.ante + table.blind + table.playBet,
+        ante: roundChips(table.ante * this.handBet),
+        blind: roundChips(table.blind * this.handBet),
+        play: roundChips(table.playBet * this.handBet),
+        total: roundChips((table.ante + table.blind + table.playBet) * this.handBet),
       },
       stack: {
         start: UthSession.STARTING_STACK,
-        balance: this.balance,
+        balance: this.chips.stack,
         lastNet: this.lastNet,
       },
+      // The rail between hands: the Ante being built, the limits, what may change.
+      chips: chipsView(this.chips, !inHand || settled),
       hands: this.hands,
       stats: this.stats,
       // The floor under the effective edge, as the tooltip quotes it.
@@ -627,7 +704,7 @@ export class UthSession {
       // it to be done early; this tells the page whether it still needs asking.
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
-      settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+      settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
       showdown:
         settled && table.settlement && !table.settlement.folded
           ? this.showdown(table.hole, table.dealerHole, table.board)
@@ -639,7 +716,8 @@ export class UthSession {
           index,
           id: hand.id,
           dots: hand.decisions.map((d) => trackDot(d.severityTier, uthCloseCall(d))),
-          net: hand.settlement.net,
+          // In chips at the Ante the hand was dealt at.
+          net: roundChips(hand.settlement.net * (hand.bet ?? 1)),
         }),
       ),
       howTo: this.howTo(),
@@ -798,7 +876,7 @@ export class UthSession {
       (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
       'optimal',
     );
-    const result = this.lines(hand.settlement);
+    const result = this.lines(hand.settlement, hand.bet ?? 1);
     const shown = hand.settlement.folded ? null : this.showdown(hand.hole, hand.dealerHole, hand.board);
 
     return {
@@ -810,7 +888,7 @@ export class UthSession {
       },
       summary,
       severity: worst,
-      net: hand.settlement.net,
+      net: roundChips(hand.settlement.net * (hand.bet ?? 1)),
       decisions,
       showdown: shown ? [shown.player.words, shown.dealer.words] : [],
       lines: result.lines,
@@ -1001,14 +1079,15 @@ export class UthSession {
    * (which is the only bet qualification touches), then the Play, then the
    * Blind — and the total comes last and quietest.
    */
-  private lines(s: UthSettlement): { lines: string[]; net: string; folded: boolean } {
+  private lines(s: UthSettlement, perUnit: number): { lines: string[]; net: string; folded: boolean } {
     const L = this.locale;
     const iso = isolateFor(L);
-    const cash = (value: number) => iso(money(value));
+    // Every figure in chips at the bet; the multiple on the Play bet stays a multiple.
+    const cash = (value: number) => iso(money(roundChips(value * perUnit)));
     const bet = iso(`${s.playBet}×`);
     if (s.folded) {
       return {
-        lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit')],
+        lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit', { lost: cash(-2) })],
         net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: true,
       };
@@ -1036,7 +1115,7 @@ export class UthSession {
         : s.blindPushed
           ? t(L, 'uth.line.blindPush')
           : s.blind < 0
-            ? t(L, 'uth.line.blindLose')
+            ? t(L, 'uth.line.blindLose', { blind: cash(s.blind) })
             : t(L, 'uth.line.blindTie');
     return {
       lines: [dealer, play, blind],

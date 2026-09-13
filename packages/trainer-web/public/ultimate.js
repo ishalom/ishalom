@@ -26,6 +26,10 @@ const uthState = {
   busy: false,
   /** The decision the card was last drawn for, so the result waits its turn. */
   cardToken: null,
+  /** The decision whose chips last moved at settlement, so they move once. */
+  chipsToken: null,
+  /** Whether the chips are open between hands while the last card is still up. */
+  betOpen: false,
   /** Measured solve times on this page, for anyone checking the flop is quick. */
   timings: [],
 };
@@ -176,6 +180,11 @@ function uthRender() {
   const inHand = view.phase !== 'idle';
 
   el('uth-empty').hidden = inHand;
+  if (view.chips) {
+    el('uth-empty').textContent = T('uth.pressDeal', {
+      bet: window.EVChips ? window.EVChips.figure(view.chips.bet) : view.chips.bet,
+    });
+  }
 
   el('uth-dealer').replaceChildren(
     ...(view.dealerRevealed
@@ -354,23 +363,36 @@ function uthRenderRail(view) {
     return div;
   };
   const stake = view.stake;
-  rail.append(
-    spot(T('uth.ante'), stake.ante || '—'),
-    spot(T('uth.blind'), stake.blind || '—'),
-    spot(T('uth.play'), stake.play || '—'),
-  );
+  const chips = view.chips;
+  const figure = (value, signed) =>
+    window.EVChips ? window.EVChips.figure(value, signed) : String(value);
 
-  const bank = spot(T('ui.stack'), view.stack.balance.toFixed(view.stack.balance % 1 === 0 ? 0 : 1), 'bank');
+  // Between hands the Ante spot holds the Ante being built, and the Blind shows
+  // what it will post: always the same. During a hand, what is on the felt.
+  const building = Boolean(chips) && (view.phase === 'idle' || view.phase === 'settled');
+  const onFelt = (value) => (value ? figure(value) : '—');
+  const ante = spot(T('uth.ante'), building ? onFelt(chips.bet) : onFelt(stake.ante), 'ante');
+  const blind = spot(T('uth.blind'), building ? onFelt(chips.bet) : onFelt(stake.blind), 'blind');
+  const play = spot(T('uth.play'), building ? '—' : onFelt(stake.play), 'play');
+  rail.append(ante, blind, play);
+  if (building && window.EVChips) {
+    window.EVChips.spot(ante, chips, (op) => uthSend('/api/uth/bet', { op }));
+  }
+
+  // The stack, in chips. Below zero after a hand that needed more than it held,
+  // and drawn like any other figure.
+  const bank = spot(T('ui.stack'), figure(view.stack.balance), 'bank');
   // The swing from the hand, drawn only once the card above has had its moment.
   if (view.stack.lastNet !== null && view.settlement) {
     const delta = document.createElement('span');
     const net = view.stack.lastNet;
     delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
-    delta.textContent = uthFigure(`${net > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net)}`);
+    delta.textContent = figure(net, true);
     delta.hidden = true;
     bank.appendChild(delta);
   }
   rail.appendChild(bank);
+  if (chips && window.EVChips) rail.appendChild(window.EVChips.limits(chips));
 }
 
 /**
@@ -473,10 +495,30 @@ function uthRenderCard(view) {
   const reveal = () => {
     for (const node of document.querySelectorAll('.uth-late')) node.hidden = false;
   };
-  if (uthState.cardToken === token || reduced) reveal();
-  else {
+  // The chips go where the hand sends them, with the result and once a hand.
+  // The click is the same whichever way they go.
+  const settleChips = () => {
+    if (!view.settlement || !window.EVChips || uthState.chipsToken === token) return;
+    uthState.chipsToken = token;
+    const rail = el('uth-rail');
+    window.EVChips.settle(
+      view.stack.lastNet ?? 0,
+      ['ante', 'blind', 'play'].map((name) => rail && rail.querySelector(`.uth-spot.${name}`)),
+      rail && rail.querySelector('.uth-spot.bank'),
+      el('uth-dealer'),
+    );
+  };
+  if (uthState.cardToken === token) reveal();
+  else if (reduced) {
     uthState.cardToken = token;
-    setTimeout(reveal, 450);
+    reveal();
+    settleChips();
+  } else {
+    uthState.cardToken = token;
+    setTimeout(() => {
+      reveal();
+      settleChips();
+    }, 450);
   }
 }
 
@@ -546,16 +588,67 @@ function uthRenderActions(waiting) {
       row(
         actions.map((action) => {
           const entry = byAction.get(action);
-          return button(entry.label, entry.key, () => uthSend('/api/uth/act', { action }), false, action);
+          return button(entry.label, entry.key, () => uthAct(action), false, action);
         }),
       );
     }
     return;
   }
-  row([button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true, 'deal')]);
+  // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
+  const chips = view.chips;
+  // While the last hand's card is up: one row, so the card never climbs over the
+  // player's ringed cards. The chips are a tap away.
+  const compact = Boolean(view.feedback) && !uthState.betOpen;
+  let shown = null;
+  if (chips && window.EVChips) {
+    shown = window.EVChips.controls(
+      box,
+      chips,
+      (op, chip) => uthSend('/api/uth/bet', { op, chip }),
+      () => uthSend('/api/uth/rebuy'),
+      () => document.querySelector('#uth-rail .uth-spot.ante'),
+      uthState.busy,
+      compact,
+    );
+    if (shown === 'rebuy') return;
+  }
+  const deal = button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', uthDeal, true, 'deal');
+  if (chips && !chips.canDeal) deal.disabled = true;
+  if (shown === 'compact') {
+    const open = () => {
+      uthState.betOpen = true;
+      uthRenderActions();
+      uthFitCard();
+    };
+    row([deal, window.EVChips.toggle(chips, open, uthState.busy)]);
+    return;
+  }
+  row([deal]);
 }
 
 // --- Keyboard ---------------------------------------------------------------
+
+/**
+ * A decision. A raise puts the Play bet out, so its chips move to the Play spot
+ * with the one chip click (round 6b).
+ */
+async function uthAct(action) {
+  const from = document.querySelector('#uth-rail .uth-spot.bank')?.getBoundingClientRect();
+  await uthSend('/api/uth/act', { action });
+  if (action.startsWith('raise') && from && window.EVChips) {
+    window.EVChips.place(from, document.querySelector('#uth-rail .uth-spot.play'), 25);
+  }
+}
+
+/** Deal: the Blind is posted beside the Ante, and its chips move there. */
+async function uthDeal() {
+  const from = document.querySelector('#uth-rail .uth-spot.bank')?.getBoundingClientRect();
+  uthState.betOpen = false;
+  await uthSend('/api/uth/deal');
+  if (from && window.EVChips && uthState.view && uthState.view.phase === 'preflop') {
+    window.EVChips.place(from, document.querySelector('#uth-rail .uth-spot.blind'), 5);
+  }
+}
 
 /*
  * Physical keys, not characters: a Hebrew layout turns C into ב and F into כ,
@@ -579,12 +672,12 @@ document.addEventListener('keydown', (event) => {
   const entry = view.legalActions.find((candidate) => candidate.code === event.code);
   if (entry) {
     event.preventDefault();
-    uthSend('/api/uth/act', { action: entry.action });
+    uthAct(entry.action);
     return;
   }
   if (view.legalActions.length === 0 && event.code === 'KeyN') {
     event.preventDefault();
-    uthSend('/api/uth/deal');
+    if (!view.chips || view.chips.canDeal) uthDeal();
   }
 });
 
