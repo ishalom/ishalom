@@ -9,6 +9,7 @@
     <script src="/i18n.js"></script>
     <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
+    <script src="/track.js"></script>
   </head>
   <body>
     <div class="shell uth">
@@ -52,6 +53,13 @@
       </section>
       <section class="stat-info" id="uth-stat-info" hidden aria-live="polite"></section>
 
+      <!-- The decision track, as on the Blackjack table. It replaces the list of
+           hands this screen used to carry; the hands themselves are reviewed
+           on the home screen, and a tap on a row opens one there. -->
+      <div class="track-anchor">
+        <section class="track" id="uth-track" data-i18n-attr="aria-label:track.title"></section>
+      </div>
+
       <main class="table felt uth-felt" id="uth-table">
         <section class="seat" data-i18n-attr="aria-label:ui.dealer">
           <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span></h2>
@@ -75,14 +83,6 @@
 
         <p class="empty" id="uth-empty" data-i18n="uth.pressDeal">Deal to post Ante 1 and Blind 1.</p>
       </main>
-
-      <!-- Every finished hand, kept: one block per decision, the result quietest. -->
-      <section class="panel" id="uth-log-panel">
-        <div class="panel-head">
-          <h2 class="panel-title" data-i18n="uth.logTitle">Hands</h2>
-        </div>
-        <div id="uth-hands"></div>
-      </section>
 
       <div class="dock">
         <!-- The grade first; the result under it, later and quieter (§3.1). -->

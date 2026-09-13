@@ -328,6 +328,16 @@ const EN: Catalogue = {
     'House edge you face',
   'info.uthEdge.body':
     '**Lower is better.** The floor is the game’s own edge against perfect play, {rulesEdge} of the Ante, solved exactly from every starting hand. Counting cards cannot lower it: the deck is reshuffled for every hand. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes.',
+  'track.title':
+    'Last hands',
+  'track.empty':
+    'Your hands line up here as you play, one dot for each decision.',
+  'track.row':
+    '{n} decisions, result {net} units. Opens the hand in your log.',
+  'track.rowOne':
+    'One decision, result {net} units. Opens the hand in your log.',
+  'track.rowNone':
+    'No decision: the hand ended on the deal. Result {net} units. Opens the hand in your log.',
   'uth.logTitle':
     'Hands',
   'uth.logEmpty':
@@ -919,6 +929,16 @@ const HE: Catalogue = {
     'יתרון הקזינו מולך',
   'info.uthEdge.body':
     '**כמה שיותר נמוך.** הרצפה היא היתרון של המשחק עצמו מול משחק מושלם, {rulesEdge} מהאנטה, מחושב במדויק מכל הידיים הפותחות. ספירת קלפים לא יכולה להוריד אותו: החפיסה נטרפת לפני כל יד. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים, ולכן כל מה שמעל {rulesEdge} הוא הטעויות שלך.',
+  'track.title':
+    'ידיים אחרונות',
+  'track.empty':
+    'הידיים שלך יסתדרו כאן תוך כדי משחק, נקודה לכל החלטה.',
+  'track.row':
+    '{n} החלטות, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+  'track.rowOne':
+    'החלטה אחת, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+  'track.rowNone':
+    'בלי החלטה: היד נגמרה בחלוקה. תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
   'uth.logTitle':
     'ידיים',
   'uth.logEmpty':

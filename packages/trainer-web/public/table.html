@@ -9,6 +9,7 @@
     <script src="/i18n.js"></script>
     <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
+    <script src="/track.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -65,6 +66,13 @@
 
     <!-- Opens under whichever figure was asked about, and stays until dismissed. -->
     <section class="stat-info" id="stat-info" hidden aria-live="polite"></section>
+
+    <!-- The decision track (round 6): the last twelve hands, one dot per
+         decision. Beside the felt on a wide screen, a row under the strip on a
+         phone. A tap opens the hand in the log on the home screen. -->
+    <div class="track-anchor">
+      <section class="track" id="bj-track" data-i18n-attr="aria-label:track.title"></section>
+    </div>
 
     <main class="table felt" id="table">
       <!-- The dealer who teaches (§3.4): she prompts before the decision and

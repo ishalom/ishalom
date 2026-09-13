@@ -204,10 +204,12 @@ function uthRender() {
   }
 
   uthRenderRail(view);
+  // Before the card, because the card reveals the late result and the track's
+  // newest figure is part of it.
+  uthRenderTrack(view);
   uthRenderCard(view);
   uthFitCard();
   uthRenderStats(view);
-  uthRenderLog(view);
   uthRenderActions();
 }
 
@@ -300,82 +302,24 @@ for (const button of document.querySelectorAll('#uth-stats .stat[data-info]')) {
 }
 
 /**
- * Every finished hand, in the Blackjack log's round 3 structure.
+ * The decision track (round 6), drawn by track.js.
  *
- * The row summarises the hand, not one decision in it. Opened, each decision
- * has its own header and its one sentence, and the result comes last, in the
- * quiet style the card uses for it. Everything arrives worded by the session in
- * the current language; the page only lays it out.
+ * It replaces the hand log this screen used to carry. The log now lives on the
+ * home screen, where hands are reviewed, and a tap on a row opens the hand
+ * there. The newest row's figure waits with the rest of the result, held back
+ * like the rail's swing and revealed with it (§3.1); its dots are the grade,
+ * which the card shows at the same moment.
  */
-function uthRenderLog(view) {
-  const box = el('uth-hands');
-  if (!box) return;
-  box.replaceChildren();
-  const hands = view.history || [];
-  if (hands.length === 0) {
-    const note = document.createElement('p');
-    note.className = 'empty-note';
-    note.textContent = T('uth.logEmpty');
-    box.appendChild(note);
-    return;
-  }
-
-  for (const hand of hands) {
-    const row = document.createElement('div');
-    row.className = 'log-row';
-    const tier = document.createElement('div');
-    tier.className = `log-tier ${hand.severity}`;
-    const middle = document.createElement('div');
-    const cards = document.createElement('div');
-    cards.className = 'log-hand';
-    cards.textContent = hand.cards.dealer
-      ? `${hand.cards.hole} ${T('log.vs')} ${hand.cards.dealer} · ${hand.cards.board}`
-      : `${hand.cards.hole} · ${hand.cards.board}`;
-    const detail = document.createElement('div');
-    detail.className = 'log-detail';
-    detail.textContent = hand.summary;
-    middle.append(cards, detail);
-    const net = document.createElement('div');
-    net.className = 'log-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
-    net.textContent = uthFigure(`${hand.net > 0 ? '+' : hand.net < 0 ? '−' : ''}${Math.abs(hand.net)}`);
-    row.append(tier, middle, net);
-
-    const steps = document.createElement('div');
-    steps.className = 'log-steps';
-    steps.hidden = true;
-    for (const decision of hand.decisions) {
-      const block = document.createElement('div');
-      block.className = 'log-decision';
-      const head = document.createElement('div');
-      head.className = 'log-decision-head';
-      const dot = document.createElement('span');
-      dot.className = `log-dot ${decision.severity}`;
-      const text = document.createElement('span');
-      text.textContent = decision.header;
-      head.append(dot, text);
-      const sentence = document.createElement('p');
-      uthRich(sentence, decision.sentence);
-      block.append(head, sentence);
-      for (const line of decision.notes || []) {
-        const note = document.createElement('p');
-        uthRich(note, line);
-        block.appendChild(note);
-      }
-      steps.appendChild(block);
+function uthRenderTrack(view) {
+  const box = el('uth-track');
+  if (!box || !window.EVTrack) return;
+  window.EVTrack.render(box, view.track, 'uth');
+  if (view.settlement) {
+    const newest = box.querySelector('.track-net');
+    if (newest && newest.classList) {
+      newest.classList.add('uth-late');
+      newest.hidden = true;
     }
-    const result = document.createElement('div');
-    result.className = 'uth-result';
-    for (const line of [...(hand.showdown || []), ...hand.lines, hand.netLine]) {
-      const p = document.createElement('p');
-      p.textContent = line;
-      result.appendChild(p);
-    }
-    steps.appendChild(result);
-
-    row.addEventListener('click', () => {
-      steps.hidden = !steps.hidden;
-    });
-    box.append(row, steps);
   }
 }
 

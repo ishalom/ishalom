@@ -47,6 +47,7 @@ import {
 } from '@evtrainer/game-engine';
 
 import { t, type Locale } from './i18n.ts';
+import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 
 /*
  * Named for the game rather than generically. The shared build folds every
@@ -142,6 +143,12 @@ export function wholePercents(counts: readonly number[]): number[] {
 
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
+
+/** Whether a saved decision was a close call: its top two plays within that gap. */
+function uthCloseCall(d: { legalActions: UthAction[]; evByAction: Partial<Record<UthAction, number>> }): boolean {
+  const evs = d.legalActions.map((a) => d.evByAction[a] ?? 0).sort((a, b) => b - a);
+  return evs.length > 1 && evs[0]! - evs[1]! < UTH_CLOSE_CALL;
+}
 
 /** How many finished hands the log and the saved record keep — Blackjack's figure. */
 const UTH_HISTORY_KEPT = 40;
@@ -626,6 +633,15 @@ export class UthSession {
           ? this.showdown(table.hole, table.dealerHole, table.board)
           : null,
       history: this.history.map((hand) => this.logEntry(hand)),
+      // The decision track, built the way Blackjack's is.
+      track: this.history.slice(0, TRACK_HANDS).map(
+        (hand, index): TrackRow => ({
+          index,
+          id: hand.id,
+          dots: hand.decisions.map((d) => trackDot(d.severityTier, uthCloseCall(d))),
+          net: hand.settlement.net,
+        }),
+      ),
       howTo: this.howTo(),
     };
   }

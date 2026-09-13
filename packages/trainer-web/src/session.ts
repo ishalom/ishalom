@@ -47,6 +47,7 @@ import {
 } from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 import { t, type Locale } from './i18n.ts';
+import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 
 /** House restrictions layered over a preset. See `TrainerSession.restrictions`. */
 export interface Restrictions {
@@ -763,6 +764,15 @@ export class TrainerSession {
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       history: this.history.slice(0, 40),
+      // The decision track: the last hands, newest first, one dot a decision.
+      track: this.history.slice(0, TRACK_HANDS).map(
+        (hand, index): TrackRow => ({
+          index,
+          id: hand.id,
+          dots: hand.decisions.map((d) => trackDot(d.severity, Boolean(d.closeCall))),
+          net: hand.netUnits,
+        }),
+      ),
       stats: this.stats,
       ruleSet: this.ruleSet,
     };

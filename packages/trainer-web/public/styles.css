@@ -1813,3 +1813,108 @@ button,
 .uth-hand-name { color: var(--ink) !important; font-size: 13.5px; }
 .uth-legend { font-size: 11.5px !important; opacity: 0.8; }
 .uth-note { margin-top: 6px; color: var(--muted); font-size: 13.5px; }
+
+/* --- The decision track (round 6) ----------------------------------------------
+ *
+ * One row per hand: dots in the card's tier colours, a hollow dash for a hand
+ * that ended on the deal, and the result smaller and muted after them. No
+ * animation, no highlight for a run: the tenth green row looks like the first.
+ *
+ * On a phone, and up to a wide screen, it is one row under the strip, newest on
+ * the physical left in both languages. With room beside the 540px shell it sits
+ * on the felt's physical right, newest at the top. */
+.track-anchor { position: relative; }
+.track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.track-title { display: none; margin: 0; }
+.track-empty { margin: 0; font-size: 11.5px; color: var(--muted); }
+.track-rows {
+  direction: ltr;
+  display: flex;
+  gap: 4px;
+  /* A zero width, grown to fill. Sized by its content instead, the full length
+     of twelve rows became the page's minimum width, and a 390px phone laid the
+     whole table out wider than its screen — measured, with Check cut off. */
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.track-rows::-webkit-scrollbar { display: none; }
+.track-row {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 7px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.track-row:hover,
+.track-row:focus-visible { background: var(--panel-2); }
+.track-dots { display: inline-flex; align-items: center; gap: 3px; }
+.track-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--negligible); }
+.track-dot.optimal { background: var(--optimal); }
+.track-dot.negligible,
+.track-dot.close { background: var(--negligible); }
+.track-dot.minor { background: var(--minor); }
+.track-dot.significant { background: var(--significant); }
+.track-dot.blunder { background: var(--blunder); }
+.track-dash {
+  width: 12px;
+  height: 5px;
+  border: 1.5px solid var(--muted);
+  border-radius: 3px;
+  background: transparent;
+}
+.track-net { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+@media (min-width: 900px) {
+  .track {
+    position: absolute;
+    top: 12px;
+    left: calc(100% + 14px);
+    width: 150px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .track-title {
+    display: block;
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .track-rows { flex-direction: column; flex: none; width: auto; overflow: visible; gap: 2px; }
+  .track-row { justify-content: space-between; border-color: transparent; border-radius: 6px; }
+}
+
+/* The hands a track row opens: each game under its name, the opened one marked. */
+.hands-game {
+  margin: 14px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.log-row.opened { background: var(--panel-2); }

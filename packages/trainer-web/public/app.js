@@ -1091,6 +1091,21 @@ async function renderCoach(view) {
   }
 }
 
+/**
+ * The decision track (round 6), drawn by track.js.
+ *
+ * Held to the rail's gate. While the reveal is still running, the hand being
+ * revealed is already in the history, and its dots and its result would give
+ * away the grade and the outcome before the card does (§3.1). It joins the
+ * track once the reveal is complete.
+ */
+function renderTrack(view) {
+  if (!window.EVTrack) return;
+  const rows = view.track || [];
+  const withheld = view.phase === 'settled' && !revealComplete();
+  window.EVTrack.render(el('bj-track'), withheld ? rows.slice(1) : rows, 'bj');
+}
+
 function render() {
   const view = state.view;
   if (!view) return;
@@ -1108,6 +1123,7 @@ function render() {
   renderFeedback(view);
   renderActions(view);
   renderStats(view);
+  renderTrack(view);
   renderCoach(view).catch(() => {});
 }
 

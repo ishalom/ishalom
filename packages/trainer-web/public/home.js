@@ -209,12 +209,24 @@ function decisionBlocks(hand) {
   return box;
 }
 
-function renderHands(view) {
+/** Rows a table's track can open, by game and position. Rebuilt with the list. */
+let openable = new Map();
+
+function handsHeading(text) {
+  const head = document.createElement('h3');
+  head.className = 'hands-game';
+  head.textContent = text;
+  return head;
+}
+
+function renderHands(view, uthView) {
   const box = el('hands');
   box.replaceChildren();
+  openable = new Map();
   const hands = view.history ?? [];
+  const uthHands = (uthView && uthView.history) || [];
 
-  if (hands.length === 0) {
+  if (hands.length === 0 && uthHands.length === 0) {
     const note = document.createElement('p');
     note.className = 'empty-note';
     note.textContent = T('home.noHands');
@@ -222,7 +234,10 @@ function renderHands(view) {
     return;
   }
 
-  for (const hand of hands) {
+  // Each game under its own name. Ultimate's hands moved here from its table
+  // screen in round 6, when the decision track took their place there.
+  if (hands.length > 0) box.appendChild(handsHeading(T('ui.blackjack')));
+  hands.forEach((hand, index) => {
     const worst = hand.decisions.reduce(
       (acc, d) => (acc === null || d.evCost > acc.evCost ? d : acc),
       null,
@@ -240,16 +255,130 @@ function renderHands(view) {
       // 26 of 27 cards measured suit-first on a 390px phone.
       `<div><div class="log-hand"><bdi dir="ltr">${cards}</bdi> <span class="muted">${T('log.vs')}</span> <bdi dir="ltr">${dealer}</bdi></div>` +
       `<div class="log-detail">${detail}</div></div>` +
-      `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
-        hand.netUnits > 0 ? '+' : ''
-      }${hand.netUnits}</div>`;
+      // The figure is kept in one piece too: in Hebrew "+1.5" drew as "1.5+" and
+      // "−1" as "1-", seen on a phone once the track started opening this list.
+      `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${isolate(
+        `${hand.netUnits > 0 ? '+' : hand.netUnits < 0 ? '−' : ''}${Math.abs(hand.netUnits)}`,
+      )}</div>`;
 
     const steps = decisionBlocks(hand);
     row.addEventListener('click', () => {
       steps.hidden = !steps.hidden;
     });
+    openable.set(`bj:${index}`, { row, steps, id: hand.id });
     box.append(row, steps);
+  });
+
+  if (uthHands.length > 0) box.appendChild(handsHeading(T('ui.ultimate')));
+  uthHands.forEach((hand, index) => {
+    const [row, steps] = uthHandRow(hand);
+    openable.set(`uth:${index}`, { row, steps, id: hand.id });
+    box.append(row, steps);
+  });
+}
+
+/** A figure kept in one piece inside right-to-left text, as on the tables. */
+const isolate = (text) =>
+  document.documentElement.getAttribute('dir') === 'rtl' ? `\u2066${text}\u2069` : text;
+
+/** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
+function boldParts(target, text) {
+  target.replaceChildren();
+  text.split(/(\*\*[^*]+\*\*)/).forEach((part) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      const b = document.createElement('b');
+      b.textContent = part.slice(2, -2);
+      target.appendChild(b);
+    } else if (part) {
+      target.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+/**
+ * One finished Ultimate hand, in the Blackjack log's round 3 structure.
+ *
+ * The row summarises the hand, not one decision in it. Opened, each decision
+ * has its own header and its sentences, and the result comes last, in the quiet
+ * style the card uses for it. Everything arrives worded by the session in the
+ * current language; the page only lays it out. Moved here from the UTH table
+ * screen in round 6, unchanged.
+ */
+function uthHandRow(hand) {
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  const tier = document.createElement('div');
+  tier.className = `log-tier ${hand.severity}`;
+  const middle = document.createElement('div');
+  const cards = document.createElement('div');
+  cards.className = 'log-hand';
+  cards.textContent = hand.cards.dealer
+    ? `${hand.cards.hole} ${T('log.vs')} ${hand.cards.dealer} · ${hand.cards.board}`
+    : `${hand.cards.hole} · ${hand.cards.board}`;
+  const detail = document.createElement('div');
+  detail.className = 'log-detail';
+  detail.textContent = hand.summary;
+  middle.append(cards, detail);
+  const net = document.createElement('div');
+  net.className = 'log-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
+  net.textContent = isolate(`${hand.net > 0 ? '+' : hand.net < 0 ? '−' : ''}${Math.abs(hand.net)}`);
+  row.append(tier, middle, net);
+
+  const steps = document.createElement('div');
+  steps.className = 'log-steps';
+  steps.hidden = true;
+  for (const decision of hand.decisions) {
+    const block = document.createElement('div');
+    block.className = 'log-decision';
+    const head = document.createElement('div');
+    head.className = 'log-decision-head';
+    const dot = document.createElement('span');
+    dot.className = `log-dot ${decision.severity}`;
+    const text = document.createElement('span');
+    text.textContent = decision.header;
+    head.append(dot, text);
+    const sentence = document.createElement('p');
+    boldParts(sentence, decision.sentence);
+    block.append(head, sentence);
+    for (const line of decision.notes || []) {
+      const note = document.createElement('p');
+      boldParts(note, line);
+      block.appendChild(note);
+    }
+    steps.appendChild(block);
   }
+  const result = document.createElement('div');
+  result.className = 'uth-result';
+  for (const line of [...(hand.showdown || []), ...hand.lines, hand.netLine]) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    result.appendChild(p);
+  }
+  steps.appendChild(result);
+
+  row.addEventListener('click', () => {
+    steps.hidden = !steps.hidden;
+  });
+  return [row, steps];
+}
+
+/**
+ * Open a hand a table's track asked for: show its decisions, bring it into view.
+ *
+ * Found by game and position, then checked against the id — ids start again
+ * when a page reloads, so a restored history can hold two hands with one id.
+ */
+function openHand(wanted) {
+  let found = openable.get(`${wanted.game}:${wanted.index}`);
+  if (!found || found.id !== wanted.id) {
+    found = [...openable.entries()].find(
+      ([key, entry]) => key.startsWith(`${wanted.game}:`) && entry.id === wanted.id,
+    )?.[1];
+  }
+  if (!found) return;
+  found.steps.hidden = false;
+  if (found.row.classList) found.row.classList.add('opened');
+  if (typeof found.row.scrollIntoView === 'function') found.row.scrollIntoView({ block: 'center' });
 }
 
 /** A figure, written out rather than tabulated — one number, one sentence. */
@@ -316,7 +445,11 @@ function selectTab(name) {
 }
 
 async function refresh() {
-  const [profile, view] = await Promise.all([api('/api/profile'), api('/api/state')]);
+  const [profile, view, uthView] = await Promise.all([
+    api('/api/profile'),
+    api('/api/state'),
+    api('/api/uth/state'),
+  ]);
   // The placeholder is the client's business, because it has to be in the
   // language on screen; the server only knows a name once one is typed.
   const name = profile.player.name || T('ui.defaultName');
@@ -332,8 +465,12 @@ async function refresh() {
   });
 
   renderStanding(profile);
-  renderHands(view);
+  renderHands(view, uthView);
   renderStats(view, profile);
+  if (pendingOpen) {
+    openHand(pendingOpen);
+    pendingOpen = null;
+  }
 }
 
 for (const tab of document.querySelectorAll('.tab')) {
@@ -350,10 +487,16 @@ el('name').addEventListener('change', async (event) => {
   await refresh();
 });
 
+/*
+ * A hand asked for from a table's track opens the Hands tab, whatever tab was
+ * open last. Choosing it here also stores it as the tab, which is what stops the
+ * built page's shell from reopening a social tab over it.
+ */
+let pendingOpen = window.EVTrack ? window.EVTrack.takeOpened() : null;
 try {
-  selectTab(localStorage.getItem('ev:tab') ?? 'standing');
+  selectTab(pendingOpen ? 'hands' : localStorage.getItem('ev:tab') ?? 'standing');
 } catch {
-  selectTab('standing');
+  selectTab(pendingOpen ? 'hands' : 'standing');
 }
 // After the locale handshake, so the first render is already in the right language.
 Promise.resolve(window.EV && window.EV.ready).then(refresh);
