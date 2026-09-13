@@ -105,6 +105,8 @@ test('keys the pages build at runtime resolve for every value', () => {
     ['verbTo.', ['hit', 'stand', 'double', 'split', 'surrender', 'takeInsurance', 'declineInsurance']],
     ['howto.', ['1', '2', '3', '4']],
     ['spot.', ['routine', 'ordinary', 'tricky', 'brutal']],
+    // The rule-sensitivity note, worded on the page from untranslated ids (round 7).
+    ['sens.', ['s17', 'h17', 'noSurrender', 'lateSurrender', 'noDas', 'noHoleCard']],
     ['info.accuracy.', ['title', 'body']],
     ['info.evLost.', ['title', 'body']],
     ['info.edge.', ['title', 'body']],

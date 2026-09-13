@@ -155,7 +155,11 @@
     node.disabled = Boolean(disabled);
     if (typeof label === 'string') node.textContent = label;
     else node.append(label);
-    node.addEventListener('click', handler);
+    // The dock's hold (dock.js): a tap that arrived with the last one is not a bet.
+    node.addEventListener('click', (event) => {
+      if (window.EVDock && !window.EVDock.ready()) return;
+      handler(event);
+    });
     return node;
   }
 

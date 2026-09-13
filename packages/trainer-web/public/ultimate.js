@@ -197,13 +197,10 @@ function uthRender() {
   el('uth-board').replaceChildren(...board);
 
   el('uth-hole').replaceChildren(...view.hole.map(uthCard));
-  // Plain words beside "You"; the notation is there for anyone who hovers.
-  el('uth-class').textContent = view.holeWords ?? '';
-  el('uth-class').title = view.holeClass ?? '';
-
   /*
-   * At showdown, ring the five cards that make each hand: gold for yours, grey
-   * for the dealer's. A board card in both hands carries both rings.
+   * At showdown, ring the five cards that make each hand: gold for yours, blue
+   * for the dealer's, with equal weight. A board card in both hands carries
+   * both at once, split across the card (round 7).
    */
   const shown = view.showdown;
   for (const node of document.querySelectorAll('#uth-table .card[data-code]')) {
@@ -470,6 +467,11 @@ function uthRenderCard(view) {
         p.textContent = line;
         result.appendChild(p);
       }
+      // Who won, by the cards: with the two hands, after the grade, quieter than it.
+      const winner = document.createElement('p');
+      winner.className = 'uth-winner';
+      winner.textContent = view.showdown.winner;
+      result.appendChild(winner);
       const legend = document.createElement('p');
       legend.className = 'uth-legend';
       legend.textContent = view.showdown.legend;
@@ -561,7 +563,12 @@ function uthRenderActions(waiting) {
     hint.className = 'key';
     hint.textContent = key;
     node.append(text, hint);
-    node.addEventListener('click', handler);
+    // A second tap arriving with the one that replaced these buttons is not a
+    // new choice; see dock.js.
+    node.addEventListener('click', (event) => {
+      if (window.EVDock && !window.EVDock.ready()) return;
+      handler(event);
+    });
     return node;
   };
   const row = (buttons) => {
@@ -581,6 +588,9 @@ function uthRenderActions(waiting) {
   }
 
   if (view.legalActions.length > 0) {
+    // Each street is its own offer: Check before the flop and Check on it sit
+    // in the same place, and a double press must not play both.
+    if (window.EVDock) window.EVDock.enter(`uth:${view.phase}`);
     // All decision buttons look the same. Colouring one would be the page
     // quietly suggesting an answer to a decision it is about to grade.
     const byAction = new Map(view.legalActions.map((entry) => [entry.action, entry]));
@@ -596,6 +606,7 @@ function uthRenderActions(waiting) {
   }
   // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
   const chips = view.chips;
+  if (window.EVDock) window.EVDock.enter(chips && chips.needsRebuy ? 'uth:rebuy' : 'uth:between');
   // While the last hand's card is up: one row, so the card never climbs over the
   // player's ringed cards. The chips are a tap away.
   const compact = Boolean(view.feedback) && !uthState.betOpen;
@@ -677,7 +688,7 @@ document.addEventListener('keydown', (event) => {
   }
   if (view.legalActions.length === 0 && event.code === 'KeyN') {
     event.preventDefault();
-    if (!view.chips || view.chips.canDeal) uthDeal();
+    if ((!view.chips || view.chips.canDeal) && (!window.EVDock || window.EVDock.ready())) uthDeal();
   }
 });
 

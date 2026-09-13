@@ -36,34 +36,48 @@ export function chartFor(rules: BlackjackRules): StrategyChart {
 }
 
 /** The rule changes worth checking against: the ones players actually meet. */
-const VARIANTS: ReadonlyArray<{ label: string; apply: (rules: BlackjackRules) => BlackjackRules }> = [
+const VARIANTS: ReadonlyArray<{
+  /** Untranslated: the page words it (`sens.<id>`), so a Hebrew card never reads in English. */
+  id: string;
+  label: string;
+  apply: (rules: BlackjackRules) => BlackjackRules;
+}> = [
   {
+    id: 's17',
     label: 'if the dealer stood on soft 17',
     apply: (rules) => makeRules({ ...rules, soft17: 'S17' }),
   },
   {
+    id: 'h17',
     label: 'if the dealer hit soft 17',
     apply: (rules) => makeRules({ ...rules, soft17: 'H17' }),
   },
   {
+    id: 'noSurrender',
     label: 'without late surrender',
     apply: (rules) => makeRules({ ...rules, surrender: 'none' }),
   },
   {
+    id: 'lateSurrender',
     label: 'with late surrender available',
     apply: (rules) => makeRules({ ...rules, surrender: 'late' }),
   },
   {
+    id: 'noDas',
     label: 'without double after split',
     apply: (rules) => makeRules({ ...rules, das: false }),
   },
   {
+    id: 'noHoleCard',
     label: 'in a no-hole-card game',
     apply: (rules) => makeRules({ ...rules, peek: false }),
   },
 ];
 
 export interface SensitivityNote {
+  /** Which rule change, as an untranslated id: `s17`, `noSurrender`, … */
+  id: string;
+  /** The English wording, kept for logs and tests; the page uses `id`. */
   label: string;
   action: BlackjackAction;
   letter: string;
@@ -98,6 +112,7 @@ export function ruleSensitivity(
     if (!cell || cell.optimalAction === optimal) continue;
     if (!isHandAction(cell.optimalAction)) continue;
     notes.push({
+      id: variant.id,
       label: variant.label,
       action: cell.optimalAction,
       letter: ACTION_LETTERS[cell.optimalAction],

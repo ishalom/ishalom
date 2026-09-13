@@ -102,6 +102,8 @@ const ultimateJs = screenScript(read(PUBLIC, 'ultimate.js'), 'initUltimate');
 const trackJs = read(PUBLIC, 'track.js');
 // The bet rail, the moving chips and their one click, shared by both tables.
 const chipsJs = read(PUBLIC, 'chips.js');
+// The dock's settle-in hold, shared by both tables (round 7).
+const dockJs = read(PUBLIC, 'dock.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 const shell = read(ARTIFACT, 'shell.js');
@@ -181,6 +183,9 @@ ${trackJs}
 
 /* Chips: the bet rail, the moving chips and their one click (round 6b). */
 ${chipsJs}
+
+/* The dock's settle-in hold, shared by both tables (round 7). */
+${dockJs}
 
 /* The three screen scripts, unchanged but for their transport. */
 ${homeJs}

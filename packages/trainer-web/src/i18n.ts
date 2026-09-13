@@ -338,6 +338,18 @@ const EN: Catalogue = {
     'Add a {value} chip',
   'bet.spot':
     'Your bet: {bet} chips. Tap to take the last chip back.',
+  'sens.s17':
+    'if the dealer stood on soft 17',
+  'sens.h17':
+    'if the dealer hit soft 17',
+  'sens.noSurrender':
+    'without late surrender',
+  'sens.lateSurrender':
+    'with late surrender available',
+  'sens.noDas':
+    'without double after split',
+  'sens.noHoleCard':
+    'in a no-hole-card game',
   'bet.change':
     'Bet {bet} · change',
   'bet.clear':
@@ -396,8 +408,22 @@ const EN: Catalogue = {
     'You: {hand} ({five})',
   'uth.show.dealer':
     'Dealer: {hand} ({five})',
+  'uth.note.suitOffSame':
+    'Your cards are in different suits: **{best}** is worth {ev}. The same ranks in one suit would be worth {suitedEv}, with the same best play.',
+  'uth.note.suitOffFlips':
+    'Your cards are in different suits, so the best play is **{best}**, at {ev}. The same ranks in one suit would make it **{suitedBest}**, at {suitedEv} — the suit would change the decision.',
+  'uth.show.youWin':
+    'You win: {you} against {dealer}',
+  'uth.show.dealerWins':
+    'The dealer wins: {dealer} against {you}',
+  'uth.show.youWinKicker':
+    'You win on the kicker: {hand} each',
+  'uth.show.dealerWinsKicker':
+    'The dealer wins on the kicker: {hand} each',
+  'uth.show.tie':
+    'A tie: {hand} each',
   'uth.show.legend':
-    'Gold ring: your five cards. Grey ring: the dealer’s.',
+    'Gold ring: your five cards. Blue ring: the dealer’s. A board card in both hands carries both, blue on the dealer’s side and gold on yours.',
   'uthHand.0':
     '{r1} high',
   'uthHand.1':
@@ -963,6 +989,18 @@ const HE: Catalogue = {
     'הוסף צ׳יפ של {value}',
   'bet.spot':
     'ההימור שלך: {bet} צ׳יפים. הקשה מחזירה את הצ׳יפ האחרון.',
+  'sens.s17':
+    'אם הדילר היה עוצר על 17 רך',
+  'sens.h17':
+    'אם הדילר היה מושך על 17 רך',
+  'sens.noSurrender':
+    'בלי ויתור מאוחר',
+  'sens.lateSurrender':
+    'כשיש ויתור מאוחר',
+  'sens.noDas':
+    'בלי הכפלה אחרי פיצול',
+  'sens.noHoleCard':
+    'במשחק בלי קלף סגור',
   'bet.change':
     'הימור {bet} · שינוי',
   'bet.clear':
@@ -1021,8 +1059,22 @@ const HE: Catalogue = {
     'אתה: {hand} ({five})',
   'uth.show.dealer':
     'הדילר: {hand} ({five})',
+  'uth.note.suitOffSame':
+    'הקלפים שלך בצורות שונות: **{best}** שווה {ev}. אותם ערכים באותה צורה היו שווים {suitedEv}, עם אותה בחירה טובה.',
+  'uth.note.suitOffFlips':
+    'הקלפים שלך בצורות שונות, ולכן הבחירה הטובה היא **{best}**, ב-{ev}. אותם ערכים באותה צורה היו הופכים אותה ל-**{suitedBest}**, ב-{suitedEv} — הצורה הייתה משנה את ההחלטה.',
+  'uth.show.youWin':
+    'אתה מנצח: {you} מול {dealer}',
+  'uth.show.dealerWins':
+    'הדילר מנצח: {dealer} מול {you}',
+  'uth.show.youWinKicker':
+    'אתה מנצח בקלף הצד: {hand} לשניכם',
+  'uth.show.dealerWinsKicker':
+    'הדילר מנצח בקלף הצד: {hand} לשניכם',
+  'uth.show.tie':
+    'תיקו: {hand} לשניכם',
   'uth.show.legend':
-    'טבעת זהב: חמשת הקלפים שלך. טבעת אפורה: של הדילר.',
+    'טבעת זהב: חמשת הקלפים שלך. טבעת כחולה: של הדילר. קלף לוח ששייך לשתי הידיים נושא את שתיהן, כחול בצד של הדילר וזהב בצד שלך.',
   'uthHand.0':
     'קלף גבוה {r1}',
   'uthHand.1':

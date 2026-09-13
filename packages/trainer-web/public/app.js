@@ -814,7 +814,11 @@ function renderFeedback(view) {
     const note = document.createElement('p');
     note.className = 'sensitivity';
     note.textContent = T('fb.ruleSensitive', {
-      list: feedback.sensitivity.map((s) => `${s.action} ${s.label}`).join('; '),
+      // Worded here from untranslated ids (round 7): the Hebrew card used to
+      // read "תלוי בחוקים: hit without late surrender".
+      list: feedback.sensitivity
+        .map((s) => `${T('action.' + s.action).toLowerCase()} ${T('sens.' + s.id)}`)
+        .join('; '),
     });
     box.appendChild(note);
   }
@@ -875,17 +879,24 @@ function renderActions(view) {
     line.append(...buttons);
     box.appendChild(line);
   };
+  const dock = window.EVDock;
   const button = (label, handler, primary, action) => {
     const node = document.createElement('button');
     node.className = 'action' + (primary ? ' primary' : '');
     node.type = 'button';
     node.textContent = label;
     if (action) node.dataset.action = action;
-    node.addEventListener('click', handler);
+    // A second tap arriving with the one that replaced these buttons is not a
+    // new choice; see dock.js.
+    node.addEventListener('click', (event) => {
+      if (dock && !dock.ready()) return;
+      handler(event);
+    });
     return node;
   };
 
   if (view.phase === 'insurance') {
+    if (dock) dock.enter('bj:insurance');
     // No decision button is primary: colouring one suggests the answer to a
     // decision the page is about to grade.
     row([
@@ -895,6 +906,7 @@ function renderActions(view) {
     return;
   }
   if (view.phase === 'player') {
+    if (dock) dock.enter('bj:player');
     for (const actions of blackjackRows(view.legalActions)) {
       row(
         actions.map((action) =>
@@ -909,8 +921,25 @@ function renderActions(view) {
     }
     return;
   }
+  /*
+   * The hand is over but its walkthrough is not: the dock finishes that first.
+   *
+   * A hand that ended on a decision — the insurance answer against a dealer's
+   * blackjack, most of all — used to offer Deal at once, with the dealer's card
+   * still face down, nothing said about why, and the walkthrough's own Next
+   * below the fold on a phone. The one button in reach dealt the next hand, and
+   * the one just played was never seen to end (Idan, round 7). Deal and the
+   * chips wait until the walkthrough has shown how it ended.
+   */
+  if (!revealComplete()) {
+    if (dock) dock.enter('bj:reveal');
+    row([button(T('ui.next'), () => advanceReveal(), true, 'reveal-next')]);
+    return;
+  }
+
   // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
   const chips = view.chips;
+  if (dock) dock.enter(chips && chips.needsRebuy ? 'bj:rebuy' : 'bj:between');
   // While the last hand's card is up: one row, Deal at the same bet and the chips a tap away.
   const compact = Boolean(view.feedback && state.reveal) && !state.betOpen;
   let shown = null;
@@ -1411,7 +1440,8 @@ document.addEventListener('keydown', (event) => {
   if (carryOn) {
     event.preventDefault();
     // Deal only with a bet inside the limits and chips to bet; otherwise the rail says what to do.
-    if (!view.chips || view.chips.canDeal) send('/api/deal');
+    // And not in the moment the dock changed: a double press is not a deal.
+    if ((!view.chips || view.chips.canDeal) && (!window.EVDock || window.EVDock.ready())) send('/api/deal');
   }
 });
 

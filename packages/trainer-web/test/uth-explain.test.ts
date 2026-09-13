@@ -92,10 +92,27 @@ test('the suited-connector line appears only on suited connectors the table chec
   assert.deepEqual(shown.sort(), ['32s', '43s', '54s', '65s', '76s', '87s', '98s', 'T9s'].sort());
 });
 
-test('no note for pairs or for hands in different suits, in Hebrew either', () => {
-  for (const label of ['AA', '77', '22', 'AKo', 'T9o', '72o']) {
+test('no suit note for pairs; one for hands in different suits, from the table (round 7), in both languages', () => {
+  for (const label of ['AA', '77', '22']) {
     assert.deepEqual(preflopCard(label, 'he').notes, [], `${label} got a note`);
   }
+  const fmt = (v: number) => `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(3)}`;
+  const bestEv = (r: any) => (r.optimalAction === 'raise4x' ? r.ev4x : r.optimalAction === 'raise3x' ? r.ev3x : r.evCheck);
+  const flipsLead = catalogue('en')['uth.note.suitOffFlips']!.split('**')[0]!;
+  const sameLead = catalogue('en')['uth.note.suitOffSame']!.split('**')[0]!;
+  let flips = 0;
+  for (const row of Object.values(PREFLOP_TABLE)) {
+    if (!(row.label.length === 3 && row.label.endsWith('o'))) continue;
+    const [line, ...rest] = preflopCard(row.label).notes;
+    assert.equal(rest.length, 0, `${row.label} got more than the suit line`);
+    const suited = PREFLOP_TABLE[`${row.label.slice(0, 2)}s`]!;
+    const flipped = row.optimalAction !== suited.optimalAction;
+    assert.ok(line.startsWith(flipped ? flipsLead : sameLead), `${row.label}: wrong suit line: ${line}`);
+    assert.ok(line.includes(fmt(bestEv(row))) && line.includes(fmt(bestEv(suited))), `${row.label}: figures are not the table's`);
+    if (flipped) flips++;
+    assert.ok(preflopCard(row.label, 'he').notes[0].includes('בצורות שונות'), `${row.label}: no Hebrew suit line`);
+  }
+  assert.equal(flips, 7, 'the same seven classes flip, seen from the other side');
   assert.equal(preflopCard('T9s', 'he').notes.length, 2);
 });
 

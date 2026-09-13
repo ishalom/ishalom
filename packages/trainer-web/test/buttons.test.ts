@@ -146,6 +146,11 @@ async function hebrewTable() {
   await page.booted;
   for (let i = 0; i < 5; i++) await tick();
   assert.equal(page.screen(), 'table');
+  // Since round 7 the dock holds presses for a moment after it changes what it
+  // offers (dock.js), so a deal key sent the instant the table appears would be
+  // held. A player never presses that fast; wait the hold out once.
+  const hold = (globalThis as any).EVDock?.HOLD_MS ?? 450;
+  await new Promise((resolve) => setTimeout(resolve, hold + 60));
   return page;
 }
 

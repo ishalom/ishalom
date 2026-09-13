@@ -152,6 +152,9 @@ export function loadHosted(
     },
   };
   g.alert = () => {};
+  // The UTH page waits two frames before solving the flop; a page without
+  // frames would throw there instead of preparing.
+  g.requestAnimationFrame = (fn: (time: number) => void) => setTimeout(() => fn(Date.now()), 0);
 
   const out: Record<string, any> = {};
   new Function(

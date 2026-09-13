@@ -1813,11 +1813,32 @@ button,
 }
 
 /* --- UTH showdown: the five cards that make each hand (round 5) --------------- */
-.uth .card.best-you { outline: 3px solid var(--brass); outline-offset: 2px; }
-.uth .card.best-dealer { box-shadow: inset 0 0 0 3px #9aa6b2, 0 3px 10px var(--shadow); }
-.uth-hand-name { color: var(--ink) !important; font-size: 13.5px; }
-.uth-legend { font-size: 11.5px !important; opacity: 0.8; }
-.uth-note { margin-top: 6px; color: var(--muted); font-size: 13.5px; }
+/*
+ * Both hands marked with equal weight (round 7): the same ring, gold for yours
+ * and blue for the dealer's. A board card in both hands carries both at once,
+ * split across the card — the dealer's half on the edge facing the dealer, at
+ * the top, and yours on the edge facing you.
+ */
+.uth .card.best-you::after,
+.uth .card.best-dealer::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.uth .card.best-you::after { border-color: var(--brass); }
+.uth .card.best-dealer::before { border-color: #5aa9ff; }
+.uth .card.best-you.best-dealer::before { clip-path: inset(0 0 50% 0); }
+.uth .card.best-you.best-dealer::after { clip-path: inset(50% 0 0 0); }
+.uth-hand-name { color: var(--ink) !important; font-size: 15px; }
+.uth-winner { color: var(--ink) !important; font-size: 15px; font-weight: 600; margin-top: 3px !important; }
+.uth-legend { font-size: 12.5px !important; opacity: 0.8; }
+.uth-note { margin-top: 6px; color: var(--muted); font-size: 15px; }
+/* The analysis on the card, big enough to read on a phone (round 7). */
+.uth .quickcard .reason { font-size: 15.5px; line-height: 1.45; }
+.uth .uth-result p { font-size: 14.5px; }
 
 /* --- The decision track (round 6) ----------------------------------------------
  *

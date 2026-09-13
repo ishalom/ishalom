@@ -794,19 +794,41 @@ export class UthSession {
       const ranks = ordered.map((card) => rankOf(card));
       const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
       const shown = wheel ? [...ranks.slice(1), 12] : ranks;
+      const phrase = this.handPhrase(category, significantRanks(best.value));
       return {
-        words: t(L, key, {
-          hand: this.handPhrase(category, significantRanks(best.value)),
-          five: iso(shown.map(rankSymbol).join('-')),
-        }),
+        words: t(L, key, { hand: phrase, five: iso(shown.map(rankSymbol).join('-')) }),
         cards: best.cards,
+        value: best.value,
+        phrase,
       };
     };
+    const player = describe([...hole, ...board], 'uth.show.you');
+    const dealer = describe([...dealerHole, ...board], 'uth.show.dealer');
     return {
-      player: describe([...hole, ...board], 'uth.show.you'),
-      dealer: describe([...dealerHole, ...board], 'uth.show.dealer'),
+      player,
+      dealer,
+      winner: this.winnerLine(player, dealer),
       legend: t(L, 'uth.show.legend'),
     };
+  }
+
+  /**
+   * Who won, by the cards, in one plain line (round 7).
+   *
+   * Only the cards decide it here. Whether the dealer qualified moves the Ante,
+   * which the settlement lines already say; it does not make either hand
+   * better. The evaluator's values compare directly, so the line can never name
+   * a winner the settlement did not pay. When both hands read the same in words,
+   * the kicker decided it — or nothing did, and it is a tie.
+   */
+  private winnerLine(player: { value: number; phrase: string }, dealer: { value: number; phrase: string }): string {
+    const L = this.locale;
+    if (player.value === dealer.value) return t(L, 'uth.show.tie', { hand: player.phrase });
+    const youWin = player.value > dealer.value;
+    if (player.phrase === dealer.phrase) {
+      return t(L, youWin ? 'uth.show.youWinKicker' : 'uth.show.dealerWinsKicker', { hand: player.phrase });
+    }
+    return t(L, youWin ? 'uth.show.youWin' : 'uth.show.dealerWins', { you: player.phrase, dealer: dealer.phrase });
   }
 
   // --- The hand log ----------------------------------------------------------
@@ -890,7 +912,7 @@ export class UthSession {
       severity: worst,
       net: roundChips(hand.settlement.net * (hand.bet ?? 1)),
       decisions,
-      showdown: shown ? [shown.player.words, shown.dealer.words] : [],
+      showdown: shown ? [shown.player.words, shown.dealer.words, shown.winner] : [],
       lines: result.lines,
       netLine: result.net,
     };
@@ -1040,7 +1062,25 @@ export class UthSession {
   private preflopNotes(holeClass: string): string[] {
     const L = this.locale;
     const iso = isolateFor(L);
-    if (holeClass.length === 2 || !holeClass.endsWith('s')) return [];
+    // A pair can never share a suit, so there is nothing about suits to say.
+    if (holeClass.length === 2) return [];
+    /*
+     * In different suits: the same fact from the other side (round 7). The felt
+     * used to say "different suits" beside You; it no longer does, so the card
+     * says it here, with what the same ranks would be worth in one suit.
+     */
+    if (!holeClass.endsWith('s')) {
+      const off = bestOf(preflopRow(holeClass));
+      const same = bestOf(preflopRow(`${holeClass.slice(0, 2)}s`));
+      return [
+        t(L, off.action !== same.action ? 'uth.note.suitOffFlips' : 'uth.note.suitOffSame', {
+          best: this.label(off.action).toLowerCase(),
+          ev: iso(uthUnits(off.ev)),
+          suitedBest: this.label(same.action).toLowerCase(),
+          suitedEv: iso(uthUnits(same.ev)),
+        }),
+      ];
+    }
     const suitedRow = preflopRow(holeClass);
     const offRow = preflopRow(`${holeClass.slice(0, 2)}o`);
     const suited = bestOf(suitedRow);
