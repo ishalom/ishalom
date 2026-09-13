@@ -360,6 +360,23 @@ test('on the built page, the stack and the bet survive closing the tab, in both 
   reopened.stopWatching();
 });
 
+test('the home log shows a Blackjack hand in chips at its bet, like the track row that opens it', async () => {
+  const page = loadHosted('#table', [['ev:playerName', 'Dana']]);
+  await page.booted;
+  await page.api('/api/bet', { op: 'clear' });
+  await page.api('/api/bet', { op: 'add', chip: 25 });
+  page.session().table.shoe.stack(page.parseCards('As 9d Kh 7c'));
+  const view = await playBlackjackPage(page);
+  assert.equal(view.track[0].net, 37.5);
+
+  page.go('#home');
+  for (let i = 0; i < 30; i++) await new Promise((resolve) => setTimeout(resolve, 0));
+  const logged = page.document.getElementById('hands').children.filter((n: any) => n.className === 'log-row');
+  assert.ok(logged.length > 0, 'the home log is empty');
+  assert.ok(String(logged[0].innerHTML).includes('+37.5'), `the log row is not in chips: ${logged[0].innerHTML}`);
+  page.stopWatching();
+});
+
 let server: Server;
 let port = 0;
 let rows: any[] = [];

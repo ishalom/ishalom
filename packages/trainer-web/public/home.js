@@ -257,8 +257,12 @@ function renderHands(view, uthView) {
       `<div class="log-detail">${detail}</div></div>` +
       // The figure is kept in one piece too: in Hebrew "+1.5" drew as "1.5+" and
       // "−1" as "1-", seen on a phone once the track started opening this list.
+      // In chips at the bet the hand was dealt at, like the track row that opens
+      // it (round 6b); hands saved before chips were all played at 1.
       `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${isolate(
-        `${hand.netUnits > 0 ? '+' : hand.netUnits < 0 ? '−' : ''}${Math.abs(hand.netUnits)}`,
+        `${hand.netUnits > 0 ? '+' : hand.netUnits < 0 ? '−' : ''}${
+          Math.round(Math.abs(hand.netUnits) * (hand.bet ?? 1) * 100) / 100
+        }`,
       )}</div>`;
 
     const steps = decisionBlocks(hand);
