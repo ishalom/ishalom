@@ -14,8 +14,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="f78ac41bedf7fb7f5791c8779c73e0a60715eb58-dirty" />
-<meta name="ev-build-at" content="2026-09-13T09:48:21.727Z" />
+<meta name="ev-build-commit" content="05749e2e1df1b3ab3fbbe48b337382e017070ba4-dirty" />
+<meta name="ev-build-at" content="2026-09-13T18:27:04.695Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -1796,6 +1796,11 @@ button,
   .rules-name { font-size: 13px; }
   .rules-sub { flex-wrap: nowrap; }
   .rules-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  /* A zero width, grown to fill. Sized by its content, the one-line badge's full
+     length became the page's minimum width, and a 360px phone laid the table out
+     at 398px — the stack and the last chip cut off at the edge. Measured in
+     round 6b; it had been there since the badge went onto one line in round 5. */
+  .rules-main { flex: 1 1 0; width: 0; }
 
   .stat { padding: 6px 4px; }
   .stat-value { font-size: 17px; }
@@ -1941,6 +1946,49 @@ button,
   letter-spacing: 0.08em;
 }
 .log-row.opened { background: var(--panel-2); }
+
+/* --- Chips (round 6b) -----------------------------------------------------------
+ *
+ * The rail a bet is built on, the limits printed on the felt, the rebuy line,
+ * and a chip crossing the table. A stack below zero is drawn like any other
+ * figure: no colour, no warning, because it is units and nothing is owed. */
+.table-limits {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.uth-rail .table-limits { grid-column: 1 / -1; }
+.bet-spot { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.bet-spot[aria-disabled='true'] { cursor: default; }
+.bet-spot:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 12px; }
+.action-row.bet-chips > .chip-button { display: grid; place-items: center; padding-block: 6px; }
+.chip-button .chip { width: 36px; height: 36px; margin: 0; font-size: 12px; }
+.chip-button:disabled .chip { opacity: 0.4; }
+.action-row.bet-tools > .action { font-size: 14px; padding-block: 9px; }
+.rebuy-line { margin: 0 0 8px; text-align: center; font-size: 14.5px; color: var(--ink); }
+.chip-flight {
+  position: fixed;
+  z-index: 40;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chip-flight { animation: chip-fly 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  @keyframes chip-fly {
+    from { transform: translate(var(--fly-x), var(--fly-y)); }
+    to { transform: none; }
+  }
+}
+@media (max-width: 560px) {
+  .chip-button .chip { width: 32px; height: 32px; }
+  .action-row.bet-chips > .chip-button { padding-block: 4px; }
+  .action-row.bet-tools > .action { font-size: 13px; padding-block: 7px; }
+}
 
 /* ===========================================================================
  * The shared build only.
@@ -7078,16 +7126,40 @@ const EN            = {
     'House edge you face',
   'info.uthEdge.body':
     '**Lower is better.** The floor is the game’s own edge against perfect play, {rulesEdge} of the Ante, solved exactly from every starting hand. Counting cards cannot lower it: the deck is reshuffled for every hand. This figure is exactly that floor plus your EV lost per 100 hands, so everything above {rulesEdge} is your own mistakes.',
+  'hand.chips':
+    '{n} chips',
+  'bet.yourBet':
+    'bet',
+  'bet.limits':
+    'Table limits {range}',
+  'bet.chip':
+    'Add a {value} chip',
+  'bet.spot':
+    'Your bet: {bet} chips. Tap to take the last chip back.',
+  'bet.change':
+    'Bet {bet} · change',
+  'bet.clear':
+    'Clear',
+  'bet.repeat':
+    'Repeat {bet}',
+  'bet.double':
+    'Double to {bet}',
+  'bet.place':
+    'Tap a chip to place a bet.',
+  'rebuy.line':
+    'Out of chips. Take {n} more — free, as often as you like.',
+  'rebuy.button':
+    'Take {n} chips',
   'track.title':
     'Last hands',
   'track.empty':
     'Your hands line up here as you play, one dot for each decision.',
   'track.row':
-    '{n} decisions, result {net} units. Opens the hand in your log.',
+    '{n} decisions, result {net} chips. Opens the hand in your log.',
   'track.rowOne':
-    'One decision, result {net} units. Opens the hand in your log.',
+    'One decision, result {net} chips. Opens the hand in your log.',
   'track.rowNone':
-    'No decision: the hand ended on the deal. Result {net} units. Opens the hand in your log.',
+    'No decision: the hand ended on the deal. Result {net} chips. Opens the hand in your log.',
   'uth.logTitle':
     'Hands',
   'uth.logEmpty':
@@ -7209,7 +7281,7 @@ const EN            = {
   'uth.atRisk':
     'in play',
   'uth.pressDeal':
-    'Deal to post Ante 1 and Blind 1.',
+    'Deal to post Ante {bet} and Blind {bet}.',
   'uth.nextHand':
     'Next hand',
   'uth.keys':
@@ -7235,9 +7307,9 @@ const EN            = {
   'uth.s.flopCheck':
     'Checking beats 2× by **{gap}**. You keep a 1× decision on the river, and fold it in {riverFold} of cases.',
   'uth.s.riverRaise':
-    'Your hand beats **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose} — worth more than folding for {fold}.',
+    'Your hand beats **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose} — worth more than folding for {fold} units.',
   'uth.s.riverFold':
-    'Your hand beats only **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose}, so 1× loses more than folding for {fold}.',
+    'Your hand beats only **{win}** of the dealer’s possible hands, ties {tie} and loses to {lose}, so 1× loses more than folding for {fold} units.',
   'uth.line.dealerQualified':
     'Dealer qualifies with a pair or better — Ante {ante}',
   'uth.line.dealerNotQualified':
@@ -7255,7 +7327,7 @@ const EN            = {
   'uth.line.blindPush':
     'Blind pushes — the win was below a straight',
   'uth.line.blindLose':
-    'Blind loses −1',
+    'Blind loses {blind}',
   'uth.line.blindTie':
     'Blind pushes',
   'uth.line.folded':
@@ -7263,9 +7335,9 @@ const EN            = {
   'uth.line.foldPlay':
     'No Play bet was made',
   'uth.line.forfeit':
-    'Ante and Blind are forfeit: −2',
+    'Ante and Blind are forfeit: {lost}',
   'uth.line.net':
-    'Hand {net}',
+    'Hand {net} chips',
   'uth.fold': 'Fold',
   'uth.threeXNever': 'The 3× raise loses to both alternatives here — as it does everywhere.',
   'uth.stillComputing': 'This class is still being computed by the offline job. The flop and river below are exact.',
@@ -7394,7 +7466,7 @@ const EN            = {
   'fb.spotAboveYou': 'Rated above you.',
 
   'sound.enable': 'Sound',
-  'sound.note': 'Short tones as cards land and when the verdict arrives. Nothing sounds when a hand wins or loses.',
+  'sound.note': 'Short tones as cards land and when the verdict arrives, and one click whenever chips move — the same click whether a hand wins or loses.',
 
   // --- The door ---
   'welcome.codeLabel': 'Pick a 4-digit code',
@@ -7679,16 +7751,40 @@ const HE            = {
     'יתרון הקזינו מולך',
   'info.uthEdge.body':
     '**כמה שיותר נמוך.** הרצפה היא היתרון של המשחק עצמו מול משחק מושלם, {rulesEdge} מהאנטה, מחושב במדויק מכל הידיים הפותחות. ספירת קלפים לא יכולה להוריד אותו: החפיסה נטרפת לפני כל יד. המספר הזה הוא בדיוק הרצפה הזו ועוד ה-EV שאבד לך ל-100 ידיים, ולכן כל מה שמעל {rulesEdge} הוא הטעויות שלך.',
+  'hand.chips':
+    '{n} צ׳יפים',
+  'bet.yourBet':
+    'הימור',
+  'bet.limits':
+    'מגבלות השולחן {range}',
+  'bet.chip':
+    'הוסף צ׳יפ של {value}',
+  'bet.spot':
+    'ההימור שלך: {bet} צ׳יפים. הקשה מחזירה את הצ׳יפ האחרון.',
+  'bet.change':
+    'הימור {bet} · שינוי',
+  'bet.clear':
+    'נקה',
+  'bet.repeat':
+    'חזור על {bet}',
+  'bet.double':
+    'הכפל ל-{bet}',
+  'bet.place':
+    'הקש על צ׳יפ כדי להניח הימור.',
+  'rebuy.line':
+    'נגמרו הצ׳יפים. קח עוד {n} — בחינם, כמה פעמים שתרצה.',
+  'rebuy.button':
+    'קח {n} צ׳יפים',
   'track.title':
     'ידיים אחרונות',
   'track.empty':
     'הידיים שלך יסתדרו כאן תוך כדי משחק, נקודה לכל החלטה.',
   'track.row':
-    '{n} החלטות, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    '{n} החלטות, תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'track.rowOne':
-    'החלטה אחת, תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    'החלטה אחת, תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'track.rowNone':
-    'בלי החלטה: היד נגמרה בחלוקה. תוצאה {net} יחידות. פותח את היד ברשימת הידיים.',
+    'בלי החלטה: היד נגמרה בחלוקה. תוצאה {net} צ׳יפים. פותח את היד ברשימת הידיים.',
   'uth.logTitle':
     'ידיים',
   'uth.logEmpty':
@@ -7810,7 +7906,7 @@ const HE            = {
   'uth.atRisk':
     'במשחק',
   'uth.pressDeal':
-    'חלק כדי להניח אנטה 1 ובליינד 1.',
+    'חלק כדי להניח אנטה {bet} ובליינד {bet}.',
   'uth.nextHand':
     'היד הבאה',
   'uth.keys':
@@ -7836,9 +7932,9 @@ const HE            = {
   'uth.s.flopCheck':
     'צ׳ק עדיף על ⁦2×⁩ ב-**{gap}**. נשארת לך החלטת ⁦1×⁩ בריבר, ופורשים בה ב-{riverFold} מהמקרים.',
   'uth.s.riverRaise':
-    'היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose} — שווה יותר מפרישה ב-{fold}.',
+    'היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose} — שווה יותר מפרישה ב-{fold} יחידות.',
   'uth.s.riverFold':
-    'היד שלך מנצחת רק **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose}, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-{fold}.',
+    'היד שלך מנצחת רק **{win}** מהידיים האפשריות של הדילר, משתווה ל-{tie} ומפסידה ל-{lose}, ולכן ⁦1×⁩ מפסיד יותר מפרישה ב-{fold} יחידות.',
   'uth.line.dealerQualified':
     'הדילר מתאים עם זוג ומעלה — אנטה {ante}',
   'uth.line.dealerNotQualified':
@@ -7856,7 +7952,7 @@ const HE            = {
   'uth.line.blindPush':
     'הבליינד בתיקו — הניצחון היה מתחת לרצף',
   'uth.line.blindLose':
-    'הבליינד מפסיד ⁦−1⁩',
+    'הבליינד מפסיד {blind}',
   'uth.line.blindTie':
     'הבליינד בתיקו',
   'uth.line.folded':
@@ -7864,9 +7960,9 @@ const HE            = {
   'uth.line.foldPlay':
     'לא הונח הימור פליי',
   'uth.line.forfeit':
-    'האנטה והבליינד אבודים: ⁦−2⁩',
+    'האנטה והבליינד אבודים: {lost}',
   'uth.line.net':
-    'היד {net}',
+    'היד {net} צ׳יפים',
   'uth.fold': 'פרישה',
   'uth.threeXNever': 'ההעלאה של ⁦3×⁩ מפסידה לשתי האפשרויות האחרות כאן — כמו בכל מקום אחר.',
   'uth.stillComputing': 'המחלקה הזו עדיין בחישוב על ידי העבודה הלא-מקוונת. הפלופ והריבר למטה מדויקים.',
@@ -7987,7 +8083,7 @@ const HE            = {
   'fb.spotAboveYou': 'מדורג מעליך.',
 
   'sound.enable': 'צליל',
-  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון. שום דבר לא נשמע כשיד מנצחת או מפסידה.',
+  'sound.note': 'צלילים קצרים כשקלף נוחת וכשההחלטה מקבלת ציון, ונקישה אחת כשצ׳יפים זזים — אותה נקישה בדיוק כשיד מנצחת או מפסידה.',
 
   // --- The door ---
   'welcome.codeLabel': 'בחר קוד בן 4 ספרות',
@@ -8956,6 +9052,174 @@ function trackDot(severity              , closeCall         )           {
   return closeCall ? 'close' : severity;
 }
 
+/* ===== packages/trainer-web/src/chips.ts ===== */
+/**
+ * Chip betting (round 6b): the bet a player builds, the table limits, the stack.
+ *
+ * The engine and every grade stay in units. A bet here is only a multiplier —
+ * chips per unit — so a blunder at a bet of 100 costs exactly the rating, the
+ * EV and the accuracy it costs at 1, and only the stack feels the difference.
+ * Both sessions keep one of these books, so the two tables bet the same way.
+ *
+ * Idan's decision (round 6, option B): the bet is limited by the table limits
+ * and nothing else. A hand that needs more than the stack holds — a split and a
+ * double, an Ultimate raise — still plays, and the stack may go below zero until
+ * the free rebuy. The arithmetic stays exact.
+ */
+
+/** The chips on the rail, smallest first. */
+const CHIP_VALUES                    = [1, 5, 25, 100];
+
+/** The table limits printed on the felt. */
+const TABLE_LIMITS                                         = { min: 1, max: 100 };
+
+/** What a new player sits down with, and what the free rebuy returns the stack to. */
+const STARTING_CHIPS = 200;
+
+                                                                         
+
+                           
+                                                                        
+                
+                                                                              
+              
+                                                                          
+                  
+                                                                                         
+                   
+ 
+
+/** What the rail needs to draw and enable its controls. */
+                            
+                
+              
+                  
+                                       
+                   
+                                                                             
+                    
+                     
+                    
+                     
+                     
+                   
+                      
+                        
+ 
+
+/**
+ * Chips as figures: exact to the cent.
+ *
+ * A unit result can be 1.5 or 1.2 (a natural at 3:2 or 6:5) and a bet is any
+ * whole number, so products like 1.2 × 7 land a hair off in floating point. The
+ * stack is the one figure on the table that is meant to be plain arithmetic.
+ */
+function roundChips(value        )         {
+  return Math.round(value * 100) / 100;
+}
+
+function validBet(bet        )          {
+  return Number.isInteger(bet) && bet >= TABLE_LIMITS.min && bet <= TABLE_LIMITS.max;
+}
+
+/** The chips a bet is laid out in, largest first, so the smallest is taken back first. */
+function chipsFor(bet        )           {
+  const out           = [];
+  let left = Math.max(0, Math.floor(bet));
+  for (const value of [...CHIP_VALUES].reverse()) {
+    while (left >= value) {
+      out.push(value);
+      left -= value;
+    }
+  }
+  return out;
+}
+
+function newChipBook()           {
+  return { stack: STARTING_CHIPS, bet: 1, lastBet: 1, placed: [1] };
+}
+
+function needsRebuy(book          )          {
+  return book.stack < TABLE_LIMITS.min;
+}
+
+/** One change to the bet. Throws, and changes nothing, when it would break the limits. */
+function applyBet(book          , op       , chip         )           {
+  switch (op) {
+    case 'add': {
+      if (typeof chip !== 'number' || !CHIP_VALUES.includes(chip)) throw new Error('No such chip');
+      if (book.bet + chip > TABLE_LIMITS.max) throw new Error(`The table maximum is ${TABLE_LIMITS.max}`);
+      return { ...book, bet: book.bet + chip, placed: [...book.placed, chip] };
+    }
+    case 'removeLast': {
+      const last = book.placed[book.placed.length - 1];
+      if (last === undefined) throw new Error('There is no chip to take back');
+      return { ...book, bet: book.bet - last, placed: book.placed.slice(0, -1) };
+    }
+    case 'clear':
+      return { ...book, bet: 0, placed: [] };
+    case 'repeat':
+      if (!validBet(book.lastBet)) throw new Error('There is no last bet to repeat');
+      return { ...book, bet: book.lastBet, placed: chipsFor(book.lastBet) };
+    case 'double': {
+      const doubled = book.lastBet * 2;
+      if (!validBet(doubled)) throw new Error(`The table maximum is ${TABLE_LIMITS.max}`);
+      return { ...book, bet: doubled, placed: chipsFor(doubled) };
+    }
+    default:
+      throw new Error(`No such bet change: ${String(op)}`);
+  }
+}
+
+/** The free rebuy: only below the table minimum, always back to the starting stack, the bet untouched. */
+function rebuyBook(book          )           {
+  if (!needsRebuy(book)) throw new Error('A rebuy is for a stack below the table minimum');
+  return { ...book, stack: STARTING_CHIPS };
+}
+
+/** The rail's view of a book. Nothing changes during a hand, so every control is off then. */
+function chipsView(book          , betweenHands         )            {
+  const doubled = book.lastBet * 2;
+  const rebuy = needsRebuy(book);
+  return {
+    stack: book.stack,
+    bet: book.bet,
+    lastBet: book.lastBet,
+    limits: { ...TABLE_LIMITS },
+    values: [...CHIP_VALUES],
+    canAdd: CHIP_VALUES.map((value) => betweenHands && book.bet + value <= TABLE_LIMITS.max),
+    canRemove: betweenHands && book.placed.length > 0,
+    canClear: betweenHands && book.bet > 0,
+    canRepeat: betweenHands && validBet(book.lastBet) && book.lastBet !== book.bet,
+    canDouble: betweenHands && validBet(doubled) && doubled !== book.bet,
+    canDeal: betweenHands && validBet(book.bet) && !rebuy,
+    needsRebuy: betweenHands && rebuy,
+    startingChips: STARTING_CHIPS,
+  };
+}
+
+/**
+ * A saved book, read defensively.
+ *
+ * A record passed around a family can be half-written, and older saves have no
+ * bet at all: those come back at a bet of 1, which is what every hand before
+ * round 6b was played at. The stack is worked out by the caller, because the
+ * two games saved it differently before this existed.
+ */
+function readChipBook(
+  saved                                                         ,
+  stack        ,
+)           {
+  const bet = typeof saved?.bet === 'number' && (saved.bet === 0 || validBet(saved.bet)) ? saved.bet : 1;
+  const lastBet = typeof saved?.lastBet === 'number' && validBet(saved.lastBet) ? saved.lastBet : 1;
+  return {
+    stack: Number.isFinite(stack) ? roundChips(stack) : STARTING_CHIPS,
+    bet,
+    lastBet,
+    placed: chipsFor(bet),
+  };
+}
+
 /* ===== packages/trainer-web/src/session.ts ===== */
 /**
  * The session controller (spec §12), in the small.
@@ -8970,6 +9234,7 @@ function trackDot(severity              , closeCall         )           {
  *     resolves, so feedback can never be coloured by an outcome the player has
  *     already seen.
  */
+
 
 
 
@@ -9031,6 +9296,8 @@ function cardView(card        )           {
                           
                    
                           
+                                                                                                   
+               
                     
                         
                      
@@ -9113,7 +9380,19 @@ function cardView(card        )           {
                 
  
 
-                                                                                        
+/**
+ * Version 4: version 3, plus the chips (round 6b).
+ *
+ * The stack, the bet ready for the next hand, the last bet dealt, and the table
+ * limits it was built under. Everything graded stays in units exactly as in
+ * version 3; a version 3 save opens at a bet of 1 with the stack it last showed.
+ */
+                                                                               
+             
+                                                                                               
+ 
+
+                                                                                                            
 
                                
                       
@@ -9304,6 +9583,13 @@ class TrainerSession {
    * safe to use when deciding which of two saved copies is further along.
    */
           lifetimeDecisions = 0;
+  /*
+   * The chips (round 6b): the stack, the bet being built, the last bet dealt.
+   * Only ever a multiplier on units — nothing graded reads it.
+   */
+          chips           = newChipBook();
+  /** Chips per unit of the hand on the felt, fixed when it is dealt. */
+          handBet = 1;
 
   /**
    * Two house restrictions the player can switch on over any preset.
@@ -9364,7 +9650,16 @@ class TrainerSession {
   }
 
   deal()       {
+    /*
+     * The table limits and the free rebuy are held here, not only on the rail.
+     * The hand is still dealt at one unit: the engine and every grade stay in
+     * units, and the bet only says how many chips a unit is.
+     */
+    if (needsRebuy(this.chips)) throw new Error('The stack is below the table minimum: take the free rebuy first');
+    if (!validBet(this.chips.bet)) throw new Error(`A bet is between ${TABLE_LIMITS.min} and ${TABLE_LIMITS.max}`);
     this.table.startHand(1);
+    this.handBet = this.chips.bet;
+    this.chips = { ...this.chips, lastBet: this.chips.bet };
     this.lastFeedback = null;
     this.lastRatingDelta = null;
     // A milestone belongs to the decision that reached it, not to the run.
@@ -9602,6 +9897,9 @@ class TrainerSession {
     this.countedHand = record.id;
     this.hands++;
     this.netUnits += record.netUnits;
+    // Exact, and allowed below zero: a hand that needed more than the stack
+    // still played (round 6b, option B).
+    this.chips = { ...this.chips, stack: roundChips(this.chips.stack + record.netUnits * this.handBet) };
 
     this.history.unshift({
       id: record.id,
@@ -9610,9 +9908,27 @@ class TrainerSession {
       dealerCards: record.dealerCards.map(cardView),
       netUnits: record.netUnits,
       insuranceTaken: record.insuranceTaken,
+      bet: this.handBet,
       decisions: this.pending,
     });
     this.pending = [];
+  }
+
+  /**
+   * Build the bet between hands: add a chip, take the last one back, clear it,
+   * repeat the last bet or double it. The table limits are enforced here.
+   */
+  placeBet(op       , chip         )       {
+    const phase = this.table.view.phase;
+    if (phase === 'player' || phase === 'insurance') throw new Error('The bet stays until the hand is over');
+    this.chips = applyBet(this.chips, op, chip);
+  }
+
+  /** The free rebuy: only below the table minimum, always back to the starting stack. */
+  rebuy()       {
+    const phase = this.table.view.phase;
+    if (phase === 'player' || phase === 'insurance') throw new Error('Finish the hand first');
+    this.chips = rebuyBook(this.chips);
   }
 
   get stats()               {
@@ -9649,11 +9965,13 @@ class TrainerSession {
       hands: view.hands.map((hand, index) => ({
         cards: hand.cards.map(cardView),
         total: totalOf(hand.cards),
-        bet: hand.bet,
+        // In chips at the bet; `units` is what the engine staked.
+        bet: roundChips(hand.bet * this.handBet),
+        units: hand.bet,
         doubled: hand.doubled,
         surrendered: hand.surrendered,
         finished: hand.finished,
-        net: hand.net,
+        net: hand.net === null ? null : roundChips(hand.net * this.handBet),
         active: !settled && index === view.activeHandIndex,
       })),
       dealer: {
@@ -9675,19 +9993,24 @@ class TrainerSession {
       netUnits: view.netUnits,
       stack: {
         start: TrainerSession.STARTING_STACK,
-        // Settled hands only. A wager still on the felt has not been lost yet,
-        // and showing it as though it had would misreport the one figure on
-        // screen that is supposed to be simple arithmetic.
-        balance: TrainerSession.STARTING_STACK + this.netUnits,
+        // Settled hands only, in chips. A wager still on the felt has not been
+        // lost yet, and showing it as though it had would misreport the one
+        // figure on screen that is supposed to be simple arithmetic. It can be
+        // below zero after a hand that needed more than the stack held.
+        balance: this.chips.stack,
         // Swept the moment the hand settles, because by then it has already
         // moved into the balance — leaving it on the felt would show the same
         // chips in two places and make the arithmetic look wrong.
         wager: settled
           ? 0
-          : view.hands.reduce((total, hand) => total + hand.bet, 0) +
-            (view.insuranceTaken ? 0.5 : 0),
-        lastNet: view.netUnits,
+          : roundChips(
+              (view.hands.reduce((total, hand) => total + hand.bet, 0) + (view.insuranceTaken ? 0.5 : 0)) *
+                this.handBet,
+            ),
+        lastNet: view.netUnits === null ? null : roundChips(view.netUnits * this.handBet),
       },
+      // The rail between hands: the bet, the limits, what may change.
+      chips: chipsView(this.chips, view.phase !== 'player' && view.phase !== 'insurance'),
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       history: this.history.slice(0, 40),
@@ -9697,7 +10020,8 @@ class TrainerSession {
           index,
           id: hand.id,
           dots: hand.decisions.map((d) => trackDot(d.severity, Boolean(d.closeCall))),
-          net: hand.netUnits,
+          // In chips at the bet the hand was dealt at.
+          net: roundChips(hand.netUnits * (hand.bet ?? 1)),
         }),
       ),
       stats: this.stats,
@@ -9901,7 +10225,7 @@ class TrainerSession {
    */
   get progress()                    {
     return {
-      version: 3,
+      version: 4,
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -9920,6 +10244,12 @@ class TrainerSession {
       },
       scenarioStats: [...this.scenarioStats.values()],
       history: this.history.slice(0, 40),
+      chips: {
+        stack: this.chips.stack,
+        bet: this.chips.bet,
+        lastBet: this.chips.lastBet,
+        limits: { ...TABLE_LIMITS },
+      },
     };
   }
 
@@ -9933,7 +10263,9 @@ class TrainerSession {
   restore(saved                                    )       {
     // Versions 2 and 3 hold the same Blackjack fields; version 3 only adds
     // `uth`, which is `UthSession`'s to read.
-    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3)) return;
+    // Versions 2 to 4 hold the same Blackjack fields; 3 adds `uth`, which is
+    // `UthSession`'s to read, and 4 adds the chips.
+    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4)) return;
     const n = (value         , fallback = 0)         =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -9983,6 +10315,18 @@ class TrainerSession {
       (saved.scenarioStats ?? []).map((stat) => [stat.scenarioKey, { ...stat }]),
     );
     this.history = [...(saved.history ?? [])];
+    /*
+     * Before version 4 the stack was never saved: it was drawn as the starting
+     * stack plus this session's units, which is what the player last saw, so
+     * that is where it reopens — at a bet of 1, the bet every one of those
+     * hands was played at.
+     */
+    const chips = saved.version === 4 ? saved.chips : undefined;
+    this.chips = readChipBook(
+      chips,
+      chips && typeof chips.stack === 'number' ? chips.stack : TrainerSession.STARTING_STACK + n(saved.netUnits),
+    );
+    this.handBet = 1;
     // A restored session is between hands by construction, so nothing from the
     // previous one is left pointing at a table that no longer exists.
     this.pending = [];
@@ -10132,6 +10476,7 @@ function describeScenarioKey(key        , locale         = 'en')         {
  * cards, the starting hand described rather than written as "62s", and what the
  * suit is worth before the flop. Every figure still comes from the engine.
  */
+
 
 
 
@@ -10330,6 +10675,8 @@ function uthPerfectPlayEdgePercent()         {
                     
                             
                                 
+                                                                                                   
+               
  
 
 /** The `uth` part of a version 3 progress blob. */
@@ -10348,6 +10695,19 @@ function uthPerfectPlayEdgePercent()         {
                                                                                 
                             
                            
+ 
+
+/**
+ * The `uth` part since round 6b: version 1, plus the bet.
+ *
+ * `balance` was already the stack, in units at the only bet there was, so it
+ * carries straight over as chips. The Ante the next hand posts is `bet`.
+ */
+                                                                       
+             
+              
+                  
+                                       
  
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -10389,7 +10749,10 @@ class UthSession {
                    table          ;
           locale         = 'en';
 
-          balance = UthSession.STARTING_STACK;
+  /** The stack, the bet being built and the last bet dealt, in chips (round 6b). */
+          chips           = newChipBook();
+  /** Chips per unit of the hand on the felt: the Ante, fixed when it is dealt. */
+          handBet = 1;
           hands = 0;
           decisions = 0;
           correct = 0;
@@ -10422,8 +10785,17 @@ class UthSession {
     if (phase !== 'idle' && phase !== 'settled') {
       throw new Error('Finish the hand before dealing another');
     }
+    if (needsRebuy(this.chips)) throw new Error('The stack is below the table minimum: take the free rebuy first');
+    if (!validBet(this.chips.bet)) throw new Error(`An Ante is between ${TABLE_LIMITS.min} and ${TABLE_LIMITS.max}`);
     this.table.startHand();
-    this.balance -= 2; // Ante 1 + Blind 1, onto the felt
+    // The Ante is the bet, and the Blind always equals it: both onto the felt.
+    // The stack may go below zero here; the hand still plays (option B).
+    this.handBet = this.chips.bet;
+    this.chips = {
+      ...this.chips,
+      lastBet: this.chips.bet,
+      stack: roundChips(this.chips.stack - 2 * this.handBet),
+    };
     this.lastNet = null;
     this.last = null;
     this.pending = [];
@@ -10467,14 +10839,20 @@ class UthSession {
     this.count(record, evaluation);
 
     const raise = { raise4x: 4, raise3x: 3, raise2x: 2, raise1x: 1 }[action          ];
-    if (raise !== undefined) this.balance -= raise;
+    // A raise is the rule's multiple of the Ante: 4× on an Ante of 5 is 20.
+    if (raise !== undefined) {
+      this.chips = { ...this.chips, stack: roundChips(this.chips.stack - raise * this.handBet) };
+    }
 
     const view = this.table.view;
     if (view.phase === 'settled' && view.settlement) {
       const settlement = view.settlement;
-      // Everything staked comes back, plus or minus what it won.
-      this.balance += 2 + settlement.playBet + settlement.net;
-      this.lastNet = settlement.net;
+      // Everything staked comes back, plus or minus what it won — in chips, at the bet.
+      this.chips = {
+        ...this.chips,
+        stack: roundChips(this.chips.stack + (2 + settlement.playBet + settlement.net) * this.handBet),
+      };
+      this.lastNet = roundChips(settlement.net * this.handBet);
       this.netUnits += settlement.net;
       this.hands++;
       const hand = this.table.handRecord;
@@ -10486,6 +10864,7 @@ class UthSession {
         holeClass: hand.holeClass,
         settlement: { ...settlement },
         decisions: this.pending,
+        bet: this.handBet,
       });
       this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
       this.pending = [];
@@ -10530,6 +10909,25 @@ class UthSession {
         playerValue: evaluation.playerValue,
       },
     });
+  }
+
+  // --- The bet -------------------------------------------------------------
+
+  /**
+   * Build the Ante between hands: add a chip, take the last one back, clear it,
+   * repeat the last Ante or double it. The table limits are enforced here.
+   */
+  placeBet(op       , chip         )       {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') throw new Error('The Ante stays until the hand is over');
+    this.chips = applyBet(this.chips, op, chip);
+  }
+
+  /** The free rebuy: only below the table minimum, always back to the starting stack. */
+  rebuy()       {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') throw new Error('Finish the hand first');
+    this.chips = rebuyBook(this.chips);
   }
 
   // --- Saving and restoring ------------------------------------------------
@@ -10588,8 +10986,13 @@ class UthSession {
     }
 
     return {
-      version: 1,
-      balance: inHand ? this.balance + view.ante + view.blind + view.playBet : this.balance,
+      version: 2,
+      balance: inHand
+        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet)
+        : this.chips.stack,
+      bet: this.chips.bet,
+      lastBet: this.chips.lastBet,
+      limits: { ...TABLE_LIMITS },
       hands: this.hands,
       decisions: unwound(this.decisions, this.pending.length),
       correct: unwound(this.correct, pendingCorrect),
@@ -10624,13 +11027,15 @@ class UthSession {
       throw new Error('Restore between hands, not during one');
     }
     this.reset();
-    const s = saved                                             ;
-    if (!s || typeof s !== 'object' || s.version !== 1) return;
+    const s = saved                                                                                        ;
+    if (!s || typeof s !== 'object' || (s.version !== 1 && s.version !== 2)) return;
 
     const n = (value         , fallback = 0)         =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
-    this.balance = n(s.balance, UthSession.STARTING_STACK);
+    // A version 1 part has no bet: it opens at 1, the bet all of its hands were played at.
+    this.chips = readChipBook(s.version === 2 ? s : undefined, n(s.balance, UthSession.STARTING_STACK));
+    this.handBet = 1;
     this.hands = n(s.hands);
     this.decisions = n(s.decisions);
     this.correct = n(s.correct);
@@ -10654,7 +11059,8 @@ class UthSession {
   }
 
           reset()       {
-    this.balance = UthSession.STARTING_STACK;
+    this.chips = newChipBook();
+    this.handBet = 1;
     this.hands = 0;
     this.decisions = 0;
     this.correct = 0;
@@ -10688,17 +11094,20 @@ class UthSession {
       // Notation for the tooltip; words for the player.
       holeClass: inHand ? this.table.holeClass : null,
       holeWords: inHand ? this.classWords(this.table.holeClass) : null,
+      // In chips at the bet: an Ante of 5 posts a Blind of 5, and 4× is 20.
       stake: {
-        ante: table.ante,
-        blind: table.blind,
-        play: table.playBet,
-        total: table.ante + table.blind + table.playBet,
+        ante: roundChips(table.ante * this.handBet),
+        blind: roundChips(table.blind * this.handBet),
+        play: roundChips(table.playBet * this.handBet),
+        total: roundChips((table.ante + table.blind + table.playBet) * this.handBet),
       },
       stack: {
         start: UthSession.STARTING_STACK,
-        balance: this.balance,
+        balance: this.chips.stack,
         lastNet: this.lastNet,
       },
+      // The rail between hands: the Ante being built, the limits, what may change.
+      chips: chipsView(this.chips, !inHand || settled),
       hands: this.hands,
       stats: this.stats,
       // The floor under the effective edge, as the tooltip quotes it.
@@ -10713,7 +11122,7 @@ class UthSession {
       // it to be done early; this tells the page whether it still needs asking.
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
-      settlement: settled && table.settlement ? this.lines(table.settlement) : null,
+      settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
       showdown:
         settled && table.settlement && !table.settlement.folded
           ? this.showdown(table.hole, table.dealerHole, table.board)
@@ -10725,7 +11134,8 @@ class UthSession {
           index,
           id: hand.id,
           dots: hand.decisions.map((d) => trackDot(d.severityTier, uthCloseCall(d))),
-          net: hand.settlement.net,
+          // In chips at the Ante the hand was dealt at.
+          net: roundChips(hand.settlement.net * (hand.bet ?? 1)),
         }),
       ),
       howTo: this.howTo(),
@@ -10884,7 +11294,7 @@ class UthSession {
       (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
       'optimal',
     );
-    const result = this.lines(hand.settlement);
+    const result = this.lines(hand.settlement, hand.bet ?? 1);
     const shown = hand.settlement.folded ? null : this.showdown(hand.hole, hand.dealerHole, hand.board);
 
     return {
@@ -10896,7 +11306,7 @@ class UthSession {
       },
       summary,
       severity: worst,
-      net: hand.settlement.net,
+      net: roundChips(hand.settlement.net * (hand.bet ?? 1)),
       decisions,
       showdown: shown ? [shown.player.words, shown.dealer.words] : [],
       lines: result.lines,
@@ -11087,14 +11497,15 @@ class UthSession {
    * (which is the only bet qualification touches), then the Play, then the
    * Blind — and the total comes last and quietest.
    */
-          lines(s               )                                                    {
+          lines(s               , perUnit        )                                                    {
     const L = this.locale;
     const iso = isolateFor(L);
-    const cash = (value        ) => iso(money(value));
+    // Every figure in chips at the bet; the multiple on the Play bet stays a multiple.
+    const cash = (value        ) => iso(money(roundChips(value * perUnit)));
     const bet = iso(`${s.playBet}×`);
     if (s.folded) {
       return {
-        lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit')],
+        lines: [t(L, 'uth.line.folded'), t(L, 'uth.line.foldPlay'), t(L, 'uth.line.forfeit', { lost: cash(-2) })],
         net: t(L, 'uth.line.net', { net: cash(s.net) }),
         folded: true,
       };
@@ -11122,7 +11533,7 @@ class UthSession {
         : s.blindPushed
           ? t(L, 'uth.line.blindPush')
           : s.blind < 0
-            ? t(L, 'uth.line.blindLose')
+            ? t(L, 'uth.line.blindLose', { blind: cash(s.blind) })
             : t(L, 'uth.line.blindTie');
     return {
       lines: [dealer, play, blind],
@@ -11138,7 +11549,7 @@ class UthSession {
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
-const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n            <span class=\"seat-total\" id=\"uth-class\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\" data-i18n=\"uth.pressDeal\">Deal to post Ante 1 and Blind 1.</p>\n      </main>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n            <span class=\"seat-total\" id=\"uth-class\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 
 /* The decision track, shared by both tables (round 6). */
 /*
@@ -11272,6 +11683,275 @@ const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a sta
   }
 
   window.EVTrack = { render, open, takeOpened, figure };
+})();
+
+
+/* Chips: the bet rail, the moving chips and their one click (round 6b). */
+/*
+ * Chips (round 6b): the rail a bet is built on, the chips that move, and the
+ * one sound they make.
+ *
+ * Shared by both tables, like the decision track. It draws what the session
+ * sends — the bet, the limits, which controls are allowed — and decides none of
+ * it: the session is what refuses a bet over the table maximum.
+ *
+ * Three lines it holds:
+ *
+ *   - Money never changes the grade. Nothing here reads a verdict, and the
+ *     bet only ever reaches the stack.
+ *   - Money is silent in spirit (§3.1). Placing, collecting and paying make the
+ *     same click, and the click takes no arguments, so nothing about a hand can
+ *     reach it: a win and a loss are indistinguishable.
+ *   - Nothing presses a longer session (§16). The rebuy is one plain line and
+ *     one button: no timer, no offer, no count.
+ *
+ * Everything lives on `window.EVChips`; the pages share one global scope.
+ */
+(function () {
+  const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
+  /** The colour every table uses for each value, as the rail already draws them. */
+  const FACE = { 1: 'white', 5: 'red', 25: 'green', 100: 'black' };
+
+  const rtl = () => document.documentElement.getAttribute('dir') === 'rtl';
+  const isolate = (text) => (rtl() ? `⁦${text}⁩` : text);
+
+  /** A chip figure: exact, a real minus sign, kept in one piece in Hebrew. */
+  function figure(value, signed) {
+    const size = Math.abs(value);
+    const text = Number.isInteger(size) ? String(size) : String(Number(size.toFixed(2)));
+    const sign = value < 0 ? '−' : signed && value > 0 ? '+' : '';
+    return isolate(`${sign}${text}`);
+  }
+
+  // --- Sound ---------------------------------------------------------------------
+
+  function soundOn() {
+    try {
+      return localStorage.getItem('ev:sound') === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  /** The table's one audio context, made only once sound is asked for. Shared with app.js. */
+  function audio() {
+    if (!soundOn()) return null;
+    try {
+      if (!window.__evAudio) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        const ctx = new Ctx();
+        const master = ctx.createGain();
+        master.gain.value = 0.25;
+        master.connect(ctx.destination);
+        window.__evAudio = { ctx, master };
+      }
+      const held = window.__evAudio;
+      if (held.ctx.state === 'suspended') held.ctx.resume();
+      return held;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * One chip click. The same for placing a bet, for the dealer collecting it and
+   * for the dealer paying — no parameters, so no outcome can make it louder,
+   * longer or different.
+   */
+  function click() {
+    const held = audio();
+    if (!held) return;
+    const { ctx, master } = held;
+    const at = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = 1900;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(0.3, at + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.03);
+    osc.connect(gain).connect(master);
+    osc.start(at);
+    osc.stop(at + 0.04);
+  }
+
+  // --- Motion ----------------------------------------------------------------------
+
+  function still() {
+    return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  const centre = (rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+
+  /**
+   * A chip crossing the felt, from a place on screen to an element.
+   *
+   * Nothing is created at all when the player has asked for less motion, and the
+   * animation itself lives inside the stylesheet's reduced-motion guard as well,
+   * so stillness is the default twice over.
+   */
+  function fly(from, to, value) {
+    if (still() || !from || !to || typeof to.getBoundingClientRect !== 'function') return;
+    const start = centre(typeof from.getBoundingClientRect === 'function' ? from.getBoundingClientRect() : from);
+    const end = centre(to.getBoundingClientRect());
+    const chip = document.createElement('span');
+    chip.className = `chip chip-${FACE[value] || 'white'} chip-flight`;
+    chip.setAttribute('aria-hidden', 'true');
+    chip.style.left = `${end.x}px`;
+    chip.style.top = `${end.y}px`;
+    chip.style.setProperty('--fly-x', `${start.x - end.x}px`);
+    chip.style.setProperty('--fly-y', `${start.y - end.y}px`);
+    document.body.appendChild(chip);
+    const done = () => chip.remove();
+    chip.addEventListener('animationend', done);
+    setTimeout(done, 450);
+  }
+
+  /** A bet placed: one click, one chip to the spot. */
+  function place(from, to, value) {
+    click();
+    fly(from, to, value);
+  }
+
+  /**
+   * A hand's chips going where the result sends them, after the reveal.
+   *
+   * The click comes first and unconditionally: collecting and paying sound the
+   * same. Only the direction of the chips differs, which is what a table shows.
+   */
+  function settle(net, spots, bank, dealer) {
+    click();
+    const from = spots.filter(Boolean);
+    if (net > 0) {
+      fly(dealer, bank, 25);
+      for (const spot of from) fly(spot, bank, 5);
+    } else if (net < 0) {
+      for (const spot of from) fly(spot, dealer, 5);
+    } else {
+      for (const spot of from) fly(spot, bank, 5);
+    }
+  }
+
+  // --- The rail ----------------------------------------------------------------------
+
+  function button(label, action, disabled, handler) {
+    const node = document.createElement('button');
+    node.type = 'button';
+    node.className = 'action bet-control';
+    node.dataset.action = action;
+    node.disabled = Boolean(disabled);
+    if (typeof label === 'string') node.textContent = label;
+    else node.append(label);
+    node.addEventListener('click', handler);
+    return node;
+  }
+
+  function row(box, nodes, extra) {
+    const line = document.createElement('div');
+    line.className = 'action-row' + (extra ? ` ${extra}` : '');
+    line.style.setProperty('--cols', String(nodes.length));
+    line.append(...nodes);
+    box.appendChild(line);
+  }
+
+  /**
+   * The controls between hands, into the page's action bar.
+   *
+   * Below the table minimum it is the rebuy and nothing else: one line saying
+   * what it is, and one button. Otherwise the four chips, then Clear, Repeat and
+   * Double; the page adds Deal under them.
+   *
+   * @param bet    (op, chip) => Promise, sending one change to the session
+   * @param rebuy  () => Promise
+   * @param spot   () => the element a placed chip flies to
+   * @param compact  true while the last hand's card is still up
+   * @returns 'rebuy' when only the rebuy is shown, 'compact' when the chips wait behind `toggle`
+   */
+  function controls(box, chips, bet, rebuy, spot, busy, compact) {
+    if (chips.needsRebuy) {
+      const line = document.createElement('p');
+      line.className = 'rebuy-line';
+      line.textContent = T('rebuy.line', { n: figure(chips.startingChips) });
+      box.appendChild(line);
+      row(box, [
+        button(T('rebuy.button', { n: figure(chips.startingChips) }), 'rebuy', busy, () => rebuy()),
+      ]);
+      return 'rebuy';
+    }
+
+    /*
+     * With the last hand's card still up, the bar stays one row: Deal at the same
+     * bet, and the chips one tap away. Three rows of chips under the card covered
+     * the player's own cards on a phone at showdown — the five the card rings.
+     */
+    if (compact) return 'compact';
+
+    row(
+      box,
+      chips.values.map((value, i) => {
+        const face = document.createElement('span');
+        face.className = `chip chip-${FACE[value] || 'white'}`;
+        face.textContent = value;
+        const node = button(face, `chip-${value}`, busy || !chips.canAdd[i], async () => {
+          const from = node.getBoundingClientRect();
+          await bet('add', value);
+          place(from, spot(), value);
+        });
+        node.classList.add('chip-button');
+        node.setAttribute('aria-label', T('bet.chip', { value }));
+        return node;
+      }),
+      'bet-chips',
+    );
+    row(
+      box,
+      [
+        button(T('bet.clear'), 'bet-clear', busy || !chips.canClear, () => bet('clear')),
+        button(T('bet.repeat', { bet: figure(chips.lastBet) }), 'bet-repeat', busy || !chips.canRepeat, () => bet('repeat')),
+        button(T('bet.double', { bet: figure(chips.lastBet * 2) }), 'bet-double', busy || !chips.canDouble, () => bet('double')),
+      ],
+      'bet-tools',
+    );
+    return 'chips';
+  }
+
+  /** The bet as it stands, which opens the chips when tapped. */
+  function toggle(chips, open, busy) {
+    return button(T('bet.change', { bet: figure(chips.bet) }), 'bet-open', busy, () => open());
+  }
+
+  /** Make a bet spot on the felt take its last chip back when tapped, between hands. */
+  function spot(node, chips, bet) {
+    if (!node || !chips || chips.needsRebuy) return;
+    node.classList.add('bet-spot');
+    node.setAttribute('role', 'button');
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('aria-label', T('bet.spot', { bet: figure(chips.bet) }));
+    if (!chips.canRemove) {
+      node.setAttribute('aria-disabled', 'true');
+      return;
+    }
+    const take = () => bet('removeLast');
+    node.addEventListener('click', take);
+    node.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        take();
+      }
+    });
+  }
+
+  /** The limits, printed on the felt as a table prints them. */
+  function limits(chips) {
+    const line = document.createElement('p');
+    line.className = 'table-limits';
+    line.textContent = T('bet.limits', { range: isolate(`${chips.limits.min}–${chips.limits.max}`) });
+    return line;
+  }
+
+  window.EVChips = { controls, toggle, spot, limits, place, settle, fly, click, figure, FACE };
 })();
 
 
@@ -11809,6 +12489,10 @@ const state = {
   shown: { dealer: [], hands: [] },
   /** Guards the one-shot verdict effects; see `flashOnce`. */
   flashed: null,
+  /** Hands settled when the chips last moved, so they move once a hand. */
+  chipsSettled: null,
+  /** Whether the chips are open between hands while the last card is still up. */
+  betOpen: false,
 };
 
 /** Identity of a card in its seat: same rank, same suit, same position. */
@@ -11951,6 +12635,9 @@ function setShowAllPreferred(value) {
 }
 
 
+/** Building a bet or taking the rebuy: nothing about the last hand changes. */
+const CHIP_PATHS = ['/api/bet', '/api/rebuy'];
+
 /** Every call that changes the table funnels through here. */
 async function send(path, body) {
   if (state.busy) return;
@@ -11958,12 +12645,19 @@ async function send(path, body) {
   try {
     // A new hand starts an empty felt, so its first cards are new even if they
     // happen to match the last hand's rank, suit and seat.
-    if (path === '/api/deal') state.shown = { dealer: [], hands: [] };
+    if (path === '/api/deal') {
+      state.shown = { dealer: [], hands: [] };
+      state.betOpen = false;
+    }
     state.view = await api(path, body ?? {});
     const feedback = state.view.feedback;
-    state.reveal = feedback
-      ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
-      : null;
+    // A chip placed after a hand leaves that hand's card where the player had
+    // the reveal, rather than starting the reasoning over.
+    if (!CHIP_PATHS.includes(path)) {
+      state.reveal = feedback
+        ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
+        : null;
+    }
     render();
   } catch (error) {
     console.error(error);
@@ -11974,6 +12668,16 @@ async function send(path, body) {
 }
 
 // --- Rendering -------------------------------------------------------------
+
+/**
+ * A decision that puts more chips out — a double, a split, insurance — moves
+ * them from the stack to the spot, with the one chip click (round 6b).
+ */
+async function sendPlacing(path, body, placesChips) {
+  const from = placesChips ? document.querySelector('#rail .rail-bank .chips')?.getBoundingClientRect() : null;
+  await send(path, body);
+  if (from && window.EVChips) window.EVChips.place(from, document.querySelector('#rail .rail-bet .chips'), 5);
+}
 
 /**
  * One card, marked by where it came from.
@@ -12106,26 +12810,44 @@ function chipNodes(amount, cap) {
   });
 }
 
-/** The player's rail: what is in play, and what is behind it. */
+/** A chip figure: exact, a real minus sign, one piece in Hebrew. */
+const chipFigure = (value, signed) =>
+  window.EVChips ? window.EVChips.figure(value, signed) : String(value);
+
+/**
+ * The player's rail: what is in play, and what is behind it.
+ *
+ * Between hands the spot holds the bet being built, and a tap takes the last
+ * chip back. During a hand it holds what is in play, in chips. The stack can be
+ * below zero after a hand that needed more than it held; it is drawn like any
+ * other figure, because it is one (round 6b).
+ */
 function renderRail(view) {
   const box = el('rail');
   if (!box) return;
   const stack = view.stack;
+  const chips = view.chips;
   box.replaceChildren();
+
+  const between = view.phase !== 'player' && view.phase !== 'insurance';
+  const onSpot = between && chips ? chips.bet : stack.wager;
 
   const wager = document.createElement('div');
   wager.className = 'rail-spot rail-bet';
   const wagerChips = document.createElement('span');
   wagerChips.className = 'chips';
   wagerChips.setAttribute('aria-hidden', 'true');
-  wagerChips.replaceChildren(...chipNodes(stack.wager, 12));
+  wagerChips.replaceChildren(...chipNodes(onSpot, 12));
   const wagerFigure = document.createElement('span');
   wagerFigure.className = 'rail-value';
-  wagerFigure.textContent = stack.wager > 0 ? stack.wager : '—';
+  wagerFigure.textContent = onSpot > 0 ? chipFigure(onSpot) : '—';
   const wagerLabel = document.createElement('span');
   wagerLabel.className = 'rail-label';
-  wagerLabel.textContent = T('ui.wager');
+  wagerLabel.textContent = between && chips ? T('bet.yourBet') : T('ui.wager');
   wager.append(wagerChips, wagerFigure, wagerLabel);
+  if (between && chips && window.EVChips) {
+    window.EVChips.spot(wager, chips, (op) => send('/api/bet', { op }));
+  }
 
   const bank = document.createElement('div');
   bank.className = 'rail-spot rail-bank';
@@ -12135,7 +12857,7 @@ function renderRail(view) {
   bankChips.replaceChildren(...chipNodes(stack.balance, 24));
   const bankFigure = document.createElement('span');
   bankFigure.className = 'rail-value';
-  bankFigure.textContent = stack.balance.toFixed(stack.balance % 1 === 0 ? 0 : 1);
+  bankFigure.textContent = chipFigure(stack.balance);
   const bankLabel = document.createElement('span');
   bankLabel.className = 'rail-label';
   bankLabel.textContent = T('ui.stack');
@@ -12148,11 +12870,12 @@ function renderRail(view) {
     const delta = document.createElement('span');
     delta.className =
       'rail-delta ' + (stack.lastNet > 0 ? 'win' : stack.lastNet < 0 ? 'loss' : '');
-    delta.textContent = `${stack.lastNet > 0 ? '+' : ''}${stack.lastNet}`;
+    delta.textContent = chipFigure(stack.lastNet, true);
     bank.appendChild(delta);
   }
 
   box.append(wager, bank);
+  if (chips && window.EVChips) box.appendChild(window.EVChips.limits(chips));
 }
 
 function renderHands(view) {
@@ -12198,7 +12921,8 @@ function renderHands(view) {
     if (hand.total > 21) bits.push(T('ui.bust'));
     if (hand.doubled) bits.push(T('hand.doubled'));
     if (hand.surrendered) bits.push(T('hand.surrendered'));
-    if (hand.bet !== 1) bits.push(T('hand.units', { n: hand.bet }));
+    // A doubled or split hand says what it carries, in chips.
+    if (hand.units !== 1) bits.push(T('hand.chips', { n: chipFigure(hand.bet) }));
     meta.textContent = bits.join(' · ');
 
     // §3.1: the result is shown, but afterwards and de-emphasised — and never
@@ -12206,7 +12930,7 @@ function renderHands(view) {
     if (hand.net !== null && hand.net !== undefined && revealComplete()) {
       const net = document.createElement('span');
       net.className = 'hand-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
-      net.textContent = `  ${hand.net > 0 ? '+' : ''}${hand.net}`;
+      net.textContent = `  ${chipFigure(hand.net, true)}`;
       meta.appendChild(net);
     }
     wrap.appendChild(meta);
@@ -12611,7 +13335,7 @@ function renderActions(view) {
     // No decision button is primary: colouring one suggests the answer to a
     // decision the page is about to grade.
     row([
-      button(T('action.takeInsurance'), () => send('/api/insurance', { take: true }), false, 'takeInsurance'),
+      button(T('action.takeInsurance'), () => sendPlacing('/api/insurance', { take: true }, true), false, 'takeInsurance'),
       button(T('ui.declineInsurance'), () => send('/api/insurance', { take: false }), false, 'declineInsurance'),
     ]);
     return;
@@ -12620,13 +13344,45 @@ function renderActions(view) {
     for (const actions of blackjackRows(view.legalActions)) {
       row(
         actions.map((action) =>
-          button(LABELS[action] ? T(LABELS[action]) : action, () => send('/api/act', { action }), false, action),
+          button(
+            LABELS[action] ? T(LABELS[action]) : action,
+            () => sendPlacing('/api/act', { action }, action === 'double' || action === 'split'),
+            false,
+            action,
+          ),
         ),
       );
     }
     return;
   }
-  row([button(T('ui.deal'), () => send('/api/deal'), true, 'deal')]);
+  // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
+  const chips = view.chips;
+  // While the last hand's card is up: one row, Deal at the same bet and the chips a tap away.
+  const compact = Boolean(view.feedback && state.reveal) && !state.betOpen;
+  let shown = null;
+  if (chips && window.EVChips) {
+    shown = window.EVChips.controls(
+      box,
+      chips,
+      (op, chip) => send('/api/bet', { op, chip }),
+      () => send('/api/rebuy'),
+      () => document.querySelector('#rail .rail-bet .chips'),
+      false,
+      compact,
+    );
+    if (shown === 'rebuy') return;
+  }
+  const deal = button(T('ui.deal'), () => send('/api/deal'), true, 'deal');
+  deal.disabled = Boolean(chips && !chips.canDeal);
+  if (shown === 'compact') {
+    const open = () => {
+      state.betOpen = true;
+      render();
+    };
+    row([deal, window.EVChips.toggle(chips, open, false)]);
+    return;
+  }
+  row([deal]);
 }
 
 function renderStats(view) {
@@ -12858,6 +13614,29 @@ async function renderCoach(view) {
 }
 
 /**
+ * The chips go where the hand sends them: once a hand, and only once the reveal
+ * is complete, like everything else that shows a result (§3.1). The click is the
+ * same whichever way they go.
+ */
+function settleChips(view) {
+  if (state.chipsSettled === null) {
+    // What was already settled when the page opened has already moved.
+    state.chipsSettled = view.stats.hands;
+    return;
+  }
+  if (!window.EVChips || view.phase !== 'settled' || !revealComplete()) return;
+  if (state.chipsSettled === view.stats.hands) return;
+  state.chipsSettled = view.stats.hands;
+  const rail = el('rail');
+  window.EVChips.settle(
+    view.stack.lastNet ?? 0,
+    [rail && rail.querySelector('.rail-bet .chips')],
+    rail && rail.querySelector('.rail-bank .chips'),
+    el('dealer-cards'),
+  );
+}
+
+/**
  * The decision track (round 6), drawn by track.js.
  *
  * Held to the rail's gate. While the reveal is still running, the hand being
@@ -12890,6 +13669,7 @@ function render() {
   renderActions(view);
   renderStats(view);
   renderTrack(view);
+  settleChips(view);
   renderCoach(view).catch(() => {});
 }
 
@@ -13063,18 +13843,21 @@ document.addEventListener('keydown', (event) => {
     // Y and N only. Space belongs to the reveal and to the deal, and a key that
     // means "carry on" elsewhere must never resolve a bet here.
     if (carryOn) event.preventDefault();
-    if (code === 'KeyY') send('/api/insurance', { take: true });
+    if (code === 'KeyY') sendPlacing('/api/insurance', { take: true }, true);
     if (code === 'KeyN') send('/api/insurance', { take: false });
     return;
   }
   if (view.phase === 'player') {
     const action = { KeyH: 'hit', KeyS: 'stand', KeyD: 'double', KeyP: 'split', KeyR: 'surrender' }[code];
-    if (action && view.legalActions.includes(action)) send('/api/act', { action });
+    if (action && view.legalActions.includes(action)) {
+      sendPlacing('/api/act', { action }, action === 'double' || action === 'split');
+    }
     return;
   }
   if (carryOn) {
     event.preventDefault();
-    send('/api/deal');
+    // Deal only with a bet inside the limits and chips to bet; otherwise the rail says what to do.
+    if (!view.chips || view.chips.canDeal) send('/api/deal');
   }
 });
 
@@ -13141,6 +13924,10 @@ const uthState = {
   busy: false,
   /** The decision the card was last drawn for, so the result waits its turn. */
   cardToken: null,
+  /** The decision whose chips last moved at settlement, so they move once. */
+  chipsToken: null,
+  /** Whether the chips are open between hands while the last card is still up. */
+  betOpen: false,
   /** Measured solve times on this page, for anyone checking the flop is quick. */
   timings: [],
 };
@@ -13281,6 +14068,11 @@ function uthRender() {
   const inHand = view.phase !== 'idle';
 
   el('uth-empty').hidden = inHand;
+  if (view.chips) {
+    el('uth-empty').textContent = T('uth.pressDeal', {
+      bet: window.EVChips ? window.EVChips.figure(view.chips.bet) : view.chips.bet,
+    });
+  }
 
   el('uth-dealer').replaceChildren(
     ...(view.dealerRevealed
@@ -13459,23 +14251,36 @@ function uthRenderRail(view) {
     return div;
   };
   const stake = view.stake;
-  rail.append(
-    spot(T('uth.ante'), stake.ante || '—'),
-    spot(T('uth.blind'), stake.blind || '—'),
-    spot(T('uth.play'), stake.play || '—'),
-  );
+  const chips = view.chips;
+  const figure = (value, signed) =>
+    window.EVChips ? window.EVChips.figure(value, signed) : String(value);
 
-  const bank = spot(T('ui.stack'), view.stack.balance.toFixed(view.stack.balance % 1 === 0 ? 0 : 1), 'bank');
+  // Between hands the Ante spot holds the Ante being built, and the Blind shows
+  // what it will post: always the same. During a hand, what is on the felt.
+  const building = Boolean(chips) && (view.phase === 'idle' || view.phase === 'settled');
+  const onFelt = (value) => (value ? figure(value) : '—');
+  const ante = spot(T('uth.ante'), building ? onFelt(chips.bet) : onFelt(stake.ante), 'ante');
+  const blind = spot(T('uth.blind'), building ? onFelt(chips.bet) : onFelt(stake.blind), 'blind');
+  const play = spot(T('uth.play'), building ? '—' : onFelt(stake.play), 'play');
+  rail.append(ante, blind, play);
+  if (building && window.EVChips) {
+    window.EVChips.spot(ante, chips, (op) => uthSend('/api/uth/bet', { op }));
+  }
+
+  // The stack, in chips. Below zero after a hand that needed more than it held,
+  // and drawn like any other figure.
+  const bank = spot(T('ui.stack'), figure(view.stack.balance), 'bank');
   // The swing from the hand, drawn only once the card above has had its moment.
   if (view.stack.lastNet !== null && view.settlement) {
     const delta = document.createElement('span');
     const net = view.stack.lastNet;
     delta.className = 'rail-delta uth-late ' + (net > 0 ? 'win' : net < 0 ? 'loss' : '');
-    delta.textContent = uthFigure(`${net > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net)}`);
+    delta.textContent = figure(net, true);
     delta.hidden = true;
     bank.appendChild(delta);
   }
   rail.appendChild(bank);
+  if (chips && window.EVChips) rail.appendChild(window.EVChips.limits(chips));
 }
 
 /**
@@ -13578,10 +14383,30 @@ function uthRenderCard(view) {
   const reveal = () => {
     for (const node of document.querySelectorAll('.uth-late')) node.hidden = false;
   };
-  if (uthState.cardToken === token || reduced) reveal();
-  else {
+  // The chips go where the hand sends them, with the result and once a hand.
+  // The click is the same whichever way they go.
+  const settleChips = () => {
+    if (!view.settlement || !window.EVChips || uthState.chipsToken === token) return;
+    uthState.chipsToken = token;
+    const rail = el('uth-rail');
+    window.EVChips.settle(
+      view.stack.lastNet ?? 0,
+      ['ante', 'blind', 'play'].map((name) => rail && rail.querySelector(`.uth-spot.${name}`)),
+      rail && rail.querySelector('.uth-spot.bank'),
+      el('uth-dealer'),
+    );
+  };
+  if (uthState.cardToken === token) reveal();
+  else if (reduced) {
     uthState.cardToken = token;
-    setTimeout(reveal, 450);
+    reveal();
+    settleChips();
+  } else {
+    uthState.cardToken = token;
+    setTimeout(() => {
+      reveal();
+      settleChips();
+    }, 450);
   }
 }
 
@@ -13651,16 +14476,67 @@ function uthRenderActions(waiting) {
       row(
         actions.map((action) => {
           const entry = byAction.get(action);
-          return button(entry.label, entry.key, () => uthSend('/api/uth/act', { action }), false, action);
+          return button(entry.label, entry.key, () => uthAct(action), false, action);
         }),
       );
     }
     return;
   }
-  row([button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', () => uthSend('/api/uth/deal'), true, 'deal')]);
+  // Between hands: the chips, then Deal. Below the table minimum, the rebuy alone.
+  const chips = view.chips;
+  // While the last hand's card is up: one row, so the card never climbs over the
+  // player's ringed cards. The chips are a tap away.
+  const compact = Boolean(view.feedback) && !uthState.betOpen;
+  let shown = null;
+  if (chips && window.EVChips) {
+    shown = window.EVChips.controls(
+      box,
+      chips,
+      (op, chip) => uthSend('/api/uth/bet', { op, chip }),
+      () => uthSend('/api/uth/rebuy'),
+      () => document.querySelector('#uth-rail .uth-spot.ante'),
+      uthState.busy,
+      compact,
+    );
+    if (shown === 'rebuy') return;
+  }
+  const deal = button(T(view.phase === 'idle' ? 'ui.deal' : 'uth.nextHand'), 'N', uthDeal, true, 'deal');
+  if (chips && !chips.canDeal) deal.disabled = true;
+  if (shown === 'compact') {
+    const open = () => {
+      uthState.betOpen = true;
+      uthRenderActions();
+      uthFitCard();
+    };
+    row([deal, window.EVChips.toggle(chips, open, uthState.busy)]);
+    return;
+  }
+  row([deal]);
 }
 
 // --- Keyboard ---------------------------------------------------------------
+
+/**
+ * A decision. A raise puts the Play bet out, so its chips move to the Play spot
+ * with the one chip click (round 6b).
+ */
+async function uthAct(action) {
+  const from = document.querySelector('#uth-rail .uth-spot.bank')?.getBoundingClientRect();
+  await uthSend('/api/uth/act', { action });
+  if (action.startsWith('raise') && from && window.EVChips) {
+    window.EVChips.place(from, document.querySelector('#uth-rail .uth-spot.play'), 25);
+  }
+}
+
+/** Deal: the Blind is posted beside the Ante, and its chips move there. */
+async function uthDeal() {
+  const from = document.querySelector('#uth-rail .uth-spot.bank')?.getBoundingClientRect();
+  uthState.betOpen = false;
+  await uthSend('/api/uth/deal');
+  if (from && window.EVChips && uthState.view && uthState.view.phase === 'preflop') {
+    window.EVChips.place(from, document.querySelector('#uth-rail .uth-spot.blind'), 5);
+  }
+}
 
 /*
  * Physical keys, not characters: a Hebrew layout turns C into ב and F into כ,
@@ -13684,12 +14560,12 @@ document.addEventListener('keydown', (event) => {
   const entry = view.legalActions.find((candidate) => candidate.code === event.code);
   if (entry) {
     event.preventDefault();
-    uthSend('/api/uth/act', { action: entry.action });
+    uthAct(entry.action);
     return;
   }
   if (view.legalActions.length === 0 && event.code === 'KeyN') {
     event.preventDefault();
-    uthSend('/api/uth/deal');
+    if (!view.chips || view.chips.canDeal) uthDeal();
   }
 });
 
@@ -14567,6 +15443,27 @@ async function api(path, body) {
       saveProgressLocally();
       return session.view;
     }
+
+    // The chips (round 6b). A change to the bet is kept in this browser at once
+    // and reaches the shared table with the next hand; a rebuy goes straight away.
+    case '/api/bet':
+      session.placeBet(b.op, b.chip);
+      saveProgressLocally();
+      return session.view;
+    case '/api/rebuy':
+      session.rebuy();
+      saveProgressLocally();
+      void publish();
+      return session.view;
+    case '/api/uth/bet':
+      uthSession.placeBet(b.op, b.chip);
+      saveProgressLocally();
+      return uthSession.view;
+    case '/api/uth/rebuy':
+      uthSession.rebuy();
+      saveProgressLocally();
+      void publish();
+      return uthSession.view;
 
     case '/api/uth/state':
       return uthSession.view;
