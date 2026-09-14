@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="8dbccb7c88aeee6776b8b770831d9e11a48e1ea1-dirty" />
-<meta name="ev-build-at" content="2026-09-14T20:51:30.383Z" />
+<meta name="ev-build-commit" content="0c00c49524f7eeb41584ae70917a1687d1988764-dirty" />
+<meta name="ev-build-at" content="2026-09-14T21:48:52.994Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2040,6 +2040,18 @@ button,
 .standings .standing-value { font-size: 42px; }
 .standings .standing-note { overflow-wrap: anywhere; }
 .quickcard .rating-side .provisional { opacity: 0.6; }
+
+/* --- Trips (round 11) ---------------------------------------------------------
+ * A fourth small circle on the Ultimate rail, before the Ante. The circle the
+ * chips go on between hands carries the brass edge; the other is a tap away.
+ * Nothing here moves: Trips is a cost, quieter than the grade. */
+.uth-rail { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); }
+.uth-spot.bet-target { border-color: var(--brass); box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.45); }
+.uth-spot.trips .rail-label { letter-spacing: 0.03em; }
+@media (max-width: 380px) {
+  .uth-rail { gap: 4px; }
+  .uth-spot .rail-label { font-size: 9.5px; letter-spacing: 0.02em; }
+}
 
 /* ===========================================================================
  * The shared build only.
@@ -7320,7 +7332,7 @@ const EN            = {
   'uth.howto.2':
     'You are graded on the **decision**, not the result: the card shows what every choice was worth and what yours cost. The cards come after it, and quieter.',
   'uth.howto.trips':
-    '**Trips is not offered here.** Under the default Trips paytable it costs **{edge}** of every bet placed on it.',
+    '**Trips** is optional, in its own circle beside the Ante. It pays on your own seven cards — even after a fold — and costs **{edge}** of every bet placed on it. It is never graded.',
   'uth.class.pair':
     'a pair of {p}',
   'uth.class.suited':
@@ -7629,6 +7641,57 @@ const EN            = {
   'home.uthRating.settling': 'Still settling — about {left} more rated decisions before it means much.',
   'home.uthRating.peak': 'Peak {peak}. Only the harder decisions move it.',
   'home.remember': 'Write down your name and code — you will need them once.',
+  'home.ladderHead': 'what this mode counts as hard',
+  'home.ladderOneIn': 'one in {n} hands',
+  // Trips (round 11): a cost stated honestly, in its own place, never graded.
+  'uth.trips': 'Trips',
+  'uth.line.tripsPaid': 'Trips pays {multiple} to 1 on {hand}: {won}',
+  'uth.line.tripsLose': 'Trips loses {lost} — below three of a kind',
+  'uth.line.tripsCost': 'Trips costs {edge} of what you put on it, over time, however it lands tonight.',
+  'bet.spotTrips': 'Trips: {bet} chips. Tap to take the last chip back.',
+  'bet.chooseAnte': 'Ante: {bet} chips. Tap to put chips here.',
+  'bet.chooseTrips': 'Trips: {bet} chips. Tap to put chips here.',
+  'home.tripsHead': 'Trips, in Ultimate',
+  'home.fig.tripsPut': 'chips put on Trips',
+  'home.fig.tripsPutNote': 'Over {hands} hands.',
+  'home.fig.tripsPutNoteOne': 'On one hand.',
+  // Rule sets and cards, worded in the language on screen (round 11, the Hebrew sweep).
+  'preset.vegas-strip-6d-s17': 'Vegas Strip 6-deck S17',
+  'preset.downtown-h17': 'Downtown H17',
+  'preset.single-deck-6-5': 'Single Deck 6:5',
+  'preset.single-deck-6-5.note': 'The 6:5 blackjack payout alone adds roughly 1.4% to the house edge — a rule choice that costs more than every strategy error a typical player makes combined.',
+  'preset.european-nhc': 'European No-Hole-Card',
+  'preset.european-nhc.note': 'The dealer takes no hole card. A dealer natural collects your doubled and split wagers too, which changes the correct play against an Ace or ten.',
+  'badge.noDas': 'no DAS',
+  'badge.surrender.none': 'no surrender',
+  'badge.surrender.late': 'late surrender',
+  'badge.surrender.early': 'early surrender',
+  'badge.likeRanks': 'like ranks only',
+  'badge.noHoleCard': 'no hole card',
+  'card.label': '{rank} of {suit}',
+  'card.rank.2': '2',
+  'card.rank.3': '3',
+  'card.rank.4': '4',
+  'card.rank.5': '5',
+  'card.rank.6': '6',
+  'card.rank.7': '7',
+  'card.rank.8': '8',
+  'card.rank.9': '9',
+  'card.rank.10': 'ten',
+  'card.rank.J': 'jack',
+  'card.rank.Q': 'queen',
+  'card.rank.K': 'king',
+  'card.rank.A': 'ace',
+  'card.suit.clubs': 'clubs',
+  'card.suit.diamonds': 'diamonds',
+  'card.suit.hearts': 'hearts',
+  'card.suit.spades': 'spades',
+  'card.faceDown': 'face-down card',
+  'key.space': 'SPACE',
+  'home.fig.tripsCost': 'what Trips costs over time',
+  'home.fig.tripsCostNote': '{edge} of what was put on it: the price of the bet, whatever it did tonight.',
+  'home.fig.tripsResult': 'what Trips actually did, in chips',
+  'home.fig.tripsResultNote': 'How the cards fell on it. It says nothing about how well you played.',
   'social.byBlackjack': 'Ranked by Blackjack rating',
   'social.byUltimate': 'Ranked by Ultimate rating',
   'social.noUthPlayers': 'Nobody has an Ultimate rating yet. A few hands of Ultimate and you are first.',
@@ -8015,7 +8078,7 @@ const HE            = {
   'uth.howto.2':
     'הציון הוא על **ההחלטה**, לא על התוצאה: הכרטיס מראה כמה שווה כל אפשרות וכמה עלתה הבחירה שלך. הקלפים מגיעים אחריו, ובשקט.',
   'uth.howto.trips':
-    '**טריפס לא מוצע כאן.** בטבלת התשלומים ברירת המחדל שלו הוא עולה **{edge}** מכל הימור שמונח עליו.',
+    '**טריפס** הוא הימור רשות, בעיגול משלו ליד האנטה. הוא משלם לפי שבעת הקלפים שלך — גם אחרי קיפול — ועולה **{edge}** מכל הימור שמונח עליו. הוא אף פעם לא מקבל ציון.',
   'uth.class.pair':
     'זוג {p}',
   'uth.class.suited':
@@ -8315,6 +8378,55 @@ const HE            = {
   'home.uthRating.settling': 'עדיין מתייצב — עוד כ-{left} החלטות מדורגות עד שזה יתחיל להגיד משהו.',
   'home.uthRating.peak': 'שיא {peak}. רק ההחלטות הקשות יותר מזיזות אותו.',
   'home.remember': 'רשום לעצמך את השם והקוד — תצטרך אותם פעם אחת.',
+  'home.ladderHead': 'מה נחשב קשה במצב הזה',
+  'home.ladderOneIn': 'יד אחת מכל {n}',
+  'uth.trips': 'טריפס',
+  'uth.line.tripsPaid': 'טריפס משלם {multiple} ל־1 על {hand}: {won}',
+  'uth.line.tripsLose': 'טריפס מפסיד {lost} — פחות משלישייה',
+  'uth.line.tripsCost': 'טריפס עולה {edge} ממה שמונח עליו, לאורך זמן, לא משנה איך ייפול הערב.',
+  'bet.spotTrips': 'טריפס: {bet} צ׳יפים. הקשה מחזירה את הצ׳יפ האחרון.',
+  'bet.chooseAnte': 'אנטה: {bet} צ׳יפים. הקשה כדי להניח כאן צ׳יפים.',
+  'bet.chooseTrips': 'טריפס: {bet} צ׳יפים. הקשה כדי להניח כאן צ׳יפים.',
+  'home.tripsHead': 'טריפס, באולטימייט',
+  'home.fig.tripsPut': 'צ׳יפים שהונחו על טריפס',
+  'home.fig.tripsPutNote': 'לאורך {hands} ידיים.',
+  'home.fig.tripsPutNoteOne': 'ביד אחת.',
+  'preset.vegas-strip-6d-s17': 'וגאס סטריפ · 6 חפיסות · S17',
+  'preset.downtown-h17': 'דאונטאון · H17',
+  'preset.single-deck-6-5': 'חפיסה אחת · ⁦6:5⁩',
+  'preset.single-deck-6-5.note': 'תשלום של ⁦6:5⁩ על בלאק ג׳ק לבדו מוסיף בערך ⁦1.4%⁩ ליתרון הבית — בחירת חוק שעולה יותר מכל טעויות האסטרטגיה של שחקן טיפוסי ביחד.',
+  'preset.european-nhc': 'אירופאי, בלי קלף סגור',
+  'preset.european-nhc.note': 'הדילר לא לוקח קלף סגור. בלאק ג׳ק של הדילר לוקח גם את ההכפלות והפיצולים שלך, וזה משנה את המהלך הנכון מול אס או עשר.',
+  'badge.noDas': 'בלי DAS',
+  'badge.surrender.none': 'בלי ויתור',
+  'badge.surrender.late': 'ויתור מאוחר',
+  'badge.surrender.early': 'ויתור מוקדם',
+  'badge.likeRanks': 'פיצול רק בערכים זהים',
+  'badge.noHoleCard': 'בלי קלף סגור',
+  'card.label': '{rank} {suit}',
+  'card.rank.2': '2',
+  'card.rank.3': '3',
+  'card.rank.4': '4',
+  'card.rank.5': '5',
+  'card.rank.6': '6',
+  'card.rank.7': '7',
+  'card.rank.8': '8',
+  'card.rank.9': '9',
+  'card.rank.10': '10',
+  'card.rank.J': 'נסיך',
+  'card.rank.Q': 'מלכה',
+  'card.rank.K': 'מלך',
+  'card.rank.A': 'אס',
+  'card.suit.clubs': 'תלתן',
+  'card.suit.diamonds': 'יהלום',
+  'card.suit.hearts': 'לב',
+  'card.suit.spades': 'עלה',
+  'card.faceDown': 'קלף הפוך',
+  'key.space': 'רווח',
+  'home.fig.tripsCost': 'כמה טריפס עולה לאורך זמן',
+  'home.fig.tripsCostNote': '{edge} ממה שהונח עליו: המחיר של ההימור, לא משנה מה עשה הערב.',
+  'home.fig.tripsResult': 'מה טריפס עשה בפועל, בצ׳יפים',
+  'home.fig.tripsResultNote': 'איך שהקלפים נפלו עליו. זה לא אומר כלום על כמה טוב שיחקת.',
   'social.byBlackjack': 'לפי דירוג בלאק ג׳ק',
   'social.byUltimate': 'לפי דירוג אולטימייט',
   'social.noUthPlayers': 'עוד לאף אחד אין דירוג אולטימייט. כמה ידיים של אולטימייט ואתה הראשון.',
@@ -9193,6 +9305,47 @@ function updateRating(
   return delta;
 }
 
+/**
+ * How far above a decision's difficulty a correct answer can still lift a
+ * rating: the one rule both games share (Ultimate from round 10, Blackjack from
+ * round 11).
+ *
+ * Found by the trivial-ladder test. Under the plain update a long enough run of
+ * easy, correct decisions climbs without limit, because a perfect record on easy
+ * questions has no finite best estimate. 400 above a decision is where the
+ * expected score is already 10/11: getting it right says almost nothing more.
+ */
+const INFORMATION_REACH = 400;
+
+/**
+ * One rated decision under that rule: `updateRating`, then the reach limit on a
+ * gain. A wrong answer costs exactly what it always did, and wherever the limit
+ * does not bind the change is `updateRating`'s to the last digit.
+ *
+ * It only ever shapes a movement. A stored rating is never passed through it on
+ * the way in, so adding the limit changed no one's number.
+ */
+function updateRatingWithReach(
+  rating        ,
+  difficulty        ,
+  severity              ,
+  reach         = INFORMATION_REACH,
+)         {
+  const before = rating.rating;
+  const peakBefore = rating.peak;
+  const delta = updateRating(rating, difficulty, severity);
+  if (delta > 0) {
+    const ceiling = Math.max(before, difficulty + reach);
+    if (rating.rating > ceiling) {
+      rating.sessionDelta -= rating.rating - ceiling;
+      rating.rating = ceiling;
+      rating.peak = Math.max(peakBefore, ceiling);
+      return ceiling - before;
+    }
+  }
+  return delta;
+}
+
 /* ===== packages/trainer-web/src/sensitivity.ts ===== */
 /**
  * Rule-sensitivity flags for the feedback card (spec §7.1 item 6, §3.3).
@@ -9926,22 +10079,26 @@ class TrainerSession {
     {
     const preset = RULE_PRESETS.find((p) => p.id === this.presetId) ;
     const rules = this.rules;
+    // Worded in the language on screen (round 11): the Hebrew sweep found the
+    // rules bar reading "Vegas Strip 6-deck S17 · late surrender" inside Hebrew.
+    // The rule codes — 6D, S17, H17, DAS, 3:2 — stay codes in both languages.
+    const L = this.locale;
     const badge = [
       `${rules.decks}D`,
       rules.soft17,
-      rules.das ? 'DAS' : 'no DAS',
-      rules.surrender === 'none' ? 'no surrender' : `${rules.surrender} surrender`,
-      rules.splitUnlikeTens ? '' : 'like ranks only',
+      rules.das ? 'DAS' : t(L, 'badge.noDas'),
+      t(L, `badge.surrender.${rules.surrender}`),
+      rules.splitUnlikeTens ? '' : t(L, 'badge.likeRanks'),
       rules.blackjackPayout,
-      rules.peek ? '' : 'no hole card',
+      rules.peek ? '' : t(L, 'badge.noHoleCard'),
     ]
       .filter(Boolean)
       .join(' · ');
     return {
       id: preset.id,
-      name: preset.name,
+      name: t(L, `preset.${preset.id}`),
       badge,
-      note: preset.note ?? null,
+      note: preset.note ? t(L, `preset.${preset.id}.note`) : null,
       edgePercent: this.baseEdgePercent,
       // What a natural actually pays, for the one line on screen that quotes it.
       blackjackPayout: rules.blackjackPayout,
@@ -10107,7 +10264,7 @@ class TrainerSession {
     // Last, because it moves the rating every comparison above had to read.
     this.lifetimeDecisions++;
     this.lastRatingDelta = cell
-      ? updateRating(this.ratings[this.mode], cell[this.mode], record.severityTier)
+      ? updateRatingWithReach(this.ratings[this.mode], cell[this.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -10489,6 +10646,9 @@ class TrainerSession {
           difficulty: d[this.mode],
           margin: d.margin,
           optimal: cell.optimalAction,
+          // Worded in the language on screen, as the hand log is (round 11): the
+          // id alone read "stand" and "split" inside a Hebrew home screen.
+          optimalLabel: prettyAction(cell.optimalAction, this.locale),
           oneIn: Math.round(1000 / Math.max(d.perThousand, 0.01)),
         };
       })
@@ -10879,7 +11039,7 @@ const UTH_RATING                                              = { slope: 660, ce
 const LEAK_FLOOR = 3e-4;
 
 /** How far above a decision's difficulty a correct answer can still lift a rating. */
-const UTH_INFORMATION_REACH = 400;
+const UTH_INFORMATION_REACH = INFORMATION_REACH;
 
 /** Difficulty from a leak already worked out, or null when it is below the scale. */
 function uthDifficultyFromLeak(
@@ -10903,8 +11063,8 @@ function uthDifficulty(
 }
 
 /**
- * One rated decision: Blackjack's update, then the reach limit on a gain.
- * Returns the change, for the card.
+ * One rated decision: the rule both games share (difficulty.ts). Kept under this
+ * name so Ultimate's tests and calibration read as they did.
  */
 function updateUthRating(
   rating        ,
@@ -10912,20 +11072,7 @@ function updateUthRating(
   severity              ,
   reach         = UTH_INFORMATION_REACH,
 )         {
-  const before = rating.rating;
-  const peakBefore = rating.peak;
-  const delta = updateRating(rating, difficulty, severity);
-  if (delta > 0) {
-    const ceiling = Math.max(before, difficulty + reach);
-    if (rating.rating > ceiling) {
-      rating.sessionDelta -= rating.rating - ceiling;
-      rating.rating = ceiling;
-      rating.peak = Math.max(peakBefore, ceiling);
-      return ceiling - before;
-    }
-  }
-  // Unlimited, it is Blackjack's change to the last digit.
-  return delta;
+  return updateRatingWithReach(rating, difficulty, severity, reach);
 }
 
 /* ===== packages/trainer-web/src/uth-session.ts ===== */
@@ -11050,6 +11197,9 @@ function wholePercents(counts                   )           {
   return floors;
 }
 
+/** The one Trips paytable offered (round 11): paytable I, 3-4-7-8-30-40-50, California's UTH-03. */
+const UTH_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0] ;
+
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
 
@@ -11155,6 +11305,8 @@ function uthPerfectPlayEdgePercent()         {
                                 
                                                                                                    
                
+                                                                                                      
+                                            
  
 
 /** The `uth` part of a version 3 progress blob. */
@@ -11192,6 +11344,11 @@ function uthPerfectPlayEdgePercent()         {
                            
      
                   
+     
+                                                                               
+                                                                          
+     
+                                                                                        
  
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -11258,6 +11415,25 @@ class UthSession {
   /** What the last graded decision did to it, for the card; null when it was not rated. */
           lastRatingDelta                = null;
 
+  /*
+   * Trips (round 11; spec A as approved). An optional bet on the player's own
+   * seven cards, paid by paytable I, never graded: it changes no decision, so the
+   * solver, the grades, the rating, the track, EV-lost and accuracy never see it.
+   * Its amount is its own, anywhere inside the table limits, empty by default,
+   * and it stays for the next hand like the Ante.
+   */
+          trips           = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+  /** The Trips bet on the felt for the hand being played; 0 for none. */
+          handTrips = 0;
+  /** The last settled hand's Trips, for its settlement line. */
+          lastTrips                                           = null;
+  /** For the Stats row: hands with Trips, chips put on it, and what it did net. */
+          tripsHands = 0;
+          tripsWagered = 0;
+          tripsNet = 0;
+  /** The hand whose settlement says what Trips costs: the first Trips hand of the sitting. */
+          tripsNoteHand                = null;
+
   /** Decisions of the hand on the felt, saved when it settles. */
           pending                     = [];
           lastNet                = null;
@@ -11295,6 +11471,13 @@ class UthSession {
     this.pending = [];
     this.ratingAtDeal = { ...this.rating };
     this.lastRatingDelta = null;
+    // Trips, when there is one: its own amount, off the stack with the Ante and Blind.
+    this.handTrips = this.trips.bet;
+    this.lastTrips = null;
+    if (this.handTrips > 0) {
+      this.trips = { ...this.trips, lastBet: this.trips.bet };
+      this.chips = { ...this.chips, stack: roundChips(this.chips.stack - this.handTrips) };
+    }
     return this.view;
   }
 
@@ -11352,6 +11535,28 @@ class UthSession {
       this.netUnits += settlement.net;
       this.hands++;
       const hand = this.table.handRecord;
+      /*
+       * Trips settles on the player's own seven cards, whatever the dealer holds
+       * and even after a fold: "If the player has a three of a kind or better,
+       * the Trips wager always wins - even if the player folds" (California
+       * Bureau of Gambling Control, Standard Game: Ultimate Texas Hold'em, rev.
+       * March 2015). A fold happens only on the river, so all seven are face up.
+       *
+       * It is kept out of the hand's own figure: the grade, the track, the strip
+       * and the stack's swing measure the play, and Trips is a cost stated on its
+       * own line. Its chips never move across the felt, win or lose.
+       */
+      let trips                                               ;
+      if (this.handTrips > 0) {
+        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, UTH_TRIPS_PAYTABLE);
+        trips = { bet: this.handTrips, multiple };
+        this.chips = { ...this.chips, stack: roundChips(this.chips.stack + this.handTrips * (1 + multiple)) };
+        this.tripsHands++;
+        this.tripsWagered += this.handTrips;
+        this.tripsNet = roundChips(this.tripsNet + this.handTrips * multiple);
+        if (this.tripsNoteHand === null) this.tripsNoteHand = hand.id;
+      }
+      this.lastTrips = trips ?? null;
       this.history.unshift({
         id: hand.id,
         hole: [...hand.hole],
@@ -11361,6 +11566,7 @@ class UthSession {
         settlement: { ...settlement },
         decisions: this.pending,
         bet: this.handBet,
+        ...(trips ? { trips } : {}),
       });
       this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
       this.pending = [];
@@ -11419,10 +11625,12 @@ class UthSession {
    * Build the Ante between hands: add a chip, take the last one back, clear it,
    * repeat the last Ante or double it. The table limits are enforced here.
    */
-  placeBet(op       , chip         )       {
+  placeBet(op       , chip         , spot                   = 'ante')       {
     const phase = this.table.view.phase;
     if (phase !== 'idle' && phase !== 'settled') throw new Error('The Ante stays until the hand is over');
-    this.chips = applyBet(this.chips, op, chip);
+    // Trips is its own circle: the same chips, the same limits, its own amount (round 11).
+    if (spot === 'trips') this.trips = applyBet(this.trips, op, chip);
+    else this.chips = applyBet(this.chips, op, chip);
   }
 
   /** The free rebuy: only below the table minimum, always back to the starting stack. */
@@ -11490,7 +11698,7 @@ class UthSession {
     return {
       version: 2,
       balance: inHand
-        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet)
+        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet + this.handTrips)
         : this.chips.stack,
       bet: this.chips.bet,
       lastBet: this.chips.lastBet,
@@ -11505,6 +11713,13 @@ class UthSession {
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
       rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
+      trips: {
+        bet: this.trips.bet,
+        lastBet: this.trips.lastBet,
+        hands: this.tripsHands,
+        wagered: this.tripsWagered,
+        net: this.tripsNet,
+      },
       history: this.history.map((hand) => ({
         ...hand,
         hole: [...hand.hole],
@@ -11562,6 +11777,15 @@ class UthSession {
       };
     }
     this.ratingAtDeal = { ...this.rating };
+    const trips = s.trips                                                            ;
+    if (trips && typeof trips === 'object') {
+      const bet = typeof trips.bet === 'number' && (trips.bet === 0 || validBet(trips.bet)) ? trips.bet : 0;
+      const lastBet = typeof trips.lastBet === 'number' && validBet(trips.lastBet) ? trips.lastBet : 0;
+      this.trips = { stack: 0, bet, lastBet, placed: chipsFor(bet) };
+      this.tripsHands = Math.max(0, Math.floor(n(trips.hands)));
+      this.tripsWagered = Math.max(0, n(trips.wagered));
+      this.tripsNet = n(trips.net);
+    }
     this.history = (Array.isArray(s.history) ? s.history : [])
       .filter(
         (hand)                        =>
@@ -11594,6 +11818,13 @@ class UthSession {
     this.rating = newRating('basic');
     this.ratingAtDeal = newRating('basic');
     this.lastRatingDelta = null;
+    this.trips = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+    this.handTrips = 0;
+    this.lastTrips = null;
+    this.tripsHands = 0;
+    this.tripsWagered = 0;
+    this.tripsNet = 0;
+    this.tripsNoteHand = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -11644,7 +11875,27 @@ class UthSession {
       feedback: this.last ? this.compose(this.last) : null,
       // The Ultimate rating, for the card and home — never the strip (round 10).
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
-      settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
+      // Trips (round 11): its circle between hands and on the felt, and its Stats row.
+      trips: {
+        ...chipsView({ ...this.trips, stack: this.chips.stack }, !inHand || settled),
+        onFelt: inHand ? this.handTrips : 0,
+      },
+      tripsStats: {
+        hands: this.tripsHands,
+        wagered: this.tripsWagered,
+        expectedCost: roundChips((this.tripsWagered * analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent) / 100),
+        net: this.tripsNet,
+        edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`),
+      },
+      settlement:
+        settled && table.settlement
+          ? this.lines(
+              table.settlement,
+              this.handBet,
+              this.lastTrips && { ...this.lastTrips, cards: [...table.hole, ...table.board] },
+              Boolean(this.lastTrips) && this.tripsNoteHand === this.table.handRecord.id,
+            )
+          : null,
       showdown:
         settled && table.settlement && !table.settlement.folded
           ? this.showdown(table.hole, table.dealerHole, table.board)
@@ -11838,7 +12089,7 @@ class UthSession {
       (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
       'optimal',
     );
-    const result = this.lines(hand.settlement, hand.bet ?? 1);
+    const result = this.lines(hand.settlement, hand.bet ?? 1, hand.trips && { ...hand.trips, cards: [...hand.hole, ...hand.board] });
     const shown = hand.settlement.folded ? null : this.showdown(hand.hole, hand.dealerHole, hand.board);
 
     return {
@@ -12059,7 +12310,44 @@ class UthSession {
    * (which is the only bet qualification touches), then the Play, then the
    * Blind — and the total comes last and quietest.
    */
-          lines(s               , perUnit        )                                                    {
+  /**
+   * The settlement's lines, and Trips' after them when a Trips bet was on the
+   * hand (round 11): what it paid and on which hand, or that it lost; and, on
+   * the first Trips hand of a sitting, the one sentence about what it costs.
+   * The hand's own figure stays the play's alone.
+   */
+          lines(
+    s               ,
+    perUnit        ,
+    trips                                                          ,
+    costNote = false,
+  )                                                    {
+    const out = this.gameLines(s, perUnit);
+    if (!trips || trips.bet <= 0) return out;
+    const L = this.locale;
+    const iso = isolateFor(L);
+    const cash = (value        ) => iso(money(roundChips(value)));
+    if (trips.multiple > 0) {
+      const value = bestFive(trips.cards).value;
+      out.lines.push(
+        t(L, 'uth.line.tripsPaid', {
+          multiple: iso(String(trips.multiple)),
+          hand: this.handPhrase(categoryOf(value), significantRanks(value)),
+          won: cash(trips.bet * trips.multiple),
+        }),
+      );
+    } else {
+      out.lines.push(t(L, 'uth.line.tripsLose', { lost: cash(-trips.bet) }));
+    }
+    if (costNote) {
+      out.lines.push(
+        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`) }),
+      );
+    }
+    return out;
+  }
+
+          gameLines(s               , perUnit        )                                                    {
     const L = this.locale;
     const iso = isolateFor(L);
     // Every figure in chips at the bet; the multiple on the Play bet stays a multiple.
@@ -12694,7 +12982,7 @@ function renderStanding(profile) {
 
   const head = document.createElement('div');
   head.className = 'ladder-head';
-  head.textContent = 'what this mode counts as hard';
+  head.textContent = T('home.ladderHead');
   box.appendChild(head);
 
   const lo = ladder[0].difficulty;
@@ -12704,10 +12992,12 @@ function renderStanding(profile) {
     const div = document.createElement('div');
     div.className = 'ladder-row';
     div.innerHTML =
-      `<div><div>${row.label} <span class="muted">· ${row.optimal}</span></div>` +
+      // Every word from the catalogue and every figure by the one rule (round 11):
+      // this row read English inside Hebrew until the sweep found it.
+      `<div><div><bdi>${row.label}</bdi> <span class="muted">· ${row.optimalLabel ?? row.optimal}</span></div>` +
       `<div class="ladder-bar" style="width:${Math.max(6, width)}%"></div>` +
-      `<div class="ladder-meta">one in ${row.oneIn.toLocaleString()} hands</div></div>` +
-      `<div class="ladder-score">${row.difficulty}</div>`;
+      `<div class="ladder-meta">${T('home.ladderOneIn', { n: window.EVFigure.units(row.oneIn) })}</div></div>` +
+      `<div class="ladder-score">${window.EVFigure.units(row.difficulty)}</div>`;
     box.appendChild(div);
   }
 }
@@ -13015,7 +13305,37 @@ function figure(value, label, note, quiet) {
   return div;
 }
 
-function renderStats(view, profile) {
+/**
+ * The Trips row (round 11): what was put on it, what it costs over time, and
+ * what it actually did. A cost stated in its own place, under its own heading,
+ * never mixed into the figures above that measure the play. Shown once anything
+ * has been put on Trips, whichever game the rest of the tab is about.
+ */
+function tripsFigures(uthView) {
+  const trips = uthView && uthView.tripsStats;
+  if (!trips || trips.hands === 0) return [];
+  const head = document.createElement('h3');
+  head.className = 'hands-game';
+  head.textContent = T('home.tripsHead');
+  return [
+    head,
+    figure(
+      window.EVFigure.units(trips.wagered),
+      T('home.fig.tripsPut'),
+      trips.hands === 1
+        ? T('home.fig.tripsPutNoteOne')
+        : T('home.fig.tripsPutNote', { hands: window.EVFigure.units(trips.hands) }),
+    ),
+    figure(
+      window.EVFigure.units(-trips.expectedCost, true),
+      T('home.fig.tripsCost'),
+      T('home.fig.tripsCostNote', { edge: trips.edge }),
+    ),
+    figure(window.EVFigure.units(trips.net, true), T('home.fig.tripsResult'), T('home.fig.tripsResultNote'), true),
+  ];
+}
+
+function renderStats(view, profile, uthView) {
   const s = view.stats;
   const box = el('stats');
   box.replaceChildren();
@@ -13025,6 +13345,7 @@ function renderStats(view, profile) {
     note.className = 'empty-note';
     note.textContent = T('home.noStats');
     box.appendChild(note);
+    box.append(...tripsFigures(uthView));
     return;
   }
 
@@ -13051,6 +13372,7 @@ function renderStats(view, profile) {
       true,
     ),
   );
+  box.append(...tripsFigures(uthView));
 }
 
 function selectTab(name) {
@@ -13090,7 +13412,7 @@ async function refresh() {
   renderStanding(profile);
   renderUthStanding(uthView.rating);
   renderHands(view, uthView);
-  renderStats(view, profile);
+  renderStats(view, profile, uthView);
   if (pendingOpen) {
     openHand(pendingOpen);
     pendingOpen = null;
@@ -13376,8 +13698,8 @@ function cardNode(card, index, dealtNow) {
   node.setAttribute(
     'aria-label',
     drawn
-      ? T('ui.cardDrawn', { card: card.label, n: index - 1 })
-      : T('ui.cardDealt', { card: card.label }),
+      ? T('ui.cardDrawn', { card: cardWords(card), n: index - 1 })
+      : T('ui.cardDealt', { card: cardWords(card) }),
   );
   if (drawn) node.dataset.draw = index - 1;
   const rank = document.createElement('span');
@@ -13395,7 +13717,7 @@ function faceDownNode(dealtNow) {
   node.className = 'card back dealt' + (dealtNow === undefined ? '' : ' arriving');
   if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', 'face-down card');
+  node.setAttribute('aria-label', T('card.faceDown'));
   return node;
 }
 
@@ -13485,6 +13807,15 @@ function chipNodes(amount, cap) {
 }
 
 /** A chip figure: exact, a real minus sign, one piece in Hebrew. */
+/**
+ * A card as a screen reader hears it, in the language on screen (round 11):
+ * "nine of hearts", "9 לב". The session sends the rank and the suit; the words
+ * are the page's, like every other word on it.
+ */
+const SUIT_WORDS = { '♣': 'clubs', '♦': 'diamonds', '♥': 'hearts', '♠': 'spades' };
+const cardWords = (card) =>
+  T('card.label', { rank: T(`card.rank.${card.rank}`), suit: T(`card.suit.${SUIT_WORDS[card.suit] || 'spades'}`) });
+
 const chipFigure = (value, signed) =>
   window.EVChips ? window.EVChips.figure(value, signed) : String(value);
 
@@ -13892,7 +14223,7 @@ function renderFeedback(view) {
     controls.className = 'reveal-controls';
     const next = document.createElement('button');
     next.className = 'reveal-next';
-    next.innerHTML = `${T('ui.next')}<span class="key">SPACE</span>`;
+    next.innerHTML = `${T('ui.next')}<span class="key">${T('key.space')}</span>`;
     next.addEventListener('click', advanceReveal);
     const skip = document.createElement('button');
     skip.className = 'reveal-skip';
@@ -14625,6 +14956,15 @@ const el = (id) => document.getElementById(id);
 const uthFigure = (text) =>
   document.documentElement.getAttribute('dir') === 'rtl' ? `\u2066${text}\u2069` : text;
 
+/**
+ * A card as a screen reader hears it, in the language on screen (round 11):
+ * "nine of hearts", "9 לב". The session sends the rank and the suit; the words
+ * are the page's, like every other word on it.
+ */
+const SUIT_WORDS = { '♣': 'clubs', '♦': 'diamonds', '♥': 'hearts', '♠': 'spades' };
+const cardWords = (card) =>
+  T('card.label', { rank: T(`card.rank.${card.rank}`), suit: T(`card.suit.${SUIT_WORDS[card.suit] || 'spades'}`) });
+
 const uthState = {
   view: null,
   busy: false,
@@ -14634,6 +14974,8 @@ const uthState = {
   chipsToken: null,
   /** Whether the chips are open between hands while the last card is still up. */
   betOpen: false,
+  /** Which circle the chips go on between hands: the Ante, or Trips (round 11). */
+  betSpot: 'ante',
   /** Measured solve times on this page, for anyone checking the flop is quick. */
   timings: [],
 };
@@ -14691,7 +15033,7 @@ function uthCard(card) {
   node.className = 'card dealt' + (card.red ? ' red' : '');
   if (card.code !== undefined) node.dataset.code = String(card.code);
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', card.label);
+  node.setAttribute('aria-label', cardWords(card));
   const rank = document.createElement('span');
   rank.className = 'card-rank';
   rank.textContent = card.rank;
@@ -14706,7 +15048,7 @@ function uthBack() {
   const node = document.createElement('div');
   node.className = 'card back dealt';
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', 'face-down card');
+  node.setAttribute('aria-label', T('card.faceDown'));
   return node;
 }
 
@@ -14966,9 +15308,44 @@ function uthRenderRail(view) {
   const ante = spot(T('uth.ante'), building ? onFelt(chips.bet) : onFelt(stake.ante), 'ante');
   const blind = spot(T('uth.blind'), building ? onFelt(chips.bet) : onFelt(stake.blind), 'blind');
   const play = spot(T('uth.play'), building ? '—' : onFelt(stake.play), 'play');
-  rail.append(ante, blind, play);
+  // Trips (round 11): its own circle, empty until chips are put on it. Quiet on
+  // purpose: no chips fly to it or from it, and a win on it moves nothing.
+  const trips = view.trips;
+  const tripsSpot = trips
+    ? spot(T('uth.trips'), building ? onFelt(trips.bet) : onFelt(trips.onFelt), 'trips')
+    : null;
+  rail.append(...(tripsSpot ? [tripsSpot] : []), ante, blind, play);
   if (building && window.EVChips) {
-    window.EVChips.spot(ante, chips, (op) => uthSend('/api/uth/bet', { op }));
+    // The chosen circle takes its last chip back when tapped, as the Ante always
+    // has; the other one is chosen by a tap. The Ante is chosen until Trips is.
+    const target = tripsSpot && uthState.betSpot === 'trips' ? 'trips' : 'ante';
+    for (const [node, name, book] of [[ante, 'ante', chips], [tripsSpot, 'trips', trips]]) {
+      if (!node || !book) continue;
+      if (name === target) {
+        node.classList.add('bet-target');
+        window.EVChips.spot(node, book, (op) => uthSend('/api/uth/bet', { op, spot: name }));
+        if (name === 'trips') node.setAttribute('aria-label', T('bet.spotTrips', { bet: figure(book.bet) }));
+        continue;
+      }
+      if (book.needsRebuy) continue;
+      node.classList.add('bet-spot');
+      node.setAttribute('role', 'button');
+      node.setAttribute('tabindex', '0');
+      node.setAttribute('aria-label', T(name === 'trips' ? 'bet.chooseTrips' : 'bet.chooseAnte', { bet: figure(book.bet) }));
+      const choose = () => {
+        uthState.betSpot = name;
+        uthState.betOpen = true;
+        uthRender();
+        uthRenderActions();
+      };
+      node.addEventListener('click', choose);
+      node.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          choose();
+        }
+      });
+    }
   }
 
   // The stack, in chips. Below zero after a hand that needed more than it held,
@@ -15240,12 +15617,14 @@ function uthRenderActions(waiting) {
   const compact = Boolean(view.feedback) && !uthState.betOpen;
   let shown = null;
   if (chips && window.EVChips) {
+    // The chips, Clear, Repeat and Double work on the chosen circle (round 11).
+    const onTrips = uthState.betSpot === 'trips' && Boolean(view.trips);
     shown = window.EVChips.controls(
       box,
-      chips,
-      (op, chip) => uthSend('/api/uth/bet', { op, chip }),
+      onTrips ? view.trips : chips,
+      (op, chip) => uthSend('/api/uth/bet', { op, chip, spot: onTrips ? 'trips' : 'ante' }),
       () => uthSend('/api/uth/rebuy'),
-      () => document.querySelector('#uth-rail .uth-spot.ante'),
+      () => document.querySelector(`#uth-rail .uth-spot.${onTrips ? 'trips' : 'ante'}`),
       uthState.busy,
       compact,
     );
@@ -16443,7 +16822,12 @@ async function api(path, body) {
       return session.view;
 
     case '/api/presets':
-      return RULE_PRESETS.map((p) => ({ id: p.id, name: p.name, note: p.note ?? null }));
+      // In the language on screen, as the rules bar is (round 11).
+      return RULE_PRESETS.map((p) => ({
+        id: p.id,
+        name: t(session.localeCode, `preset.${p.id}`),
+        note: p.note ? t(session.localeCode, `preset.${p.id}.note`) : null,
+      }));
 
     case '/api/session': {
       const presetId = typeof b.presetId === 'string' ? b.presetId : undefined;
@@ -16480,7 +16864,8 @@ async function api(path, body) {
       void publish();
       return session.view;
     case '/api/uth/bet':
-      uthSession.placeBet(b.op, b.chip);
+      // The circle the chips go on: the Ante unless Trips is chosen (round 11).
+      uthSession.placeBet(b.op, b.chip, b.spot === 'trips' ? 'trips' : 'ante');
       saveProgressLocally();
       return uthSession.view;
     case '/api/uth/rebuy':
