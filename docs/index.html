@@ -8,14 +8,15 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="#12161c" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <meta name="application-name" content="EV Trainer" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="2b2968765e1c4e737ae2c2350e226fb43e4cfa73-dirty" />
-<meta name="ev-build-at" content="2026-09-14T17:37:44.868Z" />
+<meta name="ev-build-commit" content="3859743f93bc0a8a55fa162eb3a1edf442b5f893-dirty" />
+<meta name="ev-build-at" content="2026-09-14T18:33:25.736Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2175,12 +2176,70 @@ body { background: var(--bg); }
 .feed-verdict { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
 
 
+/* --- Who is playing (round 9) ----------------------------------------------
+ * The usage page. The four counts reuse the home screen's figures, two to a
+ * row so a phone reads them without scrolling; one card per person below. */
+
+.usage { padding: 14px 16px 28px; }
+.usage-title {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  font-size: 26px;
+  margin: 10px 0 4px;
+}
+.usage-line { color: var(--muted); font-size: 13.5px; margin: 0 0 12px; max-width: 46ch; }
+.usage-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  margin-bottom: 16px;
+}
+.usage-figures .figure:nth-child(2) { border-top: none; padding-top: 4px; }
+.usage-figures .figure-note { font-size: 12px; }
+.usage-people { display: flex; flex-direction: column; gap: 8px; }
+.usage-person {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.usage-name { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; font-weight: 600; }
+.usage-name > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.usage-tier {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 1px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.usage-tier.regular { color: var(--optimal); border-color: var(--optimal); }
+.usage-tier.back { color: var(--ink); }
+.usage-detail { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.usage-note { color: var(--muted); font-size: 12px; margin: 16px 0 0; max-width: 52ch; }
+.usage-public { margin-top: 8px; }
+
 </style>
     <script>
     /* Offline play for the installed app. Secure pages only, which is what the
        browser requires; a page opened from disk simply plays online. */
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
       addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+    /* Opened from the home screen: ask that what is saved here is never cleared
+       to make room (round 9). Chrome grants it to an installed app and Safari to
+       a home-screen app, without asking the player. In a browser tab it is not
+       asked, because some browsers would ask the player, and a prompt about
+       storage on a first visit is a reason to leave. The record is in the shared
+       table too, so this guards the copy on the phone, not the only copy. */
+    if (navigator.storage && navigator.storage.persist &&
+        ((typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true)) {
+      navigator.storage.persist().catch(() => {});
     }
     </script>
   </head>
@@ -7545,6 +7604,35 @@ const EN            = {
   'welcome.fineLocal': 'No account, no password. This copy keeps your record in this browser only.',
   'welcome.switch': 'Not you? Switch player',
   'welcome.switchNote': 'Forgets this browser and returns to the door. Nothing is deleted — your record stays under its name and code.',
+  // --- The usage page (round 9) ---
+  'usage.title': 'Who is playing',
+  'usage.line': 'From the shared table: everyone who has played, how much, and who came back on another day.',
+  'usage.back': '← Home',
+  'usage.played': 'people have played',
+  'usage.playedNote': 'At least one graded decision, in either game.',
+  'usage.cameBack': 'came back on another day',
+  'usage.cameBackNote': 'Finished a hand on two or more different days.',
+  'usage.regulars': 'regulars',
+  'usage.regularsNote': 'Played on {days} or more different days, with {decisions} or more graded decisions in all.',
+  'usage.recent': 'played in the last {n} days',
+  'usage.recentNote': 'By the last day they finished a hand.',
+  'usage.oneDay': '1 day played',
+  'usage.days': '{days} days played',
+  'usage.lastPlayed': '{days} · last played {last}',
+  'usage.notCounted': 'Has not played since the day count began · last seen {last}',
+  'usage.decisions': 'Blackjack: {bj} decisions · Ultimate: {uth} decisions',
+  'usage.tierRegular': 'regular',
+  'usage.tierBack': 'came back',
+  'usage.tierOnce': 'one day',
+  'usage.nobody': 'Nobody has played yet.',
+  'usage.loading': 'Reading the table…',
+  'usage.noTable': 'This copy has no shared table, so there is nobody to count.',
+  'usage.offline': 'The shared table is not answering, so nothing can be counted right now.',
+  'usage.refused': 'The shared table refused the question ({status}), so nothing is shown rather than a wrong count.',
+  'usage.counting':
+    'Days are counted from {day}. Someone who played before then and has not played since shows the day they were last seen; when they play again, the earlier visit counts as a day.',
+  'usage.public':
+    'Not private. Nothing links to this page, but the table it reads is open to anyone who has the app’s address, so anyone who looked could read these same numbers.',
 };
 
 const HE            = {
@@ -8188,6 +8276,35 @@ const HE            = {
   'welcome.fineLocal': 'בלי חשבון ובלי סיסמה. העותק הזה שומר את הרשומה שלך בדפדפן הזה בלבד.',
   'welcome.switch': 'לא אתה? החלף שחקן',
   'welcome.switchNote': 'שוכח את הדפדפן הזה וחוזר לדלת. שום דבר לא נמחק — הרשומה שלך נשארת תחת השם והקוד שלה.',
+  // --- The usage page (round 9) ---
+  'usage.title': 'מי משחק',
+  'usage.line': 'מהטבלה המשותפת: כל מי ששיחק, כמה, ומי חזר ביום אחר.',
+  'usage.back': '→ לבית',
+  'usage.played': 'אנשים שיחקו',
+  'usage.playedNote': 'לפחות החלטה אחת שקיבלה ציון, באחד המשחקים.',
+  'usage.cameBack': 'חזרו ביום אחר',
+  'usage.cameBackNote': 'סיימו יד בשני ימים שונים או יותר.',
+  'usage.regulars': 'קבועים',
+  'usage.regularsNote': 'שיחקו ב־{days} ימים שונים או יותר, עם {decisions} החלטות או יותר שקיבלו ציון.',
+  'usage.recent': 'שיחקו ב־{n} הימים האחרונים',
+  'usage.recentNote': 'לפי היום האחרון שבו סיימו יד.',
+  'usage.oneDay': 'שיחק ביום אחד',
+  'usage.days': 'שיחק ב־{days} ימים',
+  'usage.lastPlayed': '{days} · לאחרונה ב־{last}',
+  'usage.notCounted': 'לא שיחק מאז שהתחילה ספירת הימים · נראה לאחרונה ב־{last}',
+  'usage.decisions': 'בלאק ג׳ק: {bj} החלטות · אולטימייט: {uth} החלטות',
+  'usage.tierRegular': 'קבוע',
+  'usage.tierBack': 'חזר',
+  'usage.tierOnce': 'יום אחד',
+  'usage.nobody': 'עוד אף אחד לא שיחק.',
+  'usage.loading': 'קורא את הטבלה…',
+  'usage.noTable': 'לעותק הזה אין טבלה משותפת, אז אין את מי לספור.',
+  'usage.offline': 'הטבלה המשותפת לא עונה, אז אי אפשר לספור כרגע.',
+  'usage.refused': 'הטבלה המשותפת סירבה לשאלה ({status}), אז לא מוצג כלום במקום ספירה שגויה.',
+  'usage.counting':
+    'הימים נספרים מ־{day}. מי ששיחק לפני כן ולא שיחק מאז מופיע עם היום שבו נראה לאחרונה; כשישחק שוב, הביקור הקודם ייספר כיום.',
+  'usage.public':
+    'לא פרטי. שום דבר לא מקשר לדף הזה, אבל הטבלה שהוא קורא פתוחה לכל מי שיש לו את כתובת האפליקציה, כך שכל מי שיחפש יוכל לקרוא את אותם מספרים.',
 };
 
 const MESSAGES                            = { en: EN, he: HE };
@@ -9410,6 +9527,13 @@ function cardView(card        )           {
                      
                    
                     
+       
+                                                                             
+                                                                           
+                                              
+       
+                          
+                           
                      
                    
                            
@@ -9922,6 +10046,8 @@ class TrainerSession {
       headline: explanation.headline,
       chosen: prettyAction(record.chosenAction, this.locale),
       optimal: prettyAction(record.optimalAction, this.locale),
+      chosenAction: record.chosenAction,
+      optimalAction: record.optimalAction,
       correct,
       evCost: record.evCost,
       severity: record.severityTier,
@@ -10120,7 +10246,7 @@ class TrainerSession {
       chips: chipsView(this.chips, view.phase !== 'player' && view.phase !== 'insurance'),
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
-      history: this.history.slice(0, 40),
+      history: this.history.slice(0, 40).map((hand) => this.wordedHand(hand)),
       // The decision track: the last hands, newest first, one dot a decision.
       track: this.history.slice(0, TRACK_HANDS).map(
         (hand, index)           => ({
@@ -10460,6 +10586,71 @@ class TrainerSession {
     // rather than leaving a Hebrew explanation under an English verdict — the
     // numbers are unchanged, so this is a re-render, not a re-grade.
     if (this.lastRecord) this.recompose(this.lastRecord);
+  }
+
+  /** Decisions already worded, per saved object, with the language they were worded in. */
+          worded = new WeakMap                                                                       ();
+
+  /**
+   * A saved hand, worded in the language on screen now (round 9).
+   *
+   * A hand used to keep the sentences it was graded with, so a player who played
+   * in English and then chose Hebrew read an English headline inside a Hebrew
+   * row. The numbers never change, so the words are composed again from them —
+   * the same `explain` the card used, over the same EVs and the same rules. What
+   * is saved stays as it was; only what is shown is worded.
+   */
+          wordedHand(hand            )             {
+    return { ...hand, decisions: hand.decisions.map((decision) => this.wordedDecision(decision)) };
+  }
+
+          wordedDecision(decision                                 )                                  {
+    const kept = this.worded.get(decision);
+    if (kept && kept.locale === this.locale) return kept.decision;
+
+    let worded = decision;
+    const ranked = Array.isArray(decision.ranked) ? decision.ranked : [];
+    const actions = ranked.map((entry) => entry.action);
+    // A hand saved before the ids were kept names its actions by label, in the
+    // language it was played in. Either language's label finds the id.
+    const byLabel = (label        ) =>
+      actions.find((action) => prettyAction(action, 'en') === label || prettyAction(action, 'he') === label);
+    const optimal = decision.optimalAction ?? byLabel(decision.optimal) ?? actions[0];
+    const chosen = decision.chosenAction ?? byLabel(decision.chosen) ?? (decision.correct ? optimal : undefined);
+    if (optimal && chosen && actions.length > 0) {
+      try {
+        const scenario =
+          decision.scenarioKey === 'bj:insurance'
+            ? ({ kind: 'insurance' }         )
+            : parseScenarioKey(decision.scenarioKey);
+        const evByAction = Object.fromEntries(ranked.map((entry) => [entry.action, entry.ev]));
+        const explanation = explain(
+          scenario,
+          {
+            legalActions: actions                     ,
+            evByAction: evByAction                                            ,
+            optimalAction: optimal                   ,
+            optimalEv: evByAction[optimal] ?? 0,
+          },
+          this.rules,
+          this.locale,
+          chosen                   ,
+        );
+        worded = {
+          ...decision,
+          headline: explanation.headline,
+          steps: [...explanation.steps],
+          chosen: prettyAction(chosen, this.locale),
+          optimal: prettyAction(optimal, this.locale),
+          chosenAction: chosen,
+          optimalAction: optimal,
+        };
+      } catch {
+        // A key this build cannot read: shown as it was saved, rather than not at all.
+      }
+    }
+    this.worded.set(decision, { locale: this.locale, decision: worded });
+    return worded;
   }
 
   /**
@@ -14943,7 +15134,7 @@ async function pinHash(id, code) {
  * Returns one of:
  *   { action: 'create', id, pinHash }   — nobody has this name yet
  *   { action: 'claim',  id, pinHash }   — one row, no code on it yet; take it
- *   { action: 'adopt',  id }            — the code matches; this is them
+ *   { action: 'adopt',  id, pinHash }   — the code matches; this is them
  *   { action: 'refuse', reason }        — it does not match, or the code is malformed
  */
 async function decideIdentity(name, code, rows, newId) {
@@ -14978,7 +15169,10 @@ async function decideIdentity(name, code, rows, newId) {
   }
 
   const offered = await pinHash(best.id, code);
-  if (offered === stored) return { action: 'adopt', id: best.id };
+  // The hash comes back with the decision (round 9). Without it a second device
+  // adopted the row holding no hash of its own, and its next save wrote the row's
+  // code away — after which anyone typing the name could claim it.
+  if (offered === stored) return { action: 'adopt', id: best.id, pinHash: offered };
 
   // Never create a second player with the same name. A wrong code is a wrong
   // code, and silently making a new player is how duplicates happen.
@@ -14999,6 +15193,7 @@ async function decideIdentity(name, code, rows, newId) {
  *   save(id, record)         -> void
  *   watch(onRows)            -> unsubscribe
  *   findByName(nameKey)      -> rows already using that name
+ *   usage()                  -> how much each live player has played (round 9)
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -15030,7 +15225,23 @@ function artifactBackend(db) {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
+        updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
+    },
+
+    /* The summaries carry the day count and both games' decisions, so nobody's session is read. */
+    async usage() {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => d.data())
+        .filter((row) => !row.mergedInto)
+        .map((row) => ({
+          name: row.name,
+          blackjack: row.lifetimeDecisions ?? row.decisions ?? 0,
+          ultimate: row.uthDecisions ?? 0,
+          activity: row.activity ?? null,
+          at: row.at ?? 0,
+        }));
     },
 
     async save(id, record) {
@@ -15158,7 +15369,7 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into,updated_at`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
@@ -15171,7 +15382,44 @@ function httpBackend({ url, key, table = 'players' }) {
         // has to know, or it will read a dormant session back and then write to
         // it — which would put an abandoned rating back on the leaderboard.
         mergedInto: rows[0].merged_into ?? null,
+        // When the row was last written: the last day a player from before the
+        // day count is known to have played (round 9).
+        updatedAt: Date.parse(rows[0].updated_at) || null,
       };
+    },
+
+    /*
+     * How much each live player has played, for the usage page (round 9).
+     *
+     * Only what that page counts: the name, both games' lifetime decisions and
+     * the day count, which lives inside the saved record — so nothing new was
+     * added to the table and no migration is needed. The two JSON paths return
+     * those few fields, not the saved session around them. Merged rows are not
+     * people and are left out.
+     *
+     * A refusal is thrown with its status, so the page can say "the table
+     * refused (400)" rather than showing zero people as if that were true.
+     */
+    async usage() {
+      const response = await fetch(
+        `${endpoint}?select=name,decisions,lifetime_decisions,updated_at,` +
+          'activity:progress->activity,uth_decisions:progress->uth->>lifetimeDecisions' +
+          '&merged_into=is.null&order=updated_at.desc&limit=1000',
+        { headers },
+      );
+      if (!response.ok) {
+        const error = new Error(`usage failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const rows = await response.json();
+      return (Array.isArray(rows) ? rows : []).map((row) => ({
+        name: row.name,
+        blackjack: row.lifetime_decisions ?? row.decisions ?? 0,
+        ultimate: Number(row.uth_decisions) || 0,
+        activity: row.activity && typeof row.activity === 'object' ? row.activity : null,
+        at: Date.parse(row.updated_at) || 0,
+      }));
     },
 
     async save(id, record) {
@@ -15189,7 +15437,10 @@ function httpBackend({ url, key, table = 'players' }) {
           decisions: record.decisions,
           lifetime_decisions: record.lifetimeDecisions,
           name_key: record.nameKey,
-          pin_hash: record.pinHash,
+          // Only when this device holds one. The upsert updates just the columns
+          // it is sent, so leaving it out keeps the row's code; sending null
+          // would erase it (round 9).
+          ...(record.pinHash ? { pin_hash: record.pinHash } : {}),
           accuracy: record.accuracy,
           ev_lost_per_100: record.evLostPer100,
           progress: record.progress,
@@ -15398,6 +15649,8 @@ async function connect() {
       // fresh stack every time, while Blackjack came back as it was.
       uthSession.restore(local.uth);
     }
+    activity = activityOf(local);
+    playedBefore = earlierDay(local?.playedBefore, null);
     myFeed = readLocalFeed();
     myHistory = session.view.history;
   }
@@ -15458,6 +15711,10 @@ async function writeRecord() {
       nameKey: nameKey(me.name),
       pinHash: me.pinHash,
       lifetimeDecisions: session.progress.lifetimeDecisions,
+      // For the usage page. The HTTP table reads both from the saved record;
+      // the artifact store keeps them on the summary, which is all it reads.
+      uthDecisions: uthSession.progress.lifetimeDecisions,
+      activity,
       hands: stats.hands,
       decisions: stats.decisions,
       accuracy: stats.accuracy,
@@ -15485,6 +15742,92 @@ async function writeRecord() {
 
 const PROGRESS_KEY = 'ev:progress';
 const FEED_KEY = 'ev:feed';
+
+/* --------------------------------------------------------------------------
+ * How often this player has played (round 9)
+ *
+ * Counted in calendar days on this device's clock, because the question it
+ * answers is "did they come back on another day". Three things are kept and
+ * nothing else: the first day, the last day, and how many different days have
+ * a finished hand in them. No times, no list of dates, nothing about the
+ * device. It rides inside the saved record, so it travels with the player to
+ * another device the same way their rating does.
+ * ----------------------------------------------------------------------- */
+
+let activity = null;
+
+/*
+ * For a player from before the count: a day they are known to have played on
+ * or before, kept until their first hand under the count absorbs it. It comes
+ * from their row's last write as the table held it before this build first
+ * wrote it — and it is saved, because this build writes the row as soon as the
+ * page opens, after which that date would only say the app was opened.
+ */
+let playedBefore = null;
+
+/** Today on this device, as 2026-09-14. */
+function localDay(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A saved record's day count, or null when it has none that can be read. */
+function activityOf(progress) {
+  const a = progress && progress.activity;
+  if (!a || typeof a !== 'object' || !DAY.test(a.firstDay) || !DAY.test(a.lastDay)) return null;
+  const days = Number.isInteger(a.days) && a.days > 0 ? a.days : 1;
+  return { firstDay: a.firstDay, lastDay: a.lastDay, days };
+}
+
+/**
+ * Two copies of the count, as one.
+ *
+ * The larger count wins, never the sum: two devices played on the same day
+ * would otherwise count that day twice. The first and last days are the
+ * earliest and latest either copy has seen, and two different days mean at
+ * least two days whatever the counts say. When copies disagree this can only
+ * undercount, which is the safe direction for a number a decision rests on.
+ */
+function mergeActivity(a, b) {
+  if (!a) return b ? { ...b } : null;
+  if (!b) return { ...a };
+  const firstDay = a.firstDay < b.firstDay ? a.firstDay : b.firstDay;
+  const lastDay = a.lastDay > b.lastDay ? a.lastDay : b.lastDay;
+  const days = Math.max(a.days, b.days, firstDay === lastDay ? 1 : 2);
+  return { firstDay, lastDay, days };
+}
+
+/** The earlier of two days, either of which may be missing. */
+function earlierDay(a, b) {
+  if (!DAY.test(a ?? '')) return DAY.test(b ?? '') ? b : null;
+  if (!DAY.test(b ?? '')) return a;
+  return a < b ? a : b;
+}
+
+/**
+ * A day played before the count, folded into it once there is a count.
+ *
+ * A day before the first counted day is a different day, so it adds one. A day
+ * on or after it is already inside the count, so it adds nothing — which is
+ * also what makes folding the same day in twice, from two devices, harmless.
+ */
+function absorbPrior(counted, prior) {
+  if (!counted || !DAY.test(prior ?? '') || prior >= counted.firstDay) return counted;
+  return { ...counted, firstDay: prior, days: counted.days + 1 };
+}
+
+/** A finished hand on `day`. A new day adds one; another hand on the same day adds nothing. */
+function markPlayed(day = localDay()) {
+  if (!activity) {
+    activity = { firstDay: day, lastDay: day, days: 1 };
+  } else if (day > activity.lastDay) {
+    activity = { ...activity, lastDay: day, days: activity.days + 1 };
+  }
+  activity = absorbPrior(activity, playedBefore);
+  if (activity.firstDay === playedBefore) playedBefore = null;
+}
 
 /** The parts of a saved session that outlive the rules it was played under. */
 function playerOnly(progress) {
@@ -15521,7 +15864,7 @@ function saveProgressLocally() {
  * to reach the Blackjack rating.
  */
 function fullProgress() {
-  return { ...session.progress, uth: uthSession.progress };
+  return { ...session.progress, uth: uthSession.progress, activity, playedBefore };
 }
 
 function readLocalProgress() {
@@ -15579,6 +15922,8 @@ async function restoreMine() {
     // A version 1 or 2 blob has no `uth`, and this leaves UTH at zero.
     uthSession.restore(local.uth);
   }
+  activity = activityOf(local);
+  playedBefore = earlierDay(local?.playedBefore, null);
   myFeed = readLocalFeed();
 
   if (backend && me.name) {
@@ -15615,6 +15960,21 @@ async function restoreMine() {
           session.restore(remote.progress);
           uthSession.restore(remote.progress.uth);
         }
+        /*
+         * The day count is merged whichever copy won, because each device may
+         * have seen days the other has not. A row no build with the count has
+         * written yet belongs to a player from before it, who played on or
+         * before the day it was last written.
+         */
+        activity = mergeActivity(activity, activityOf(remote.progress));
+        const untouched =
+          remote.progress && !('activity' in remote.progress) && lifetimeOf(remote.progress) > 0 && remote.updatedAt;
+        playedBefore = earlierDay(
+          earlierDay(playedBefore, remote.progress?.playedBefore),
+          untouched ? localDay(new Date(remote.updatedAt)) : null,
+        );
+        activity = absorbPrior(activity, playedBefore);
+        if (activity && activity.firstDay === playedBefore) playedBefore = null;
         if (remote.feed.length > 0) myFeed = remote.feed;
         saveProgressLocally();
       }
@@ -15678,6 +16038,7 @@ function noteForFeed(hand) {
 
 /** After a hand settles: keep it, and share it if it is worth showing. */
 function keep(hand) {
+  markPlayed();
   noteForFeed(hand);
   myHistory = session.view.history;
   saveProgressLocally();
@@ -15773,6 +16134,7 @@ async function api(path, body) {
     case '/api/uth/act': {
       const view = uthSession.act(b.action);
       if (view.phase === 'settled') {
+        markPlayed();
         saveProgressLocally();
         void publish();
       }
@@ -15832,6 +16194,206 @@ function afterPlay() {
   return view;
 }
 
+
+
+/*
+ * The usage page (round 9).
+ *
+ * Idan will buy a domain only if he first sees quality use among family and
+ * friends. This is how he reads that: how many people have played, how much
+ * each of them played, and — the real signal — how many came back on another
+ * day. Plus one reading of "quality" on top: a regular is someone who came back
+ * on several days and played a real amount in all.
+ *
+ * Reached at `#usage`. Nothing links to it, so a friend will not wander in. It
+ * is not private, and says so on the page: the table it reads is open to anyone
+ * who has the app's address, by design (see backends.js).
+ *
+ * It reads what the app already keeps and counts nothing new about anyone: a
+ * name the player chose, both games' decisions, and three facts about days.
+ */
+
+/** A regular: this many different days, and this many graded decisions in all. */
+const USAGE_REGULAR_DAYS = 3;
+const USAGE_REGULAR_DECISIONS = 100;
+/** "Recently" means a finished hand in this many days, today included. */
+const USAGE_RECENT_DAYS = 7;
+/** The day the day count began, which the page names so no one reads it as older. */
+const USAGE_COUNTING_FROM = '2026-09-14';
+
+/** Whole days from `a` to `b`, both written 2026-09-14. */
+function daysBetween(a, b) {
+  const [ya, ma, da] = a.split('-').map(Number);
+  const [yb, mb, db] = b.split('-').map(Number);
+  return Math.round((Date.UTC(yb, mb - 1, db) - Date.UTC(ya, ma - 1, da)) / 86400000);
+}
+
+/**
+ * The table's rows, read as people. Pure, so every branch is tested without a
+ * network.
+ *
+ * Someone with no graded decision in either game has not played, whatever row
+ * they left behind, and is not counted. A row with no day count belongs to
+ * someone who has not played since the count began: they appear with the day
+ * they were last seen, count as having played, and count as neither back nor
+ * recent — an undercount, which is the safe side for a gate.
+ */
+function summariseUsage(rows, today) {
+  const people = (Array.isArray(rows) ? rows : [])
+    .map((row) => {
+      const blackjack = Math.max(0, Number(row.blackjack) || 0);
+      const ultimate = Math.max(0, Number(row.ultimate) || 0);
+      const counted = activityOf({ activity: row.activity });
+      const days = counted ? counted.days : 0;
+      return {
+        name: String(row.name ?? ''),
+        blackjack,
+        ultimate,
+        decisions: blackjack + ultimate,
+        counted: Boolean(counted),
+        days,
+        lastPlayed: counted ? counted.lastDay : null,
+        lastSeen: row.at ? localDay(new Date(row.at)) : null,
+        cameBack: days >= 2,
+        regular: days >= USAGE_REGULAR_DAYS && blackjack + ultimate >= USAGE_REGULAR_DECISIONS,
+        recent: Boolean(counted) && daysBetween(counted.lastDay, today) < USAGE_RECENT_DAYS,
+      };
+    })
+    .filter((person) => person.decisions > 0)
+    .sort(
+      (a, b) =>
+        Number(b.regular) - Number(a.regular) ||
+        b.days - a.days ||
+        (b.lastPlayed ?? b.lastSeen ?? '').localeCompare(a.lastPlayed ?? a.lastSeen ?? '') ||
+        b.decisions - a.decisions,
+    );
+  return {
+    people,
+    played: people.length,
+    cameBack: people.filter((p) => p.cameBack).length,
+    regulars: people.filter((p) => p.regular).length,
+    recent: people.filter((p) => p.recent).length,
+  };
+}
+
+const usageHtml = () => `
+  <div class="shell usage">
+    <a class="back" href="#home">${tr('usage.back')}</a>
+    <h1 class="usage-title">${tr('usage.title')}</h1>
+    <p class="usage-line">${tr('usage.line')}</p>
+    <section class="usage-figures" id="usage-figures"></section>
+    <section class="usage-people" id="usage-people"></section>
+    <p class="usage-note" id="usage-counting"></p>
+    <p class="usage-note usage-public" id="usage-public">${tr('usage.public')}</p>
+  </div>`;
+
+/** A count, written by the one figure rule like every other figure (round 8). */
+const usageCount = (n) => window.EVFigure.units(n);
+
+/** 2026-09-14 as the page's language writes a short date. */
+function usageDate(day) {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Intl.DateTimeFormat(locale === 'he' ? 'he-IL' : 'en-GB', { day: 'numeric', month: 'short' }).format(
+    new Date(y, m - 1, d),
+  );
+}
+
+async function initUsage() {
+  const figures = document.getElementById('usage-figures');
+  const list = document.getElementById('usage-people');
+  const counting = document.getElementById('usage-counting');
+  if (!figures || !list) return;
+  if (counting) counting.textContent = tr('usage.counting', { day: usageDate(USAGE_COUNTING_FROM) });
+
+  const say = (key, params) => {
+    figures.replaceChildren();
+    const line = document.createElement('p');
+    line.className = 'empty-note';
+    line.textContent = tr(key, params);
+    list.replaceChildren(line);
+  };
+
+  if (!backend || typeof backend.usage !== 'function') return say('usage.noTable');
+  say('usage.loading');
+  let rows;
+  try {
+    rows = await backend.usage();
+  } catch (error) {
+    // A refusal says so, with its status, so a wrong query shows as an error and never as zero people.
+    return error && error.status ? say('usage.refused', { status: usageCount(error.status) }) : say('usage.offline');
+  }
+  if (screen !== 'usage') return;
+
+  const summary = summariseUsage(rows, localDay());
+  if (summary.played === 0) return say('usage.nobody');
+
+  const tile = (value, label, note) => {
+    const div = document.createElement('div');
+    div.className = 'figure';
+    const v = document.createElement('div');
+    v.className = 'figure-value';
+    v.textContent = usageCount(value);
+    const l = document.createElement('div');
+    l.className = 'figure-label';
+    l.textContent = label;
+    const n = document.createElement('div');
+    n.className = 'figure-note';
+    n.textContent = note;
+    div.append(v, l, n);
+    return div;
+  };
+  figures.replaceChildren(
+    tile(summary.played, tr('usage.played'), tr('usage.playedNote')),
+    tile(summary.cameBack, tr('usage.cameBack'), tr('usage.cameBackNote')),
+    tile(
+      summary.regulars,
+      tr('usage.regulars'),
+      tr('usage.regularsNote', { days: usageCount(USAGE_REGULAR_DAYS), decisions: usageCount(USAGE_REGULAR_DECISIONS) }),
+    ),
+    tile(summary.recent, tr('usage.recent', { n: usageCount(USAGE_RECENT_DAYS) }), tr('usage.recentNote')),
+  );
+
+  list.replaceChildren(
+    ...summary.people.map((person) => {
+      const card = document.createElement('div');
+      card.className = 'usage-person';
+
+      const head = document.createElement('div');
+      head.className = 'usage-name';
+      const name = document.createElement('span');
+      name.dir = 'auto';
+      name.textContent = person.name;
+      const tier = document.createElement('span');
+      const [tierClass, tierKey] = person.regular
+        ? ['regular', 'usage.tierRegular']
+        : person.cameBack
+          ? ['back', 'usage.tierBack']
+          : ['once', 'usage.tierOnce'];
+      tier.className = `usage-tier ${tierClass}`;
+      tier.textContent = tr(tierKey);
+      head.append(name, tier);
+
+      const days = document.createElement('div');
+      days.className = 'usage-detail';
+      days.textContent = person.counted
+        ? tr('usage.lastPlayed', {
+            days: person.days === 1 ? tr('usage.oneDay') : tr('usage.days', { days: usageCount(person.days) }),
+            last: usageDate(person.lastPlayed),
+          })
+        : tr('usage.notCounted', { last: person.lastSeen ? usageDate(person.lastSeen) : '—' });
+
+      const decisions = document.createElement('div');
+      decisions.className = 'usage-detail';
+      decisions.textContent = tr('usage.decisions', {
+        bj: usageCount(person.blackjack),
+        uth: usageCount(person.ultimate),
+      });
+
+      card.append(head, days, decisions);
+      return card;
+    }),
+  );
+}
 
 
 /*
@@ -15942,8 +16504,14 @@ const app = () => document.getElementById('app');
  *
  * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
-const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate' };
-const SCREEN_HTML = { home: () => HOME_HTML, table: () => TABLE_HTML, ultimate: () => ULTIMATE_HTML };
+// `#usage` (round 9) is the one screen nothing links to: see usage.js.
+const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage' };
+const SCREEN_HTML = {
+  home: () => HOME_HTML,
+  table: () => TABLE_HTML,
+  ultimate: () => ULTIMATE_HTML,
+  usage: () => usageHtml(),
+};
 const screenFromHash = () => SCREENS[location.hash] ?? null;
 
 function mount(name) {
@@ -15964,6 +16532,8 @@ function mount(name) {
     }
   } else if (name === 'ultimate') {
     initUltimate();
+  } else if (name === 'usage') {
+    void initUsage();
   } else {
     initTable();
   }
