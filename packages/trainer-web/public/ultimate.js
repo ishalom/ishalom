@@ -394,6 +394,38 @@ function uthRenderRail(view) {
 }
 
 /**
+ * What the decision did to the Ultimate rating (round 10), beside the headline
+ * as Blackjack's card has it: small, and there whether the hand went on to win
+ * or lose. A decision too obvious to rate shows a dash that says why.
+ */
+function uthRatingSide(rating) {
+  const side = document.createElement('span');
+  side.className = 'rating-side';
+  const delta = rating ? rating.lastDelta : null;
+  if (delta === null || delta === undefined) {
+    const none = document.createElement('span');
+    none.className = 'unrated';
+    none.textContent = '—';
+    none.title = T('fb.uthUnratedWhy');
+    side.appendChild(none);
+    return side;
+  }
+  const points = Math.round(delta);
+  const moved = document.createElement('span');
+  moved.className = points >= 0 ? 'up' : 'down';
+  moved.textContent = T('ui.uthRatingPoints', { delta: window.EVFigure.units(points, true) });
+  // Still settling reads as a dimmer figure, as on home, with the reason on hover:
+  // words here would crowd the headline the card is really about.
+  moved.title = T('fb.uthRatingWhy');
+  if (rating.provisional) {
+    moved.classList.add('provisional');
+    moved.title += ` ${T('home.uthRating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })}`;
+  }
+  side.appendChild(moved);
+  return side;
+}
+
+/**
  * The card: the grade, then — later and quieter — what the cards did.
  *
  * §3.1 keeps the result behind the decision. With no three-step reveal in 4a
@@ -419,6 +451,7 @@ function uthRenderCard(view) {
   const head = document.createElement('b');
   head.textContent = feedback.headline;
   anchor.appendChild(head);
+  anchor.appendChild(uthRatingSide(view.rating));
   box.appendChild(anchor);
 
   const verdict = document.createElement('p');

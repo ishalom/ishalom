@@ -175,6 +175,21 @@ test('the usage page writes every count by the one rule (round 9)', () => {
   assert.doesNotMatch(usage, /(?:days|decisions|bj|uth|n|status): (?:person|summary)\.\w+\s*[,}]/, 'a count handed to the copy raw');
 });
 
+test('ratings are written by the one rule too, wherever a player reads one (round 10)', () => {
+  for (const file of ['home.js', 'app.js', 'ultimate.js']) {
+    const code = source(file);
+    assert.doesNotMatch(code, /`\+\$\{points\}`/, `${file} signs a rating change by hand`);
+    for (const use of code.matchAll(/round10\([^)]*\)\)?/g)) {
+      const before = code.slice(Math.max(0, use.index! - 22), use.index!);
+      assert.match(before, /EVFigure\.units\($/, `${file} writes a rating without the rule: ${use[0]}`);
+    }
+  }
+  const ui = readFileSync(join(HERE, '..', 'artifact', 'ui.js'), 'utf8');
+  for (const line of ui.split('\n').filter((l) => /score\.textContent =/.test(l))) {
+    assert.match(line, /EVFigure\.units\(/, `a leaderboard rating written without the rule: ${line.trim()}`);
+  }
+});
+
 test('the strip holds its four cells whatever the figure', () => {
   const css = source('styles.css');
   const from = css.indexOf('/* --- The stat strip holds its four cells');

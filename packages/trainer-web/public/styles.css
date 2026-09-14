@@ -2006,3 +2006,13 @@ button,
 }
 /* The home Stats tab has room to wrap a long figure, so it wraps. */
 .figure-value { overflow-wrap: anywhere; }
+
+/* --- Two ratings (round 10) --------------------------------------------------
+ * Blackjack's and Ultimate's, side by side on home, each under its game's name.
+ * Two columns from the smallest phone up: the numbers are short and the notes
+ * wrap, so neither pushes the other off the screen. */
+.standings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.standings .standing { min-width: 0; padding-inline: 4px; }
+.standings .standing-value { font-size: 42px; }
+.standings .standing-note { overflow-wrap: anywhere; }
+.quickcard .rating-side .provisional { opacity: 0.6; }

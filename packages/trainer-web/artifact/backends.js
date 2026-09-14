@@ -12,6 +12,7 @@
  *   watch(onRows)            -> unsubscribe
  *   findByName(nameKey)      -> rows already using that name
  *   usage()                  -> how much each live player has played (round 9)
+ *   uthBoard()               -> live players ranked by their Ultimate rating (round 10)
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -45,6 +46,23 @@ function artifactBackend(db) {
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
         updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
+    },
+
+    /* Ranked by the Ultimate rating the summaries carry; players never rated in Ultimate are not on it. */
+    async uthBoard() {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((row) => !row.mergedInto && typeof row.uthRating === 'number')
+        .sort((a, b) => b.uthRating - a.uthRating)
+        .slice(0, 60)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          rating: row.uthRating,
+          provisional: row.uthProvisional !== false,
+          decisions: row.uthDecisions ?? 0,
+        }));
     },
 
     /* The summaries carry the day count and both games' decisions, so nobody's session is read. */
@@ -136,6 +154,14 @@ function artifactBackend(db) {
  */
 function httpBackend({ url, key, table = 'players' }) {
   const endpoint = `${url.replace(/\/+$/, '')}/rest/v1/${table}`;
+  /*
+   * Whether the table has the Ultimate rating's two columns (migration 003,
+   * round 10). Assumed until the table says otherwise. Without them a save that
+   * names them is refused whole, so the first refusal that names them turns
+   * them off for the rest of the visit and the save goes again without them:
+   * everything else is kept exactly as before the migration.
+   */
+  let uthColumns = true;
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
@@ -241,10 +267,13 @@ function httpBackend({ url, key, table = 'players' }) {
     },
 
     async save(id, record) {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({
+      const write = (body) =>
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(body),
+        });
+      const body = {
           id,
           name: record.name,
           rating: record.rating,
@@ -264,9 +293,50 @@ function httpBackend({ url, key, table = 'players' }) {
           progress: record.progress,
           feed: record.feed,
           updated_at: new Date().toISOString(),
-        }),
-      });
+      };
+      if (uthColumns) {
+        // Null until an Ultimate decision has been rated: never rated is not rated.
+        body.uth_rating = record.uthRating ?? null;
+        body.uth_provisional = record.uthProvisional !== false;
+      }
+      let response = await write(body);
+      if (!response.ok && uthColumns && response.status === 400) {
+        const reason = await response.text().catch(() => '');
+        if (/uth_rating|uth_provisional/.test(reason)) {
+          uthColumns = false;
+          delete body.uth_rating;
+          delete body.uth_provisional;
+          response = await write(body);
+        }
+      }
       if (!response.ok) throw new Error(`save failed: ${response.status}`);
+    },
+
+    /*
+     * The Ultimate side of the leaderboard (round 10): live players with an
+     * Ultimate rating, best first. A table without the columns yet answers 400,
+     * which is thrown with its status so the board can say it is waiting for the
+     * table rather than showing nobody as if that were true.
+     */
+    async uthBoard() {
+      const response = await fetch(
+        `${endpoint}?select=id,name,uth_rating,uth_provisional,uth_decisions:progress->uth->>lifetimeDecisions` +
+          '&merged_into=is.null&uth_rating=not.is.null&order=uth_rating.desc&limit=60',
+        { headers },
+      );
+      if (!response.ok) {
+        const error = new Error(`uthBoard failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const rows = await response.json();
+      return (Array.isArray(rows) ? rows : []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        rating: row.uth_rating,
+        provisional: row.uth_provisional !== false,
+        decisions: Number(row.uth_decisions) || 0,
+      }));
     },
 
     /**

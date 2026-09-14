@@ -35,11 +35,37 @@ function greet(stats) {
   return T('home.greet.work', { hands });
 }
 
+/**
+ * The Ultimate rating beside Blackjack's (round 10): its own number, named with
+ * its game, rounded to ten like Blackjack's, and never added to it. A player
+ * who has not had an Ultimate decision rated is shown as not rated.
+ */
+function renderUthStanding(rating) {
+  const value = el('uth-rating');
+  if (!value || !rating) return;
+  const rated = rating.ratedDecisions > 0;
+  value.textContent = rated ? window.EVFigure.units(round10(rating.rating)) : '—';
+  value.className = 'standing-value' + (rated && rating.provisional ? ' provisional' : '');
+  el('uth-rating-label').textContent = T(rated ? 'home.uthRating' : 'home.uthUnrated');
+  el('uth-rating-note').textContent = !rated
+    ? T('home.uthRating.none')
+    : rating.provisional
+      ? T('home.uthRating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })
+      : T('home.uthRating.peak', { peak: window.EVFigure.units(round10(rating.peak)) });
+  const swing = el('uth-rating-swing');
+  const points = Math.round(rating.sessionDelta || 0);
+  swing.hidden = !rated || points === 0;
+  if (!swing.hidden) {
+    swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
+    swing.textContent = T('home.sessionSwing', { delta: window.EVFigure.units(points, true) });
+  }
+}
+
 function renderStanding(profile) {
   const { rating, ladder } = profile;
   const rated = rating.ratedDecisions > 0;
 
-  el('rating').textContent = rated ? round10(rating.rating) : '—';
+  el('rating').textContent = rated ? window.EVFigure.units(round10(rating.rating)) : '—';
   el('rating').className = 'standing-value' + (rating.provisional ? ' provisional' : '');
   el('rating-label').textContent = rated
     ? T('home.ratingOf', { mode: T('ui.mode.' + rating.mode) })
@@ -47,8 +73,8 @@ function renderStanding(profile) {
   el('rating-note').textContent = !rated
     ? T('home.rating.none')
     : rating.provisional
-      ? T('home.rating.settling', { left: Math.max(1, 30 - rating.ratedDecisions) })
-      : T('home.rating.peak', { peak: round10(rating.peak) });
+      ? T('home.rating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })
+      : T('home.rating.peak', { peak: window.EVFigure.units(round10(rating.peak)) });
 
   // Which way it has gone this session. The rating falls as readily as it
   // rises, which is what makes it worth showing at all.
@@ -59,9 +85,7 @@ function renderStanding(profile) {
     if (moved) {
       const points = Math.round(rating.sessionDelta);
       swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
-      swing.textContent = T('home.sessionSwing', {
-        delta: points > 0 ? `+${points}` : `−${Math.abs(points)}`,
-      });
+      swing.textContent = T('home.sessionSwing', { delta: window.EVFigure.units(points, true) });
     }
   }
 
@@ -469,6 +493,7 @@ async function refresh() {
   });
 
   renderStanding(profile);
+  renderUthStanding(uthView.rating);
   renderHands(view, uthView);
   renderStats(view, profile);
   if (pendingOpen) {

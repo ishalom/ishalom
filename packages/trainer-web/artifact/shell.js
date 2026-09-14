@@ -86,6 +86,32 @@ let stopWatching = null;
 let leaderboard = [];
 let feed = [];
 
+/*
+ * The leaderboard's other side (round 10). One screen, a switch between the
+ * games; the Ultimate side is asked for only while it is the one on screen.
+ * `pending` is a table that has not had migration 003 yet.
+ */
+let boardGame = store.get('ev:board') === 'uth' ? 'uth' : 'bj';
+let uthBoard = { state: 'idle', rows: [] };
+
+async function loadUthBoard() {
+  if (!backend || typeof backend.uthBoard !== 'function') {
+    uthBoard = { state: 'none', rows: [] };
+    renderSocial();
+    return;
+  }
+  if (uthBoard.state === 'idle') {
+    uthBoard = { state: 'loading', rows: [] };
+    renderSocial();
+  }
+  try {
+    uthBoard = { state: 'ready', rows: await backend.uthBoard() };
+  } catch (error) {
+    uthBoard = { state: error && error.status ? 'pending' : 'offline', rows: uthBoard.rows };
+  }
+  renderSocial();
+}
+
 /** How many of a player's showable hands ride along with their record. */
 const FEED_KEPT = 5;
 
@@ -105,6 +131,8 @@ async function connect() {
         .sort((a, b) => b.at - a.at)
         .slice(0, 40);
       renderSocial();
+      // The Ultimate side keeps pace with the same poll while it is on screen.
+      if (boardGame === 'uth') void loadUthBoard();
       },
       (reachable) => {
         if (reachable === backendReachable) return;
@@ -178,6 +206,8 @@ async function publish() {
 async function writeRecord() {
   const profile = session.profile;
   const stats = session.view.stats;
+  const uth = uthSession.progress;
+  const uthRated = Boolean(uth.rating) && uth.rating.ratedDecisions > 0;
   try {
     await backend.save(me.id, {
       name: me.name,
@@ -190,7 +220,10 @@ async function writeRecord() {
       lifetimeDecisions: session.progress.lifetimeDecisions,
       // For the usage page. The HTTP table reads both from the saved record;
       // the artifact store keeps them on the summary, which is all it reads.
-      uthDecisions: uthSession.progress.lifetimeDecisions,
+      uthDecisions: uth.lifetimeDecisions,
+      // The Ultimate rating (round 10): null until an Ultimate decision is rated.
+      uthRating: uthRated ? Math.round(uth.rating.rating) : null,
+      uthProvisional: !uthRated || uth.rating.ratedDecisions < 30,
       activity,
       hands: stats.hands,
       decisions: stats.decisions,

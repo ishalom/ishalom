@@ -47,11 +47,20 @@
       </nav>
 
       <section class="tab-body" id="panel-standing" role="tabpanel">
-        <div class="standing">
-          <div class="standing-value" id="rating">—</div>
-          <div class="standing-label" id="rating-label" data-i18n="ui.rating">rating</div>
-          <div class="rating-side" id="rating-swing" hidden></div>
-          <p class="standing-note" id="rating-note"></p>
+        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->
+        <div class="standings">
+          <div class="standing">
+            <div class="standing-value" id="rating">—</div>
+            <div class="standing-label" id="rating-label" data-i18n="ui.rating">Blackjack rating</div>
+            <div class="rating-side" id="rating-swing" hidden></div>
+            <p class="standing-note" id="rating-note"></p>
+          </div>
+          <div class="standing">
+            <div class="standing-value" id="uth-rating">—</div>
+            <div class="standing-label" id="uth-rating-label" data-i18n="home.uthRating">Ultimate rating</div>
+            <div class="rating-side" id="uth-rating-swing" hidden></div>
+            <p class="standing-note" id="uth-rating-note"></p>
+          </div>
         </div>
         <div class="modes" role="group" data-i18n-attr="aria-label:ui.drilledOn">
           <button class="mode" type="button" data-mode="basic" aria-pressed="true">

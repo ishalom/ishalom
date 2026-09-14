@@ -46,8 +46,10 @@ import {
   type UthSettlement,
 } from '@evtrainer/game-engine';
 
+import { newRating, type Rating } from './difficulty.ts';
 import { displayFigure } from './figure.ts';
 import { t, type Locale } from './i18n.ts';
+import { uthDifficulty, updateUthRating } from './uth-rating.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 import {
   TABLE_LIMITS,
@@ -292,6 +294,12 @@ export interface UthProgressV2 extends Omit<UthProgressV1, 'version'> {
   bet: number;
   lastBet: number;
   limits: { min: number; max: number };
+  /**
+   * The Ultimate rating (round 10). Absent on parts saved before it existed,
+   * which open unrated at 1200 — a player who never rated an Ultimate decision
+   * is not shown as rated.
+   */
+  rating?: Rating;
 }
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -348,6 +356,16 @@ export class UthSession {
   private lifetimeDecisions = 0;
   private history: UthPlayedHand[] = [];
 
+  /** The Ultimate rating (round 10): its own ladder, never Blackjack's, Basic mode only. */
+  private rating: Rating = newRating('basic');
+  /**
+   * The rating as the hand on the felt was dealt. A save taken mid-hand keeps
+   * this, as it keeps the counters without that hand's decisions.
+   */
+  private ratingAtDeal: Rating = newRating('basic');
+  /** What the last graded decision did to it, for the card; null when it was not rated. */
+  private lastRatingDelta: number | null = null;
+
   /** Decisions of the hand on the felt, saved when it settles. */
   private pending: UthSavedDecision[] = [];
   private lastNet: number | null = null;
@@ -383,6 +401,8 @@ export class UthSession {
     this.lastNet = null;
     this.last = null;
     this.pending = [];
+    this.ratingAtDeal = { ...this.rating };
+    this.lastRatingDelta = null;
     return this.view;
   }
 
@@ -473,6 +493,12 @@ export class UthSession {
       this.closeCalls++;
       if (correct) this.closeCallsCorrect++;
     }
+
+    // Rated from the EVs the grade already holds: nothing is solved to rate it,
+    // and the grade itself is untouched. Too obvious to rate means not rated.
+    const legalEvs = Object.fromEntries(record.legalActions.map((a) => [a, record.evByAction[a] ?? 0]));
+    const difficulty = uthDifficulty(legalEvs);
+    this.lastRatingDelta = difficulty === null ? null : updateUthRating(this.rating, difficulty, record.severityTier);
 
     this.pending.push({
       phase: evaluation.phase,
@@ -586,6 +612,7 @@ export class UthSession {
       closeCallsCorrect: this.closeCallsCorrect - pendingCloseCorrect,
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
+      rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
       history: this.history.map((hand) => ({
         ...hand,
         hole: [...hand.hole],
@@ -629,6 +656,20 @@ export class UthSession {
     this.closeCallsCorrect = n(s.closeCallsCorrect);
     for (const tier of TIERS) this.bySeverity[tier] = n(s.bySeverity?.[tier]);
     this.lifetimeDecisions = n(s.lifetimeDecisions, this.decisions);
+    const rating = s.rating as Partial<Rating> | undefined;
+    if (rating && typeof rating === 'object' && Number.isFinite(rating.rating)) {
+      const rated = Math.max(0, Math.floor(n(rating.ratedDecisions)));
+      this.rating = {
+        mode: 'basic',
+        rating: Math.max(800, Math.min(2200, rating.rating!)),
+        peak: Math.max(800, Math.min(2200, n(rating.peak, rating.rating!))),
+        ratedDecisions: rated,
+        provisional: rated < 30,
+        // A restored session is a new sitting: nothing has moved in it yet.
+        sessionDelta: 0,
+      };
+    }
+    this.ratingAtDeal = { ...this.rating };
     this.history = (Array.isArray(s.history) ? s.history : [])
       .filter(
         (hand): hand is UthPlayedHand =>
@@ -658,6 +699,9 @@ export class UthSession {
     this.pending = [];
     this.last = null;
     this.lastNet = null;
+    this.rating = newRating('basic');
+    this.ratingAtDeal = newRating('basic');
+    this.lastRatingDelta = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -706,6 +750,8 @@ export class UthSession {
       // it to be done early; this tells the page whether it still needs asking.
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
+      // The Ultimate rating, for the card and home — never the strip (round 10).
+      rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
       showdown:
         settled && table.settlement && !table.settlement.folded

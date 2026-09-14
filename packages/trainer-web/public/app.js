@@ -571,9 +571,7 @@ function ratingSide(feedback) {
   const moved = document.createElement('span');
   moved.className = points >= 0 ? 'up' : 'down';
   // U+2212 for the minus, matching the typography everywhere else.
-  moved.textContent = T('ui.ratingPoints', {
-    delta: points >= 0 ? `+${points}` : `−${Math.abs(points)}`,
-  });
+  moved.textContent = T('ui.ratingPoints', { delta: window.EVFigure.units(points, true) });
   moved.title = T('fb.ratingWhy');
   side.appendChild(moved);
   return side;

@@ -167,6 +167,12 @@ function mountSwitchPlayer() {
   if (!backend) return;
   const footer = app().querySelector('.footer');
   if (!footer) return;
+  // Approved round 10: the one thing a player needs when the address changes.
+  const remember = document.createElement('p');
+  remember.className = 'remember';
+  remember.textContent = tr('home.remember');
+  footer.parentElement.insertBefore(remember, footer);
+
   const button = document.createElement('button');
   button.className = 'link switch-player';
   button.type = 'button';
@@ -260,6 +266,16 @@ function renderLeaderboard(box) {
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
   if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
 
+  // One board, two games (round 10): the switch, then the chosen game's ranking,
+  // named — the numbers are never added together or put in one list.
+  box.appendChild(boardSwitch());
+  const caption = document.createElement('p');
+  caption.className = 'board-caption';
+  caption.textContent = tr(boardGame === 'uth' ? 'social.byUltimate' : 'social.byBlackjack');
+  box.appendChild(caption);
+  if (boardGame === 'uth') return void renderUthBoard(box);
+
+  // The Blackjack side, as it was before round 10: same rows, same order.
   const rated = leaderboard.filter((p) => p.decisions > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
 
@@ -279,7 +295,7 @@ function renderLeaderboard(box) {
 
     const score = document.createElement('span');
     score.className = 'ladder-score';
-    score.textContent = player.rating > 0 ? player.rating : '—';
+    score.textContent = player.rating > 0 ? window.EVFigure.units(player.rating) : '—';
     if (player.provisional) score.classList.add('provisional');
 
     const detail = document.createElement('span');
@@ -288,6 +304,69 @@ function renderLeaderboard(box) {
       accuracy: (player.accuracy * 100).toFixed(1),
       hands: player.hands,
     });
+
+    row.append(place, who, score, detail);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+}
+
+/** Blackjack | Ultimate. The choice is remembered on this device. */
+function boardSwitch() {
+  const bar = document.createElement('div');
+  bar.className = 'board-games';
+  bar.setAttribute('role', 'group');
+  for (const [key, label] of [['bj', 'ui.blackjack'], ['uth', 'ui.ultimate']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.game = key;
+    button.textContent = tr(label);
+    button.setAttribute('aria-pressed', String(boardGame === key));
+    button.addEventListener('click', () => {
+      if (boardGame === key) return;
+      boardGame = key;
+      store.set('ev:board', key);
+      renderSocial();
+      if (key === 'uth') void loadUthBoard();
+    });
+    bar.appendChild(button);
+  }
+  return bar;
+}
+
+/** The Ultimate side: the same row as Blackjack's, ranked by the Ultimate rating. */
+function renderUthBoard(box) {
+  if (uthBoard.state === 'idle') void loadUthBoard();
+  if (uthBoard.state === 'idle' || uthBoard.state === 'loading') {
+    return void box.appendChild(emptyNote(tr('social.connecting')));
+  }
+  if (uthBoard.state === 'pending') return void box.appendChild(emptyNote(tr('social.uthPending')));
+  if (uthBoard.state === 'offline') return void box.appendChild(emptyNote(tr('social.offlineNow')));
+  if (uthBoard.state === 'none') return void box.appendChild(emptyNote(tr('social.offline')));
+  if (uthBoard.rows.length === 0) return void box.appendChild(emptyNote(tr('social.noUthPlayers')));
+
+  const list = document.createElement('ol');
+  list.className = 'ladder board';
+  uthBoard.rows.forEach((player, index) => {
+    const row = document.createElement('li');
+    row.className = 'board-row' + (player.id === me.id ? ' is-me' : '');
+
+    const place = document.createElement('span');
+    place.className = 'board-place';
+    place.textContent = index + 1;
+
+    const who = document.createElement('span');
+    who.className = 'board-name';
+    who.textContent = player.name;
+
+    const score = document.createElement('span');
+    score.className = 'ladder-score';
+    score.textContent = window.EVFigure.units(player.rating);
+    if (player.provisional) score.classList.add('provisional');
+
+    const detail = document.createElement('span');
+    detail.className = 'board-detail';
+    detail.textContent = tr('social.uthPlayerLine', { decisions: window.EVFigure.units(player.decisions) });
 
     row.append(place, who, score, detail);
     list.appendChild(row);
