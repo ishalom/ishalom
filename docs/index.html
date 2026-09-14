@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="3859743f93bc0a8a55fa162eb3a1edf442b5f893-dirty" />
-<meta name="ev-build-at" content="2026-09-14T18:33:25.736Z" />
+<meta name="ev-build-commit" content="8dbccb7c88aeee6776b8b770831d9e11a48e1ea1-dirty" />
+<meta name="ev-build-at" content="2026-09-14T20:51:30.383Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2031,6 +2031,16 @@ button,
 /* The home Stats tab has room to wrap a long figure, so it wraps. */
 .figure-value { overflow-wrap: anywhere; }
 
+/* --- Two ratings (round 10) --------------------------------------------------
+ * Blackjack's and Ultimate's, side by side on home, each under its game's name.
+ * Two columns from the smallest phone up: the numbers are short and the notes
+ * wrap, so neither pushes the other off the screen. */
+.standings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.standings .standing { min-width: 0; padding-inline: 4px; }
+.standings .standing-value { font-size: 42px; }
+.standings .standing-note { overflow-wrap: anywhere; }
+.quickcard .rating-side .provisional { opacity: 0.6; }
+
 /* ===========================================================================
  * The shared build only.
  *
@@ -2223,6 +2233,36 @@ body { background: var(--bg); }
 .usage-detail { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .usage-note { color: var(--muted); font-size: 12px; margin: 16px 0 0; max-width: 52ch; }
 .usage-public { margin-top: 8px; }
+
+/* --- One leaderboard, two games (round 10) ------------------------------------ */
+
+.board-games { display: flex; gap: 8px; margin: 2px 0 8px; }
+.board-games button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.board-games button[aria-pressed="true"] { color: var(--ink); border-color: var(--brass); }
+.board-caption {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* The reminder about name and code, above "Not you?". Plain, not a warning. */
+.remember { margin: 18px 16px 0; text-align: center; font-size: 12.5px; color: var(--muted); }
+.remember + .switch-player { margin-top: 6px; }
 
 </style>
     <script>
@@ -7051,7 +7091,7 @@ const EN            = {
   'ui.tab.standing': 'Standing',
   'ui.tab.hands': 'Hands',
   'ui.tab.stats': 'Stats',
-  'ui.rating': 'rating',
+  'ui.rating': 'Blackjack rating',
   'ui.drilledOn': 'What you are drilled on',
   'ui.mode.basic': 'Basic',
   'ui.mode.basicNote': 'the costly hands',
@@ -7182,8 +7222,8 @@ const EN            = {
   'home.greet.clean': '{hands} hands, and playing them well.',
   'home.greet.close': '{hands} hands. Close to clean.',
   'home.greet.work': '{hands} hands. There is work in here.',
-  'home.ratingOf': '{mode} rating',
-  'home.unrated': 'unrated',
+  'home.ratingOf': 'Blackjack rating · {mode}',
+  'home.unrated': 'Blackjack · not rated yet',
   'home.rating.none': 'Play a few hands and this settles on a number. It rises when you beat a hard spot and falls when you lose an easy one.',
   'home.rating.settling': 'Still settling — about {left} more decisions before it means much.',
   'home.rating.peak': 'Peak {peak}. It moves with every decision, both ways.',
@@ -7575,10 +7615,25 @@ const EN            = {
   'fb.milestoneOne': '**{n} in a row** — one of them the chart calls hard.',
   'fb.milestoneNone': '**{n} in a row**.',
 
-  'ui.ratingPoints': '{delta} rating',
+  'ui.ratingPoints': '{delta} Blackjack rating',
   'home.sessionSwing': '{delta} this session',
   'ui.ratingUnrated': 'not rated',
-  'fb.ratingWhy': 'The rating moves on the decision and how hard it was — never on whether the hand won.',
+  'fb.ratingWhy': 'Your Blackjack rating moves on the decision and how hard it was — never on whether the hand won.',
+  // The Ultimate rating (round 10): its own number, always named with its game.
+  'ui.uthRatingPoints': '{delta} Ultimate rating',
+  'fb.uthRatingWhy': 'Your Ultimate rating moves on the decision and how hard it was — never on whether the hand won.',
+  'fb.uthUnratedWhy': 'Too obvious to rate: getting it right says nothing about how well you play.',
+  'home.uthRating': 'Ultimate rating',
+  'home.uthUnrated': 'Ultimate · not rated yet',
+  'home.uthRating.none': 'Play a few hands of Ultimate and this settles on a number of its own. It is never added to your Blackjack rating.',
+  'home.uthRating.settling': 'Still settling — about {left} more rated decisions before it means much.',
+  'home.uthRating.peak': 'Peak {peak}. Only the harder decisions move it.',
+  'home.remember': 'Write down your name and code — you will need them once.',
+  'social.byBlackjack': 'Ranked by Blackjack rating',
+  'social.byUltimate': 'Ranked by Ultimate rating',
+  'social.noUthPlayers': 'Nobody has an Ultimate rating yet. A few hands of Ultimate and you are first.',
+  'social.uthPending': 'Ultimate ratings appear here once the shared table has been updated for them.',
+  'social.uthPlayerLine': '{decisions} Ultimate decisions',
   'fb.unratedWhy': 'No real decision here, so there is nothing to rate.',
 
   'spot.routine': 'routine',
@@ -7728,10 +7783,10 @@ const HE            = {
   'ui.lookAround': 'להסתכל מסביב',
   'ui.preview': 'תצוגה מקדימה',
   'ui.yourPlay': 'המשחק שלך',
-  'ui.tab.standing': 'דירוג',
+  'ui.tab.standing': 'מעמד',
   'ui.tab.hands': 'ידיים',
   'ui.tab.stats': 'סטטיסטיקה',
-  'ui.rating': 'דירוג',
+  'ui.rating': 'דירוג בלאק ג׳ק',
   'ui.drilledOn': 'על מה מתאמנים',
   'ui.mode.basic': 'בסיסי',
   'ui.mode.basicNote': 'הידיים היקרות',
@@ -7862,8 +7917,8 @@ const HE            = {
   'home.greet.clean': '{hands} ידיים, ואתה משחק אותן טוב.',
   'home.greet.close': '{hands} ידיים. קרוב לנקי.',
   'home.greet.work': '{hands} ידיים. יש כאן עוד עבודה.',
-  'home.ratingOf': 'דירוג {mode}',
-  'home.unrated': 'ללא דירוג',
+  'home.ratingOf': 'דירוג בלאק ג׳ק · {mode}',
+  'home.unrated': 'בלאק ג׳ק · עוד ללא דירוג',
   'home.rating.none': 'שחק כמה ידיים והמספר הזה יתייצב. הוא עולה כשאתה מנצח מצב קשה ויורד כשאתה מפסיד קל.',
   'home.rating.settling': 'עדיין מתייצב — עוד כ-{left} החלטות עד שזה יתחיל להגיד משהו.',
   'home.rating.peak': 'שיא {peak}. הוא זז עם כל החלטה, לשני הכיוונים.',
@@ -8247,10 +8302,24 @@ const HE            = {
   'fb.milestoneOne': '**{n} ברצף** — אחת מהן נחשבת קשה בטבלה.',
   'fb.milestoneNone': '**{n} ברצף**.',
 
-  'ui.ratingPoints': 'דירוג {delta}',
+  'ui.ratingPoints': 'דירוג בלאק ג׳ק {delta}',
   'home.sessionSwing': '{delta} במושב הזה',
   'ui.ratingUnrated': 'לא מדורג',
-  'fb.ratingWhy': 'הדירוג זז לפי ההחלטה ולפי כמה שהיא הייתה קשה — לעולם לא לפי זה שהיד ניצחה.',
+  'fb.ratingWhy': 'דירוג הבלאק ג׳ק שלך זז לפי ההחלטה ולפי כמה שהיא הייתה קשה — לעולם לא לפי זה שהיד ניצחה.',
+  'ui.uthRatingPoints': 'דירוג אולטימייט {delta}',
+  'fb.uthRatingWhy': 'דירוג האולטימייט שלך זז לפי ההחלטה ולפי כמה שהיא הייתה קשה — לעולם לא לפי זה שהיד ניצחה.',
+  'fb.uthUnratedWhy': 'ברורה מדי כדי לדרג: לשחק אותה נכון לא אומר כלום על כמה טוב אתה משחק.',
+  'home.uthRating': 'דירוג אולטימייט',
+  'home.uthUnrated': 'אולטימייט · עוד ללא דירוג',
+  'home.uthRating.none': 'שחק כמה ידיים של אולטימייט והמספר הזה יתייצב — מספר משלו. הוא לעולם לא מתחבר לדירוג הבלאק ג׳ק שלך.',
+  'home.uthRating.settling': 'עדיין מתייצב — עוד כ-{left} החלטות מדורגות עד שזה יתחיל להגיד משהו.',
+  'home.uthRating.peak': 'שיא {peak}. רק ההחלטות הקשות יותר מזיזות אותו.',
+  'home.remember': 'רשום לעצמך את השם והקוד — תצטרך אותם פעם אחת.',
+  'social.byBlackjack': 'לפי דירוג בלאק ג׳ק',
+  'social.byUltimate': 'לפי דירוג אולטימייט',
+  'social.noUthPlayers': 'עוד לאף אחד אין דירוג אולטימייט. כמה ידיים של אולטימייט ואתה הראשון.',
+  'social.uthPending': 'דירוגי אולטימייט יופיעו כאן אחרי שהטבלה המשותפת תעודכן בשבילם.',
+  'social.uthPlayerLine': '{decisions} החלטות אולטימייט',
   'fb.unratedWhy': 'אין כאן החלטה אמיתית, ולכן אין מה לדרג.',
 
   'spot.routine': 'שגרתי',
@@ -10771,6 +10840,94 @@ function displayFigure(value        , signed = false)         {
   return `${sign}${String(Math.abs(rounded))}`;
 }
 
+/* ===== packages/trainer-web/src/uth-rating.ts ===== */
+/**
+ * The Ultimate rating (round 10; spec B as approved).
+ *
+ * The same machinery as Blackjack's (docs/elo-difficulty.md, difficulty.ts), fed
+ * differently, because Ultimate has no chart: every flop and river is a fresh
+ * board. So a decision's difficulty is worked out at the moment it is graded,
+ * from the EVs the grade already has — the 169-hand table before the flop, the
+ * exact solve on the flop and river. Nothing is solved to rate a decision.
+ *
+ * What is Blackjack's, unchanged: the expected-leak measure and its floor, the
+ * 800–2200 scale, the expected score, partial credit by severity, the K schedule,
+ * the start at 1200, provisional until 30 rated decisions. One mode only, Basic.
+ *
+ * What is Ultimate's own, and why:
+ *
+ *   - **Two constants**, fitted once by `scripts/calibrate-uth-rating.ts` so a
+ *     player who is equally sharp at both games lands on about the same number
+ *     in both, then hard-coded here. Never recomputed live: 1700 must not quietly
+ *     change meaning. `test/uth-rating.test.ts` holds them to a golden snapshot.
+ *   - **Off the scale means off the grid.** A decision so obvious that its
+ *     difficulty falls below 800 is not rated — Blackjack's rule for hard 18–21,
+ *     where standing is trivially right. Most Ultimate decisions are like that.
+ *   - **An easy decision can only lift a rating so far above itself.** Found by
+ *     the trivial-ladder test: under the plain update, a long enough run of easy,
+ *     correct decisions climbs without limit, because a perfect record on easy
+ *     questions has no finite best estimate. A correct answer now lifts a rating
+ *     no higher than 400 above the decision's difficulty — the point at which the
+ *     model already expects it right ten times in eleven, so getting it right says
+ *     almost nothing more. A wrong answer costs exactly what it always did.
+ */
+
+/** Fitted by scripts/calibrate-uth-rating.ts on 2026-09-14. Do not retune without refitting and a new snapshot. */
+const UTH_RATING                                              = { slope: 660, centre: -2.25 };
+
+/** Blackjack's leak floor: below it the leak stops meaning anything. */
+const LEAK_FLOOR = 3e-4;
+
+/** How far above a decision's difficulty a correct answer can still lift a rating. */
+const UTH_INFORMATION_REACH = 400;
+
+/** Difficulty from a leak already worked out, or null when it is below the scale. */
+function uthDifficultyFromLeak(
+  leak        ,
+  constants                                    = UTH_RATING,
+)                {
+  const raw = 1500 + constants.slope * (Math.log10(leak + LEAK_FLOOR) - constants.centre);
+  if (!(raw >= 800)) return null;
+  return Math.min(2200, Math.round(raw / 5) * 5);
+}
+
+/**
+ * A graded Ultimate decision's difficulty on the 800–2200 scale, from its legal
+ * actions' EVs — or null when it is too obvious to rate.
+ */
+function uthDifficulty(
+  evByAction                                 ,
+  constants                                    = UTH_RATING,
+)                {
+  return uthDifficultyFromLeak(expectedLeak(evByAction), constants);
+}
+
+/**
+ * One rated decision: Blackjack's update, then the reach limit on a gain.
+ * Returns the change, for the card.
+ */
+function updateUthRating(
+  rating        ,
+  difficulty        ,
+  severity              ,
+  reach         = UTH_INFORMATION_REACH,
+)         {
+  const before = rating.rating;
+  const peakBefore = rating.peak;
+  const delta = updateRating(rating, difficulty, severity);
+  if (delta > 0) {
+    const ceiling = Math.max(before, difficulty + reach);
+    if (rating.rating > ceiling) {
+      rating.sessionDelta -= rating.rating - ceiling;
+      rating.rating = ceiling;
+      rating.peak = Math.max(peakBefore, ceiling);
+      return ceiling - before;
+    }
+  }
+  // Unlimited, it is Blackjack's change to the last digit.
+  return delta;
+}
+
 /* ===== packages/trainer-web/src/uth-session.ts ===== */
 /**
  * An Ultimate Texas Hold'em session: the table, the stack, the stats, the hand
@@ -10793,6 +10950,8 @@ function displayFigure(value        , signed = false)         {
  * cards, the starting hand described rather than written as "62s", and what the
  * suit is worth before the flop. Every figure still comes from the engine.
  */
+
+
 
 
 
@@ -11027,6 +11186,12 @@ function uthPerfectPlayEdgePercent()         {
               
                   
                                        
+     
+                                                                             
+                                                                               
+                           
+     
+                  
  
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -11083,6 +11248,16 @@ class UthSession {
           lifetimeDecisions = 0;
           history                  = [];
 
+  /** The Ultimate rating (round 10): its own ladder, never Blackjack's, Basic mode only. */
+          rating         = newRating('basic');
+  /**
+   * The rating as the hand on the felt was dealt. A save taken mid-hand keeps
+   * this, as it keeps the counters without that hand's decisions.
+   */
+          ratingAtDeal         = newRating('basic');
+  /** What the last graded decision did to it, for the card; null when it was not rated. */
+          lastRatingDelta                = null;
+
   /** Decisions of the hand on the felt, saved when it settles. */
           pending                     = [];
           lastNet                = null;
@@ -11118,6 +11293,8 @@ class UthSession {
     this.lastNet = null;
     this.last = null;
     this.pending = [];
+    this.ratingAtDeal = { ...this.rating };
+    this.lastRatingDelta = null;
     return this.view;
   }
 
@@ -11208,6 +11385,12 @@ class UthSession {
       this.closeCalls++;
       if (correct) this.closeCallsCorrect++;
     }
+
+    // Rated from the EVs the grade already holds: nothing is solved to rate it,
+    // and the grade itself is untouched. Too obvious to rate means not rated.
+    const legalEvs = Object.fromEntries(record.legalActions.map((a) => [a, record.evByAction[a] ?? 0]));
+    const difficulty = uthDifficulty(legalEvs);
+    this.lastRatingDelta = difficulty === null ? null : updateUthRating(this.rating, difficulty, record.severityTier);
 
     this.pending.push({
       phase: evaluation.phase,
@@ -11321,6 +11504,7 @@ class UthSession {
       closeCallsCorrect: this.closeCallsCorrect - pendingCloseCorrect,
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
+      rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
       history: this.history.map((hand) => ({
         ...hand,
         hole: [...hand.hole],
@@ -11364,6 +11548,20 @@ class UthSession {
     this.closeCallsCorrect = n(s.closeCallsCorrect);
     for (const tier of TIERS) this.bySeverity[tier] = n(s.bySeverity?.[tier]);
     this.lifetimeDecisions = n(s.lifetimeDecisions, this.decisions);
+    const rating = s.rating                               ;
+    if (rating && typeof rating === 'object' && Number.isFinite(rating.rating)) {
+      const rated = Math.max(0, Math.floor(n(rating.ratedDecisions)));
+      this.rating = {
+        mode: 'basic',
+        rating: Math.max(800, Math.min(2200, rating.rating )),
+        peak: Math.max(800, Math.min(2200, n(rating.peak, rating.rating ))),
+        ratedDecisions: rated,
+        provisional: rated < 30,
+        // A restored session is a new sitting: nothing has moved in it yet.
+        sessionDelta: 0,
+      };
+    }
+    this.ratingAtDeal = { ...this.rating };
     this.history = (Array.isArray(s.history) ? s.history : [])
       .filter(
         (hand)                        =>
@@ -11393,6 +11591,9 @@ class UthSession {
     this.pending = [];
     this.last = null;
     this.lastNet = null;
+    this.rating = newRating('basic');
+    this.ratingAtDeal = newRating('basic');
+    this.lastRatingDelta = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -11441,6 +11642,8 @@ class UthSession {
       // it to be done early; this tells the page whether it still needs asking.
       needsPrepare: table.phase === 'flop' || table.phase === 'river',
       feedback: this.last ? this.compose(this.last) : null,
+      // The Ultimate rating, for the card and home — never the strip (round 10).
+      rating: { ...this.rating, lastDelta: this.lastRatingDelta },
       settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
       showdown:
         settled && table.settlement && !table.settlement.folded
@@ -11906,7 +12109,7 @@ class UthSession {
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <div class=\"standing\">\n          <div class=\"standing-value\" id=\"rating\">—</div>\n          <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">rating</div>\n          <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n          <p class=\"standing-note\" id=\"rating-note\"></p>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 
@@ -12427,11 +12630,37 @@ function greet(stats) {
   return T('home.greet.work', { hands });
 }
 
+/**
+ * The Ultimate rating beside Blackjack's (round 10): its own number, named with
+ * its game, rounded to ten like Blackjack's, and never added to it. A player
+ * who has not had an Ultimate decision rated is shown as not rated.
+ */
+function renderUthStanding(rating) {
+  const value = el('uth-rating');
+  if (!value || !rating) return;
+  const rated = rating.ratedDecisions > 0;
+  value.textContent = rated ? window.EVFigure.units(round10(rating.rating)) : '—';
+  value.className = 'standing-value' + (rated && rating.provisional ? ' provisional' : '');
+  el('uth-rating-label').textContent = T(rated ? 'home.uthRating' : 'home.uthUnrated');
+  el('uth-rating-note').textContent = !rated
+    ? T('home.uthRating.none')
+    : rating.provisional
+      ? T('home.uthRating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })
+      : T('home.uthRating.peak', { peak: window.EVFigure.units(round10(rating.peak)) });
+  const swing = el('uth-rating-swing');
+  const points = Math.round(rating.sessionDelta || 0);
+  swing.hidden = !rated || points === 0;
+  if (!swing.hidden) {
+    swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
+    swing.textContent = T('home.sessionSwing', { delta: window.EVFigure.units(points, true) });
+  }
+}
+
 function renderStanding(profile) {
   const { rating, ladder } = profile;
   const rated = rating.ratedDecisions > 0;
 
-  el('rating').textContent = rated ? round10(rating.rating) : '—';
+  el('rating').textContent = rated ? window.EVFigure.units(round10(rating.rating)) : '—';
   el('rating').className = 'standing-value' + (rating.provisional ? ' provisional' : '');
   el('rating-label').textContent = rated
     ? T('home.ratingOf', { mode: T('ui.mode.' + rating.mode) })
@@ -12439,8 +12668,8 @@ function renderStanding(profile) {
   el('rating-note').textContent = !rated
     ? T('home.rating.none')
     : rating.provisional
-      ? T('home.rating.settling', { left: Math.max(1, 30 - rating.ratedDecisions) })
-      : T('home.rating.peak', { peak: round10(rating.peak) });
+      ? T('home.rating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })
+      : T('home.rating.peak', { peak: window.EVFigure.units(round10(rating.peak)) });
 
   // Which way it has gone this session. The rating falls as readily as it
   // rises, which is what makes it worth showing at all.
@@ -12451,9 +12680,7 @@ function renderStanding(profile) {
     if (moved) {
       const points = Math.round(rating.sessionDelta);
       swing.className = 'rating-side ' + (points > 0 ? 'up' : 'down');
-      swing.textContent = T('home.sessionSwing', {
-        delta: points > 0 ? `+${points}` : `−${Math.abs(points)}`,
-      });
+      swing.textContent = T('home.sessionSwing', { delta: window.EVFigure.units(points, true) });
     }
   }
 
@@ -12861,6 +13088,7 @@ async function refresh() {
   });
 
   renderStanding(profile);
+  renderUthStanding(uthView.rating);
   renderHands(view, uthView);
   renderStats(view, profile);
   if (pendingOpen) {
@@ -13463,9 +13691,7 @@ function ratingSide(feedback) {
   const moved = document.createElement('span');
   moved.className = points >= 0 ? 'up' : 'down';
   // U+2212 for the minus, matching the typography everywhere else.
-  moved.textContent = T('ui.ratingPoints', {
-    delta: points >= 0 ? `+${points}` : `−${Math.abs(points)}`,
-  });
+  moved.textContent = T('ui.ratingPoints', { delta: window.EVFigure.units(points, true) });
   moved.title = T('fb.ratingWhy');
   side.appendChild(moved);
   return side;
@@ -14762,6 +14988,38 @@ function uthRenderRail(view) {
 }
 
 /**
+ * What the decision did to the Ultimate rating (round 10), beside the headline
+ * as Blackjack's card has it: small, and there whether the hand went on to win
+ * or lose. A decision too obvious to rate shows a dash that says why.
+ */
+function uthRatingSide(rating) {
+  const side = document.createElement('span');
+  side.className = 'rating-side';
+  const delta = rating ? rating.lastDelta : null;
+  if (delta === null || delta === undefined) {
+    const none = document.createElement('span');
+    none.className = 'unrated';
+    none.textContent = '—';
+    none.title = T('fb.uthUnratedWhy');
+    side.appendChild(none);
+    return side;
+  }
+  const points = Math.round(delta);
+  const moved = document.createElement('span');
+  moved.className = points >= 0 ? 'up' : 'down';
+  moved.textContent = T('ui.uthRatingPoints', { delta: window.EVFigure.units(points, true) });
+  // Still settling reads as a dimmer figure, as on home, with the reason on hover:
+  // words here would crowd the headline the card is really about.
+  moved.title = T('fb.uthRatingWhy');
+  if (rating.provisional) {
+    moved.classList.add('provisional');
+    moved.title += ` ${T('home.uthRating.settling', { left: window.EVFigure.units(Math.max(1, 30 - rating.ratedDecisions)) })}`;
+  }
+  side.appendChild(moved);
+  return side;
+}
+
+/**
  * The card: the grade, then — later and quieter — what the cards did.
  *
  * §3.1 keeps the result behind the decision. With no three-step reveal in 4a
@@ -14787,6 +15045,7 @@ function uthRenderCard(view) {
   const head = document.createElement('b');
   head.textContent = feedback.headline;
   anchor.appendChild(head);
+  anchor.appendChild(uthRatingSide(view.rating));
   box.appendChild(anchor);
 
   const verdict = document.createElement('p');
@@ -15194,6 +15453,7 @@ async function decideIdentity(name, code, rows, newId) {
  *   watch(onRows)            -> unsubscribe
  *   findByName(nameKey)      -> rows already using that name
  *   usage()                  -> how much each live player has played (round 9)
+ *   uthBoard()               -> live players ranked by their Ultimate rating (round 10)
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -15227,6 +15487,23 @@ function artifactBackend(db) {
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
         updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
+    },
+
+    /* Ranked by the Ultimate rating the summaries carry; players never rated in Ultimate are not on it. */
+    async uthBoard() {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => ({ id: d.id, ...d.data() }))
+        .filter((row) => !row.mergedInto && typeof row.uthRating === 'number')
+        .sort((a, b) => b.uthRating - a.uthRating)
+        .slice(0, 60)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          rating: row.uthRating,
+          provisional: row.uthProvisional !== false,
+          decisions: row.uthDecisions ?? 0,
+        }));
     },
 
     /* The summaries carry the day count and both games' decisions, so nobody's session is read. */
@@ -15318,6 +15595,14 @@ function artifactBackend(db) {
  */
 function httpBackend({ url, key, table = 'players' }) {
   const endpoint = `${url.replace(/\/+$/, '')}/rest/v1/${table}`;
+  /*
+   * Whether the table has the Ultimate rating's two columns (migration 003,
+   * round 10). Assumed until the table says otherwise. Without them a save that
+   * names them is refused whole, so the first refusal that names them turns
+   * them off for the rest of the visit and the save goes again without them:
+   * everything else is kept exactly as before the migration.
+   */
+  let uthColumns = true;
   const headers = {
     apikey: key,
     Authorization: `Bearer ${key}`,
@@ -15423,10 +15708,13 @@ function httpBackend({ url, key, table = 'players' }) {
     },
 
     async save(id, record) {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
-        body: JSON.stringify({
+      const write = (body) =>
+        fetch(endpoint, {
+          method: 'POST',
+          headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(body),
+        });
+      const body = {
           id,
           name: record.name,
           rating: record.rating,
@@ -15446,9 +15734,50 @@ function httpBackend({ url, key, table = 'players' }) {
           progress: record.progress,
           feed: record.feed,
           updated_at: new Date().toISOString(),
-        }),
-      });
+      };
+      if (uthColumns) {
+        // Null until an Ultimate decision has been rated: never rated is not rated.
+        body.uth_rating = record.uthRating ?? null;
+        body.uth_provisional = record.uthProvisional !== false;
+      }
+      let response = await write(body);
+      if (!response.ok && uthColumns && response.status === 400) {
+        const reason = await response.text().catch(() => '');
+        if (/uth_rating|uth_provisional/.test(reason)) {
+          uthColumns = false;
+          delete body.uth_rating;
+          delete body.uth_provisional;
+          response = await write(body);
+        }
+      }
       if (!response.ok) throw new Error(`save failed: ${response.status}`);
+    },
+
+    /*
+     * The Ultimate side of the leaderboard (round 10): live players with an
+     * Ultimate rating, best first. A table without the columns yet answers 400,
+     * which is thrown with its status so the board can say it is waiting for the
+     * table rather than showing nobody as if that were true.
+     */
+    async uthBoard() {
+      const response = await fetch(
+        `${endpoint}?select=id,name,uth_rating,uth_provisional,uth_decisions:progress->uth->>lifetimeDecisions` +
+          '&merged_into=is.null&uth_rating=not.is.null&order=uth_rating.desc&limit=60',
+        { headers },
+      );
+      if (!response.ok) {
+        const error = new Error(`uthBoard failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const rows = await response.json();
+      return (Array.isArray(rows) ? rows : []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        rating: row.uth_rating,
+        provisional: row.uth_provisional !== false,
+        decisions: Number(row.uth_decisions) || 0,
+      }));
     },
 
     /**
@@ -15609,6 +15938,32 @@ let stopWatching = null;
 let leaderboard = [];
 let feed = [];
 
+/*
+ * The leaderboard's other side (round 10). One screen, a switch between the
+ * games; the Ultimate side is asked for only while it is the one on screen.
+ * `pending` is a table that has not had migration 003 yet.
+ */
+let boardGame = store.get('ev:board') === 'uth' ? 'uth' : 'bj';
+let uthBoard = { state: 'idle', rows: [] };
+
+async function loadUthBoard() {
+  if (!backend || typeof backend.uthBoard !== 'function') {
+    uthBoard = { state: 'none', rows: [] };
+    renderSocial();
+    return;
+  }
+  if (uthBoard.state === 'idle') {
+    uthBoard = { state: 'loading', rows: [] };
+    renderSocial();
+  }
+  try {
+    uthBoard = { state: 'ready', rows: await backend.uthBoard() };
+  } catch (error) {
+    uthBoard = { state: error && error.status ? 'pending' : 'offline', rows: uthBoard.rows };
+  }
+  renderSocial();
+}
+
 /** How many of a player's showable hands ride along with their record. */
 const FEED_KEPT = 5;
 
@@ -15628,6 +15983,8 @@ async function connect() {
         .sort((a, b) => b.at - a.at)
         .slice(0, 40);
       renderSocial();
+      // The Ultimate side keeps pace with the same poll while it is on screen.
+      if (boardGame === 'uth') void loadUthBoard();
       },
       (reachable) => {
         if (reachable === backendReachable) return;
@@ -15701,6 +16058,8 @@ async function publish() {
 async function writeRecord() {
   const profile = session.profile;
   const stats = session.view.stats;
+  const uth = uthSession.progress;
+  const uthRated = Boolean(uth.rating) && uth.rating.ratedDecisions > 0;
   try {
     await backend.save(me.id, {
       name: me.name,
@@ -15713,7 +16072,10 @@ async function writeRecord() {
       lifetimeDecisions: session.progress.lifetimeDecisions,
       // For the usage page. The HTTP table reads both from the saved record;
       // the artifact store keeps them on the summary, which is all it reads.
-      uthDecisions: uthSession.progress.lifetimeDecisions,
+      uthDecisions: uth.lifetimeDecisions,
+      // The Ultimate rating (round 10): null until an Ultimate decision is rated.
+      uthRating: uthRated ? Math.round(uth.rating.rating) : null,
+      uthProvisional: !uthRated || uth.rating.ratedDecisions < 30,
       activity,
       hands: stats.hands,
       decisions: stats.decisions,
@@ -16565,6 +16927,12 @@ function mountSwitchPlayer() {
   if (!backend) return;
   const footer = app().querySelector('.footer');
   if (!footer) return;
+  // Approved round 10: the one thing a player needs when the address changes.
+  const remember = document.createElement('p');
+  remember.className = 'remember';
+  remember.textContent = tr('home.remember');
+  footer.parentElement.insertBefore(remember, footer);
+
   const button = document.createElement('button');
   button.className = 'link switch-player';
   button.type = 'button';
@@ -16658,6 +17026,16 @@ function renderLeaderboard(box) {
   if (!backend) return void box.appendChild(emptyNote(tr('social.offline')));
   if (!backendReachable) return void box.appendChild(emptyNote(tr('social.offlineNow')));
 
+  // One board, two games (round 10): the switch, then the chosen game's ranking,
+  // named — the numbers are never added together or put in one list.
+  box.appendChild(boardSwitch());
+  const caption = document.createElement('p');
+  caption.className = 'board-caption';
+  caption.textContent = tr(boardGame === 'uth' ? 'social.byUltimate' : 'social.byBlackjack');
+  box.appendChild(caption);
+  if (boardGame === 'uth') return void renderUthBoard(box);
+
+  // The Blackjack side, as it was before round 10: same rows, same order.
   const rated = leaderboard.filter((p) => p.decisions > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
 
@@ -16677,7 +17055,7 @@ function renderLeaderboard(box) {
 
     const score = document.createElement('span');
     score.className = 'ladder-score';
-    score.textContent = player.rating > 0 ? player.rating : '—';
+    score.textContent = player.rating > 0 ? window.EVFigure.units(player.rating) : '—';
     if (player.provisional) score.classList.add('provisional');
 
     const detail = document.createElement('span');
@@ -16686,6 +17064,69 @@ function renderLeaderboard(box) {
       accuracy: (player.accuracy * 100).toFixed(1),
       hands: player.hands,
     });
+
+    row.append(place, who, score, detail);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+}
+
+/** Blackjack | Ultimate. The choice is remembered on this device. */
+function boardSwitch() {
+  const bar = document.createElement('div');
+  bar.className = 'board-games';
+  bar.setAttribute('role', 'group');
+  for (const [key, label] of [['bj', 'ui.blackjack'], ['uth', 'ui.ultimate']]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.game = key;
+    button.textContent = tr(label);
+    button.setAttribute('aria-pressed', String(boardGame === key));
+    button.addEventListener('click', () => {
+      if (boardGame === key) return;
+      boardGame = key;
+      store.set('ev:board', key);
+      renderSocial();
+      if (key === 'uth') void loadUthBoard();
+    });
+    bar.appendChild(button);
+  }
+  return bar;
+}
+
+/** The Ultimate side: the same row as Blackjack's, ranked by the Ultimate rating. */
+function renderUthBoard(box) {
+  if (uthBoard.state === 'idle') void loadUthBoard();
+  if (uthBoard.state === 'idle' || uthBoard.state === 'loading') {
+    return void box.appendChild(emptyNote(tr('social.connecting')));
+  }
+  if (uthBoard.state === 'pending') return void box.appendChild(emptyNote(tr('social.uthPending')));
+  if (uthBoard.state === 'offline') return void box.appendChild(emptyNote(tr('social.offlineNow')));
+  if (uthBoard.state === 'none') return void box.appendChild(emptyNote(tr('social.offline')));
+  if (uthBoard.rows.length === 0) return void box.appendChild(emptyNote(tr('social.noUthPlayers')));
+
+  const list = document.createElement('ol');
+  list.className = 'ladder board';
+  uthBoard.rows.forEach((player, index) => {
+    const row = document.createElement('li');
+    row.className = 'board-row' + (player.id === me.id ? ' is-me' : '');
+
+    const place = document.createElement('span');
+    place.className = 'board-place';
+    place.textContent = index + 1;
+
+    const who = document.createElement('span');
+    who.className = 'board-name';
+    who.textContent = player.name;
+
+    const score = document.createElement('span');
+    score.className = 'ladder-score';
+    score.textContent = window.EVFigure.units(player.rating);
+    if (player.provisional) score.classList.add('provisional');
+
+    const detail = document.createElement('span');
+    detail.className = 'board-detail';
+    detail.textContent = tr('social.uthPlayerLine', { decisions: window.EVFigure.units(player.decisions) });
 
     row.append(place, who, score, detail);
     list.appendChild(row);
