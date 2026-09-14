@@ -46,6 +46,7 @@ import {
   type UthSettlement,
 } from '@evtrainer/game-engine';
 
+import { displayFigure } from './figure.ts';
 import { t, type Locale } from './i18n.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 import {
@@ -127,11 +128,12 @@ const isolateFor = (locale: Locale) => (text: string): string =>
 const uthUnits = (value: number): string =>
   `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
 const uthPercent = (value: number): string => `${Math.round(value * 100)}%`;
-/** A settlement figure: whole units where it is whole, otherwise one place. */
-const money = (value: number): string => {
-  const text = Math.abs(value) % 1 === 0 ? Math.abs(value).toFixed(0) : Math.abs(value).toFixed(1);
-  return `${value < 0 ? '−' : value > 0 ? '+' : ''}${text}`;
-};
+/**
+ * A settlement figure, by the one figure rule every screen uses (round 8):
+ * at most two decimals, trailing zeros dropped. It used to keep one place,
+ * a different rule from the strip, the track and the log.
+ */
+const money = (value: number): string => displayFigure(value, true);
 
 /**
  * Whole-number percentages that add to exactly 100.

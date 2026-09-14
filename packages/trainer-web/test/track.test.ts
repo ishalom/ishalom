@@ -152,6 +152,8 @@ function loadTrack(options: { rtl?: boolean; inApp?: boolean } = {}) {
     params.push('HOME_HTML');
     args.push('<div></div>');
   }
+  // The figure rule first, as every page loads it (round 8).
+  new Function(...params, source('figure.js'))(...args);
   new Function(...params, source('track.js'))(...args);
   return { track: win.EVTrack, storage, loc, win };
 }

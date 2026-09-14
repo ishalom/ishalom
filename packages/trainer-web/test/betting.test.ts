@@ -517,6 +517,8 @@ function loadChips(options: { sound: boolean; reduced: boolean }) {
     documentElement: { getAttribute: () => null },
   };
   const storage = { getItem: (k: string) => (k === 'ev:sound' && options.sound ? '1' : null) };
+  // The figure rule first, as every page loads it (round 8).
+  new Function('window', 'document', source('figure.js'))(win, doc);
   new Function('window', 'document', 'localStorage', 'setTimeout', source('chips.js'))(win, doc, storage, () => 0);
   return { chips: win.EVChips, log, contexts: () => contexts, node: () => fakeNode(log) };
 }

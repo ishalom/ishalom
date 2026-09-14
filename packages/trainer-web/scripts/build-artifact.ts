@@ -98,6 +98,8 @@ const ultimateHtml = localLinks(bodyOf(read(PUBLIC, 'ultimate.html')), 'ultimate
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
 const ultimateJs = screenScript(read(PUBLIC, 'ultimate.js'), 'initUltimate');
+// How every units and chips figure is written, loaded before anything that writes one (round 8).
+const figureJs = read(PUBLIC, 'figure.js');
 // Shared by both tables, and read by home to open the hand a row names.
 const trackJs = read(PUBLIC, 'track.js');
 // The bet rail, the moving chips and their one click, shared by both tables.
@@ -177,6 +179,9 @@ ${engine}
 const HOME_HTML = ${jsString(homeHtml)};
 const TABLE_HTML = ${jsString(tableHtml)};
 const ULTIMATE_HTML = ${jsString(ultimateHtml)};
+
+/* How a figure is written on screen, for every page (round 8). */
+${figureJs}
 
 /* The decision track, shared by both tables (round 6). */
 ${trackJs}

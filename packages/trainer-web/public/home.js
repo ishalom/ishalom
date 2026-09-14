@@ -259,11 +259,11 @@ function renderHands(view, uthView) {
       // "−1" as "1-", seen on a phone once the track started opening this list.
       // In chips at the bet the hand was dealt at, like the track row that opens
       // it (round 6b); hands saved before chips were all played at 1.
-      `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${isolate(
-        `${hand.netUnits > 0 ? '+' : hand.netUnits < 0 ? '−' : ''}${
-          Math.round(Math.abs(hand.netUnits) * (hand.bet ?? 1) * 100) / 100
-        }`,
-      )}</div>`;
+      // Written by the one figure rule (figure.js, round 8), so it reads exactly
+      // as the track row that opens it.
+      `<div class="log-net ${hand.netUnits > 0 ? 'win' : hand.netUnits < 0 ? 'loss' : ''}">${
+        window.EVFigure.units(hand.netUnits * (hand.bet ?? 1), true)
+      }</div>`;
 
     const steps = decisionBlocks(hand);
     row.addEventListener('click', () => {
@@ -325,7 +325,7 @@ function uthHandRow(hand) {
   middle.append(cards, detail);
   const net = document.createElement('div');
   net.className = 'log-net ' + (hand.net > 0 ? 'win' : hand.net < 0 ? 'loss' : '');
-  net.textContent = isolate(`${hand.net > 0 ? '+' : hand.net < 0 ? '−' : ''}${Math.abs(hand.net)}`);
+  net.textContent = window.EVFigure.units(hand.net, true);
   row.append(tier, middle, net);
 
   const steps = document.createElement('div');
@@ -426,7 +426,7 @@ function renderStats(view, profile) {
       T('home.fig.edgeNote', { pct: profile.ruleSet.edgePercent.toFixed(2) }),
     ),
     figure(
-      `${s.netUnits > 0 ? '+' : ''}${s.netUnits}`,
+      window.EVFigure.units(s.netUnits, true),
       T('home.fig.units'),
       T('home.fig.unitsNote'),
       true,

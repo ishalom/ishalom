@@ -977,7 +977,11 @@ function renderStats(view) {
     stats.hands === 0
       ? `${view.ruleSet.edgePercent.toFixed(2)}%`
       : `${stats.effectiveHouseEdgePercent.toFixed(2)}%`;
-  el('stat-units').textContent = `${stats.netUnits > 0 ? '+' : ''}${stats.netUnits}`;
+  // Through the one figure rule (figure.js): results add up in binary, and this
+  // cell read +1.4000000000000004 after a 6:5 blackjack (round 8).
+  el('stat-units').textContent = window.EVFigure
+    ? window.EVFigure.units(stats.netUnits, true)
+    : String(stats.netUnits);
   if (openInfo) showInfo(openInfo);
 }
 

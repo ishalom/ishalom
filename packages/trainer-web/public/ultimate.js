@@ -247,9 +247,10 @@ function uthRenderStats(view) {
   el('uth-stat-accuracy').textContent = s.decisions === 0 ? '—' : `${(s.accuracy * 100).toFixed(1)}%`;
   el('uth-stat-evlost').textContent = s.hands === 0 ? '—' : s.evLostPer100.toFixed(2);
   el('uth-stat-edge').textContent = `${s.effectiveHouseEdgePercent.toFixed(2)}%`;
-  el('uth-stat-units').textContent = uthFigure(
-    `${s.netUnits > 0 ? '+' : s.netUnits < 0 ? '−' : ''}${Math.abs(s.netUnits)}`,
-  );
+  // Through the one figure rule (figure.js), as on the Blackjack strip (round 8).
+  el('uth-stat-units').textContent = window.EVFigure
+    ? window.EVFigure.units(s.netUnits, true)
+    : uthFigure(String(s.netUnits));
   if (uthOpenInfo) uthShowInfo(uthOpenInfo);
 }
 

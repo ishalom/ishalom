@@ -27,12 +27,9 @@
   const rtl = () => document.documentElement.getAttribute('dir') === 'rtl';
   const isolate = (text) => (rtl() ? `⁦${text}⁩` : text);
 
-  /** A chip figure: exact, a real minus sign, kept in one piece in Hebrew. */
+  /** A chip figure, by the one figure rule (figure.js): short, a real minus, one piece in Hebrew. */
   function figure(value, signed) {
-    const size = Math.abs(value);
-    const text = Number.isInteger(size) ? String(size) : String(Number(size.toFixed(2)));
-    const sign = value < 0 ? '−' : signed && value > 0 ? '+' : '';
-    return isolate(`${sign}${text}`);
+    return window.EVFigure.units(value, signed);
   }
 
   // --- Sound ---------------------------------------------------------------------

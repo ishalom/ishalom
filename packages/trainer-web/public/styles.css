@@ -1987,3 +1987,22 @@ button,
   .action-row.bet-chips > .chip-button { padding-block: 4px; }
   .action-row.bet-tools > .action { font-size: 13px; padding-block: 7px; }
 }
+
+/* --- The stat strip holds its four cells, whatever the figure (round 8) ---------
+ *
+ * A figure that ran long — +1.4000000000000004, before figures were rounded —
+ * overflowed its cell and was drawn off the strip, to the left in Hebrew. The
+ * columns cannot grow past their share, and a figure too long for its cell is
+ * cut short with an ellipsis rather than pushing anything. It is laid out left
+ * to right, so what stays visible is the sign and the leading digits. The cell
+ * itself is not clipped: its tooltip hangs outside it. */
+.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat-value {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+}
+/* The home Stats tab has room to wrap a long figure, so it wraps. */
+.figure-value { overflow-wrap: anywhere; }

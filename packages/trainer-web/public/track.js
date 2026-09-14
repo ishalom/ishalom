@@ -17,11 +17,9 @@
   const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
   const OPEN_KEY = 'ev:openHand';
 
-  /** A result as the track prints it: +1, −2, +1.5, 0 — kept in one piece in Hebrew. */
+  /** A result as the track prints it: +1, −2, +1.5, 0 — the one figure rule (figure.js). */
   function figure(net) {
-    const size = Math.abs(net);
-    const text = `${net > 0 ? '+' : net < 0 ? '−' : ''}${Number.isInteger(size) ? size : Number(size.toFixed(2))}`;
-    return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
+    return window.EVFigure.units(net, true);
   }
 
   function label(row) {
