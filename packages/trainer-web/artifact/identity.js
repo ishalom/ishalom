@@ -66,7 +66,7 @@ async function pinHash(id, code) {
  * Returns one of:
  *   { action: 'create', id, pinHash }   — nobody has this name yet
  *   { action: 'claim',  id, pinHash }   — one row, no code on it yet; take it
- *   { action: 'adopt',  id }            — the code matches; this is them
+ *   { action: 'adopt',  id, pinHash }   — the code matches; this is them
  *   { action: 'refuse', reason }        — it does not match, or the code is malformed
  */
 async function decideIdentity(name, code, rows, newId) {
@@ -101,7 +101,10 @@ async function decideIdentity(name, code, rows, newId) {
   }
 
   const offered = await pinHash(best.id, code);
-  if (offered === stored) return { action: 'adopt', id: best.id };
+  // The hash comes back with the decision (round 9). Without it a second device
+  // adopted the row holding no hash of its own, and its next save wrote the row's
+  // code away — after which anyone typing the name could claim it.
+  if (offered === stored) return { action: 'adopt', id: best.id, pinHash: offered };
 
   // Never create a second player with the same name. A wrong code is a wrong
   // code, and silently making a new player is how duplicates happen.

@@ -50,9 +50,39 @@ test('the hosted page links the manifest and the icons, and registers the worker
   const html = hosted();
   assert.match(html, /<link rel="manifest" href="manifest\.webmanifest" \/>/);
   assert.match(html, /<meta name="theme-color" content="#[0-9a-f]{6}" \/>/i);
-  assert.match(html, /<link rel="apple-touch-icon" href="icons\/apple-touch-icon\.png" \/>/);
+  assert.match(html, /<link rel="apple-touch-icon"(?: sizes="180x180")? href="icons\/apple-touch-icon\.png" \/>/);
   assert.ok(existsSync(join(SITE, 'icons', 'apple-touch-icon.png')));
   assert.match(html, /navigator\.serviceWorker\.register\('sw\.js'\)/);
+});
+
+test('an iPhone gets what it reads instead of the manifest: the icon at its size, the name, full screen (round 9)', () => {
+  const html = hosted();
+  // Safari takes the icon, the name under it and full-screen from these, not from the manifest.
+  assert.match(html, /<link rel="apple-touch-icon" sizes="180x180" href="icons\/apple-touch-icon\.png" \/>/);
+  assert.match(html, /<meta name="apple-mobile-web-app-capable" content="yes" \/>/);
+  assert.match(html, /<meta name="apple-mobile-web-app-title" content="EV Trainer" \/>/);
+  assert.match(html, /<title>EV Trainer<\/title>/);
+  const png = readFileSync(join(SITE, 'icons', 'apple-touch-icon.png'));
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [180, 180], 'the touch icon is not 180 × 180');
+
+  // Android: the same app every install already has, and a name short enough not to be cut under the icon.
+  const manifest = JSON.parse(readFileSync(join(SITE, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(manifest.id, './');
+  assert.ok(manifest.short_name.length <= 12, `"${manifest.short_name}" would be cut under the icon`);
+  for (const icon of manifest.icons) {
+    const b = readFileSync(join(SITE, icon.src));
+    assert.equal(`${b.readUInt32BE(16)}x${b.readUInt32BE(20)}`, icon.sizes, `${icon.src} is not the size it claims`);
+  }
+});
+
+test('opened from the home screen, the page asks that what it saved is kept — and only then (round 9)', () => {
+  const html = hosted();
+  const from = html.indexOf('navigator.storage && navigator.storage.persist');
+  assert.ok(from > 0, 'the page never asks');
+  const block = html.slice(from, html.indexOf('</script>', from));
+  assert.match(block, /display-mode: standalone/);
+  assert.match(block, /navigator\.standalone === true/);
+  assert.match(block, /navigator\.storage\.persist\(\)\.catch/);
 });
 
 test('the artifact carries none of it: it is a fragment inside someone else’s page', () => {

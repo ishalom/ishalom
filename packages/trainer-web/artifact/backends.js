@@ -11,6 +11,7 @@
  *   save(id, record)         -> void
  *   watch(onRows)            -> unsubscribe
  *   findByName(nameKey)      -> rows already using that name
+ *   usage()                  -> how much each live player has played (round 9)
  *
  * A record is one player: their summary for the leaderboard, their saved
  * session, and their few most recent showable hands. One logical record per
@@ -42,7 +43,23 @@ function artifactBackend(db) {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
+        updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
+    },
+
+    /* The summaries carry the day count and both games' decisions, so nobody's session is read. */
+    async usage() {
+      const snap = await db.collection('players').get();
+      return snap.docs
+        .map((d) => d.data())
+        .filter((row) => !row.mergedInto)
+        .map((row) => ({
+          name: row.name,
+          blackjack: row.lifetimeDecisions ?? row.decisions ?? 0,
+          ultimate: row.uthDecisions ?? 0,
+          activity: row.activity ?? null,
+          at: row.at ?? 0,
+        }));
     },
 
     async save(id, record) {
@@ -170,7 +187,7 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into,updated_at`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
@@ -183,7 +200,44 @@ function httpBackend({ url, key, table = 'players' }) {
         // has to know, or it will read a dormant session back and then write to
         // it — which would put an abandoned rating back on the leaderboard.
         mergedInto: rows[0].merged_into ?? null,
+        // When the row was last written: the last day a player from before the
+        // day count is known to have played (round 9).
+        updatedAt: Date.parse(rows[0].updated_at) || null,
       };
+    },
+
+    /*
+     * How much each live player has played, for the usage page (round 9).
+     *
+     * Only what that page counts: the name, both games' lifetime decisions and
+     * the day count, which lives inside the saved record — so nothing new was
+     * added to the table and no migration is needed. The two JSON paths return
+     * those few fields, not the saved session around them. Merged rows are not
+     * people and are left out.
+     *
+     * A refusal is thrown with its status, so the page can say "the table
+     * refused (400)" rather than showing zero people as if that were true.
+     */
+    async usage() {
+      const response = await fetch(
+        `${endpoint}?select=name,decisions,lifetime_decisions,updated_at,` +
+          'activity:progress->activity,uth_decisions:progress->uth->>lifetimeDecisions' +
+          '&merged_into=is.null&order=updated_at.desc&limit=1000',
+        { headers },
+      );
+      if (!response.ok) {
+        const error = new Error(`usage failed: ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const rows = await response.json();
+      return (Array.isArray(rows) ? rows : []).map((row) => ({
+        name: row.name,
+        blackjack: row.lifetime_decisions ?? row.decisions ?? 0,
+        ultimate: Number(row.uth_decisions) || 0,
+        activity: row.activity && typeof row.activity === 'object' ? row.activity : null,
+        at: Date.parse(row.updated_at) || 0,
+      }));
     },
 
     async save(id, record) {
@@ -201,7 +255,10 @@ function httpBackend({ url, key, table = 'players' }) {
           decisions: record.decisions,
           lifetime_decisions: record.lifetimeDecisions,
           name_key: record.nameKey,
-          pin_hash: record.pinHash,
+          // Only when this device holds one. The upsert updates just the columns
+          // it is sent, so leaving it out keeps the row's code; sending null
+          // would erase it (round 9).
+          ...(record.pinHash ? { pin_hash: record.pinHash } : {}),
           accuracy: record.accuracy,
           ev_lost_per_100: record.evLostPer100,
           progress: record.progress,

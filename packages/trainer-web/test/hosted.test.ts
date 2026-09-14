@@ -270,6 +270,27 @@ test('the HTTP backend saves and reads back a real player', async () => {
   assert.equal(await backend.load('nobody'), null);
 });
 
+test('a save never sends an empty code over the row’s code (round 9)', async () => {
+  /*
+   * The upsert updates only the columns it is sent. A device that holds no code
+   * check used to send pin_hash null, and that erased the row's code — after
+   * which anyone typing the name could take the record.
+   */
+  rows = [];
+  seen.length = 0;
+  const backend = await loadBackends().openBackend({ url: `http://127.0.0.1:${port}`, key: 'k' });
+  const record = {
+    name: 'Dana', rating: 1600, peak: 1600, provisional: false, mode: 'basic',
+    hands: 1, decisions: 1, accuracy: 1, evLostPer100: 0, at: Date.now(),
+    progress: { version: 4, decisions: 1 }, feed: [],
+  };
+  await backend.save('a', { ...record, pinHash: null });
+  await backend.save('a', { ...record, pinHash: 'f'.repeat(64) });
+  const [withoutCode, withCode] = seen.filter((r) => r.method === 'POST');
+  assert.ok(!('pin_hash' in withoutCode!.body), 'a device with no code check sent one anyway');
+  assert.equal(withCode!.body.pin_hash, 'f'.repeat(64));
+});
+
 test('the leaderboard query leaves the saved sessions behind', async () => {
   rows = [];
   seen.length = 0;

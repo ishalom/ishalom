@@ -167,6 +167,14 @@ test('no page writes a units or chips figure without the one rule', () => {
   }
 });
 
+test('the usage page writes every count by the one rule (round 9)', () => {
+  const usage = readFileSync(join(HERE, '..', 'artifact', 'usage.js'), 'utf8');
+  assert.match(usage, /const usageCount = \(n\) => window\.EVFigure\.units\(n\);/);
+  assert.doesNotMatch(usage, /textContent = String\(/, 'a count written around the rule');
+  assert.doesNotMatch(usage, /\$\{\s*(?:summary|person)\.\w+\s*\}/, 'a count interpolated raw');
+  assert.doesNotMatch(usage, /(?:days|decisions|bj|uth|n|status): (?:person|summary)\.\w+\s*[,}]/, 'a count handed to the copy raw');
+});
+
 test('the strip holds its four cells whatever the figure', () => {
   const css = source('styles.css');
   const from = css.indexOf('/* --- The stat strip holds its four cells');

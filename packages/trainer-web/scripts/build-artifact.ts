@@ -108,6 +108,8 @@ const chipsJs = read(PUBLIC, 'chips.js');
 const dockJs = read(PUBLIC, 'dock.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
+// The usage page: who has played, how much, and who came back (round 9).
+const usage = read(ARTIFACT, 'usage.js');
 const shell = read(ARTIFACT, 'shell.js');
 const ui = read(ARTIFACT, 'ui.js');
 
@@ -203,6 +205,8 @@ ${backends}
 
 ${shell}
 
+${usage}
+
 ${ui}
 </script>`;
 
@@ -250,7 +254,8 @@ const THEME = '#12161c';
 const installTags = `<link rel="manifest" href="manifest.webmanifest" />
     <meta name="theme-color" content="${THEME}" />
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <meta name="application-name" content="EV Trainer" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
@@ -262,9 +267,22 @@ const registerWorker = `<script>
     if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
       addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
     }
+    /* Opened from the home screen: ask that what is saved here is never cleared
+       to make room (round 9). Chrome grants it to an installed app and Safari to
+       a home-screen app, without asking the player. In a browser tab it is not
+       asked, because some browsers would ask the player, and a prompt about
+       storage on a first visit is a reason to leave. The record is in the shared
+       table too, so this guards the copy on the phone, not the only copy. */
+    if (navigator.storage && navigator.storage.persist &&
+        ((typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true)) {
+      navigator.storage.persist().catch(() => {});
+    }
     </script>`;
 
 const manifest = {
+  // Who the app is to the phone. Resolved against start_url, so it names the same
+  // app every install already has (round 9).
+  id: './',
   name: 'EV Trainer',
   short_name: 'EV Trainer',
   description: 'Blackjack and Ultimate Texas Hold’em: play real hands and see what the maths says about every decision.',

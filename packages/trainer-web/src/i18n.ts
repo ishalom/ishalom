@@ -707,6 +707,35 @@ const EN: Catalogue = {
   'welcome.fineLocal': 'No account, no password. This copy keeps your record in this browser only.',
   'welcome.switch': 'Not you? Switch player',
   'welcome.switchNote': 'Forgets this browser and returns to the door. Nothing is deleted — your record stays under its name and code.',
+  // --- The usage page (round 9) ---
+  'usage.title': 'Who is playing',
+  'usage.line': 'From the shared table: everyone who has played, how much, and who came back on another day.',
+  'usage.back': '← Home',
+  'usage.played': 'people have played',
+  'usage.playedNote': 'At least one graded decision, in either game.',
+  'usage.cameBack': 'came back on another day',
+  'usage.cameBackNote': 'Finished a hand on two or more different days.',
+  'usage.regulars': 'regulars',
+  'usage.regularsNote': 'Played on {days} or more different days, with {decisions} or more graded decisions in all.',
+  'usage.recent': 'played in the last {n} days',
+  'usage.recentNote': 'By the last day they finished a hand.',
+  'usage.oneDay': '1 day played',
+  'usage.days': '{days} days played',
+  'usage.lastPlayed': '{days} · last played {last}',
+  'usage.notCounted': 'Has not played since the day count began · last seen {last}',
+  'usage.decisions': 'Blackjack: {bj} decisions · Ultimate: {uth} decisions',
+  'usage.tierRegular': 'regular',
+  'usage.tierBack': 'came back',
+  'usage.tierOnce': 'one day',
+  'usage.nobody': 'Nobody has played yet.',
+  'usage.loading': 'Reading the table…',
+  'usage.noTable': 'This copy has no shared table, so there is nobody to count.',
+  'usage.offline': 'The shared table is not answering, so nothing can be counted right now.',
+  'usage.refused': 'The shared table refused the question ({status}), so nothing is shown rather than a wrong count.',
+  'usage.counting':
+    'Days are counted from {day}. Someone who played before then and has not played since shows the day they were last seen; when they play again, the earlier visit counts as a day.',
+  'usage.public':
+    'Not private. Nothing links to this page, but the table it reads is open to anyone who has the app’s address, so anyone who looked could read these same numbers.',
 };
 
 const HE: Catalogue = {
@@ -1350,6 +1379,35 @@ const HE: Catalogue = {
   'welcome.fineLocal': 'בלי חשבון ובלי סיסמה. העותק הזה שומר את הרשומה שלך בדפדפן הזה בלבד.',
   'welcome.switch': 'לא אתה? החלף שחקן',
   'welcome.switchNote': 'שוכח את הדפדפן הזה וחוזר לדלת. שום דבר לא נמחק — הרשומה שלך נשארת תחת השם והקוד שלה.',
+  // --- The usage page (round 9) ---
+  'usage.title': 'מי משחק',
+  'usage.line': 'מהטבלה המשותפת: כל מי ששיחק, כמה, ומי חזר ביום אחר.',
+  'usage.back': '→ לבית',
+  'usage.played': 'אנשים שיחקו',
+  'usage.playedNote': 'לפחות החלטה אחת שקיבלה ציון, באחד המשחקים.',
+  'usage.cameBack': 'חזרו ביום אחר',
+  'usage.cameBackNote': 'סיימו יד בשני ימים שונים או יותר.',
+  'usage.regulars': 'קבועים',
+  'usage.regularsNote': 'שיחקו ב־{days} ימים שונים או יותר, עם {decisions} החלטות או יותר שקיבלו ציון.',
+  'usage.recent': 'שיחקו ב־{n} הימים האחרונים',
+  'usage.recentNote': 'לפי היום האחרון שבו סיימו יד.',
+  'usage.oneDay': 'שיחק ביום אחד',
+  'usage.days': 'שיחק ב־{days} ימים',
+  'usage.lastPlayed': '{days} · לאחרונה ב־{last}',
+  'usage.notCounted': 'לא שיחק מאז שהתחילה ספירת הימים · נראה לאחרונה ב־{last}',
+  'usage.decisions': 'בלאק ג׳ק: {bj} החלטות · אולטימייט: {uth} החלטות',
+  'usage.tierRegular': 'קבוע',
+  'usage.tierBack': 'חזר',
+  'usage.tierOnce': 'יום אחד',
+  'usage.nobody': 'עוד אף אחד לא שיחק.',
+  'usage.loading': 'קורא את הטבלה…',
+  'usage.noTable': 'לעותק הזה אין טבלה משותפת, אז אין את מי לספור.',
+  'usage.offline': 'הטבלה המשותפת לא עונה, אז אי אפשר לספור כרגע.',
+  'usage.refused': 'הטבלה המשותפת סירבה לשאלה ({status}), אז לא מוצג כלום במקום ספירה שגויה.',
+  'usage.counting':
+    'הימים נספרים מ־{day}. מי ששיחק לפני כן ולא שיחק מאז מופיע עם היום שבו נראה לאחרונה; כשישחק שוב, הביקור הקודם ייספר כיום.',
+  'usage.public':
+    'לא פרטי. שום דבר לא מקשר לדף הזה, אבל הטבלה שהוא קורא פתוחה לכל מי שיש לו את כתובת האפליקציה, כך שכל מי שיחפש יוכל לקרוא את אותם מספרים.',
 };
 
 const MESSAGES: Record<Locale, Catalogue> = { en: EN, he: HE };

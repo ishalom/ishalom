@@ -124,6 +124,13 @@ export interface PlayedHand {
     headline: string;
     chosen: string;
     optimal: string;
+    /**
+     * The actions as ids, so the log can word the decision again in whatever
+     * language is on screen (round 9). Absent on hands saved before, whose
+     * labels are matched back to ids instead.
+     */
+    chosenAction?: string;
+    optimalAction?: string;
     correct: boolean;
     evCost: number;
     severity: SeverityTier;
@@ -636,6 +643,8 @@ export class TrainerSession {
       headline: explanation.headline,
       chosen: prettyAction(record.chosenAction, this.locale),
       optimal: prettyAction(record.optimalAction, this.locale),
+      chosenAction: record.chosenAction,
+      optimalAction: record.optimalAction,
       correct,
       evCost: record.evCost,
       severity: record.severityTier,
@@ -834,7 +843,7 @@ export class TrainerSession {
       chips: chipsView(this.chips, view.phase !== 'player' && view.phase !== 'insurance'),
       feedback: this.lastFeedback,
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
-      history: this.history.slice(0, 40),
+      history: this.history.slice(0, 40).map((hand) => this.wordedHand(hand)),
       // The decision track: the last hands, newest first, one dot a decision.
       track: this.history.slice(0, TRACK_HANDS).map(
         (hand, index): TrackRow => ({
@@ -1174,6 +1183,71 @@ export class TrainerSession {
     // rather than leaving a Hebrew explanation under an English verdict — the
     // numbers are unchanged, so this is a re-render, not a re-grade.
     if (this.lastRecord) this.recompose(this.lastRecord);
+  }
+
+  /** Decisions already worded, per saved object, with the language they were worded in. */
+  private worded = new WeakMap<object, { locale: Locale; decision: PlayedHand['decisions'][number] }>();
+
+  /**
+   * A saved hand, worded in the language on screen now (round 9).
+   *
+   * A hand used to keep the sentences it was graded with, so a player who played
+   * in English and then chose Hebrew read an English headline inside a Hebrew
+   * row. The numbers never change, so the words are composed again from them —
+   * the same `explain` the card used, over the same EVs and the same rules. What
+   * is saved stays as it was; only what is shown is worded.
+   */
+  private wordedHand(hand: PlayedHand): PlayedHand {
+    return { ...hand, decisions: hand.decisions.map((decision) => this.wordedDecision(decision)) };
+  }
+
+  private wordedDecision(decision: PlayedHand['decisions'][number]): PlayedHand['decisions'][number] {
+    const kept = this.worded.get(decision);
+    if (kept && kept.locale === this.locale) return kept.decision;
+
+    let worded = decision;
+    const ranked = Array.isArray(decision.ranked) ? decision.ranked : [];
+    const actions = ranked.map((entry) => entry.action);
+    // A hand saved before the ids were kept names its actions by label, in the
+    // language it was played in. Either language's label finds the id.
+    const byLabel = (label: string) =>
+      actions.find((action) => prettyAction(action, 'en') === label || prettyAction(action, 'he') === label);
+    const optimal = decision.optimalAction ?? byLabel(decision.optimal) ?? actions[0];
+    const chosen = decision.chosenAction ?? byLabel(decision.chosen) ?? (decision.correct ? optimal : undefined);
+    if (optimal && chosen && actions.length > 0) {
+      try {
+        const scenario =
+          decision.scenarioKey === 'bj:insurance'
+            ? ({ kind: 'insurance' } as const)
+            : parseScenarioKey(decision.scenarioKey);
+        const evByAction = Object.fromEntries(ranked.map((entry) => [entry.action, entry.ev]));
+        const explanation = explain(
+          scenario,
+          {
+            legalActions: actions as BlackjackAction[],
+            evByAction: evByAction as Partial<Record<BlackjackAction, number>>,
+            optimalAction: optimal as BlackjackAction,
+            optimalEv: evByAction[optimal] ?? 0,
+          },
+          this.rules,
+          this.locale,
+          chosen as BlackjackAction,
+        );
+        worded = {
+          ...decision,
+          headline: explanation.headline,
+          steps: [...explanation.steps],
+          chosen: prettyAction(chosen, this.locale),
+          optimal: prettyAction(optimal, this.locale),
+          chosenAction: chosen,
+          optimalAction: optimal,
+        };
+      } catch {
+        // A key this build cannot read: shown as it was saved, rather than not at all.
+      }
+    }
+    this.worded.set(decision, { locale: this.locale, decision: worded });
+    return worded;
   }
 
   /**

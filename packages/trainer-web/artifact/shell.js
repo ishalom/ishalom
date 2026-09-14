@@ -126,6 +126,8 @@ async function connect() {
       // fresh stack every time, while Blackjack came back as it was.
       uthSession.restore(local.uth);
     }
+    activity = activityOf(local);
+    playedBefore = earlierDay(local?.playedBefore, null);
     myFeed = readLocalFeed();
     myHistory = session.view.history;
   }
@@ -186,6 +188,10 @@ async function writeRecord() {
       nameKey: nameKey(me.name),
       pinHash: me.pinHash,
       lifetimeDecisions: session.progress.lifetimeDecisions,
+      // For the usage page. The HTTP table reads both from the saved record;
+      // the artifact store keeps them on the summary, which is all it reads.
+      uthDecisions: uthSession.progress.lifetimeDecisions,
+      activity,
       hands: stats.hands,
       decisions: stats.decisions,
       accuracy: stats.accuracy,
@@ -213,6 +219,92 @@ async function writeRecord() {
 
 const PROGRESS_KEY = 'ev:progress';
 const FEED_KEY = 'ev:feed';
+
+/* --------------------------------------------------------------------------
+ * How often this player has played (round 9)
+ *
+ * Counted in calendar days on this device's clock, because the question it
+ * answers is "did they come back on another day". Three things are kept and
+ * nothing else: the first day, the last day, and how many different days have
+ * a finished hand in them. No times, no list of dates, nothing about the
+ * device. It rides inside the saved record, so it travels with the player to
+ * another device the same way their rating does.
+ * ----------------------------------------------------------------------- */
+
+let activity = null;
+
+/*
+ * For a player from before the count: a day they are known to have played on
+ * or before, kept until their first hand under the count absorbs it. It comes
+ * from their row's last write as the table held it before this build first
+ * wrote it — and it is saved, because this build writes the row as soon as the
+ * page opens, after which that date would only say the app was opened.
+ */
+let playedBefore = null;
+
+/** Today on this device, as 2026-09-14. */
+function localDay(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A saved record's day count, or null when it has none that can be read. */
+function activityOf(progress) {
+  const a = progress && progress.activity;
+  if (!a || typeof a !== 'object' || !DAY.test(a.firstDay) || !DAY.test(a.lastDay)) return null;
+  const days = Number.isInteger(a.days) && a.days > 0 ? a.days : 1;
+  return { firstDay: a.firstDay, lastDay: a.lastDay, days };
+}
+
+/**
+ * Two copies of the count, as one.
+ *
+ * The larger count wins, never the sum: two devices played on the same day
+ * would otherwise count that day twice. The first and last days are the
+ * earliest and latest either copy has seen, and two different days mean at
+ * least two days whatever the counts say. When copies disagree this can only
+ * undercount, which is the safe direction for a number a decision rests on.
+ */
+function mergeActivity(a, b) {
+  if (!a) return b ? { ...b } : null;
+  if (!b) return { ...a };
+  const firstDay = a.firstDay < b.firstDay ? a.firstDay : b.firstDay;
+  const lastDay = a.lastDay > b.lastDay ? a.lastDay : b.lastDay;
+  const days = Math.max(a.days, b.days, firstDay === lastDay ? 1 : 2);
+  return { firstDay, lastDay, days };
+}
+
+/** The earlier of two days, either of which may be missing. */
+function earlierDay(a, b) {
+  if (!DAY.test(a ?? '')) return DAY.test(b ?? '') ? b : null;
+  if (!DAY.test(b ?? '')) return a;
+  return a < b ? a : b;
+}
+
+/**
+ * A day played before the count, folded into it once there is a count.
+ *
+ * A day before the first counted day is a different day, so it adds one. A day
+ * on or after it is already inside the count, so it adds nothing — which is
+ * also what makes folding the same day in twice, from two devices, harmless.
+ */
+function absorbPrior(counted, prior) {
+  if (!counted || !DAY.test(prior ?? '') || prior >= counted.firstDay) return counted;
+  return { ...counted, firstDay: prior, days: counted.days + 1 };
+}
+
+/** A finished hand on `day`. A new day adds one; another hand on the same day adds nothing. */
+function markPlayed(day = localDay()) {
+  if (!activity) {
+    activity = { firstDay: day, lastDay: day, days: 1 };
+  } else if (day > activity.lastDay) {
+    activity = { ...activity, lastDay: day, days: activity.days + 1 };
+  }
+  activity = absorbPrior(activity, playedBefore);
+  if (activity.firstDay === playedBefore) playedBefore = null;
+}
 
 /** The parts of a saved session that outlive the rules it was played under. */
 function playerOnly(progress) {
@@ -249,7 +341,7 @@ function saveProgressLocally() {
  * to reach the Blackjack rating.
  */
 function fullProgress() {
-  return { ...session.progress, uth: uthSession.progress };
+  return { ...session.progress, uth: uthSession.progress, activity, playedBefore };
 }
 
 function readLocalProgress() {
@@ -307,6 +399,8 @@ async function restoreMine() {
     // A version 1 or 2 blob has no `uth`, and this leaves UTH at zero.
     uthSession.restore(local.uth);
   }
+  activity = activityOf(local);
+  playedBefore = earlierDay(local?.playedBefore, null);
   myFeed = readLocalFeed();
 
   if (backend && me.name) {
@@ -343,6 +437,21 @@ async function restoreMine() {
           session.restore(remote.progress);
           uthSession.restore(remote.progress.uth);
         }
+        /*
+         * The day count is merged whichever copy won, because each device may
+         * have seen days the other has not. A row no build with the count has
+         * written yet belongs to a player from before it, who played on or
+         * before the day it was last written.
+         */
+        activity = mergeActivity(activity, activityOf(remote.progress));
+        const untouched =
+          remote.progress && !('activity' in remote.progress) && lifetimeOf(remote.progress) > 0 && remote.updatedAt;
+        playedBefore = earlierDay(
+          earlierDay(playedBefore, remote.progress?.playedBefore),
+          untouched ? localDay(new Date(remote.updatedAt)) : null,
+        );
+        activity = absorbPrior(activity, playedBefore);
+        if (activity && activity.firstDay === playedBefore) playedBefore = null;
         if (remote.feed.length > 0) myFeed = remote.feed;
         saveProgressLocally();
       }
@@ -406,6 +515,7 @@ function noteForFeed(hand) {
 
 /** After a hand settles: keep it, and share it if it is worth showing. */
 function keep(hand) {
+  markPlayed();
   noteForFeed(hand);
   myHistory = session.view.history;
   saveProgressLocally();
@@ -501,6 +611,7 @@ async function api(path, body) {
     case '/api/uth/act': {
       const view = uthSession.act(b.action);
       if (view.phase === 'settled') {
+        markPlayed();
         saveProgressLocally();
         void publish();
       }

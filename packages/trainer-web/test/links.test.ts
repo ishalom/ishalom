@@ -50,7 +50,9 @@ test('every door in a built page is an in-page target that the router knows', ()
   const routed = /const SCREENS = \{([^}]*)\}/.exec(html);
   assert.ok(routed, 'the screen table is gone from the page');
   const known = [...routed[1]!.matchAll(/'(#[a-z]+)'/g)].map((m) => m[1]!);
-  assert.deepEqual(known.sort(), ['#home', '#table', '#ultimate']);
+  // `#usage` (round 9) is routed but is no door: nothing links to it, which
+  // test/usage.test.ts holds. The loop below still checks every door there is.
+  assert.deepEqual(known.sort(), ['#home', '#table', '#ultimate', '#usage']);
   for (const target of targets) {
     assert.ok(known.includes(target), `${target} is a door onto nothing`);
   }

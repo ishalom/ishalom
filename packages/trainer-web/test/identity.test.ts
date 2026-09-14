@@ -78,6 +78,9 @@ test('the right code adopts the existing player, and makes no new row', async ()
   const decision = await decideIdentity('  idan ', '7777', rows, newId);
   assert.equal(decision.action, 'adopt');
   assert.equal(decision.id, id, 'adopted the wrong record');
+  // The device that adopts holds the row's code check from now on (round 9).
+  // Without it, its first save wrote the row's code away.
+  assert.equal(decision.pinHash, rows[0]!.pinHash);
 });
 
 test('the wrong code is refused — never a second player with that name', async () => {

@@ -36,6 +36,10 @@ export interface HostedPage {
   storage: () => Map<string, string>;
   document: any;
   press: (code: string, key: string) => void;
+  /** The day count and the usage page's reading of it (round 9). */
+  usage: any;
+  /** Switch language the way the language bar does. */
+  setLocale: (code: string) => void;
 }
 
 function element(): any {
@@ -167,7 +171,10 @@ export function loadHosted(
       '__out.go = (h) => { location.hash = h; };' +
       '__out.session = () => session; __out.uthSession = () => uthSession;' +
       '__out.parseCards = parseCards; __out.lifetimeOf = lifetimeOf;' +
-      '__out.stopWatching = () => stopWatching && stopWatching();',
+      '__out.stopWatching = () => stopWatching && stopWatching();' +
+      '__out.setLocale = setLocale;' +
+      '__out.usage = { summariseUsage, activityOf, mergeActivity, absorbPrior, markPlayed, localDay, earlierDay,' +
+      ' fullProgress, get activity() { return activity; }, get playedBefore() { return playedBefore; } };',
   )(out, config);
   const page = out as unknown as HostedPage;
   page.storage = () => disk;
