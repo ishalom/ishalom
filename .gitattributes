@@ -1,0 +1,13 @@
+# Normalise line endings in the repository and in every working tree.
+#
+# Without this, a clone on Windows with the default `core.autocrlf=true` gets
+# CRLF in its working tree, and the golden strategy charts stop matching what
+# the engine renders. That turned the §14.4 regression guard into a test that
+# failed on Windows and passed on Linux, for reasons with nothing to do with the
+# charts it is meant to be guarding.
+#
+# `eol=lf` is deliberately unconditional rather than a `-text` exemption for the
+# golden files: marking them binary stops git normalising them at all, which
+# means a commit made on Windows would quietly store CRLF and move the problem
+# rather than fix it.
+* text=auto eol=lf

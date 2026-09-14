@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Home</title>
+    <link rel="stylesheet" href="mockup.css" />
+    <style>
+      .crest {
+        padding: 26px 16px 20px;
+        text-align: center;
+        background:
+          radial-gradient(120% 80% at 50% 0%, rgba(201, 162, 39, 0.12) 0%, transparent 60%),
+          var(--panel);
+      }
+      .who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+      .initial {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-family: var(--display);
+        font-size: 22px;
+        color: #10151b;
+        background: linear-gradient(180deg, var(--brass) 0%, var(--brass-dim) 100%);
+        box-shadow: 0 3px 10px var(--shadow);
+      }
+      .who-name { font-family: var(--display); font-size: 26px; letter-spacing: 0.01em; }
+      .who-since { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+      .rating-block { margin-top: 18px; }
+      .rating-value {
+        font-family: var(--display);
+        font-size: 60px;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        color: var(--brass);
+        text-shadow: 0 2px 14px rgba(201, 162, 39, 0.25);
+      }
+      .rating-label {
+        font-size: 10.5px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--muted);
+        margin-top: 5px;
+      }
+      .rating-side {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .rating-side .down { color: var(--blunder); }
+
+      .games { padding: 4px 16px 0; display: grid; gap: 10px; }
+      .game {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 15px 16px;
+        background:
+          radial-gradient(140% 100% at 100% 0%, rgba(28, 106, 64, 0.35) 0%, transparent 62%),
+          var(--panel);
+        position: relative;
+        overflow: hidden;
+      }
+      .game:hover { border-color: var(--brass-dim); }
+      .game-title { font-family: var(--display); font-size: 21px; }
+      .game-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+      .game-foot {
+        margin-top: 11px;
+        display: flex;
+        gap: 16px;
+        font-size: 12px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .game-foot b { color: var(--ink); font-weight: 600; }
+      .game .pip {
+        position: absolute;
+        right: 14px;
+        top: 12px;
+        font-size: 34px;
+        opacity: 0.18;
+        line-height: 1;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 2px 7px;
+        border-radius: 999px;
+        border: 1px solid var(--brass-dim);
+        color: var(--voice);
+        vertical-align: 2px;
+        margin-left: 7px;
+      }
+
+      .modes { display: flex; gap: 6px; margin-top: 11px; }
+      .mode {
+        flex: 1;
+        font: inherit;
+        font-size: 11.5px;
+        padding: 7px 4px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #101820;
+        color: var(--muted);
+        cursor: pointer;
+        text-align: center;
+      }
+      .mode[aria-pressed="true"] {
+        border-color: var(--brass-dim);
+        color: var(--ink);
+        background: rgba(201, 162, 39, 0.12);
+      }
+      .mode small { display: block; font-size: 9.5px; opacity: 0.75; margin-top: 1px; }
+
+      .ladder-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px;
+        align-items: center;
+        padding: 7px 0;
+        border-top: 1px solid var(--line);
+        font-size: 12.5px;
+      }
+      .ladder-row:first-child { border-top: none; }
+      .ladder-bar {
+        height: 4px;
+        border-radius: 2px;
+        background: linear-gradient(90deg, var(--optimal), var(--minor), var(--blunder));
+        margin-top: 4px;
+      }
+      .ladder-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+      .ladder-score { font-family: var(--display); font-size: 16px; color: var(--brass); }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <section class="crest">
+        <div class="who">
+          <div class="initial" id="initial">I</div>
+          <div>
+            <div class="who-name" id="name">Idan</div>
+            <div class="who-since">1,240 hands · since 12 August</div>
+          </div>
+        </div>
+
+        <div class="rating-block">
+          <div class="rating-value" id="rating">1642</div>
+          <div class="rating-label">Blackjack rating · basic</div>
+          <div class="rating-side">
+            <span id="session-delta" class="down">−8 this session</span>
+            <span>peak <b id="peak">1701</b></span>
+          </div>
+        </div>
+      </section>
+
+      <hr class="brass" />
+
+      <!--
+        §9.2 and §3.1: accuracy first, units last and quiet. Leading with the
+        bankroll teaches exactly the confusion this app exists to break.
+      -->
+      <section class="stats" aria-label="Lifetime statistics">
+        <div class="stat">
+          <span class="stat-value" id="accuracy">97.4%</span>
+          <span class="stat-label">accuracy</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="evlost">0.40</span>
+          <span class="stat-label">EV lost /100</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="edge">0.73%</span>
+          <span class="stat-label">your edge</span>
+        </div>
+        <div class="stat quiet">
+          <span class="stat-value" id="units">−13</span>
+          <span class="stat-label">units</span>
+        </div>
+      </section>
+
+      <section class="games">
+        <a class="game" href="blackjack.html">
+          <span class="pip">♠</span>
+          <div class="game-title">Blackjack</div>
+          <div class="game-sub" id="bj-rules">Vegas Strip 6-deck S17</div>
+          <div class="game-foot">
+            <span>rating <b id="bj-rating">1642</b></span>
+            <span>hands <b>1,240</b></span>
+            <span>grid <b>61%</b></span>
+          </div>
+          <div class="modes" role="group" aria-label="Difficulty mode">
+            <button class="mode" type="button" aria-pressed="true">
+              Basic<small>costly hands</small>
+            </button>
+            <button class="mode" type="button" aria-pressed="false">
+              Recall<small>thin &amp; rare</small>
+            </button>
+            <button class="mode" type="button" aria-pressed="false">
+              Value<small>your leaks</small>
+            </button>
+          </div>
+        </a>
+
+        <a class="game" href="ultimate.html">
+          <span class="pip">♦</span>
+          <div class="game-title">Ultimate Texas Hold'em<span class="tag">preview</span></div>
+          <div class="game-sub" id="uth-sub">Solvers ready · pre-flop table computing</div>
+          <div class="game-foot">
+            <span>rating <b>—</b></span>
+            <span>hands <b>0</b></span>
+            <span id="uth-classes">table 72/169</span>
+          </div>
+        </a>
+      </section>
+
+      <!--
+        The rating is meaningless unless you can see what it is measuring, so the
+        ladder shows real cells at their real computed difficulty.
+      -->
+      <section class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">What the rating means</h2>
+          <span class="panel-note">difficulty of real cells</span>
+        </div>
+        <div class="panel-body" id="ladder"></div>
+      </section>
+
+      <p class="footer">
+        Perfect basic strategy still loses <b id="house-edge">0.33%</b> of every unit
+        bet under these rules. This app teaches you to lose less, not to win.
+      </p>
+    </div>
+
+    <script src="canned.js"></script>
+    <script>
+      const DATA = CANNED;
+
+      const $ = (id) => document.getElementById(id);
+      const pct = (v) => `${(v * 100).toFixed(1)}%`;
+
+      $('name').textContent = DATA.player.name;
+      $('initial').textContent = DATA.player.initial;
+      $('rating').textContent = DATA.rating.blackjack.rating;
+      $('bj-rating').textContent = DATA.rating.blackjack.rating;
+      $('peak').textContent = DATA.rating.blackjack.peak;
+      $('session-delta').textContent = `${DATA.rating.blackjack.session} this session`;
+      $('accuracy').textContent = pct(DATA.stats.accuracy);
+      $('evlost').textContent = DATA.stats.evLostPer100.toFixed(2);
+      $('edge').textContent = `${DATA.stats.effectiveHouseEdgePercent.toFixed(2)}%`;
+      $('units').textContent = DATA.stats.netUnits;
+      $('bj-rules').textContent = DATA.ruleSet.name;
+      $('house-edge').textContent = `${DATA.ruleSet.edgePercent.toFixed(2)}%`;
+      $('uth-classes').textContent = `table ${DATA.uth.solvedClasses}/${DATA.uth.totalClasses}`;
+
+      const ladder = $('ladder');
+      const lo = DATA.ladder[0].difficulty;
+      const hi = DATA.ladder[DATA.ladder.length - 1].difficulty;
+      for (const row of DATA.ladder) {
+        const width = ((row.difficulty - lo) / (hi - lo)) * 100;
+        const div = document.createElement('div');
+        div.className = 'ladder-row';
+        div.innerHTML =
+          `<div><div>${row.label} <span class="muted">· ${row.optimal}</span></div>` +
+          `<div class="ladder-bar" style="width:${Math.max(6, width)}%"></div>` +
+          `<div class="ladder-meta">margin ${row.margin} · one in ${row.oneIn} hands</div></div>` +
+          `<div class="ladder-score">${row.difficulty}</div>`;
+        ladder.appendChild(div);
+      }
+
+      // The mode buttons are live so the three options can be felt, but they sit
+      // inside the game link, so stop the click from navigating.
+      for (const group of document.querySelectorAll('.modes')) {
+        group.addEventListener('click', (event) => {
+          const button = event.target.closest('.mode');
+          if (!button) return;
+          event.preventDefault();
+          for (const b of group.querySelectorAll('.mode')) b.setAttribute('aria-pressed', 'false');
+          button.setAttribute('aria-pressed', 'true');
+        });
+      }
+    </script>
+  </body>
+</html>

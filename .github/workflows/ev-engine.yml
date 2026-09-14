@@ -1,0 +1,83 @@
+# CI for the EV Trainer packages.
+#
+# Spec §14 is blunt about why this matters: a bug in the EV engine does not crash
+# the app, it silently teaches the user to play badly. The validation suite only
+# does its job if something fails when it drifts — in particular the §14.4 golden
+# charts, which are a manual promise until a machine enforces them.
+#
+# Both slow suites run here. They are seeded and therefore deterministic, and
+# they are the only things that exercise the exhaustive C(52,7) evaluator pass,
+# the Monte Carlo cross-checks of the dealer distributions, and the §14.3
+# simulation that plays the engine's own recommendation for millions of hands.
+
+name: ev-engine
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22.18 is the floor: below it Node will not strip TypeScript types and
+        # the packages have no build step to fall back on. 24 guards against a
+        # future runtime changing how stripping behaves.
+        node: ['22', '24']
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install build-time dependencies
+        # npm workspaces: TypeScript and @types/node are hoisted to the root and
+        # are the only dependencies in the tree.
+        run: npm ci
+
+      - name: Assert the EV engine ships with no runtime dependencies
+        # A shipping requirement, not a preference: the engine has to build as a
+        # standalone library on any platform (spec §12, §6.5).
+        # test/engine-contract.test.ts checks the imports; this checks the
+        # manifest, so neither can drift without the other noticing.
+        run: |
+          node --eval '
+            const pkg = require("./packages/ev-engine/package.json");
+            const deps = Object.keys(pkg.dependencies ?? {});
+            if (deps.length > 0) {
+              console.error("ev-engine gained runtime dependencies: " + deps.join(", "));
+              process.exit(1);
+            }
+            console.log("runtime dependencies: none");
+          '
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test the EV engine
+        run: npm test --workspace @evtrainer/ev-engine
+
+      - name: Test the EV engine with sampling cross-validation
+        run: npm run test:slow --workspace @evtrainer/ev-engine
+
+      - name: Test the game engine
+        run: npm test --workspace @evtrainer/game-engine
+
+      - name: Test the game engine with the §14.3 simulation
+        run: npm run test:slow --workspace @evtrainer/game-engine

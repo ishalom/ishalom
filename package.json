@@ -1,0 +1,14 @@
+{
+  "name": "ev-trainer",
+  "private": true,
+  "description": "EV Trainer — a practice app that grades Blackjack and Ultimate Texas Hold'em decisions against the EV-maximizing play.",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.6"
+  }
+}
