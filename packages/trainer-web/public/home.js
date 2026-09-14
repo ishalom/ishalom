@@ -99,7 +99,7 @@ function renderStanding(profile) {
 
   const head = document.createElement('div');
   head.className = 'ladder-head';
-  head.textContent = 'what this mode counts as hard';
+  head.textContent = T('home.ladderHead');
   box.appendChild(head);
 
   const lo = ladder[0].difficulty;
@@ -109,10 +109,12 @@ function renderStanding(profile) {
     const div = document.createElement('div');
     div.className = 'ladder-row';
     div.innerHTML =
-      `<div><div>${row.label} <span class="muted">· ${row.optimal}</span></div>` +
+      // Every word from the catalogue and every figure by the one rule (round 11):
+      // this row read English inside Hebrew until the sweep found it.
+      `<div><div><bdi>${row.label}</bdi> <span class="muted">· ${row.optimalLabel ?? row.optimal}</span></div>` +
       `<div class="ladder-bar" style="width:${Math.max(6, width)}%"></div>` +
-      `<div class="ladder-meta">one in ${row.oneIn.toLocaleString()} hands</div></div>` +
-      `<div class="ladder-score">${row.difficulty}</div>`;
+      `<div class="ladder-meta">${T('home.ladderOneIn', { n: window.EVFigure.units(row.oneIn) })}</div></div>` +
+      `<div class="ladder-score">${window.EVFigure.units(row.difficulty)}</div>`;
     box.appendChild(div);
   }
 }
@@ -420,7 +422,37 @@ function figure(value, label, note, quiet) {
   return div;
 }
 
-function renderStats(view, profile) {
+/**
+ * The Trips row (round 11): what was put on it, what it costs over time, and
+ * what it actually did. A cost stated in its own place, under its own heading,
+ * never mixed into the figures above that measure the play. Shown once anything
+ * has been put on Trips, whichever game the rest of the tab is about.
+ */
+function tripsFigures(uthView) {
+  const trips = uthView && uthView.tripsStats;
+  if (!trips || trips.hands === 0) return [];
+  const head = document.createElement('h3');
+  head.className = 'hands-game';
+  head.textContent = T('home.tripsHead');
+  return [
+    head,
+    figure(
+      window.EVFigure.units(trips.wagered),
+      T('home.fig.tripsPut'),
+      trips.hands === 1
+        ? T('home.fig.tripsPutNoteOne')
+        : T('home.fig.tripsPutNote', { hands: window.EVFigure.units(trips.hands) }),
+    ),
+    figure(
+      window.EVFigure.units(-trips.expectedCost, true),
+      T('home.fig.tripsCost'),
+      T('home.fig.tripsCostNote', { edge: trips.edge }),
+    ),
+    figure(window.EVFigure.units(trips.net, true), T('home.fig.tripsResult'), T('home.fig.tripsResultNote'), true),
+  ];
+}
+
+function renderStats(view, profile, uthView) {
   const s = view.stats;
   const box = el('stats');
   box.replaceChildren();
@@ -430,6 +462,7 @@ function renderStats(view, profile) {
     note.className = 'empty-note';
     note.textContent = T('home.noStats');
     box.appendChild(note);
+    box.append(...tripsFigures(uthView));
     return;
   }
 
@@ -456,6 +489,7 @@ function renderStats(view, profile) {
       true,
     ),
   );
+  box.append(...tripsFigures(uthView));
 }
 
 function selectTab(name) {
@@ -495,7 +529,7 @@ async function refresh() {
   renderStanding(profile);
   renderUthStanding(uthView.rating);
   renderHands(view, uthView);
-  renderStats(view, profile);
+  renderStats(view, profile, uthView);
   if (pendingOpen) {
     openHand(pendingOpen);
     pendingOpen = null;

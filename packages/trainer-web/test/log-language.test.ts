@@ -142,3 +142,29 @@ test('on the built page, the home log is in one language in every row of both ga
   assert.deepEqual(hebrewLetters(english), [], 'a Hebrew word in the English log');
   page.stopWatching();
 });
+
+test('on the built page, the home ladder is in one language too (round 11)', async () => {
+  /*
+   * Found in round 10 while looking at the two ratings: the heading, "one in N
+   * hands" and the action names under the Blackjack rating read English inside a
+   * Hebrew home screen. Fixed the way the hand log was — worded from ids in the
+   * language on screen — and held here the same way.
+   */
+  const page = loadHosted('#home', [
+    ['ev:playerName', 'Dana'],
+    ['ev:locale', 'he'],
+  ]);
+  await page.booted;
+  page.go('#table');
+  page.go('#home');
+  const ladder = page.document.getElementById('ladder');
+  for (let i = 0; i < 100 && (ladder.children ?? []).length < 3; i++) await settle(20);
+  const hebrew = textOf(ladder);
+  assert.ok(ladder.children.length >= 3 && hebrew.length > 40, 'the ladder did not render');
+  assert.deepEqual(latinWords(hebrew), [], 'an English word in the Hebrew ladder');
+
+  page.setLocale('en');
+  for (let i = 0; i < 50; i++) await settle(10);
+  assert.deepEqual(hebrewLetters(textOf(page.document.getElementById('ladder'))), [], 'a Hebrew word in the English ladder');
+  page.stopWatching();
+});

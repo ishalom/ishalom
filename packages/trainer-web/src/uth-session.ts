@@ -25,6 +25,7 @@ import {
   PREFLOP_TABLE,
   TRIPS_PAYTABLES,
   analyseTrips,
+  tripsResult,
   bestFive,
   categoryOf,
   formatCard,
@@ -54,6 +55,7 @@ import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 import {
   TABLE_LIMITS,
   applyBet,
+  chipsFor,
   chipsView,
   needsRebuy,
   newChipBook,
@@ -157,6 +159,9 @@ export function wholePercents(counts: readonly number[]): number[] {
   for (let k = 0; k < missing; k++) floors[order[k]!.index]!++;
   return floors;
 }
+
+/** The one Trips paytable offered (round 11): paytable I, 3-4-7-8-30-40-50, California's UTH-03. */
+const UTH_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0]!;
 
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
@@ -263,6 +268,8 @@ export interface UthPlayedHand {
   decisions: UthSavedDecision[];
   /** Chips per unit the hand was dealt at. Absent on hands saved before round 6b, which were 1. */
   bet?: number;
+  /** The Trips bet on this hand and the multiple it paid (-1 lost), when there was one (round 11). */
+  trips?: { bet: number; multiple: number };
 }
 
 /** The `uth` part of a version 3 progress blob. */
@@ -300,6 +307,11 @@ export interface UthProgressV2 extends Omit<UthProgressV1, 'version'> {
    * is not shown as rated.
    */
   rating?: Rating;
+  /**
+   * Trips (round 11): the bet being built, the last one dealt, and what it has
+   * done. Absent on parts saved before, which open with nothing on Trips.
+   */
+  trips?: { bet: number; lastBet: number; hands: number; wagered: number; net: number };
 }
 
 /** Blackjack's `SessionStats`, field for field, so the strip and its tooltips read the same. */
@@ -366,6 +378,25 @@ export class UthSession {
   /** What the last graded decision did to it, for the card; null when it was not rated. */
   private lastRatingDelta: number | null = null;
 
+  /*
+   * Trips (round 11; spec A as approved). An optional bet on the player's own
+   * seven cards, paid by paytable I, never graded: it changes no decision, so the
+   * solver, the grades, the rating, the track, EV-lost and accuracy never see it.
+   * Its amount is its own, anywhere inside the table limits, empty by default,
+   * and it stays for the next hand like the Ante.
+   */
+  private trips: ChipBook = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+  /** The Trips bet on the felt for the hand being played; 0 for none. */
+  private handTrips = 0;
+  /** The last settled hand's Trips, for its settlement line. */
+  private lastTrips: { bet: number; multiple: number } | null = null;
+  /** For the Stats row: hands with Trips, chips put on it, and what it did net. */
+  private tripsHands = 0;
+  private tripsWagered = 0;
+  private tripsNet = 0;
+  /** The hand whose settlement says what Trips costs: the first Trips hand of the sitting. */
+  private tripsNoteHand: number | null = null;
+
   /** Decisions of the hand on the felt, saved when it settles. */
   private pending: UthSavedDecision[] = [];
   private lastNet: number | null = null;
@@ -403,6 +434,13 @@ export class UthSession {
     this.pending = [];
     this.ratingAtDeal = { ...this.rating };
     this.lastRatingDelta = null;
+    // Trips, when there is one: its own amount, off the stack with the Ante and Blind.
+    this.handTrips = this.trips.bet;
+    this.lastTrips = null;
+    if (this.handTrips > 0) {
+      this.trips = { ...this.trips, lastBet: this.trips.bet };
+      this.chips = { ...this.chips, stack: roundChips(this.chips.stack - this.handTrips) };
+    }
     return this.view;
   }
 
@@ -460,6 +498,28 @@ export class UthSession {
       this.netUnits += settlement.net;
       this.hands++;
       const hand = this.table.handRecord;
+      /*
+       * Trips settles on the player's own seven cards, whatever the dealer holds
+       * and even after a fold: "If the player has a three of a kind or better,
+       * the Trips wager always wins - even if the player folds" (California
+       * Bureau of Gambling Control, Standard Game: Ultimate Texas Hold'em, rev.
+       * March 2015). A fold happens only on the river, so all seven are face up.
+       *
+       * It is kept out of the hand's own figure: the grade, the track, the strip
+       * and the stack's swing measure the play, and Trips is a cost stated on its
+       * own line. Its chips never move across the felt, win or lose.
+       */
+      let trips: { bet: number; multiple: number } | undefined;
+      if (this.handTrips > 0) {
+        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, UTH_TRIPS_PAYTABLE);
+        trips = { bet: this.handTrips, multiple };
+        this.chips = { ...this.chips, stack: roundChips(this.chips.stack + this.handTrips * (1 + multiple)) };
+        this.tripsHands++;
+        this.tripsWagered += this.handTrips;
+        this.tripsNet = roundChips(this.tripsNet + this.handTrips * multiple);
+        if (this.tripsNoteHand === null) this.tripsNoteHand = hand.id;
+      }
+      this.lastTrips = trips ?? null;
       this.history.unshift({
         id: hand.id,
         hole: [...hand.hole],
@@ -469,6 +529,7 @@ export class UthSession {
         settlement: { ...settlement },
         decisions: this.pending,
         bet: this.handBet,
+        ...(trips ? { trips } : {}),
       });
       this.history.length = Math.min(this.history.length, UTH_HISTORY_KEPT);
       this.pending = [];
@@ -527,10 +588,12 @@ export class UthSession {
    * Build the Ante between hands: add a chip, take the last one back, clear it,
    * repeat the last Ante or double it. The table limits are enforced here.
    */
-  placeBet(op: BetOp, chip?: number): void {
+  placeBet(op: BetOp, chip?: number, spot: 'ante' | 'trips' = 'ante'): void {
     const phase = this.table.view.phase;
     if (phase !== 'idle' && phase !== 'settled') throw new Error('The Ante stays until the hand is over');
-    this.chips = applyBet(this.chips, op, chip);
+    // Trips is its own circle: the same chips, the same limits, its own amount (round 11).
+    if (spot === 'trips') this.trips = applyBet(this.trips, op, chip);
+    else this.chips = applyBet(this.chips, op, chip);
   }
 
   /** The free rebuy: only below the table minimum, always back to the starting stack. */
@@ -598,7 +661,7 @@ export class UthSession {
     return {
       version: 2,
       balance: inHand
-        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet)
+        ? roundChips(this.chips.stack + (view.ante + view.blind + view.playBet) * this.handBet + this.handTrips)
         : this.chips.stack,
       bet: this.chips.bet,
       lastBet: this.chips.lastBet,
@@ -613,6 +676,13 @@ export class UthSession {
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
       rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
+      trips: {
+        bet: this.trips.bet,
+        lastBet: this.trips.lastBet,
+        hands: this.tripsHands,
+        wagered: this.tripsWagered,
+        net: this.tripsNet,
+      },
       history: this.history.map((hand) => ({
         ...hand,
         hole: [...hand.hole],
@@ -670,6 +740,15 @@ export class UthSession {
       };
     }
     this.ratingAtDeal = { ...this.rating };
+    const trips = s.trips as Partial<NonNullable<UthProgressV2['trips']>> | undefined;
+    if (trips && typeof trips === 'object') {
+      const bet = typeof trips.bet === 'number' && (trips.bet === 0 || validBet(trips.bet)) ? trips.bet : 0;
+      const lastBet = typeof trips.lastBet === 'number' && validBet(trips.lastBet) ? trips.lastBet : 0;
+      this.trips = { stack: 0, bet, lastBet, placed: chipsFor(bet) };
+      this.tripsHands = Math.max(0, Math.floor(n(trips.hands)));
+      this.tripsWagered = Math.max(0, n(trips.wagered));
+      this.tripsNet = n(trips.net);
+    }
     this.history = (Array.isArray(s.history) ? s.history : [])
       .filter(
         (hand): hand is UthPlayedHand =>
@@ -702,6 +781,13 @@ export class UthSession {
     this.rating = newRating('basic');
     this.ratingAtDeal = newRating('basic');
     this.lastRatingDelta = null;
+    this.trips = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+    this.handTrips = 0;
+    this.lastTrips = null;
+    this.tripsHands = 0;
+    this.tripsWagered = 0;
+    this.tripsNet = 0;
+    this.tripsNoteHand = null;
   }
 
   // --- What the page draws -------------------------------------------------
@@ -752,7 +838,27 @@ export class UthSession {
       feedback: this.last ? this.compose(this.last) : null,
       // The Ultimate rating, for the card and home — never the strip (round 10).
       rating: { ...this.rating, lastDelta: this.lastRatingDelta },
-      settlement: settled && table.settlement ? this.lines(table.settlement, this.handBet) : null,
+      // Trips (round 11): its circle between hands and on the felt, and its Stats row.
+      trips: {
+        ...chipsView({ ...this.trips, stack: this.chips.stack }, !inHand || settled),
+        onFelt: inHand ? this.handTrips : 0,
+      },
+      tripsStats: {
+        hands: this.tripsHands,
+        wagered: this.tripsWagered,
+        expectedCost: roundChips((this.tripsWagered * analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent) / 100),
+        net: this.tripsNet,
+        edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`),
+      },
+      settlement:
+        settled && table.settlement
+          ? this.lines(
+              table.settlement,
+              this.handBet,
+              this.lastTrips && { ...this.lastTrips, cards: [...table.hole, ...table.board] },
+              Boolean(this.lastTrips) && this.tripsNoteHand === this.table.handRecord.id,
+            )
+          : null,
       showdown:
         settled && table.settlement && !table.settlement.folded
           ? this.showdown(table.hole, table.dealerHole, table.board)
@@ -946,7 +1052,7 @@ export class UthSession {
       (acc, d) => (TIERS.indexOf(d.severityTier) > TIERS.indexOf(acc) ? d.severityTier : acc),
       'optimal',
     );
-    const result = this.lines(hand.settlement, hand.bet ?? 1);
+    const result = this.lines(hand.settlement, hand.bet ?? 1, hand.trips && { ...hand.trips, cards: [...hand.hole, ...hand.board] });
     const shown = hand.settlement.folded ? null : this.showdown(hand.hole, hand.dealerHole, hand.board);
 
     return {
@@ -1167,7 +1273,44 @@ export class UthSession {
    * (which is the only bet qualification touches), then the Play, then the
    * Blind — and the total comes last and quietest.
    */
-  private lines(s: UthSettlement, perUnit: number): { lines: string[]; net: string; folded: boolean } {
+  /**
+   * The settlement's lines, and Trips' after them when a Trips bet was on the
+   * hand (round 11): what it paid and on which hand, or that it lost; and, on
+   * the first Trips hand of a sitting, the one sentence about what it costs.
+   * The hand's own figure stays the play's alone.
+   */
+  private lines(
+    s: UthSettlement,
+    perUnit: number,
+    trips?: { bet: number; multiple: number; cards: Card[] } | null,
+    costNote = false,
+  ): { lines: string[]; net: string; folded: boolean } {
+    const out = this.gameLines(s, perUnit);
+    if (!trips || trips.bet <= 0) return out;
+    const L = this.locale;
+    const iso = isolateFor(L);
+    const cash = (value: number) => iso(money(roundChips(value)));
+    if (trips.multiple > 0) {
+      const value = bestFive(trips.cards).value;
+      out.lines.push(
+        t(L, 'uth.line.tripsPaid', {
+          multiple: iso(String(trips.multiple)),
+          hand: this.handPhrase(categoryOf(value), significantRanks(value)),
+          won: cash(trips.bet * trips.multiple),
+        }),
+      );
+    } else {
+      out.lines.push(t(L, 'uth.line.tripsLose', { lost: cash(-trips.bet) }));
+    }
+    if (costNote) {
+      out.lines.push(
+        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`) }),
+      );
+    }
+    return out;
+  }
+
+  private gameLines(s: UthSettlement, perUnit: number): { lines: string[]; net: string; folded: boolean } {
     const L = this.locale;
     const iso = isolateFor(L);
     // Every figure in chips at the bet; the multiple on the Play bet stays a multiple.

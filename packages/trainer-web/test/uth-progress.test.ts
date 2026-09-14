@@ -224,7 +224,7 @@ test('nothing in the Hebrew UTH log or How to play is English', () => {
 
 // --- Trips ------------------------------------------------------------------------
 
-test('How to play says Trips is not offered, and costs 3.50% under the default table', () => {
+test('How to play explains Trips, and that it costs 3.50% under the one table offered', () => {
   for (const locale of ['en', 'he'] as Locale[]) {
     const uth = new UthSession(1);
     uth.setLocale(locale);

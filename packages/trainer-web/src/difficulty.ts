@@ -192,3 +192,44 @@ export function updateRating(
   rating.sessionDelta += delta;
   return delta;
 }
+
+/**
+ * How far above a decision's difficulty a correct answer can still lift a
+ * rating: the one rule both games share (Ultimate from round 10, Blackjack from
+ * round 11).
+ *
+ * Found by the trivial-ladder test. Under the plain update a long enough run of
+ * easy, correct decisions climbs without limit, because a perfect record on easy
+ * questions has no finite best estimate. 400 above a decision is where the
+ * expected score is already 10/11: getting it right says almost nothing more.
+ */
+export const INFORMATION_REACH = 400;
+
+/**
+ * One rated decision under that rule: `updateRating`, then the reach limit on a
+ * gain. A wrong answer costs exactly what it always did, and wherever the limit
+ * does not bind the change is `updateRating`'s to the last digit.
+ *
+ * It only ever shapes a movement. A stored rating is never passed through it on
+ * the way in, so adding the limit changed no one's number.
+ */
+export function updateRatingWithReach(
+  rating: Rating,
+  difficulty: number,
+  severity: SeverityTier,
+  reach: number = INFORMATION_REACH,
+): number {
+  const before = rating.rating;
+  const peakBefore = rating.peak;
+  const delta = updateRating(rating, difficulty, severity);
+  if (delta > 0) {
+    const ceiling = Math.max(before, difficulty + reach);
+    if (rating.rating > ceiling) {
+      rating.sessionDelta -= rating.rating - ceiling;
+      rating.rating = ceiling;
+      rating.peak = Math.max(peakBefore, ceiling);
+      return ceiling - before;
+    }
+  }
+  return delta;
+}

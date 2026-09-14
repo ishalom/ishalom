@@ -41,7 +41,7 @@ import {
   difficultyTable,
   type ScenarioDifficulty,
   newRating,
-  updateRating,
+  updateRatingWithReach,
   type DifficultyMode,
   type Rating,
 } from './difficulty.ts';
@@ -454,22 +454,26 @@ export class TrainerSession {
   } {
     const preset = RULE_PRESETS.find((p) => p.id === this.presetId)!;
     const rules = this.rules;
+    // Worded in the language on screen (round 11): the Hebrew sweep found the
+    // rules bar reading "Vegas Strip 6-deck S17 · late surrender" inside Hebrew.
+    // The rule codes — 6D, S17, H17, DAS, 3:2 — stay codes in both languages.
+    const L = this.locale;
     const badge = [
       `${rules.decks}D`,
       rules.soft17,
-      rules.das ? 'DAS' : 'no DAS',
-      rules.surrender === 'none' ? 'no surrender' : `${rules.surrender} surrender`,
-      rules.splitUnlikeTens ? '' : 'like ranks only',
+      rules.das ? 'DAS' : t(L, 'badge.noDas'),
+      t(L, `badge.surrender.${rules.surrender}`),
+      rules.splitUnlikeTens ? '' : t(L, 'badge.likeRanks'),
       rules.blackjackPayout,
-      rules.peek ? '' : 'no hole card',
+      rules.peek ? '' : t(L, 'badge.noHoleCard'),
     ]
       .filter(Boolean)
       .join(' · ');
     return {
       id: preset.id,
-      name: preset.name,
+      name: t(L, `preset.${preset.id}`),
       badge,
-      note: preset.note ?? null,
+      note: preset.note ? t(L, `preset.${preset.id}.note`) : null,
       edgePercent: this.baseEdgePercent,
       // What a natural actually pays, for the one line on screen that quotes it.
       blackjackPayout: rules.blackjackPayout,
@@ -635,7 +639,7 @@ export class TrainerSession {
     // Last, because it moves the rating every comparison above had to read.
     this.lifetimeDecisions++;
     this.lastRatingDelta = cell
-      ? updateRating(this.ratings[this.mode], cell[this.mode], record.severityTier)
+      ? updateRatingWithReach(this.ratings[this.mode], cell[this.mode], record.severityTier)
       : null;
 
     this.pending.push({
@@ -1017,6 +1021,9 @@ export class TrainerSession {
           difficulty: d[this.mode],
           margin: d.margin,
           optimal: cell.optimalAction,
+          // Worded in the language on screen, as the hand log is (round 11): the
+          // id alone read "stand" and "split" inside a Hebrew home screen.
+          optimalLabel: prettyAction(cell.optimalAction, this.locale),
           oneIn: Math.round(1000 / Math.max(d.perThousand, 0.01)),
         };
       })

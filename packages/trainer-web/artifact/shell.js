@@ -591,7 +591,12 @@ async function api(path, body) {
       return session.view;
 
     case '/api/presets':
-      return RULE_PRESETS.map((p) => ({ id: p.id, name: p.name, note: p.note ?? null }));
+      // In the language on screen, as the rules bar is (round 11).
+      return RULE_PRESETS.map((p) => ({
+        id: p.id,
+        name: t(session.localeCode, `preset.${p.id}`),
+        note: p.note ? t(session.localeCode, `preset.${p.id}.note`) : null,
+      }));
 
     case '/api/session': {
       const presetId = typeof b.presetId === 'string' ? b.presetId : undefined;
@@ -628,7 +633,8 @@ async function api(path, body) {
       void publish();
       return session.view;
     case '/api/uth/bet':
-      uthSession.placeBet(b.op, b.chip);
+      // The circle the chips go on: the Ante unless Trips is chosen (round 11).
+      uthSession.placeBet(b.op, b.chip, b.spot === 'trips' ? 'trips' : 'ante');
       saveProgressLocally();
       return uthSession.view;
     case '/api/uth/rebuy':

@@ -256,8 +256,8 @@ function cardNode(card, index, dealtNow) {
   node.setAttribute(
     'aria-label',
     drawn
-      ? T('ui.cardDrawn', { card: card.label, n: index - 1 })
-      : T('ui.cardDealt', { card: card.label }),
+      ? T('ui.cardDrawn', { card: cardWords(card), n: index - 1 })
+      : T('ui.cardDealt', { card: cardWords(card) }),
   );
   if (drawn) node.dataset.draw = index - 1;
   const rank = document.createElement('span');
@@ -275,7 +275,7 @@ function faceDownNode(dealtNow) {
   node.className = 'card back dealt' + (dealtNow === undefined ? '' : ' arriving');
   if (dealtNow !== undefined) node.style.setProperty('--deal-index', dealtNow);
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', 'face-down card');
+  node.setAttribute('aria-label', T('card.faceDown'));
   return node;
 }
 
@@ -365,6 +365,15 @@ function chipNodes(amount, cap) {
 }
 
 /** A chip figure: exact, a real minus sign, one piece in Hebrew. */
+/**
+ * A card as a screen reader hears it, in the language on screen (round 11):
+ * "nine of hearts", "9 לב". The session sends the rank and the suit; the words
+ * are the page's, like every other word on it.
+ */
+const SUIT_WORDS = { '♣': 'clubs', '♦': 'diamonds', '♥': 'hearts', '♠': 'spades' };
+const cardWords = (card) =>
+  T('card.label', { rank: T(`card.rank.${card.rank}`), suit: T(`card.suit.${SUIT_WORDS[card.suit] || 'spades'}`) });
+
 const chipFigure = (value, signed) =>
   window.EVChips ? window.EVChips.figure(value, signed) : String(value);
 
@@ -772,7 +781,7 @@ function renderFeedback(view) {
     controls.className = 'reveal-controls';
     const next = document.createElement('button');
     next.className = 'reveal-next';
-    next.innerHTML = `${T('ui.next')}<span class="key">SPACE</span>`;
+    next.innerHTML = `${T('ui.next')}<span class="key">${T('key.space')}</span>`;
     next.addEventListener('click', advanceReveal);
     const skip = document.createElement('button');
     skip.className = 'reveal-skip';

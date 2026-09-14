@@ -77,8 +77,9 @@ const server = createServer(async (request, response) => {
           return json(
             RULE_PRESETS.map((preset) => ({
               id: preset.id,
-              name: preset.name,
-              note: preset.note ?? null,
+              // In the language on screen, as the hosted page words them (round 11).
+              name: catalogue(session.localeCode)[`preset.${preset.id}`] ?? preset.name,
+              note: preset.note ? (catalogue(session.localeCode)[`preset.${preset.id}.note`] ?? preset.note) : null,
             })),
           );
 
@@ -133,7 +134,7 @@ const server = createServer(async (request, response) => {
           return json(session.view);
 
         case '/api/uth/bet':
-          uth.placeBet(body.op as BetOp, body.chip as number);
+          uth.placeBet(body.op as BetOp, body.chip as number, body.spot === 'trips' ? 'trips' : 'ante');
           return json(uth.view);
 
         case '/api/uth/rebuy':

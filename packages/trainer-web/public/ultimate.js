@@ -21,6 +21,15 @@ const el = (id) => document.getElementById(id);
 const uthFigure = (text) =>
   document.documentElement.getAttribute('dir') === 'rtl' ? `\u2066${text}\u2069` : text;
 
+/**
+ * A card as a screen reader hears it, in the language on screen (round 11):
+ * "nine of hearts", "9 לב". The session sends the rank and the suit; the words
+ * are the page's, like every other word on it.
+ */
+const SUIT_WORDS = { '♣': 'clubs', '♦': 'diamonds', '♥': 'hearts', '♠': 'spades' };
+const cardWords = (card) =>
+  T('card.label', { rank: T(`card.rank.${card.rank}`), suit: T(`card.suit.${SUIT_WORDS[card.suit] || 'spades'}`) });
+
 const uthState = {
   view: null,
   busy: false,
@@ -30,6 +39,8 @@ const uthState = {
   chipsToken: null,
   /** Whether the chips are open between hands while the last card is still up. */
   betOpen: false,
+  /** Which circle the chips go on between hands: the Ante, or Trips (round 11). */
+  betSpot: 'ante',
   /** Measured solve times on this page, for anyone checking the flop is quick. */
   timings: [],
 };
@@ -97,7 +108,7 @@ function uthCard(card) {
   node.className = 'card dealt' + (card.red ? ' red' : '');
   if (card.code !== undefined) node.dataset.code = String(card.code);
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', card.label);
+  node.setAttribute('aria-label', cardWords(card));
   const rank = document.createElement('span');
   rank.className = 'card-rank';
   rank.textContent = card.rank;
@@ -112,7 +123,7 @@ function uthBack() {
   const node = document.createElement('div');
   node.className = 'card back dealt';
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', 'face-down card');
+  node.setAttribute('aria-label', T('card.faceDown'));
   return node;
 }
 
@@ -372,9 +383,44 @@ function uthRenderRail(view) {
   const ante = spot(T('uth.ante'), building ? onFelt(chips.bet) : onFelt(stake.ante), 'ante');
   const blind = spot(T('uth.blind'), building ? onFelt(chips.bet) : onFelt(stake.blind), 'blind');
   const play = spot(T('uth.play'), building ? '—' : onFelt(stake.play), 'play');
-  rail.append(ante, blind, play);
+  // Trips (round 11): its own circle, empty until chips are put on it. Quiet on
+  // purpose: no chips fly to it or from it, and a win on it moves nothing.
+  const trips = view.trips;
+  const tripsSpot = trips
+    ? spot(T('uth.trips'), building ? onFelt(trips.bet) : onFelt(trips.onFelt), 'trips')
+    : null;
+  rail.append(...(tripsSpot ? [tripsSpot] : []), ante, blind, play);
   if (building && window.EVChips) {
-    window.EVChips.spot(ante, chips, (op) => uthSend('/api/uth/bet', { op }));
+    // The chosen circle takes its last chip back when tapped, as the Ante always
+    // has; the other one is chosen by a tap. The Ante is chosen until Trips is.
+    const target = tripsSpot && uthState.betSpot === 'trips' ? 'trips' : 'ante';
+    for (const [node, name, book] of [[ante, 'ante', chips], [tripsSpot, 'trips', trips]]) {
+      if (!node || !book) continue;
+      if (name === target) {
+        node.classList.add('bet-target');
+        window.EVChips.spot(node, book, (op) => uthSend('/api/uth/bet', { op, spot: name }));
+        if (name === 'trips') node.setAttribute('aria-label', T('bet.spotTrips', { bet: figure(book.bet) }));
+        continue;
+      }
+      if (book.needsRebuy) continue;
+      node.classList.add('bet-spot');
+      node.setAttribute('role', 'button');
+      node.setAttribute('tabindex', '0');
+      node.setAttribute('aria-label', T(name === 'trips' ? 'bet.chooseTrips' : 'bet.chooseAnte', { bet: figure(book.bet) }));
+      const choose = () => {
+        uthState.betSpot = name;
+        uthState.betOpen = true;
+        uthRender();
+        uthRenderActions();
+      };
+      node.addEventListener('click', choose);
+      node.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          choose();
+        }
+      });
+    }
   }
 
   // The stack, in chips. Below zero after a hand that needed more than it held,
@@ -646,12 +692,14 @@ function uthRenderActions(waiting) {
   const compact = Boolean(view.feedback) && !uthState.betOpen;
   let shown = null;
   if (chips && window.EVChips) {
+    // The chips, Clear, Repeat and Double work on the chosen circle (round 11).
+    const onTrips = uthState.betSpot === 'trips' && Boolean(view.trips);
     shown = window.EVChips.controls(
       box,
-      chips,
-      (op, chip) => uthSend('/api/uth/bet', { op, chip }),
+      onTrips ? view.trips : chips,
+      (op, chip) => uthSend('/api/uth/bet', { op, chip, spot: onTrips ? 'trips' : 'ante' }),
       () => uthSend('/api/uth/rebuy'),
-      () => document.querySelector('#uth-rail .uth-spot.ante'),
+      () => document.querySelector(`#uth-rail .uth-spot.${onTrips ? 'trips' : 'ante'}`),
       uthState.busy,
       compact,
     );

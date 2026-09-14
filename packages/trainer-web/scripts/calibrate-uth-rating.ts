@@ -42,7 +42,7 @@ import { getPreset, type SeverityTier } from '@evtrainer/ev-engine';
 import { BlackjackTable, UthTable } from '@evtrainer/game-engine';
 import { PREFLOP_TABLE } from '@evtrainer/ev-engine/uth';
 
-import { difficultyTable, newRating, updateRating } from '../src/difficulty.ts';
+import { difficultyTable, newRating, updateRatingWithReach } from '../src/difficulty.ts';
 import { chartFor } from '../src/sensitivity.ts';
 import { UTH_INFORMATION_REACH, UTH_RATING, uthDifficulty, uthDifficultyFromLeak, updateUthRating } from '../src/uth-rating.ts';
 import { expectedLeak } from '../src/difficulty.ts';
@@ -143,16 +143,27 @@ const STRATEGIES: Strategy[] = [
  * The rating a stream settles at: the average over its second half, so K's
  * jitter at the end does not decide it.
  */
-function settledBj(stream: BjDecision[]): number {
+function settledBj(stream: BjDecision[], reach = Infinity): number {
   const rating = newRating('basic');
   let sum = 0;
   let n = 0;
   const half = Math.floor(stream.length / 2);
   stream.forEach((x, i) => {
-    updateRating(rating, x.d, x.s);
+    updateRatingWithReach(rating, x.d, x.s, reach);
     if (i >= half) { sum += rating.rating; n++; }
   });
   return sum / Math.max(1, n);
+}
+
+/** Blackjack's rating after each of `marks` decisions, to see how fast a player climbs. */
+function climbBj(stream: BjDecision[], marks: number[], reach = Infinity): number[] {
+  const rating = newRating('basic');
+  const out: number[] = [];
+  stream.forEach((x, i) => {
+    updateRatingWithReach(rating, x.d, x.s, reach);
+    if (marks.includes(i + 1)) out.push(Math.round(rating.rating));
+  });
+  return out;
 }
 
 function settledUth(stream: UthDecision[], constants: { slope: number; centre: number }, reach = Infinity): number {
@@ -295,4 +306,44 @@ if (SNAPSHOT) {
 `);
   console.log(`
 snapshot of ${cases.length} decisions written to ${SNAPSHOT}`);
+}
+
+// --- Blackjack under the same limit (round 11) ------------------------------------------
+
+if (flag('--blackjack-limit') !== undefined || args.includes('--blackjack-limit')) {
+  console.log('\nround 11 — Blackjack with the reach limit, and what it costs:');
+  console.log('  the same player (settled rating): Blackjack before → after the limit, and Ultimate (already limited)');
+  let before = 0;
+  let after = 0;
+  for (const tau of TAUS) {
+    const plain = settledBj(streams.bj[tau]!);
+    const limited = settledBj(streams.bj[tau]!, REACH);
+    const uth = settledUth(streams.uth[tau]!, UTH_RATING, REACH);
+    before += (uth - plain) ** 2;
+    after += (uth - limited) ** 2;
+    console.log(`  τ=${String(tau).padEnd(5)} Blackjack ${plain.toFixed(0).padStart(5)} → ${limited.toFixed(0).padStart(5)} (${(limited - plain).toFixed(0).padStart(4)})   Ultimate ${uth.toFixed(0).padStart(5)}`);
+  }
+  console.log(`  gap between the games (RMS): ${Math.sqrt(before / TAUS.length).toFixed(1)} before, ${Math.sqrt(after / TAUS.length).toFixed(1)} after`);
+
+  const marks = [30, 100, 300, 1000, 3000];
+  console.log(`\n  how fast a Blackjack player climbs: rating after ${marks.join(' / ')} rated decisions, before → after`);
+  for (const tau of TAUS) {
+    const a = climbBj(streams.bj[tau]!, marks);
+    const b = climbBj(streams.bj[tau]!, marks, REACH);
+    console.log(`  τ=${String(tau).padEnd(5)} ${a.join(' / ')}   →   ${b.join(' / ')}   (largest difference ${Math.max(...a.map((v, i) => Math.abs(v - b[i]!)))})`);
+  }
+
+  const easyBj = Object.values(streams.bj).flat().map((x) => x.d).filter((d) => d <= 900);
+  const ladderBj = (reach: number) => {
+    const rating = newRating('basic');
+    const at: Record<number, number> = {};
+    for (let i = 0; i < 5000; i++) {
+      updateRatingWithReach(rating, easyBj[i % easyBj.length]!, 'optimal', reach);
+      if ([30, 150, 600, 2000, 5000].includes(i + 1)) at[i + 1] = Math.round(rating.rating * 10) / 10;
+    }
+    return at;
+  };
+  console.log(`\n  the Blackjack trivial ladder: ${easyBj.length} dealt decisions at difficulty ≤ 900, every one right`);
+  console.log(`  plain update:    ${JSON.stringify(ladderBj(Infinity))}`);
+  console.log(`  with the limit:  ${JSON.stringify(ladderBj(REACH))}`);
 }
