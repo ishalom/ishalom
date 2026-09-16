@@ -1837,7 +1837,10 @@ button,
 .uth-legend { font-size: 12.5px !important; opacity: 0.8; }
 .uth-note { margin-top: 6px; color: var(--muted); font-size: 15px; }
 /* The analysis on the card, big enough to read on a phone (round 7). */
-.uth .quickcard .reason { font-size: 15.5px; line-height: 1.45; }
+/* Round 7's size for the analysis text, kept when the commentary moved below
+   the table in round 12: the same words, the same size, a different place. */
+.uth .quickcard .reason,
+.uth .feedback .reason { font-size: 15.5px; line-height: 1.45; }
 .uth .uth-result p { font-size: 14.5px; }
 
 /* --- The decision track (round 6) ----------------------------------------------
@@ -2028,3 +2031,9 @@ button,
   .uth-rail { gap: 4px; }
   .uth-spot .rail-label { font-size: 9.5px; letter-spacing: 0.02em; }
 }
+
+/* --- Ultimate's commentary, below the table (round 12) ------------------------
+ * Blackjack's model: the reasoning and what the cards did sit under the table
+ * and scroll with the page; the dock keeps the grade and the buttons only. */
+.uth .feedback { margin: 0 14px 10px; }
+.uth .feedback .uth-result { margin-top: 10px; }

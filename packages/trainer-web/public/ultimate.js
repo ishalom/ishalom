@@ -224,6 +224,7 @@ function uthRender() {
   // Before the card, because the card reveals the late result and the track's
   // newest figure is part of it.
   uthRenderTrack(view);
+  uthRenderCommentary(view);
   uthRenderCard(view);
   uthFitCard();
   uthRenderStats(view);
@@ -479,6 +480,73 @@ function uthRatingSide(rating) {
  * once and large, and the settlement lines appear a moment later, small and
  * muted, underneath it.
  */
+/**
+ * The commentary, below the table (round 12).
+ *
+ * Blackjack's model, which Idan named as the right one: the reasoning sits under
+ * the table where the page scrolls, and the dock carries only the grade and the
+ * buttons. What is here is everything that explains the hand — the sentence the
+ * solve produced, the notes that are true for this hand, and, a beat later and
+ * quieter, what the cards did (§3.1).
+ */
+function uthRenderCommentary(view) {
+  const box = el('uth-feedback');
+  if (!box) return;
+  const feedback = view.feedback;
+  if (!feedback) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.className = `feedback ${feedback.severity}`;
+  box.replaceChildren();
+
+  const sentence = document.createElement('p');
+  sentence.className = 'reason';
+  uthRich(sentence, feedback.sentence);
+  box.appendChild(sentence);
+  for (const line of feedback.notes || []) {
+    const note = document.createElement('p');
+    note.className = 'reason uth-note';
+    uthRich(note, line);
+    box.appendChild(note);
+  }
+
+  if (view.settlement) {
+    const result = document.createElement('div');
+    result.className = 'uth-result uth-late';
+    result.hidden = true;
+    if (view.showdown) {
+      for (const line of [view.showdown.player.words, view.showdown.dealer.words]) {
+        const p = document.createElement('p');
+        p.className = 'uth-hand-name';
+        p.textContent = line;
+        result.appendChild(p);
+      }
+      // Who won, by the cards: with the two hands, after the grade, quieter than it.
+      const winner = document.createElement('p');
+      winner.className = 'uth-winner';
+      winner.textContent = view.showdown.winner;
+      result.appendChild(winner);
+      const legend = document.createElement('p');
+      legend.className = 'uth-legend';
+      legend.textContent = view.showdown.legend;
+      result.appendChild(legend);
+    }
+    for (const line of view.settlement.lines) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      result.appendChild(p);
+    }
+    const net = document.createElement('p');
+    net.className = 'uth-net';
+    net.textContent = view.settlement.net;
+    result.appendChild(net);
+    box.appendChild(result);
+  }
+}
+
 function uthRenderCard(view) {
   const box = el('uth-card');
   const feedback = view.feedback;
@@ -525,49 +593,8 @@ function uthRenderCard(view) {
   });
   box.appendChild(evs);
 
-  const sentence = document.createElement('p');
-  sentence.className = 'reason';
-  uthRich(sentence, feedback.sentence);
-  box.appendChild(sentence);
-  for (const line of feedback.notes || []) {
-    const note = document.createElement('p');
-    note.className = 'reason uth-note';
-    uthRich(note, line);
-    box.appendChild(note);
-  }
-
-  if (view.settlement) {
-    const result = document.createElement('div');
-    result.className = 'uth-result uth-late';
-    result.hidden = true;
-    if (view.showdown) {
-      for (const line of [view.showdown.player.words, view.showdown.dealer.words]) {
-        const p = document.createElement('p');
-        p.className = 'uth-hand-name';
-        p.textContent = line;
-        result.appendChild(p);
-      }
-      // Who won, by the cards: with the two hands, after the grade, quieter than it.
-      const winner = document.createElement('p');
-      winner.className = 'uth-winner';
-      winner.textContent = view.showdown.winner;
-      result.appendChild(winner);
-      const legend = document.createElement('p');
-      legend.className = 'uth-legend';
-      legend.textContent = view.showdown.legend;
-      result.appendChild(legend);
-    }
-    for (const line of view.settlement.lines) {
-      const p = document.createElement('p');
-      p.textContent = line;
-      result.appendChild(p);
-    }
-    const net = document.createElement('p');
-    net.className = 'uth-net';
-    net.textContent = view.settlement.net;
-    result.appendChild(net);
-    box.appendChild(result);
-  }
+  // The reasoning, the notes and the result are commentary: they belong below
+  // the table, not in the dock with the buttons (round 12). See uthRenderCommentary.
 
   // One token per graded decision: the result is revealed once, after a beat,
   // and not again on an unrelated re-render.

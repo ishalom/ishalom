@@ -20,6 +20,7 @@ import { parseCards } from '@evtrainer/ev-engine/uth';
 import type { UthTable } from '@evtrainer/game-engine';
 
 import { UthSession } from '../src/uth-session.ts';
+import { loadHosted } from './helpers/hosted-page.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const source = (file: string) => readFileSync(join(HERE, '..', 'public', file), 'utf8');
@@ -81,21 +82,105 @@ test('both hands are marked with equal weight, and a shared card carries both ha
   assert.doesNotMatch(css, /\.best-dealer \{ box-shadow/, 'the dealer is still marked more weakly');
 });
 
-test('the winner line sits with the hands, after the grade, and quieter than it', () => {
+/** The declarations of the first rule whose selector list names `selector`. */
+function declarations(css: string, selector: string): string {
+  const at = css.indexOf(selector);
+  assert.ok(at > 0, `no rule for ${selector}`);
+  const open = css.indexOf('{', at);
+  return css.slice(open + 1, css.indexOf('}', open));
+}
+
+const fontSize = (css: string, selector: string) =>
+  Number(/font-size: ([\d.]+)px/.exec(declarations(css, selector))![1]);
+
+test('Ultimate follows Blackjack’s model: commentary below the table, the grade with the buttons (round 12)', () => {
+  const html = source('ultimate.html');
+  const table = html.indexOf('</main>');
+  const commentary = html.indexOf('id="uth-feedback"');
+  const dock = html.indexOf('class="dock"');
+  const card = html.indexOf('id="uth-card"');
+  const buttons = html.indexOf('id="uth-actions"');
+  assert.ok(table > 0 && commentary > table, 'the commentary is not below the table');
+  assert.ok(dock > commentary && card > dock && buttons > card, 'the dock no longer holds the grade and the buttons');
+
+  // The same shape as Blackjack's screen, which is the reference.
+  const bj = source('table.html');
+  assert.ok(bj.indexOf('id="feedback"') > bj.indexOf('</main>'));
+  assert.ok(bj.indexOf('id="quickcard"') > bj.indexOf('class="dock"'));
+
+  // The dock card carries the grade and what the player chose; the reasoning,
+  // the notes and the result carry on below the table.
   const js = source('ultimate.js');
-  const names = js.indexOf("p.className = 'uth-hand-name'");
-  const winner = js.indexOf("winner.className = 'uth-winner'");
-  const verdict = js.indexOf("verdict.className = 'verdict'");
-  assert.ok(verdict > 0 && names > verdict && winner > names, 'the winner line is not after the grade and the hands');
-  const css = source('styles.css');
-  const size = (rule: RegExp) => Number(/font-size: ([\d.]+)px/.exec(rule.exec(css)![1]!)![1]);
-  assert.ok(size(/\.uth-winner \{([^}]*)\}/) < size(/\.quickcard \.verdict \{([^}]*)\}/), 'the winner is as loud as the grade');
+  const cardFn = js.slice(js.indexOf('function uthRenderCard('), js.indexOf('function uthRenderActions('));
+  const commentaryFn = js.slice(js.indexOf('function uthRenderCommentary('), js.indexOf('function uthRenderCard('));
+  for (const inCard of ["verdict.className = 'verdict'", "className = 'did'", "evs.className = 'evs'"]) {
+    assert.ok(cardFn.includes(inCard), `the dock card lost ${inCard}`);
+  }
+  for (const below of ["sentence.className = 'reason'", "uth-note", "result.className = 'uth-result uth-late'", "net.className = 'uth-net'"]) {
+    assert.ok(commentaryFn.includes(below), `the commentary lost ${below}`);
+    assert.ok(!cardFn.includes(below), `${below} is still in the dock`);
+  }
 });
 
-test('the analysis text on the card is bigger than it was', () => {
+test('the winner line sits with the hands, after the grade, and quieter than it', () => {
+  const js = source('ultimate.js');
+  const commentary = js.slice(js.indexOf('function uthRenderCommentary('), js.indexOf('function uthRenderCard('));
+  const names = commentary.indexOf("p.className = 'uth-hand-name'");
+  const winner = commentary.indexOf("winner.className = 'uth-winner'");
+  assert.ok(names > 0 && winner > names, 'the winner line is not after the hands');
+  // The grade is in the dock, which the page lays out above the buttons and
+  // after the commentary; the winner is quieter than it.
   const css = source('styles.css');
-  const px = (rule: RegExp) => Number(/font-size: ([\d.]+)px/.exec(rule.exec(css)![1]!)![1]);
-  assert.ok(px(/\.uth \.quickcard \.reason \{([^}]*)\}/) >= 15, 'the sentence is still small');
-  assert.ok(px(/\.uth-note \{([^}]*)\}/) >= 15, 'the notes are still small');
-  assert.ok(px(/\.uth \.uth-result p \{([^}]*)\}/) >= 14, 'the result lines are still small');
+  assert.ok(fontSize(css, '.uth-winner {') < fontSize(css, '.quickcard .verdict {'), 'the winner is as loud as the grade');
+});
+
+test('the analysis text is bigger than it was, wherever it now lives', () => {
+  const css = source('styles.css');
+  // Round 7's size, kept when round 12 moved the sentence below the table.
+  assert.ok(fontSize(css, '.uth .feedback .reason') >= 15, 'the sentence is small below the table');
+  assert.ok(fontSize(css, '.uth .quickcard .reason') >= 15, 'the sentence is small on the card');
+  assert.ok(fontSize(css, '.uth-note {') >= 15, 'the notes are still small');
+  assert.ok(fontSize(css, '.uth .uth-result p {') >= 14, 'the result lines are still small');
+});
+
+/** Everything under a stub node: its own text, its markup stripped of tags, its children's. */
+function textOf(node: any): string {
+  if (!node || typeof node !== 'object') return '';
+  const own = [node.textContent ?? '', String(node.innerHTML ?? '').replace(/<[^>]*>/g, ' ')];
+  return [...own, ...(node.children ?? [])].map((part) => (typeof part === 'string' ? part : textOf(part))).join(' ');
+}
+
+test('on the built page, the played hand’s words are below the table and the grade is in the dock', async () => {
+  const page = loadHosted('#ultimate', [['ev:playerName', 'Dana'], ['ev:locale', 'en']]);
+  await page.booted;
+  page.uthSession().table.stackNextHand(page.parseCards('7s 2d As Ad Qs Jh 3d 8c 5s'));
+  let view: any = await page.api('/api/uth/deal');
+  while (view.legalActions.length > 0) {
+    const legal = view.legalActions.map((a: { action: string }) => a.action);
+    view = await page.api('/api/uth/act', { action: legal.includes('check') ? 'check' : 'raise1x' });
+  }
+  // The hand was played through the page's routes; mounting the screen again is
+  // what draws it, exactly as arriving at the table does.
+  page.go('#home');
+  page.go('#ultimate');
+  for (let i = 0; i < 80; i++) await new Promise((r) => setTimeout(r, 20));
+
+  // The bolded figures are their own nodes, so the words are compared with
+  // runs of whitespace collapsed rather than character for character.
+  const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
+  const card = flat(textOf(page.document.getElementById('uth-card')));
+  const commentary = flat(textOf(page.document.getElementById('uth-feedback')));
+  const feedback = view.feedback;
+  const sentence = flat(feedback.sentence.replace(/\*\*/g, ''));
+
+  // The grade, and what it was for, ride with the buttons.
+  assert.ok(card.includes(flat(feedback.verdict)), `the dock card lost the grade: ${card.slice(0, 120)}`);
+  assert.ok(card.includes(feedback.headline.split(' → ')[0]!), 'the dock card lost the spot');
+  // The reasoning and what the cards did are below the table.
+  assert.ok(commentary.includes(sentence), `the reasoning is not below the table: ${commentary.slice(0, 160)}`);
+  assert.ok(commentary.includes(flat(view.settlement.net)), 'the hand’s result is not below the table');
+  // And neither is in the other place.
+  assert.ok(!card.includes(sentence), 'the reasoning is still in the dock');
+  assert.ok(!commentary.includes(flat(feedback.verdict)), 'the grade is repeated below the table');
+  page.stopWatching();
 });

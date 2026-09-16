@@ -5,7 +5,8 @@
   "workspaces": ["packages/*"],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "migrate": "npm run migrate --workspace @evtrainer/trainer-web"
   },
   "devDependencies": {
     "@types/node": "^22",

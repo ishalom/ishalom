@@ -25,7 +25,7 @@ import { RULE_PRESETS } from '@evtrainer/ev-engine';
 
 import { catalogue } from '../src/i18n.ts';
 import { TrainerSession } from '../src/session.ts';
-import { loadHosted } from './helpers/hosted-page.ts';
+import { loadHosted, type HostedPage } from './helpers/hosted-page.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const CODE = /^(?:S17|H17|DAS|\d+D)$/;
@@ -88,4 +88,49 @@ test('no page script speaks English it did not get from the catalogue', () => {
     if (/aria-label', card\.label\)|card: card\.label\b/.test(code)) offenders.push(`${file}: a card spoken by its English label`);
   }
   assert.deepEqual(offenders, []);
+});
+
+/** Press one of the dock's buttons the way a tap reaches it. */
+async function tap(page: HostedPage, action: string): Promise<boolean> {
+  const box = page.document.getElementById('actions');
+  const node = (box.children as any[])
+    .flatMap((row: any) => row.children ?? [])
+    .find((b: any) => b.dataset?.action === action);
+  if (!node) return false;
+  for (const handler of node.listeners.click ?? []) handler({ preventDefault() {} });
+  for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 5));
+  return true;
+}
+
+test('the felt reads Hebrew when the dealer breaks — the word comes from the catalogue', async () => {
+  /*
+   * Found by round 12's sweep: the dealer's total read "23 bust" inside a Hebrew
+   * page, because that one word was written into the page rather than taken from
+   * the catalogue. The player's own total never had the bug, which is why only
+   * the dealer's side went unnoticed.
+   */
+  const page = loadHosted('#table', [
+    ['ev:playerName', 'בודק'],
+    ['ev:locale', 'he'],
+    ['ev:showAll', '1'],
+  ]);
+  await page.booted;
+  const dock = (globalThis as { EVDock?: { useClock: (fn: () => number) => void } }).EVDock;
+  let clock = 0;
+  dock?.useClock(() => clock);
+  for (let i = 0; i < 100; i++) await new Promise((r) => setTimeout(r, 5));
+
+  // The player stands on 16; the dealer draws to 23.
+  page.session().table.shoe.stack(page.parseCards('9s 6h 7d 8c 9d'));
+  clock += 600;
+  assert.ok(await tap(page, 'deal'), 'the table never offered Deal');
+  clock += 600;
+  assert.ok(await tap(page, 'stand'), 'the table never offered Stand');
+  for (let i = 0; i < 100; i++) await new Promise((r) => setTimeout(r, 5));
+
+  const dealerTotal = String(page.document.getElementById('dealer-total').textContent);
+  assert.match(dealerTotal, /23/, `the dealer did not break: ${dealerTotal}`);
+  assert.deepEqual(english(dealerTotal), [], `English on the felt: ${dealerTotal}`);
+  assert.ok(dealerTotal.includes(catalogue('he')['ui.bust']!), `the dealer's break is unworded: ${dealerTotal}`);
+  page.stopWatching();
 });

@@ -23,8 +23,29 @@ import { loadHosted, type HostedPage } from './helpers/hosted-page.ts';
 
 const settle = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Longer than any guard a page may hold after its buttons change. */
-const PAST_GUARD = 520;
+/*
+ * The dock's hold, on a clock this test controls (round 12).
+ *
+ * The hold is 450 ms of wall clock in a browser, and waiting it out here made
+ * the test a measure of how busy the machine was: it failed once in a full run
+ * with a browser probe alongside it, and passed alone seconds later. So the page
+ * is handed a clock that only moves when `pastTheHold()` says so — the hold is
+ * then exactly the hold, on any machine.
+ */
+let fakeNow = 0;
+
+function holdOnOurClock(page: HostedPage): void {
+  fakeNow = 0;
+  const dock = (globalThis as { EVDock?: { useClock: (fn: () => number) => void } }).EVDock;
+  assert.ok(dock?.useClock, 'the page has no dock to hold the buttons');
+  dock.useClock(() => fakeNow);
+  void page;
+}
+
+/** Move past the hold without waiting for anything. */
+const pastTheHold = () => {
+  fakeNow += 520;
+};
 
 function buttons(page: HostedPage, bar: string): any[] {
   const box = page.document.getElementById(bar);
@@ -50,12 +71,13 @@ async function until(check: () => boolean, what: string): Promise<void> {
 async function openTable(stack: string): Promise<HostedPage> {
   const page = loadHosted('#table', [['ev:playerName', 'Dana'], ['ev:showAll', '0']]);
   await page.booted;
+  holdOnOurClock(page);
   await until(() => actionsIn(page, 'actions').includes('deal'), 'the table never offered Deal');
-  await settle(PAST_GUARD);
+  pastTheHold();
   page.session().table.shoe.stack(page.parseCards(stack));
   await press(page, 'actions', 'deal');
   await until(() => page.session().view.phase === 'insurance', 'insurance was not offered');
-  await settle(PAST_GUARD);
+  pastTheHold();
   return page;
 }
 
@@ -72,7 +94,7 @@ test('a hand that ends on the insurance answer shows why before it offers the ne
 
   // Stepping through reaches the end of the hand, and the dealer names her blackjack.
   // The dock has just changed, so a press only counts after the hold.
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'actions', 'reveal-next');
   await press(page, 'actions', 'reveal-next');
   await until(() => actionsIn(page, 'actions').includes('deal'), 'Deal never came back');
@@ -91,7 +113,7 @@ test('a second tap straight after the insurance answer does not play the button 
   assert.equal(page.session().view.phase, 'player', 'a Stand arriving with the Decline tap ended the hand');
 
   // A deliberate press a moment later still plays.
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'actions', 'stand');
   assert.equal(page.session().view.phase, 'settled', 'a deliberate Stand was ignored');
   page.stopWatching();
@@ -100,18 +122,19 @@ test('a second tap straight after the insurance answer does not play the button 
 test('a second tap straight after the last decision does not deal the next Ultimate hand', async () => {
   const page = loadHosted('#ultimate', [['ev:playerName', 'Dana']]);
   await page.booted;
+  holdOnOurClock(page);
   await until(() => actionsIn(page, 'uth-actions').includes('deal'), 'Ultimate never offered Deal');
-  await settle(PAST_GUARD);
+  pastTheHold();
   page.uthSession().table.stackNextHand(page.parseCards('7s 2d As Ad Qs Jh 3d 8c 5s'));
   await press(page, 'uth-actions', 'deal');
   await until(() => actionsIn(page, 'uth-actions').includes('check'), 'no pre-flop decision');
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'uth-actions', 'check');
   await until(() => actionsIn(page, 'uth-actions').includes('raise2x'), 'no flop decision');
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'uth-actions', 'check');
   await until(() => actionsIn(page, 'uth-actions').includes('raise1x'), 'no river decision');
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'uth-actions', 'raise1x');
   assert.equal(page.uthSession().view.phase, 'settled');
   const hands = page.uthSession().stats.hands;
@@ -120,7 +143,7 @@ test('a second tap straight after the last decision does not deal the next Ultim
   assert.equal(page.uthSession().view.phase, 'settled', 'the second tap dealt a new hand');
   assert.equal(page.uthSession().stats.hands, hands);
 
-  await settle(PAST_GUARD);
+  pastTheHold();
   await press(page, 'uth-actions', 'deal');
   assert.equal(page.uthSession().view.phase, 'preflop', 'a deliberate Next hand was ignored');
   page.stopWatching();

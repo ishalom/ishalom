@@ -20,7 +20,8 @@
   const HOLD_MS = 450;
   let mode = null;
   let since = -Infinity;
-  const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+  const wallClock = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
+  let now = wallClock;
 
   /** Say what the dock offers now. A change starts the hold; the same offer again does not. */
   function enter(next) {
@@ -34,5 +35,22 @@
     return now() - since >= HOLD_MS;
   }
 
-  window.EVDock = { enter, ready, HOLD_MS };
+  /**
+   * Run the hold on a clock the caller supplies, or back on the wall clock.
+   *
+   * The hold is a length of time, so a test that waits it out in real time is
+   * really testing how busy the machine is: round 11's full run failed one of
+   * these once, with a browser probe loading the machine, and passed it alone a
+   * moment later. A test that hands in its own clock and moves it deliberately
+   * measures the hold itself, which is the thing worth measuring.
+   *
+   * The page never calls this. Called with nothing, the wall clock comes back.
+   */
+  function useClock(fn) {
+    now = typeof fn === 'function' ? fn : wallClock;
+    mode = null;
+    since = -Infinity;
+  }
+
+  window.EVDock = { enter, ready, useClock, HOLD_MS };
 })();

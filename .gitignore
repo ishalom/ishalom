@@ -7,3 +7,8 @@ packages/trainer-web/build/
 
 # A working channel between two Claude sessions, not documentation.
 handoff/
+
+# The one credential this project holds: Idan's Supabase database connection
+# string, pasted once so migrations can be run for him (round 12). It reaches
+# that database and nothing else in his account, and it never leaves this file.
+.env.local

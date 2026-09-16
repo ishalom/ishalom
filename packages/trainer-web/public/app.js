@@ -299,7 +299,9 @@ function renderDealer(view) {
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
       ? ''
-      : `· ${view.dealer.total}${view.dealer.total > 21 ? ' bust' : ''}`;
+      // The word comes from the catalogue, as the player's own total does: the
+      // Hebrew sweep found the dealer's reading "23 bust" (round 12).
+      : `· ${view.dealer.total}${view.dealer.total > 21 ? ` ${T('ui.bust')}` : ''}`;
 
   // §3.1 again: a bare total after the player busts reads as "you would have won
   // by standing", which is the opposite of true.
