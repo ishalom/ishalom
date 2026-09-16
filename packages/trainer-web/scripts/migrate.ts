@@ -61,13 +61,22 @@ function connectionString(): string {
         'That file is ignored by git. See handoff/from-code.md for where to copy it from.',
     );
   }
+  let sawTheLine = false;
   for (const line of file.split(/\r?\n/)) {
     const match = /^\s*(?:export\s+)?DATABASE_URL\s*=\s*(.*)\s*$/.exec(line);
     if (!match) continue;
+    sawTheLine = true;
     const value = match[1]!.trim().replace(/^["']|["']$/g, '');
     if (value) return value;
   }
-  throw new Error('.env.local has no DATABASE_URL line.');
+  // The line ships empty, which is exactly the state Idan will be in: say what to
+  // do next rather than what is missing.
+  throw new Error(
+    sawTheLine
+      ? 'The DATABASE_URL line in .env.local is empty. Paste the line Supabase gives you ' +
+        'after the "=". handoff/from-code.md, section 1, has the exact clicks.'
+      : '.env.local has no DATABASE_URL line.',
+  );
 }
 
 interface Target {
