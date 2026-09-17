@@ -13,6 +13,8 @@
     <script src="/track.js"></script>
     <script src="/chips.js"></script>
     <script src="/dock.js"></script>
+    <script src="/returns.js"></script>
+    <script src="/intro.js"></script>
   </head>
   <body>
     <div class="shell uth">
@@ -100,9 +102,20 @@
         <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
       </div>
 
+      <dialog id="uth-intro">
+        <form method="dialog">
+          <h2 data-i18n="intro.title">Before your first hand</h2>
+          <p class="intro-body" id="uth-intro-body"></p>
+          <menu>
+            <button value="ok" data-i18n="intro.ok">Deal me in</button>
+          </menu>
+        </form>
+      </dialog>
+
       <dialog id="uth-howto">
         <form method="dialog">
           <h2 data-i18n="howto.title">How this works</h2>
+          <p class="howto-lead" id="uth-howto-lead"></p>
           <ol class="howto" id="uth-howto-list"></ol>
           <menu>
             <button value="cancel" data-i18n="ui.close">Close</button>

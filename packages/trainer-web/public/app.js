@@ -631,16 +631,6 @@ function describeSpotLine(feedback) {
  * seeing the answer (§3.4). A player who has chosen to skip the walkthrough
  * gets it immediately, which is the point of that setting.
  */
-/**
- * How many decimals each EV chip shows: three, unless two different values
- * would print the same, when both get a fourth. Chips that look equal but are
- * ranked differently read as a bug. The same rule as the UTH card.
- */
-function chipDigits(evs) {
-  const three = evs.map((ev) => ev.toFixed(3));
-  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
-}
-
 function renderQuickCard(view) {
   const box = el('quickcard');
   if (!box) return;
@@ -728,18 +718,12 @@ function renderQuickCard(view) {
     box.appendChild(did);
   }
 
-  // §7.1 item 3: the EV of every legal action, sorted, in units.
-  const evs = document.createElement('div');
-  evs.className = 'evs';
-  feedback.ranked.forEach((entry, index) => {
-    const chip = document.createElement('span');
-    chip.className =
-      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    const sign = entry.ev >= 0 ? '+' : '';
-    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(chipDigits(feedback.ranked.map((e) => e.ev))[index])}`;
-    evs.appendChild(chip);
-  });
-  box.appendChild(evs);
+  // §7.1 item 3, as round 13 draws it: one row per legal action, longest bar
+  // best, on a scale that does not move from hand to hand. The pills this
+  // replaces are gone — they showed four minus signs and no distances.
+  box.appendChild(
+    window.EVReturns.block(feedback, { game: 'bj', decisions: view.stats.decisions, helpId: 'bj-returns-help' }),
+  );
 }
 
 function renderFeedback(view) {
@@ -1334,6 +1318,8 @@ el('opt-sound').addEventListener('change', (event) => {
 });
 
 function openHowTo() {
+  // The same passage a new player was shown once, where they would look for it.
+  window.EVIntro.passage(el('howto-lead'));
   const list = el('howto-list');
   list.replaceChildren();
   for (const n of [1, 2, 3, 4]) {
@@ -1488,4 +1474,8 @@ el('open-reference').addEventListener('click', openReference);
 el('open-howto').addEventListener('click', openHowTo);
 
 // After the locale handshake, so the first render is already in the right language.
-Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  // Before the very first hand this player ever plays, and never again.
+  window.EVIntro.showOnce('intro', 'intro-body');
+  return send('/api/state');
+});

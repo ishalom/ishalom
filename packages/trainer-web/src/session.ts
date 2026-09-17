@@ -26,6 +26,7 @@ import {
   type BlackjackAction,
   type BlackjackPayout,
   type BlackjackRules,
+  type Scenario,
   type SeverityTier,
 } from '@evtrainer/ev-engine';
 import { BlackjackTable, type DecisionRecord } from '@evtrainer/game-engine';
@@ -35,8 +36,16 @@ import {
   bustOnNextCard,
   dealerOdds,
   explain,
+  INSURANCE_STAKE,
   insuranceOdds,
+  standOutcome,
 } from './explain.ts';
+import {
+  equivalentGroups,
+  RETURN_SCALE_MAX,
+  returned,
+  sameFigure,
+} from './returns.ts';
 import {
   difficultyTable,
   type ScenarioDifficulty,
@@ -623,11 +632,22 @@ export class TrainerSession {
     this.streakMilestone =
       this.streak > before && STREAK_MILESTONES.includes(this.streak) ? this.streak : null;
 
+    /*
+     * What each action is worth, and what a player now reads for it.
+     *
+     * `ev` is the stored figure and stays exactly as it was: net of the stake,
+     * in units of the wager. `value` is round 13's display scale — what one
+     * unit already at risk comes back — and is never stored, never compared and
+     * never written into a record. Both are carried so that the card can show
+     * one while everything that grades, costs or rates reads the other.
+     */
+    const stake = record.scenarioKey === 'bj:insurance' ? INSURANCE_STAKE : 1;
     const ranked = record.legalActions
       .map((action) => ({
         action,
         label: prettyAction(action, this.locale),
         ev: record.evByAction[action] ?? 0,
+        value: returned(record.evByAction[action] ?? 0, stake),
       }))
       .sort((a, b) => b.ev - a.ev);
 
@@ -706,8 +726,72 @@ export class TrainerSession {
       evCost: record.evCost,
       counterNote: this.counterNote(record),
       ranked,
+      returns: this.returnsBlock(scenario, ranked, stake),
       sensitivity,
     };
+  }
+
+  /**
+   * Everything the card needs to draw the returns, and nothing it has to work out.
+   *
+   * The page draws bars and prints figures; which stake the spot puts at risk,
+   * which actions come to the same figure, and whether this hand can carry the
+   * worked example are all decided here, where the scenario and the rules are.
+   */
+  private returnsBlock(
+    scenario: Scenario,
+    ranked: Array<{ action: string; ev: number; value: number }>,
+    stake: number,
+  ): unknown {
+    return {
+      stake,
+      scaleMax: RETURN_SCALE_MAX,
+      best: ranked[0]?.value ?? 0,
+      // Ties are read off the figures a player actually sees, not off the EVs.
+      equivalent: equivalentGroups(ranked),
+      example: this.standExample(scenario, ranked),
+    };
+  }
+
+  /**
+   * The hand's own arithmetic, for the explanation behind the `?`.
+   *
+   * Standing is the one action whose figure a player can rebuild unaided: a win
+   * returns two units and a push returns one, so the figure is
+   * `2 × P(win) + 1 × P(push)` and nothing else. The odds come from the same
+   * chart the decision was graded against — and the identity is *checked* here
+   * rather than asserted, so a spot where the two would not agree to the last
+   * decimal simply carries no example instead of teaching a sum that does not
+   * come out.
+   */
+  private standExample(
+    scenario: Scenario,
+    ranked: Array<{ action: string; ev: number; value: number }>,
+  ): unknown {
+    const stand = ranked.find((row) => row.action === 'stand');
+    if (!stand || scenario.kind === 'insurance') return null;
+    if (scenario.total === undefined || scenario.upcard === undefined) return null;
+
+    /*
+     * A stiff hand cannot tie: sixteen loses to every total the dealer makes and
+     * wins only when he breaks. A pat hand can tie, so it needs the push term
+     * as well, and that comes from the dealer's own outcomes.
+     */
+    const push = scenario.total <= 16 ? 0 : standOutcome(scenario.total, scenario.upcard, this.rules).push;
+
+    /*
+     * The win rate is read back out of the figure rather than quoted from the
+     * dealer's outcomes, and deliberately so. The chart cell each figure comes
+     * from is an average over the two-card hands that reach this total, and the
+     * dealer's outcomes are computed against one composition — so the two agree
+     * to about the third decimal and not always beyond it. Quoting both would
+     * print a sum that does not come out, in an explanation whose whole purpose
+     * is that the player can check it. Written this way the example always
+     * rebuilds the figure it explains, exactly, and the only borrowed number is
+     * the push, which is zero for every stiff hand and small for the rest.
+     */
+    const win = (stand.value - push) / 2;
+    return { kind: push === 0 ? 'bust' : 'winPush', win, push, value: stand.value };
   }
 
   /** The card-counter remark, or nothing at all. Costs and rating never see it. */

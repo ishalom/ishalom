@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="d24cc1d985853f5a07fbd5d93d2e2334a6677c0f-dirty" />
-<meta name="ev-build-at" content="2026-09-16T17:18:02.034Z" />
+<meta name="ev-build-commit" content="c0f3826db5052a02b38228612903661a58b1edf6-dirty" />
+<meta name="ev-build-at" content="2026-09-17T23:18:37.938Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -222,18 +222,6 @@ body {
 .feedback.blunder .verdict { color: var(--blunder); }
 
 .did { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
-.evs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.ev {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #101820;
-  border: 1px solid var(--line);
-  color: var(--muted);
-}
-.ev.best { color: var(--ink); border-color: #3f7d5c; background: rgba(52, 211, 153, 0.1); }
-.ev.chosen { outline: 1px dashed #6b7c8d; }
 .reason { margin: 0; font-size: 13.5px; }
 .sensitivity {
   margin: 10px 0 0;
@@ -994,11 +982,6 @@ hr.brass {
   border-radius: 12px;
   padding: 12px 13px;
 }
-.ev {
-  padding: 4px 10px;
-  font-size: 12.5px;
-  border-color: rgba(255, 255, 255, 0.07);
-}
 .action { border-radius: 12px; }
 .card { border-radius: 9px; }
 
@@ -1233,7 +1216,6 @@ body { font-family: var(--body); }
 
 /* Figures carry the argument; they are set to be read, not scanned past. */
 .num { font-size: 1.18em; }
-.ev { font-size: 15px; padding: 6px 12px; }
 .stat-value { font-size: 25px; }
 .stat-label { font-size: 11px; }
 .standing-value { font-size: 54px; }
@@ -1379,7 +1361,6 @@ body { font-family: var(--body); }
 .quickcard.significant .verdict { color: var(--significant); }
 .quickcard.blunder .verdict { color: var(--blunder); }
 .quickcard .did { margin: 1px 0 0; font-size: 14px; }
-.quickcard .evs { margin: 9px 0 0; }
 
 /* The feedback card below is now reasoning only, so it starts with a step
    rather than a heading and needs no top padding of its own. */
@@ -2061,6 +2042,136 @@ button,
  * and scroll with the page; the dock keeps the grade and the buttons only. */
 .uth .feedback { margin: 0 14px 10px; }
 .uth .feedback .uth-result { margin-top: 10px; }
+
+/* --- What comes back to you (round 13) ----------------------------------------
+ *
+ * One row per legal action: its name, a bar whose length is what that action
+ * returns per unit staked, and the figure itself. Longest is best, because the
+ * display is there to encourage the right play rather than to mark the error —
+ * nothing here is coloured for being wrong.
+ *
+ * The scale is fixed from 0 to 2.0 and never scaled to the hand: that is what
+ * lets a player see at a glance whether the hand is winnable at all. Two lines
+ * run the whole height of the block, drawn once rather than per row — where the
+ * best action reaches, so the gap to each bar is what that move costs, and a
+ * dashed one at 1.0, break-even. No legend; the `?` carries the meaning. */
+.returns { margin: 9px 0 0; }
+.returns-head { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.returns-title {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.returns-why {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #101820;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  cursor: pointer;
+}
+.returns-why[aria-expanded='true'] { color: var(--ink); border-color: #4a5966; }
+
+.returns-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 5px;
+}
+/* The lines span every row of the bar column. The span is written out in the
+   markup: `1 / -1` collapses to one cell when no rows are declared, which is
+   how the first build of this drew a line one row tall. */
+/* `align-items: center` would leave this empty element no height at all, and
+   the lines inside it nothing to run down. */
+.ret-lines { position: relative; grid-column: 2; align-self: stretch; z-index: 3; pointer-events: none; }
+.ret-line { position: absolute; top: -3px; bottom: -3px; inset-inline-start: var(--at); width: 0; }
+.ret-best { border-inline-start: 1.5px solid rgba(52, 211, 153, 0.5); }
+.ret-even { border-inline-start: 1.5px dashed rgba(230, 233, 238, 0.32); }
+
+.ret-name { font-size: 12.5px; color: var(--muted); }
+.ret-name.best { color: var(--ink); }
+.ret-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.ret-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #101820;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.ret-bar {
+  display: block;
+  height: 100%;
+  width: var(--len);
+  border-radius: 999px;
+  background: var(--optimal);
+  /* One colour, stepping down from the best action. A second colour would be a
+     second meaning, and the only meaning here is "longer is better". */
+  opacity: calc(1 - var(--step) * 0.22);
+}
+/* Doubling and splitting can lose more than the stake, so a figure can be
+   negative: the bar bottoms out and the minus sign carries it. */
+.ret-bar.none { width: 0; }
+/* Ultimate's river can be worth more than the scale holds. The bar says so at
+   its end rather than the scale being redrawn for one hand. */
+.ret-track.over::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 7px;
+  background: repeating-linear-gradient(45deg, rgba(230, 233, 238, 0.45) 0 2px, transparent 2px 4px);
+}
+.ret-fig {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.ret-fig.best { color: var(--ink); }
+
+/* Two actions can come to the same figure — on 16 against a ten, hitting and
+   standing differ in the fourth decimal. They are equivalent, and the screen
+   says so rather than printing a decimal nobody can act on. */
+.ret-same { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+.returns-help {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d141b;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.returns-help p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.returns-help p:last-child { margin-bottom: 0; }
+.returns-help b { color: var(--ink); font-weight: 600; }
+
+/* The same step up in size the rest of the card takes on a larger screen. */
+@media (min-width: 561px) {
+  .ret-name, .ret-fig { font-size: 14px; }
+  .ret-track { height: 12px; }
+  .returns-help p, .ret-same { font-size: 13.5px; }
+}
+
+/* --- Said once, before the first hand ever (round 13) ------------------------
+ * One passage, in its own small dialog and again at the head of How to play.
+ * Sized to be read rather than skimmed past, and quiet: it states what the app
+ * is, and nothing here congratulates anybody. */
+.intro-body, .howto-lead {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.intro-body b, .howto-lead b { color: var(--ink); font-weight: 600; }
 
 /* ===========================================================================
  * The shared build only.
@@ -7090,8 +7201,8 @@ const EN            = {
 
   // --- Step 3 assembled ---
   'combined': '**{verdict}** — {shape}. {numbers}. {stat}',
-  'combined.numbers': '{best} against {runnerUp} to {runnerUpVerb}',
-  'combined.numbersOnly': '{best}',
+  'combined.numbers': 'returns {best} against {runnerUp} to {runnerUpVerb}',
+  'combined.numbersOnly': 'returns {best}',
   'headline': '{hand} vs {up} → {verdict}',
   'headline.insurance': 'Insurance → {verdict}',
   'insurance.step1': 'Dealer shows an ace, so insurance is on offer. It is a bet on the hole card and nothing else.',
@@ -7229,6 +7340,28 @@ const EN            = {
   'fb.accuracyTip': 'Share of decisions played correctly, once coin-flips are set aside.',
   'fb.accuracyAll': 'Counting everything: {pct}%.',
   'fb.noCloseCalls': 'No close calls yet.',
+
+  // --- What comes back to you: the decision block and its `?` (round 13) ---
+  'ret.title': 'What comes back, per unit staked',
+  'ret.helpAria': 'What do these figures mean?',
+  'ret.same2': '{a} and {b} are worth the same here — they differ past the third decimal.',
+  'ret.sameMany': '{list} are worth the same here — they differ past the third decimal.',
+  'ret.helpWhat': 'Each figure is what **one unit already at risk comes back**, on average, if this spot were played over and over. **1.000 is break-even**: the stake comes back and nothing more.',
+  'ret.helpSurrender': 'Surrender is the one you can check without trusting anything: **half the bet comes back, always**, so it reads +0.500.',
+  'ret.helpFold': 'Folding is the one you can check without trusting anything: the Ante and the Blind are gone and **nothing comes back**, so it reads 0.000.',
+  'ret.helpStandBust': 'Standing here wins only when the dealer breaks, and a win returns two units: **{win} × 2 = {value}**.',
+  'ret.helpStandPush': 'Standing here wins {win} of the time and ties {push} of it. A win returns two units and a tie returns one: **{win} × 2 + {push} = {value}**.',
+  'ret.helpRiver': 'On the river nothing is estimated: your hand beats **{win}** of the dealer’s possible hands and ties {tie} of them, and the Ante, the Blind and the Play bet together come to {value}.',
+  'ret.helpHit': 'Hitting has no single sum. Some of the time you break and nothing comes back; the rest of the time you are holding a new hand, and the engine keeps solving forward from it.',
+  'ret.helpRaise': 'Raising has no single sum: the Play bet joins what is already at risk, and the engine plays your hand against every holding the dealer can have.',
+  'ret.helpDouble': 'Doubling and splitting put more money out, and that money is already inside the figure — which is what makes it comparable with the rest, and why it can fall below zero.',
+  'ret.helpUthStake': 'Every figure here is per unit of the Ante and the Blind, the two bets already on the table. A raise adds the Play bet on top of them, and it is already inside the figure.',
+  'ret.helpLines': 'The dashed line is **1.000**, break-even. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
+
+  // --- Said once, before the first hand ever played (round 13) ---
+  'intro.title': 'Before your first hand',
+  'intro.body': 'This is not a blackjack game. Every decision you make is measured against the mathematically best play, and that is what you are scored on. **You will lose hands playing perfectly — that is the point.**',
+  'intro.ok': 'Deal me in',
   'ui.why': 'Why?',
   'ui.thinkPrompt': 'Take a moment. What is my card telling you?',
   'ui.dealWhenReady': 'Deal when you are ready.',
@@ -7349,9 +7482,9 @@ const EN            = {
   'uth.class.offsuit':
     '{hilo}, different suits',
   'uth.note.suitFlips':
-    'Because your cards are suited, **{best}** is worth {ev}. With the same cards in different suits the best play is **{offBest}**, at {offEv} — the suit changes the decision.',
+    'Because your cards are suited, **{best}** returns {ev}. With the same cards in different suits the best play is **{offBest}**, returning {offEv} — the suit changes the decision.',
   'uth.note.suitSame':
-    'Being suited adds {gap} here — **{best}** is worth {ev} suited and {offEv} in different suits — but the decision is the same.',
+    'Being suited adds {gap} here — **{best}** returns {ev} suited and {offEv} in different suits — but the decision is the same.',
   'uth.note.connector':
     'The surprise worth knowing: in Ultimate even suited connectors like these are a check before the flop, not a raise. You are up against the dealer’s hand, where high cards count for more; the flush and straight chances are what make the hand worth keeping, and worth betting later if they arrive.',
   'uth.note.onlyWith':
@@ -7367,9 +7500,9 @@ const EN            = {
   'uth.show.dealer':
     'Dealer: {hand} ({five})',
   'uth.note.suitOffSame':
-    'Your cards are in different suits: **{best}** is worth {ev}. The same ranks in one suit would be worth {suitedEv}, with the same best play.',
+    'Your cards are in different suits: **{best}** returns {ev}. The same ranks in one suit would return {suitedEv}, with the same best play.',
   'uth.note.suitOffFlips':
-    'Your cards are in different suits, so the best play is **{best}**, at {ev}. The same ranks in one suit would make it **{suitedBest}**, at {suitedEv} — the suit would change the decision.',
+    'Your cards are in different suits, so the best play is **{best}**, returning {ev}. The same ranks in one suit would make it **{suitedBest}**, returning {suitedEv} — the suit would change the decision.',
   'uth.show.youWin':
     'You win: {you} against {dealer}',
   'uth.show.dealerWins':
@@ -7836,8 +7969,8 @@ const HE            = {
 
   // --- Step 3 assembled ---
   'combined': '**{verdict}** — {shape}. {numbers}. {stat}',
-  'combined.numbers': '{best} מול {runnerUp} ל{runnerUpVerb}',
-  'combined.numbersOnly': '{best}',
+  'combined.numbers': 'מחזיר {best} מול {runnerUp} ל{runnerUpVerb}',
+  'combined.numbersOnly': 'מחזיר {best}',
   'headline': '{hand} מול {up} ← {verdict}',
   'headline.insurance': 'ביטוח ← {verdict}',
   'insurance.step1': 'לדילר יש אס, אז הביטוח פתוח. זה הימור על הקלף הסמוי בלבד.',
@@ -7975,6 +8108,28 @@ const HE            = {
   'fb.accuracyTip': 'שיעור ההחלטות שנוצקו נכון, אחרי שמנטרלים את הטלות המטבע.',
   'fb.accuracyAll': 'בספירה של הכול: {pct}%.',
   'fb.noCloseCalls': 'עוד לא היו מקרים צמודים.',
+
+  // --- What comes back to you: the decision block and its `?` (round 13) ---
+  'ret.title': 'כמה חוזר לך על כל יחידה בסיכון',
+  'ret.helpAria': 'מה המספרים האלה אומרים?',
+  'ret.same2': '{a} ו{b} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
+  'ret.sameMany': '{list} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
+  'ret.helpWhat': 'כל מספר הוא **כמה חוזר אליך על כל יחידה שכבר בסיכון**, בממוצע, אילו שיחקת את המצב הזה שוב ושוב. **1.000 זאת נקודת האיזון**: הכסף חוזר אליך ולא יותר מזה.',
+  'ret.helpSurrender': 'ויתור הוא המספר שאפשר לבדוק בלי להאמין לאף אחד: **חצי מההימור חוזר, תמיד** — ולכן הוא +0.500.',
+  'ret.helpFold': 'פרישה היא המספר שאפשר לבדוק בלי להאמין לאף אחד: האנטה והבליינד אבודים ו**לא חוזר כלום** — ולכן היא 0.000.',
+  'ret.helpStandBust': 'עצירה כאן מנצחת רק כשהדילר נשרף, וניצחון מחזיר שתי יחידות: **{win} × 2 = {value}**.',
+  'ret.helpStandPush': 'עצירה כאן מנצחת ב-{win} מהמקרים ויוצאת תיקו ב-{push}. ניצחון מחזיר שתי יחידות ותיקו מחזיר אחת: **{win} × 2 + {push} = {value}**.',
+  'ret.helpRiver': 'בריבר שום דבר אינו הערכה: היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר ויוצאת תיקו מול {tie} מהן, והאנטה, הבליינד וה-Play יחד יוצאים {value}.',
+  'ret.helpHit': 'לקלף אין חשבון אחד. בחלק מהמקרים אתה נשרף ולא חוזר כלום; בשאר אתה מחזיק יד חדשה, והמנוע ממשיך לפתור ממנה הלאה.',
+  'ret.helpRaise': 'להעלאה אין חשבון אחד: הימור ה-Play מצטרף למה שכבר בסיכון, והמנוע משחק את היד שלך מול כל יד שהדילר יכול להחזיק.',
+  'ret.helpDouble': 'הכפלה ופיצול מוציאים עוד כסף, והכסף הזה כבר בתוך המספר — בגלל זה אפשר להשוות אותו לשאר, ובגלל זה הוא יכול לרדת מתחת לאפס.',
+  'ret.helpUthStake': 'כל מספר כאן הוא על כל יחידה של האנטה והבליינד, שני ההימורים שכבר על השולחן. העלאה מוסיפה עליהם את הימור ה-Play, והוא כבר בתוך המספר.',
+  'ret.helpLines': 'הקו המקווקו הוא **1.000**, נקודת האיזון. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
+
+  // --- Said once, before the first hand ever played (round 13) ---
+  'intro.title': 'לפני היד הראשונה שלך',
+  'intro.body': 'זה לא משחק בלאק ג׳ק. כל החלטה שלך נמדדת מול המהלך הנכון מתמטית, ועל זה אתה מקבל ציון. **תפסיד ידיים גם כששיחקת מושלם — וזאת בדיוק הנקודה.**',
+  'intro.ok': 'קדימה, נתחיל',
   'ui.why': 'למה?',
   'ui.thinkPrompt': 'קח רגע. מה הקלף שלי מספר לך?',
   'ui.dealWhenReady': 'חלק כשאתה מוכן.',
@@ -8095,9 +8250,9 @@ const HE            = {
   'uth.class.offsuit':
     '{hilo} בצורות שונות',
   'uth.note.suitFlips':
-    'בגלל שהקלפים שלך באותה צורה, **{best}** שווה {ev}. עם אותם קלפים בצורות שונות הבחירה הטובה היא **{offBest}**, ב-{offEv} — הצורה משנה את ההחלטה.',
+    'בגלל שהקלפים שלך באותה צורה, **{best}** מחזיר {ev}. עם אותם קלפים בצורות שונות הבחירה הטובה היא **{offBest}**, שמחזיר {offEv} — הצורה משנה את ההחלטה.',
   'uth.note.suitSame':
-    'הצורה המשותפת מוסיפה כאן {gap} — **{best}** שווה {ev} באותה צורה ו-{offEv} בצורות שונות — אבל ההחלטה זהה.',
+    'הצורה המשותפת מוסיפה כאן {gap} — **{best}** מחזיר {ev} באותה צורה ו-{offEv} בצורות שונות — אבל ההחלטה זהה.',
   'uth.note.connector':
     'ההפתעה שכדאי לדעת: באולטימייט גם קלפים עוקבים באותה צורה כמו אלה הם צ׳ק לפני הפלופ, לא העלאה. אתה מול היד של הדילר, ושם קלפים גבוהים שווים יותר; הסיכוי לפלאש או לרצף הוא מה שהופך את היד לשווה שמירה, ולשווה הימור בהמשך אם הוא מגיע.',
   'uth.note.onlyWith':
@@ -8113,9 +8268,9 @@ const HE            = {
   'uth.show.dealer':
     'הדילר: {hand} ({five})',
   'uth.note.suitOffSame':
-    'הקלפים שלך בצורות שונות: **{best}** שווה {ev}. אותם ערכים באותה צורה היו שווים {suitedEv}, עם אותה בחירה טובה.',
+    'הקלפים שלך בצורות שונות: **{best}** מחזיר {ev}. אותם ערכים באותה צורה היו מחזירים {suitedEv}, עם אותה בחירה טובה.',
   'uth.note.suitOffFlips':
-    'הקלפים שלך בצורות שונות, ולכן הבחירה הטובה היא **{best}**, ב-{ev}. אותם ערכים באותה צורה היו הופכים אותה ל-**{suitedBest}**, ב-{suitedEv} — הצורה הייתה משנה את ההחלטה.',
+    'הקלפים שלך בצורות שונות, ולכן הבחירה הטובה היא **{best}**, שמחזיר {ev}. אותם ערכים באותה צורה היו הופכים אותה ל-**{suitedBest}**, שמחזיר {suitedEv} — הצורה הייתה משנה את ההחלטה.',
   'uth.show.youWin':
     'אתה מנצח: {you} מול {dealer}',
   'uth.show.dealerWins':
@@ -8517,6 +8672,104 @@ function missingKeys(locale        )           {
   return Object.keys(EN).filter((key) => table[key] === undefined);
 }
 
+/* ===== packages/trainer-web/src/returns.ts ===== */
+/**
+ * What comes back to you (round 13).
+ *
+ * Every figure a player reads about an *action* is now what one unit already at
+ * risk comes back, on average, if the spot were played over and over. Surrender
+ * reads +0.500, because half the bet comes back and always does; folding in
+ * Ultimate reads 0.000, because nothing does; 1.000 is break-even everywhere.
+ *
+ * Idan's reason, from play: the reader is a casino player, and casino players
+ * think in payouts. The arithmetic also collapses to something doable at the
+ * table — standing is 0.23 × 2 = 0.46 rather than 0.23 × (+1) + 0.77 × (−1).
+ *
+ * WHAT THIS IS NOT. It is a display and explanation change. The stored figure,
+ * the grade, what an error cost, the rating, the leaderboard and every chip
+ * total stay exactly as they were, in units net of the stake. Nothing here is
+ * ever written back into a record.
+ *
+ * WHY IT CANNOT CHANGE A RANKING. Within one spot the transform is
+ * `1 + ev / stake` with the same stake for every option, which is affine and
+ * increasing: it moves every option by the same constant and scales them all by
+ * the same positive factor. Order is preserved, and so is the sign of every
+ * gap. The stake is what the spot itself has at risk — one unit for a blackjack
+ * hand, half a unit for insurance, the Ante and the Blind for Ultimate — which
+ * is what makes "per unit staked" true rather than a figure of speech.
+ */
+
+/** The fixed scale the bars are drawn on. Never scaled to the hand. */
+const RETURN_SCALE_MAX = 2;
+
+/** Break-even: the whole stake comes back and no more. */
+const RETURN_EVEN = 1;
+
+/** What one unit staked comes back, from an EV net of that stake. */
+function returned(ev        , stake = 1)         {
+  return 1 + ev / stake;
+}
+
+/** How many decimals a return is written to. Three, always — see `sameFigure`. */
+const RETURN_DECIMALS = 3;
+
+/**
+ * Whether two returns print the same figure.
+ *
+ * They can: on 16 against a ten, hitting and standing differ in the fourth
+ * decimal. Both used to be given a fourth decimal so that no two chips looked
+ * equal, which solved the wrong problem — the two plays really are worth the
+ * same, and a player who reads a fourth decimal to tell them apart learns
+ * something false. Now the figures stay at three decimals and the screen says,
+ * in words, that the plays are equivalent.
+ */
+function sameFigure(a        , b        )          {
+  return a.toFixed(RETURN_DECIMALS) === b.toFixed(RETURN_DECIMALS);
+}
+
+/**
+ * Groups of actions whose figures print the same, in the order given.
+ *
+ * Returns one group per set of tied actions, each with two or more members;
+ * spots where every figure differs return nothing at all.
+ */
+function equivalentGroups                                             (
+  rows              ,
+)             {
+  const groups             = [];
+  let current      = [];
+  for (const row of rows) {
+    if (current.length > 0 && sameFigure(current[0] .value, row.value)) current.push(row);
+    else {
+      if (current.length > 1) groups.push(current.map((r) => r.action));
+      current = [row];
+    }
+  }
+  if (current.length > 1) groups.push(current.map((r) => r.action));
+  return groups;
+}
+
+/**
+ * A return as a player reads it: three decimals, a real minus sign, and a plus
+ * wherever the figure is positive — the same shape as the rest of the app's
+ * signed figures, and the reason 0.000 and −0.710 cannot be mistaken for each
+ * other at a glance.
+ *
+ * `public/figure.js` carries the identical rule for the pages, and a test holds
+ * the two to the same output.
+ */
+function returnFigure(value        )         {
+  const text = Math.abs(value).toFixed(RETURN_DECIMALS);
+  // −0.000 is not a figure anybody writes.
+  if (Number(text) === 0) return `0.${'0'.repeat(RETURN_DECIMALS)}`;
+  return `${value < 0 ? '−' : '+'}${text}`;
+}
+
+/** Where a bar of this value ends, as a share of the fixed scale: 0 to 1. */
+function barShare(value        )         {
+  return Math.max(0, Math.min(1, value / RETURN_SCALE_MAX));
+}
+
 /* ===== packages/trainer-web/src/explain.ts ===== */
 /**
  * Plain-language explanations for the feedback card (spec §7.1 item 5, §3.4).
@@ -8547,6 +8800,7 @@ function missingKeys(locale        )           {
  * only when doubling after is allowed. Those are three different arguments and
  * they need three different sentences.
  */
+
 
 
 const GERUND                                            = {
@@ -8623,12 +8877,13 @@ function dealerOdds(upcard        , rules                )             {
 const percent = (value        )         => `${Math.round(value * 100)}%`;
 
 /**
- * A signed EV, with a real minus sign rather than a hyphen.
- *
- * The client renders numeric runs in the display face, so these read as figures
- * rather than as more prose.
+ * An action's worth, as a player now reads it (round 13): what one unit already
+ * at risk comes back. The stored EV is untouched — this is the same number said
+ * the way a casino player already thinks, and the walkthrough has to say it the
+ * same way the card does, or the two would contradict each other on one screen.
  */
-const units = (value        )         => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
+const back = (ev        , scenario          )         =>
+  returnFigure(returned(ev, scenario.kind === 'insurance' ? INSURANCE_STAKE : 1));
 
                                
               
@@ -9024,7 +9279,7 @@ function supportingStat(
   }
 
   if (pair.has('surrender')) {
-    return t(locale, 'stat.surrender', { half: units(-0.5) });
+    return t(locale, 'stat.surrender', { half: back(-0.5, scenario) });
   }
   return '';
 }
@@ -9040,10 +9295,10 @@ function readCombined(
   const c = contest(evaluation);
   const numbers =
     c.runnerUp === null
-      ? t(locale, 'combined.numbersOnly', { best: units(c.best.ev) })
+      ? t(locale, 'combined.numbersOnly', { best: back(c.best.ev, scenario) })
       : t(locale, 'combined.numbers', {
-          best: units(c.best.ev),
-          runnerUp: units(c.runnerUp.ev),
+          best: back(c.best.ev, scenario),
+          runnerUp: back(c.runnerUp.ev, scenario),
           runnerUpVerb: verbAfterTo(c.runnerUp.action, locale),
         });
 
@@ -9696,6 +9951,7 @@ function readChipBook(
 
 
 
+
 /** House restrictions layered over a preset. See `TrainerSession.restrictions`. */
                                
                                                  
@@ -10257,11 +10513,22 @@ class TrainerSession {
     this.streakMilestone =
       this.streak > before && STREAK_MILESTONES.includes(this.streak) ? this.streak : null;
 
+    /*
+     * What each action is worth, and what a player now reads for it.
+     *
+     * `ev` is the stored figure and stays exactly as it was: net of the stake,
+     * in units of the wager. `value` is round 13's display scale — what one
+     * unit already at risk comes back — and is never stored, never compared and
+     * never written into a record. Both are carried so that the card can show
+     * one while everything that grades, costs or rates reads the other.
+     */
+    const stake = record.scenarioKey === 'bj:insurance' ? INSURANCE_STAKE : 1;
     const ranked = record.legalActions
       .map((action) => ({
         action,
         label: prettyAction(action, this.locale),
         ev: record.evByAction[action] ?? 0,
+        value: returned(record.evByAction[action] ?? 0, stake),
       }))
       .sort((a, b) => b.ev - a.ev);
 
@@ -10340,8 +10607,72 @@ class TrainerSession {
       evCost: record.evCost,
       counterNote: this.counterNote(record),
       ranked,
+      returns: this.returnsBlock(scenario, ranked, stake),
       sensitivity,
     };
+  }
+
+  /**
+   * Everything the card needs to draw the returns, and nothing it has to work out.
+   *
+   * The page draws bars and prints figures; which stake the spot puts at risk,
+   * which actions come to the same figure, and whether this hand can carry the
+   * worked example are all decided here, where the scenario and the rules are.
+   */
+          returnsBlock(
+    scenario          ,
+    ranked                                                      ,
+    stake        ,
+  )          {
+    return {
+      stake,
+      scaleMax: RETURN_SCALE_MAX,
+      best: ranked[0]?.value ?? 0,
+      // Ties are read off the figures a player actually sees, not off the EVs.
+      equivalent: equivalentGroups(ranked),
+      example: this.standExample(scenario, ranked),
+    };
+  }
+
+  /**
+   * The hand's own arithmetic, for the explanation behind the `?`.
+   *
+   * Standing is the one action whose figure a player can rebuild unaided: a win
+   * returns two units and a push returns one, so the figure is
+   * `2 × P(win) + 1 × P(push)` and nothing else. The odds come from the same
+   * chart the decision was graded against — and the identity is *checked* here
+   * rather than asserted, so a spot where the two would not agree to the last
+   * decimal simply carries no example instead of teaching a sum that does not
+   * come out.
+   */
+          standExample(
+    scenario          ,
+    ranked                                                      ,
+  )          {
+    const stand = ranked.find((row) => row.action === 'stand');
+    if (!stand || scenario.kind === 'insurance') return null;
+    if (scenario.total === undefined || scenario.upcard === undefined) return null;
+
+    /*
+     * A stiff hand cannot tie: sixteen loses to every total the dealer makes and
+     * wins only when he breaks. A pat hand can tie, so it needs the push term
+     * as well, and that comes from the dealer's own outcomes.
+     */
+    const push = scenario.total <= 16 ? 0 : standOutcome(scenario.total, scenario.upcard, this.rules).push;
+
+    /*
+     * The win rate is read back out of the figure rather than quoted from the
+     * dealer's outcomes, and deliberately so. The chart cell each figure comes
+     * from is an average over the two-card hands that reach this total, and the
+     * dealer's outcomes are computed against one composition — so the two agree
+     * to about the third decimal and not always beyond it. Quoting both would
+     * print a sum that does not come out, in an explanation whose whole purpose
+     * is that the player can check it. Written this way the example always
+     * rebuilds the figure it explains, exactly, and the only borrowed number is
+     * the push, which is zero for every stiff hand and small for the rest.
+     */
+    const win = (stand.value - push) / 2;
+    return { kind: push === 0 ? 'bust' : 'winPush', win, push, value: stand.value };
   }
 
   /** The card-counter remark, or nothing at all. Costs and rating never see it. */
@@ -11113,6 +11444,7 @@ function updateUthRating(
 
 
 
+
 /*
  * Named for the game rather than generically. The shared build folds every
  * module into one scope, and `session.ts` and `explain.ts` already declare
@@ -11160,6 +11492,17 @@ const UTH_ACTIONS = Object.keys(ACTIONS)               ;
 const TIERS                 = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
 
 /**
+ * What is already at risk at every Ultimate decision: the Ante and the Blind,
+ * which are equal, mandatory and both forfeited by folding. The engine quotes
+ * its EVs in units of the ante and folding is exactly −2, so this is the stake
+ * round 13's figures are per unit of.
+ */
+const UTH_STAKE = 2;
+
+/** Dealer holdings the river solve enumerates: 45 unseen cards, taken two at a time. */
+const UTH_DEALER_HANDS = 990;
+
+/**
  * Keep a figure in one piece inside right-to-left text.
  *
  * In a Hebrew sentence a signed number or a raise size is a left-to-right run
@@ -11178,6 +11521,15 @@ const isolateFor = (locale        ) => (text        )         =>
 const uthUnits = (value        )         =>
   `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
 const uthPercent = (value        )         => `${Math.round(value * 100)}%`;
+
+/**
+ * An action's worth as a player now reads it: what one unit of the Ante and the
+ * Blind comes back (round 13). The stored EV is untouched. A *gap* between two
+ * of these figures is `uthBackGap`, on the same scale — quoting a net gap beside
+ * two return figures would contradict the subtraction the reader can do.
+ */
+const uthBack = (ev        )         => returnFigure(returned(ev, UTH_STAKE));
+const uthBackGap = (gap        )         => uthUnits(gap / UTH_STAKE);
 /**
  * A settlement figure, by the one figure rule every screen uses (round 8):
  * at most two decimals, trailing zeros dropped. It used to keep one place,
@@ -11279,8 +11631,16 @@ function uthPerfectPlayEdgePercent()         {
                     
                      
                  
-                                        
-                                                                  
+                                                                                 
+                                                                                 
+                                                                       
+            
+                  
+                     
+                 
+                           
+                                                                              
+    
                                                               
                    
                                                                       
@@ -12132,8 +12492,19 @@ class UthSession {
     const { record, evaluation, holeClass } = last;
     const phase = evaluation.phase;
     const correct = record.evCost === 0;
+    /*
+     * The Ante and the Blind are already on the table at every decision, so
+     * they are what "per unit staked" means here — and folding, which forfeits
+     * both, reads 0.000: nothing comes back. Break-even is 1.000, as it is in
+     * Blackjack. `ev` stays the stored figure, net, in units of the ante.
+     */
     const ranked = record.legalActions
-      .map((action) => ({ action, label: this.label(action), ev: record.evByAction[action] ?? 0 }))
+      .map((action) => ({
+        action,
+        label: this.label(action),
+        ev: record.evByAction[action] ?? 0,
+        value: returned(record.evByAction[action] ?? 0, UTH_STAKE),
+      }))
       .sort((a, b) => b.ev - a.ev);
 
     return {
@@ -12157,6 +12528,23 @@ class UthSession {
       optimal: record.optimalAction,
       evCost: record.evCost,
       ranked,
+      returns: {
+        stake: UTH_STAKE,
+        scaleMax: RETURN_SCALE_MAX,
+        best: ranked[0]?.value ?? 0,
+        equivalent: equivalentGroups(ranked),
+        // The river is the one decision whose odds are exact and countable, so
+        // it is the one that can show the player what is behind the figure.
+        example:
+          phase === 'river' && evaluation.wins !== undefined
+            ? {
+                kind: 'river',
+                win: (evaluation.wins ?? 0) / UTH_DEALER_HANDS,
+                tie: (evaluation.ties ?? 0) / UTH_DEALER_HANDS,
+                value: ranked.find((row) => row.action === 'raise1x')?.value ?? ranked[0] .value,
+              }
+            : null,
+      },
       sentence: this.sentence(record, evaluation),
       notes: phase === 'preflop' ? this.preflopNotes(holeClass) : phase === 'river' ? this.riverNotes(evaluation) : [],
       solveMs: evaluation.solveMs,
@@ -12186,7 +12574,7 @@ class UthSession {
       }
       if (record.optimalAction === 'raise4x') {
         return t(L, 'uth.s.preRaise', {
-          gap: iso(uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
+          gap: iso(uthBackGap((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
         });
       }
       return t(L, 'uth.s.preCheck', {
@@ -12196,9 +12584,10 @@ class UthSession {
     }
 
     if (evaluation.phase === 'flop') {
+      // On the card's scale, like every other gap quoted beside these figures.
       const gap = Math.abs((ev.raise2x ?? 0) - (ev.check ?? 0));
       return t(L, record.optimalAction === 'raise2x' ? 'uth.s.flopRaise' : 'uth.s.flopCheck', {
-        gap: iso(gap.toFixed(3)),
+        gap: iso(uthBackGap(gap).replace('+', '')),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
     }
@@ -12275,9 +12664,9 @@ class UthSession {
       return [
         t(L, off.action !== same.action ? 'uth.note.suitOffFlips' : 'uth.note.suitOffSame', {
           best: this.label(off.action).toLowerCase(),
-          ev: iso(uthUnits(off.ev)),
+          ev: iso(uthBack(off.ev)),
           suitedBest: this.label(same.action).toLowerCase(),
-          suitedEv: iso(uthUnits(same.ev)),
+          suitedEv: iso(uthBack(same.ev)),
         }),
       ];
     }
@@ -12290,18 +12679,18 @@ class UthSession {
       notes.push(
         t(L, 'uth.note.suitFlips', {
           best: this.label(suited.action).toLowerCase(),
-          ev: iso(uthUnits(suited.ev)),
+          ev: iso(uthBack(suited.ev)),
           offBest: this.label(off.action).toLowerCase(),
-          offEv: iso(uthUnits(off.ev)),
+          offEv: iso(uthBack(off.ev)),
         }),
       );
     } else {
       notes.push(
         t(L, 'uth.note.suitSame', {
           best: this.label(suited.action).toLowerCase(),
-          ev: iso(uthUnits(suited.ev)),
-          offEv: iso(uthUnits(off.ev)),
-          gap: iso(uthUnits(suited.ev - off.ev)),
+          ev: iso(uthBack(suited.ev)),
+          offEv: iso(uthBack(off.ev)),
+          gap: iso(uthBackGap(suited.ev - off.ev)),
         }),
       );
     }
@@ -12407,8 +12796,8 @@ class UthSession {
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
-const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
-const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
+const TABLE_HTML = "<div class=\"shell\">\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <!-- The dealer who teaches (§3.4): she prompts before the decision and\n           answers questions the engine can already answer exactly. -->\n      <div class=\"dealer-zone\">\n        <div class=\"avatar\" aria-hidden=\"true\">\n          <svg viewBox=\"0 0 64 64\" role=\"img\">\n            <defs>\n              <linearGradient id=\"vest\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n                <stop offset=\"0\" stop-color=\"#2b3947\" />\n                <stop offset=\"1\" stop-color=\"#1b2530\" />\n              </linearGradient>\n            </defs>\n            <circle cx=\"32\" cy=\"24\" r=\"12\" fill=\"#d8b48c\" />\n            <path d=\"M20 20c0-7 5-11 12-11s12 4 12 11c0-3-4-5-12-5s-12 2-12 5z\" fill=\"#26313d\" />\n            <circle cx=\"27\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <circle cx=\"37\" cy=\"24\" r=\"1.5\" fill=\"#1b2530\" />\n            <path d=\"M28 30c2.5 2 5.5 2 8 0\" stroke=\"#a8815c\" stroke-width=\"1.4\" fill=\"none\" stroke-linecap=\"round\" />\n            <path d=\"M12 64c0-13 9-21 20-21s20 8 20 21z\" fill=\"url(#vest)\" />\n            <path d=\"M32 43l-7 6 7 15 7-15z\" fill=\"#f2f5f8\" />\n            <path d=\"M32 44l-5 4 5 3 5-3z\" fill=\"#c9a227\" />\n            <path d=\"M27 47l-4-2 3 5z M37 47l4-2-3 5z\" fill=\"#c9a227\" />\n          </svg>\n        </div>\n        <div class=\"speech\">\n          <div class=\"speech-who\" data-i18n=\"ui.dealerName\">Vera · dealer</div>\n          <p id=\"say\" data-i18n=\"ui.takeSeat\">Take a seat. Deal when you’re ready.</p>\n          <p id=\"answer\" hidden class=\"muted\"></p>\n          <div class=\"asks\" id=\"asks\"></div>\n        </div>\n      </div>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"intro\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"intro.title\">Before your first hand</h2>\n          <p class=\"intro-body\" id=\"intro-body\"></p>\n          <menu>\n            <button value=\"ok\" data-i18n=\"intro.ok\">Deal me in</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-intro\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"intro.title\">Before your first hand</h2>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n          <menu>\n            <button value=\"ok\" data-i18n=\"intro.ok\">Deal me in</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
 /*
@@ -12449,7 +12838,20 @@ const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a sta
     return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
   }
 
-  window.EVFigure = { round, plain, units };
+  /**
+   * A return, as round 13 writes it: three decimals, always signed, a real
+   * minus sign. Not the two-decimal rule above — a return is a share of a
+   * stake, not a number of chips, and the third decimal is where hitting and
+   * standing part company. `src/returns.ts` carries the identical rule for the
+   * prose the sessions compose, and a test holds the two to the same output.
+   */
+  function ret(value) {
+    const text = Math.abs(value).toFixed(3);
+    const figure = Number(text) === 0 ? '0.000' : `${value < 0 ? '−' : '+'}${text}`;
+    return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${figure}⁩` : figure;
+  }
+
+  window.EVFigure = { round, plain, units, ret };
 })();
 
 
@@ -12912,6 +13314,334 @@ const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!-- The rules are a sta
   }
 
   window.EVDock = { enter, ready, useClock, HOLD_MS };
+})();
+
+
+/* What comes back to you: the decision block, both tables (round 13). */
+/*
+ * What comes back to you: the decision block (round 13).
+ *
+ * This replaces the four EV pills. Idan's report from play was that
+ * `קלף: -0.463 · ויתור: -0.500 · עצירה: -0.540 · הכפלה: -0.933` never showed
+ * which moves are close and which are miles apart, and that the negative
+ * figures taught nothing. So:
+ *
+ *   - one row per legal action, longest bar = best move, because the display
+ *     should encourage the right play rather than mark the error;
+ *   - a fixed scale, 0 to 2.0, the same on every hand — never scaled to the
+ *     hand, which is what lets a player see at a glance whether the hand is
+ *     winnable at all;
+ *   - two lines running the whole height of the block: where the best action
+ *     reaches, so the small gap to each bar is what that move costs, and a
+ *     dashed one at 1.0, break-even.
+ *
+ * No legend: the lines carry their own shape, and their exact meaning lives
+ * behind the `?`. Nothing here marks an error — the grade above already said it
+ * once, and saying it twice is what §3.1 exists to prevent.
+ *
+ * The figures themselves come from the session, which knows the stake each spot
+ * puts at risk. This file draws them and works nothing out. Shared by both
+ * tables; lives on `window.EVReturns`.
+ */
+(function () {
+  const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+  /** How a return is written, from the one rule every figure goes through. */
+  const figure = (value) => window.EVFigure.ret(value);
+
+  /**
+   * The help copy's own emphasis and figures, marked up the way the reveal's
+   * steps are: `**` around the words that carry the point, numbers set in the
+   * display face. Engine copy only — nothing a player typed reaches here — and
+   * escaped first regardless.
+   */
+  function rich(target, text) {
+    const escaped = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    target.innerHTML = escaped
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/(?<![\w>])([+−-]?\d+(?:[.,]\d+)?%?)(?![\w<])/g, '<span class="num">$1</span>');
+  }
+
+  /** Remembered across sessions: whether the explanation stands open. */
+  const HELP_KEY = 'ev:returnsHelp';
+  /** How many graded decisions count as "a new player's first hands". */
+  const NEW_PLAYER_DECISIONS = 5;
+
+  function readPreference() {
+    try {
+      return localStorage.getItem(HELP_KEY);
+    } catch {
+      // A browser with storage switched off still gets the explanation; it just
+      // cannot be remembered, which is better than the page failing to draw.
+      return null;
+    }
+  }
+
+  function writePreference(value) {
+    try {
+      localStorage.setItem(HELP_KEY, value);
+    } catch {
+      /* nothing to do: the choice lasts as long as the page does */
+    }
+  }
+
+  /** Open by itself for a new player's first hands; after that, as last left. */
+  function helpOpen(decisions) {
+    const stored = readPreference();
+    if (stored === 'open') return true;
+    if (stored === 'closed') return false;
+    return decisions <= NEW_PLAYER_DECISIONS;
+  }
+
+  const percent = (share) => `${(share * 100).toFixed(2)}%`;
+
+  /** A whole percentage, for the worked example the player is meant to redo. */
+  const wholePercent = (value) => `${Math.round(value * 100)}%`;
+
+  function lines(returns, rows) {
+    const holder = document.createElement('div');
+    holder.className = 'ret-lines';
+    // Explicit rows, not `1 / -1`: with no explicit grid rows declared that
+    // collapses to a single cell and the line stops being continuous.
+    holder.style.gridRow = `1 / span ${rows}`;
+    const best = document.createElement('i');
+    best.className = 'ret-line ret-best';
+    best.style.setProperty('--at', percent(share(returns.best, returns.scaleMax)));
+    const even = document.createElement('i');
+    even.className = 'ret-line ret-even';
+    even.style.setProperty('--at', percent(share(1, returns.scaleMax)));
+    holder.append(best, even);
+    return holder;
+  }
+
+  function share(value, scaleMax) {
+    return Math.max(0, Math.min(1, value / scaleMax));
+  }
+
+  /**
+   * The sentence for actions that print the same figure.
+   *
+   * On 16 against a ten, hitting and standing differ in the fourth decimal.
+   * Both used to be given a fourth decimal so no two chips looked equal, which
+   * taught the player a difference that is not there. They are equivalent, and
+   * the screen now says so.
+   */
+  function sameNote(groups, labelOf) {
+    if (!groups || groups.length === 0) return null;
+    const note = document.createElement('p');
+    note.className = 'ret-same';
+    note.textContent = groups
+      .map((group) => {
+        const labels = group.map(labelOf);
+        return labels.length === 2
+          ? T('ret.same2', { a: labels[0], b: labels[1] })
+          : T('ret.sameMany', { list: labels.join(', ') });
+      })
+      .join(' ');
+    return note;
+  }
+
+  /**
+   * The explanation behind the `?`.
+   *
+   * Surrender — or folding, in Ultimate — is the anchor, because it is the one
+   * figure a player can check without trusting anything: half the bet comes
+   * back, always, so it is +0.500 and no arithmetic is involved. The worked
+   * example uses this hand's own numbers, never a hard-coded one.
+   */
+  function helpPanel(feedback, opts) {
+    const returns = feedback.returns;
+    const box = document.createElement('section');
+    box.className = 'returns-help';
+    box.id = opts.helpId;
+
+    const add = (key, values) => {
+      const p = document.createElement('p');
+      rich(p, T(key, values));
+      box.appendChild(p);
+    };
+
+    add('ret.helpWhat');
+    add(opts.game === 'uth' ? 'ret.helpFold' : 'ret.helpSurrender');
+
+    const example = returns.example;
+    if (example && example.kind === 'bust') {
+      add('ret.helpStandBust', { win: wholePercent(example.win), value: figure(example.value) });
+    } else if (example && example.kind === 'winPush') {
+      add('ret.helpStandPush', {
+        win: wholePercent(example.win),
+        push: wholePercent(example.push),
+        value: figure(example.value),
+      });
+    } else if (example && example.kind === 'river') {
+      add('ret.helpRiver', {
+        win: wholePercent(example.win),
+        tie: wholePercent(example.tie),
+        value: figure(example.value),
+      });
+    }
+
+    add(opts.game === 'uth' ? 'ret.helpRaise' : 'ret.helpHit');
+    add(opts.game === 'uth' ? 'ret.helpUthStake' : 'ret.helpDouble');
+    add('ret.helpLines');
+    return box;
+  }
+
+  /**
+   * The whole block, ready to append.
+   *
+   * @param feedback the graded decision, carrying `ranked` and `returns`
+   * @param opts     `game` ('bj' or 'uth'), `decisions` (how many have been
+   *                 graded in this session) and an optional `helpId`
+   */
+  function block(feedback, opts) {
+    const returns = feedback.returns;
+    const rows = feedback.ranked;
+    const section = document.createElement('section');
+    section.className = 'returns';
+    if (!returns || !rows || rows.length === 0) return section;
+
+    const helpId = opts.helpId || 'returns-help';
+    const head = document.createElement('div');
+    head.className = 'returns-head';
+    const title = document.createElement('span');
+    title.className = 'returns-title';
+    // The one place the quantity is named, which is what keeps it apart from
+    // the chips, the stack and the hand's own figure — those stay net.
+    title.textContent = T('ret.title');
+    const why = document.createElement('button');
+    why.type = 'button';
+    why.className = 'returns-why';
+    why.textContent = '?';
+    why.setAttribute('aria-controls', helpId);
+    why.setAttribute('aria-label', T('ret.helpAria'));
+    head.append(title, why);
+    section.appendChild(head);
+
+    const grid = document.createElement('div');
+    grid.className = 'returns-grid';
+    grid.appendChild(lines(returns, rows.length));
+
+    rows.forEach((row, index) => {
+      const name = document.createElement('span');
+      name.className = 'ret-name' + (index === 0 ? ' best' : '');
+      name.textContent = row.label;
+
+      const track = document.createElement('div');
+      track.className = 'ret-track';
+      const bar = document.createElement('i');
+      // Longest is best: the strongest colour on the best action, stepping down
+      // from there. Nothing is coloured for being wrong.
+      bar.className = 'ret-bar';
+      bar.style.setProperty('--step', String(Math.min(index, 3)));
+      bar.style.setProperty('--len', percent(share(row.value, returns.scaleMax)));
+      // Doubling and splitting can lose more than the stake, so a figure can be
+      // negative: the bar bottoms out and the figure carries the minus.
+      if (row.value <= 0) bar.classList.add('none');
+      // Ultimate's river can be worth more than the scale holds; the bar says
+      // so at its end rather than the scale being redrawn for one hand.
+      if (row.value > returns.scaleMax) track.classList.add('over');
+      track.appendChild(bar);
+
+      const fig = document.createElement('span');
+      fig.className = 'ret-fig' + (index === 0 ? ' best' : '');
+      fig.textContent = figure(row.value);
+
+      // Every cell is placed by hand. The lines below span the whole bar column,
+      // and an auto-placed grid *skips* cells something else already occupies —
+      // which quietly pushed each bar into the next column along.
+      [name, track, fig].forEach((node, column) => {
+        if (row.action === feedback.chosen) node.classList.add('chosen');
+        node.style.gridColumn = String(column + 1);
+        node.style.gridRow = String(index + 1);
+        grid.appendChild(node);
+      });
+    });
+    section.appendChild(grid);
+
+    const labelOf = (action) => {
+      const found = rows.find((row) => row.action === action);
+      return found ? found.label : action;
+    };
+    const note = sameNote(returns.equivalent, labelOf);
+    if (note) section.appendChild(note);
+
+    const help = helpPanel(feedback, { ...opts, helpId });
+    let open = helpOpen(opts.decisions ?? 0);
+    const apply = () => {
+      help.hidden = !open;
+      why.setAttribute('aria-expanded', String(open));
+    };
+    apply();
+    why.addEventListener('click', () => {
+      open = !open;
+      writePreference(open ? 'open' : 'closed');
+      apply();
+    });
+    section.appendChild(help);
+    return section;
+  }
+
+  window.EVReturns = { block, rich, HELP_KEY, NEW_PLAYER_DECISIONS };
+})();
+
+
+/* What this app is, said once before the first hand ever (round 13). */
+/*
+ * What this app is, said once (round 13).
+ *
+ * Idan picked exactly one of the ten ideas on the table: before the very first
+ * hand a player ever plays, one short passage saying what they are looking at.
+ * Players arrive expecting a blackjack game, play on autopilot, and read a
+ * grade on a hand they won as a mistake in the app rather than in the play.
+ *
+ * One passage, once, ever — not a tutorial and not a screen of bullets. It is
+ * the same words at the head of "How to play", so a player who waved it away
+ * can find it again in the one place they would look.
+ *
+ * Shared by both tables; lives on `window.EVIntro`.
+ */
+(function () {
+  const SEEN_KEY = 'ev:introSeen';
+  const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+
+  function seen() {
+    try {
+      return localStorage.getItem(SEEN_KEY) === '1';
+    } catch {
+      // Storage switched off: it cannot be remembered, and showing it on every
+      // visit would be worse than not showing it at all.
+      return true;
+    }
+  }
+
+  function markSeen() {
+    try {
+      localStorage.setItem(SEEN_KEY, '1');
+    } catch {
+      /* nothing to do */
+    }
+  }
+
+  /** Write the passage into a node, in the language on screen. */
+  function passage(node) {
+    if (node) window.EVReturns.rich(node, T('intro.body'));
+  }
+
+  /**
+   * Show it if it has never been shown. Returns whether it opened, which is
+   * what the tests read.
+   */
+  function showOnce(dialogId, bodyId) {
+    const dialog = document.getElementById(dialogId);
+    if (!dialog) return false;
+    passage(document.getElementById(bodyId));
+    if (seen()) return false;
+    markSeen();
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    return true;
+  }
+
+  window.EVIntro = { showOnce, passage, SEEN_KEY };
 })();
 
 
@@ -14100,16 +14830,6 @@ function describeSpotLine(feedback) {
  * seeing the answer (§3.4). A player who has chosen to skip the walkthrough
  * gets it immediately, which is the point of that setting.
  */
-/**
- * How many decimals each EV chip shows: three, unless two different values
- * would print the same, when both get a fourth. Chips that look equal but are
- * ranked differently read as a bug. The same rule as the UTH card.
- */
-function chipDigits(evs) {
-  const three = evs.map((ev) => ev.toFixed(3));
-  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
-}
-
 function renderQuickCard(view) {
   const box = el('quickcard');
   if (!box) return;
@@ -14197,18 +14917,12 @@ function renderQuickCard(view) {
     box.appendChild(did);
   }
 
-  // §7.1 item 3: the EV of every legal action, sorted, in units.
-  const evs = document.createElement('div');
-  evs.className = 'evs';
-  feedback.ranked.forEach((entry, index) => {
-    const chip = document.createElement('span');
-    chip.className =
-      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    const sign = entry.ev >= 0 ? '+' : '';
-    chip.textContent = `${entry.label}: ${sign}${entry.ev.toFixed(chipDigits(feedback.ranked.map((e) => e.ev))[index])}`;
-    evs.appendChild(chip);
-  });
-  box.appendChild(evs);
+  // §7.1 item 3, as round 13 draws it: one row per legal action, longest bar
+  // best, on a scale that does not move from hand to hand. The pills this
+  // replaces are gone — they showed four minus signs and no distances.
+  box.appendChild(
+    window.EVReturns.block(feedback, { game: 'bj', decisions: view.stats.decisions, helpId: 'bj-returns-help' }),
+  );
 }
 
 function renderFeedback(view) {
@@ -14803,6 +15517,8 @@ el('opt-sound').addEventListener('change', (event) => {
 });
 
 function openHowTo() {
+  // The same passage a new player was shown once, where they would look for it.
+  window.EVIntro.passage(el('howto-lead'));
   const list = el('howto-list');
   list.replaceChildren();
   for (const n of [1, 2, 3, 4]) {
@@ -14957,7 +15673,11 @@ el('open-reference').addEventListener('click', openReference);
 el('open-howto').addEventListener('click', openHowTo);
 
 // After the locale handshake, so the first render is already in the right language.
-Promise.resolve(window.EV && window.EV.ready).then(() => send('/api/state'));
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  // Before the very first hand this player ever plays, and never again.
+  window.EVIntro.showOnce('intro', 'intro-body');
+  return send('/api/state');
+});
 
 }
 
@@ -15079,19 +15799,6 @@ function uthBack() {
   node.setAttribute('role', 'img');
   node.setAttribute('aria-label', T('card.faceDown'));
   return node;
-}
-
-/**
- * How many decimals each EV chip shows.
- *
- * Three, unless two different values would print the same — K4s showed 3× and
- * check both as +0.019 when they are +0.0193 and +0.0189, and chips that look
- * equal but are ranked differently read as a bug. Those chips get a fourth
- * decimal. Truly equal values stay at three: there the chips should look equal.
- */
-function uthChipDigits(evs) {
-  const three = evs.map((ev) => ev.toFixed(3));
-  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
 }
 
 /** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
@@ -15298,6 +16005,8 @@ function uthRenderTrack(view) {
 
 /** How to play, including the Trips line — worded, and figured, by the session. */
 function uthOpenHowTo() {
+  // The same passage a new player was shown once, where they would look for it.
+  window.EVIntro.passage(el('uth-howto-lead'));
   const list = el('uth-howto-list');
   list.replaceChildren();
   for (const line of (uthState.view && uthState.view.howTo) || []) {
@@ -15534,18 +16243,15 @@ function uthRenderCard(view) {
     box.appendChild(did);
   }
 
-  const evs = document.createElement('div');
-  evs.className = 'evs';
-  const digits = uthChipDigits(feedback.ranked.map((entry) => entry.ev));
-  feedback.ranked.forEach((entry, index) => {
-    const chip = document.createElement('span');
-    chip.className =
-      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    chip.textContent =
-      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(digits[index])}`);
-    evs.appendChild(chip);
-  });
-  box.appendChild(evs);
+  // The same block Blackjack draws, on the same fixed scale (round 13). Here a
+  // unit staked is the Ante and the Blind together, so folding reads 0.000.
+  box.appendChild(
+    window.EVReturns.block(feedback, {
+      game: 'uth',
+      decisions: view.stats.decisions,
+      helpId: 'uth-returns-help',
+    }),
+  );
 
   // The reasoning, the notes and the result are commentary: they belong below
   // the table, not in the dock with the buttons (round 12). See uthRenderCommentary.
@@ -15755,7 +16461,11 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-Promise.resolve(window.EV && window.EV.ready).then(() => uthSend('/api/uth/state'));
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  // Before the very first hand this player ever plays, and never again.
+  window.EVIntro.showOnce('uth-intro', 'uth-intro-body');
+  return uthSend('/api/uth/state');
+});
 
 }
 

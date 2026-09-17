@@ -198,18 +198,6 @@ body {
 .feedback.blunder .verdict { color: var(--blunder); }
 
 .did { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
-.evs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.ev {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #101820;
-  border: 1px solid var(--line);
-  color: var(--muted);
-}
-.ev.best { color: var(--ink); border-color: #3f7d5c; background: rgba(52, 211, 153, 0.1); }
-.ev.chosen { outline: 1px dashed #6b7c8d; }
 .reason { margin: 0; font-size: 13.5px; }
 .sensitivity {
   margin: 10px 0 0;
@@ -970,11 +958,6 @@ hr.brass {
   border-radius: 12px;
   padding: 12px 13px;
 }
-.ev {
-  padding: 4px 10px;
-  font-size: 12.5px;
-  border-color: rgba(255, 255, 255, 0.07);
-}
 .action { border-radius: 12px; }
 .card { border-radius: 9px; }
 
@@ -1209,7 +1192,6 @@ body { font-family: var(--body); }
 
 /* Figures carry the argument; they are set to be read, not scanned past. */
 .num { font-size: 1.18em; }
-.ev { font-size: 15px; padding: 6px 12px; }
 .stat-value { font-size: 25px; }
 .stat-label { font-size: 11px; }
 .standing-value { font-size: 54px; }
@@ -1355,7 +1337,6 @@ body { font-family: var(--body); }
 .quickcard.significant .verdict { color: var(--significant); }
 .quickcard.blunder .verdict { color: var(--blunder); }
 .quickcard .did { margin: 1px 0 0; font-size: 14px; }
-.quickcard .evs { margin: 9px 0 0; }
 
 /* The feedback card below is now reasoning only, so it starts with a step
    rather than a heading and needs no top padding of its own. */
@@ -2037,3 +2018,133 @@ button,
  * and scroll with the page; the dock keeps the grade and the buttons only. */
 .uth .feedback { margin: 0 14px 10px; }
 .uth .feedback .uth-result { margin-top: 10px; }
+
+/* --- What comes back to you (round 13) ----------------------------------------
+ *
+ * One row per legal action: its name, a bar whose length is what that action
+ * returns per unit staked, and the figure itself. Longest is best, because the
+ * display is there to encourage the right play rather than to mark the error —
+ * nothing here is coloured for being wrong.
+ *
+ * The scale is fixed from 0 to 2.0 and never scaled to the hand: that is what
+ * lets a player see at a glance whether the hand is winnable at all. Two lines
+ * run the whole height of the block, drawn once rather than per row — where the
+ * best action reaches, so the gap to each bar is what that move costs, and a
+ * dashed one at 1.0, break-even. No legend; the `?` carries the meaning. */
+.returns { margin: 9px 0 0; }
+.returns-head { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.returns-title {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.returns-why {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #101820;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  cursor: pointer;
+}
+.returns-why[aria-expanded='true'] { color: var(--ink); border-color: #4a5966; }
+
+.returns-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 5px;
+}
+/* The lines span every row of the bar column. The span is written out in the
+   markup: `1 / -1` collapses to one cell when no rows are declared, which is
+   how the first build of this drew a line one row tall. */
+/* `align-items: center` would leave this empty element no height at all, and
+   the lines inside it nothing to run down. */
+.ret-lines { position: relative; grid-column: 2; align-self: stretch; z-index: 3; pointer-events: none; }
+.ret-line { position: absolute; top: -3px; bottom: -3px; inset-inline-start: var(--at); width: 0; }
+.ret-best { border-inline-start: 1.5px solid rgba(52, 211, 153, 0.5); }
+.ret-even { border-inline-start: 1.5px dashed rgba(230, 233, 238, 0.32); }
+
+.ret-name { font-size: 12.5px; color: var(--muted); }
+.ret-name.best { color: var(--ink); }
+.ret-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.ret-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #101820;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.ret-bar {
+  display: block;
+  height: 100%;
+  width: var(--len);
+  border-radius: 999px;
+  background: var(--optimal);
+  /* One colour, stepping down from the best action. A second colour would be a
+     second meaning, and the only meaning here is "longer is better". */
+  opacity: calc(1 - var(--step) * 0.22);
+}
+/* Doubling and splitting can lose more than the stake, so a figure can be
+   negative: the bar bottoms out and the minus sign carries it. */
+.ret-bar.none { width: 0; }
+/* Ultimate's river can be worth more than the scale holds. The bar says so at
+   its end rather than the scale being redrawn for one hand. */
+.ret-track.over::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 7px;
+  background: repeating-linear-gradient(45deg, rgba(230, 233, 238, 0.45) 0 2px, transparent 2px 4px);
+}
+.ret-fig {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.ret-fig.best { color: var(--ink); }
+
+/* Two actions can come to the same figure — on 16 against a ten, hitting and
+   standing differ in the fourth decimal. They are equivalent, and the screen
+   says so rather than printing a decimal nobody can act on. */
+.ret-same { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+.returns-help {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d141b;
+  max-height: 38vh;
+  overflow-y: auto;
+}
+.returns-help p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.returns-help p:last-child { margin-bottom: 0; }
+.returns-help b { color: var(--ink); font-weight: 600; }
+
+/* The same step up in size the rest of the card takes on a larger screen. */
+@media (min-width: 561px) {
+  .ret-name, .ret-fig { font-size: 14px; }
+  .ret-track { height: 12px; }
+  .returns-help p, .ret-same { font-size: 13.5px; }
+}
+
+/* --- Said once, before the first hand ever (round 13) ------------------------
+ * One passage, in its own small dialog and again at the head of How to play.
+ * Sized to be read rather than skimmed past, and quiet: it states what the app
+ * is, and nothing here congratulates anybody. */
+.intro-body, .howto-lead {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.intro-body b, .howto-lead b { color: var(--ink); font-weight: 600; }

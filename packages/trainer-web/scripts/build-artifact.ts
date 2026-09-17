@@ -106,6 +106,10 @@ const trackJs = read(PUBLIC, 'track.js');
 const chipsJs = read(PUBLIC, 'chips.js');
 // The dock's settle-in hold, shared by both tables (round 7).
 const dockJs = read(PUBLIC, 'dock.js');
+// What comes back to you: the decision block, shared by both tables (round 13).
+const returnsJs = read(PUBLIC, 'returns.js');
+// Said once, before a player's first hand ever (round 13).
+const introJs = read(PUBLIC, 'intro.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 // The usage page: who has played, how much, and who came back (round 9).
@@ -193,6 +197,12 @@ ${chipsJs}
 
 /* The dock's settle-in hold, shared by both tables (round 7). */
 ${dockJs}
+
+/* What comes back to you: the decision block, both tables (round 13). */
+${returnsJs}
+
+/* What this app is, said once before the first hand ever (round 13). */
+${introJs}
 
 /* The three screen scripts, unchanged but for their transport. */
 ${homeJs}

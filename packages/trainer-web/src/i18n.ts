@@ -132,8 +132,8 @@ const EN: Catalogue = {
 
   // --- Step 3 assembled ---
   'combined': '**{verdict}** — {shape}. {numbers}. {stat}',
-  'combined.numbers': '{best} against {runnerUp} to {runnerUpVerb}',
-  'combined.numbersOnly': '{best}',
+  'combined.numbers': 'returns {best} against {runnerUp} to {runnerUpVerb}',
+  'combined.numbersOnly': 'returns {best}',
   'headline': '{hand} vs {up} → {verdict}',
   'headline.insurance': 'Insurance → {verdict}',
   'insurance.step1': 'Dealer shows an ace, so insurance is on offer. It is a bet on the hole card and nothing else.',
@@ -271,6 +271,28 @@ const EN: Catalogue = {
   'fb.accuracyTip': 'Share of decisions played correctly, once coin-flips are set aside.',
   'fb.accuracyAll': 'Counting everything: {pct}%.',
   'fb.noCloseCalls': 'No close calls yet.',
+
+  // --- What comes back to you: the decision block and its `?` (round 13) ---
+  'ret.title': 'What comes back, per unit staked',
+  'ret.helpAria': 'What do these figures mean?',
+  'ret.same2': '{a} and {b} are worth the same here — they differ past the third decimal.',
+  'ret.sameMany': '{list} are worth the same here — they differ past the third decimal.',
+  'ret.helpWhat': 'Each figure is what **one unit already at risk comes back**, on average, if this spot were played over and over. **1.000 is break-even**: the stake comes back and nothing more.',
+  'ret.helpSurrender': 'Surrender is the one you can check without trusting anything: **half the bet comes back, always**, so it reads +0.500.',
+  'ret.helpFold': 'Folding is the one you can check without trusting anything: the Ante and the Blind are gone and **nothing comes back**, so it reads 0.000.',
+  'ret.helpStandBust': 'Standing here wins only when the dealer breaks, and a win returns two units: **{win} × 2 = {value}**.',
+  'ret.helpStandPush': 'Standing here wins {win} of the time and ties {push} of it. A win returns two units and a tie returns one: **{win} × 2 + {push} = {value}**.',
+  'ret.helpRiver': 'On the river nothing is estimated: your hand beats **{win}** of the dealer’s possible hands and ties {tie} of them, and the Ante, the Blind and the Play bet together come to {value}.',
+  'ret.helpHit': 'Hitting has no single sum. Some of the time you break and nothing comes back; the rest of the time you are holding a new hand, and the engine keeps solving forward from it.',
+  'ret.helpRaise': 'Raising has no single sum: the Play bet joins what is already at risk, and the engine plays your hand against every holding the dealer can have.',
+  'ret.helpDouble': 'Doubling and splitting put more money out, and that money is already inside the figure — which is what makes it comparable with the rest, and why it can fall below zero.',
+  'ret.helpUthStake': 'Every figure here is per unit of the Ante and the Blind, the two bets already on the table. A raise adds the Play bet on top of them, and it is already inside the figure.',
+  'ret.helpLines': 'The dashed line is **1.000**, break-even. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
+
+  // --- Said once, before the first hand ever played (round 13) ---
+  'intro.title': 'Before your first hand',
+  'intro.body': 'This is not a blackjack game. Every decision you make is measured against the mathematically best play, and that is what you are scored on. **You will lose hands playing perfectly — that is the point.**',
+  'intro.ok': 'Deal me in',
   'ui.why': 'Why?',
   'ui.thinkPrompt': 'Take a moment. What is my card telling you?',
   'ui.dealWhenReady': 'Deal when you are ready.',
@@ -391,9 +413,9 @@ const EN: Catalogue = {
   'uth.class.offsuit':
     '{hilo}, different suits',
   'uth.note.suitFlips':
-    'Because your cards are suited, **{best}** is worth {ev}. With the same cards in different suits the best play is **{offBest}**, at {offEv} — the suit changes the decision.',
+    'Because your cards are suited, **{best}** returns {ev}. With the same cards in different suits the best play is **{offBest}**, returning {offEv} — the suit changes the decision.',
   'uth.note.suitSame':
-    'Being suited adds {gap} here — **{best}** is worth {ev} suited and {offEv} in different suits — but the decision is the same.',
+    'Being suited adds {gap} here — **{best}** returns {ev} suited and {offEv} in different suits — but the decision is the same.',
   'uth.note.connector':
     'The surprise worth knowing: in Ultimate even suited connectors like these are a check before the flop, not a raise. You are up against the dealer’s hand, where high cards count for more; the flush and straight chances are what make the hand worth keeping, and worth betting later if they arrive.',
   'uth.note.onlyWith':
@@ -409,9 +431,9 @@ const EN: Catalogue = {
   'uth.show.dealer':
     'Dealer: {hand} ({five})',
   'uth.note.suitOffSame':
-    'Your cards are in different suits: **{best}** is worth {ev}. The same ranks in one suit would be worth {suitedEv}, with the same best play.',
+    'Your cards are in different suits: **{best}** returns {ev}. The same ranks in one suit would return {suitedEv}, with the same best play.',
   'uth.note.suitOffFlips':
-    'Your cards are in different suits, so the best play is **{best}**, at {ev}. The same ranks in one suit would make it **{suitedBest}**, at {suitedEv} — the suit would change the decision.',
+    'Your cards are in different suits, so the best play is **{best}**, returning {ev}. The same ranks in one suit would make it **{suitedBest}**, returning {suitedEv} — the suit would change the decision.',
   'uth.show.youWin':
     'You win: {you} against {dealer}',
   'uth.show.dealerWins':
@@ -878,8 +900,8 @@ const HE: Catalogue = {
 
   // --- Step 3 assembled ---
   'combined': '**{verdict}** — {shape}. {numbers}. {stat}',
-  'combined.numbers': '{best} מול {runnerUp} ל{runnerUpVerb}',
-  'combined.numbersOnly': '{best}',
+  'combined.numbers': 'מחזיר {best} מול {runnerUp} ל{runnerUpVerb}',
+  'combined.numbersOnly': 'מחזיר {best}',
   'headline': '{hand} מול {up} ← {verdict}',
   'headline.insurance': 'ביטוח ← {verdict}',
   'insurance.step1': 'לדילר יש אס, אז הביטוח פתוח. זה הימור על הקלף הסמוי בלבד.',
@@ -1017,6 +1039,28 @@ const HE: Catalogue = {
   'fb.accuracyTip': 'שיעור ההחלטות שנוצקו נכון, אחרי שמנטרלים את הטלות המטבע.',
   'fb.accuracyAll': 'בספירה של הכול: {pct}%.',
   'fb.noCloseCalls': 'עוד לא היו מקרים צמודים.',
+
+  // --- What comes back to you: the decision block and its `?` (round 13) ---
+  'ret.title': 'כמה חוזר לך על כל יחידה בסיכון',
+  'ret.helpAria': 'מה המספרים האלה אומרים?',
+  'ret.same2': '{a} ו{b} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
+  'ret.sameMany': '{list} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
+  'ret.helpWhat': 'כל מספר הוא **כמה חוזר אליך על כל יחידה שכבר בסיכון**, בממוצע, אילו שיחקת את המצב הזה שוב ושוב. **1.000 זאת נקודת האיזון**: הכסף חוזר אליך ולא יותר מזה.',
+  'ret.helpSurrender': 'ויתור הוא המספר שאפשר לבדוק בלי להאמין לאף אחד: **חצי מההימור חוזר, תמיד** — ולכן הוא +0.500.',
+  'ret.helpFold': 'פרישה היא המספר שאפשר לבדוק בלי להאמין לאף אחד: האנטה והבליינד אבודים ו**לא חוזר כלום** — ולכן היא 0.000.',
+  'ret.helpStandBust': 'עצירה כאן מנצחת רק כשהדילר נשרף, וניצחון מחזיר שתי יחידות: **{win} × 2 = {value}**.',
+  'ret.helpStandPush': 'עצירה כאן מנצחת ב-{win} מהמקרים ויוצאת תיקו ב-{push}. ניצחון מחזיר שתי יחידות ותיקו מחזיר אחת: **{win} × 2 + {push} = {value}**.',
+  'ret.helpRiver': 'בריבר שום דבר אינו הערכה: היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר ויוצאת תיקו מול {tie} מהן, והאנטה, הבליינד וה-Play יחד יוצאים {value}.',
+  'ret.helpHit': 'לקלף אין חשבון אחד. בחלק מהמקרים אתה נשרף ולא חוזר כלום; בשאר אתה מחזיק יד חדשה, והמנוע ממשיך לפתור ממנה הלאה.',
+  'ret.helpRaise': 'להעלאה אין חשבון אחד: הימור ה-Play מצטרף למה שכבר בסיכון, והמנוע משחק את היד שלך מול כל יד שהדילר יכול להחזיק.',
+  'ret.helpDouble': 'הכפלה ופיצול מוציאים עוד כסף, והכסף הזה כבר בתוך המספר — בגלל זה אפשר להשוות אותו לשאר, ובגלל זה הוא יכול לרדת מתחת לאפס.',
+  'ret.helpUthStake': 'כל מספר כאן הוא על כל יחידה של האנטה והבליינד, שני ההימורים שכבר על השולחן. העלאה מוסיפה עליהם את הימור ה-Play, והוא כבר בתוך המספר.',
+  'ret.helpLines': 'הקו המקווקו הוא **1.000**, נקודת האיזון. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
+
+  // --- Said once, before the first hand ever played (round 13) ---
+  'intro.title': 'לפני היד הראשונה שלך',
+  'intro.body': 'זה לא משחק בלאק ג׳ק. כל החלטה שלך נמדדת מול המהלך הנכון מתמטית, ועל זה אתה מקבל ציון. **תפסיד ידיים גם כששיחקת מושלם — וזאת בדיוק הנקודה.**',
+  'intro.ok': 'קדימה, נתחיל',
   'ui.why': 'למה?',
   'ui.thinkPrompt': 'קח רגע. מה הקלף שלי מספר לך?',
   'ui.dealWhenReady': 'חלק כשאתה מוכן.',
@@ -1137,9 +1181,9 @@ const HE: Catalogue = {
   'uth.class.offsuit':
     '{hilo} בצורות שונות',
   'uth.note.suitFlips':
-    'בגלל שהקלפים שלך באותה צורה, **{best}** שווה {ev}. עם אותם קלפים בצורות שונות הבחירה הטובה היא **{offBest}**, ב-{offEv} — הצורה משנה את ההחלטה.',
+    'בגלל שהקלפים שלך באותה צורה, **{best}** מחזיר {ev}. עם אותם קלפים בצורות שונות הבחירה הטובה היא **{offBest}**, שמחזיר {offEv} — הצורה משנה את ההחלטה.',
   'uth.note.suitSame':
-    'הצורה המשותפת מוסיפה כאן {gap} — **{best}** שווה {ev} באותה צורה ו-{offEv} בצורות שונות — אבל ההחלטה זהה.',
+    'הצורה המשותפת מוסיפה כאן {gap} — **{best}** מחזיר {ev} באותה צורה ו-{offEv} בצורות שונות — אבל ההחלטה זהה.',
   'uth.note.connector':
     'ההפתעה שכדאי לדעת: באולטימייט גם קלפים עוקבים באותה צורה כמו אלה הם צ׳ק לפני הפלופ, לא העלאה. אתה מול היד של הדילר, ושם קלפים גבוהים שווים יותר; הסיכוי לפלאש או לרצף הוא מה שהופך את היד לשווה שמירה, ולשווה הימור בהמשך אם הוא מגיע.',
   'uth.note.onlyWith':
@@ -1155,9 +1199,9 @@ const HE: Catalogue = {
   'uth.show.dealer':
     'הדילר: {hand} ({five})',
   'uth.note.suitOffSame':
-    'הקלפים שלך בצורות שונות: **{best}** שווה {ev}. אותם ערכים באותה צורה היו שווים {suitedEv}, עם אותה בחירה טובה.',
+    'הקלפים שלך בצורות שונות: **{best}** מחזיר {ev}. אותם ערכים באותה צורה היו מחזירים {suitedEv}, עם אותה בחירה טובה.',
   'uth.note.suitOffFlips':
-    'הקלפים שלך בצורות שונות, ולכן הבחירה הטובה היא **{best}**, ב-{ev}. אותם ערכים באותה צורה היו הופכים אותה ל-**{suitedBest}**, ב-{suitedEv} — הצורה הייתה משנה את ההחלטה.',
+    'הקלפים שלך בצורות שונות, ולכן הבחירה הטובה היא **{best}**, שמחזיר {ev}. אותם ערכים באותה צורה היו הופכים אותה ל-**{suitedBest}**, שמחזיר {suitedEv} — הצורה הייתה משנה את ההחלטה.',
   'uth.show.youWin':
     'אתה מנצח: {you} מול {dealer}',
   'uth.show.dealerWins':

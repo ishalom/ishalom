@@ -13,6 +13,8 @@
     <script src="/track.js"></script>
     <script src="/chips.js"></script>
     <script src="/dock.js"></script>
+    <script src="/returns.js"></script>
+    <script src="/intro.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -198,10 +200,21 @@
       </form>
     </dialog>
 
-    <dialog id="howto">
+    <dialog id="intro">
+        <form method="dialog">
+          <h2 data-i18n="intro.title">Before your first hand</h2>
+          <p class="intro-body" id="intro-body"></p>
+          <menu>
+            <button value="ok" data-i18n="intro.ok">Deal me in</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <dialog id="howto">
       <form method="dialog">
         <h2 data-i18n="howto.title">How this works</h2>
-        <ol class="howto" id="howto-list"></ol>
+        <p class="howto-lead" id="howto-lead"></p>
+          <ol class="howto" id="howto-list"></ol>
         <menu>
           <button value="cancel" data-i18n="ui.close">Close</button>
         </menu>

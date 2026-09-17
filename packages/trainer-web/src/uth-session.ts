@@ -49,6 +49,7 @@ import {
 
 import { newRating, type Rating } from './difficulty.ts';
 import { displayFigure } from './figure.ts';
+import { equivalentGroups, RETURN_SCALE_MAX, returned, returnFigure } from './returns.ts';
 import { t, type Locale } from './i18n.ts';
 import { uthDifficulty, updateUthRating } from './uth-rating.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
@@ -114,6 +115,17 @@ const UTH_ACTIONS = Object.keys(ACTIONS) as UthAction[];
 const TIERS: SeverityTier[] = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
 
 /**
+ * What is already at risk at every Ultimate decision: the Ante and the Blind,
+ * which are equal, mandatory and both forfeited by folding. The engine quotes
+ * its EVs in units of the ante and folding is exactly −2, so this is the stake
+ * round 13's figures are per unit of.
+ */
+const UTH_STAKE = 2;
+
+/** Dealer holdings the river solve enumerates: 45 unseen cards, taken two at a time. */
+const UTH_DEALER_HANDS = 990;
+
+/**
  * Keep a figure in one piece inside right-to-left text.
  *
  * In a Hebrew sentence a signed number or a raise size is a left-to-right run
@@ -132,6 +144,15 @@ const isolateFor = (locale: Locale) => (text: string): string =>
 const uthUnits = (value: number): string =>
   `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
 const uthPercent = (value: number): string => `${Math.round(value * 100)}%`;
+
+/**
+ * An action's worth as a player now reads it: what one unit of the Ante and the
+ * Blind comes back (round 13). The stored EV is untouched. A *gap* between two
+ * of these figures is `uthBackGap`, on the same scale — quoting a net gap beside
+ * two return figures would contradict the subtraction the reader can do.
+ */
+const uthBack = (ev: number): string => returnFigure(returned(ev, UTH_STAKE));
+const uthBackGap = (gap: number): string => uthUnits(gap / UTH_STAKE);
 /**
  * A settlement figure, by the one figure rule every screen uses (round 8):
  * at most two decimals, trailing zeros dropped. It used to keep one place,
@@ -233,8 +254,16 @@ export interface UthFeedback {
   chosen: UthAction;
   optimal: UthAction;
   evCost: number;
-  /** Every legal action, best first. */
-  ranked: Array<{ action: UthAction; label: string; ev: number }>;
+  /** Every legal action, best first. `ev` is net; `value` is what comes back. */
+  ranked: Array<{ action: UthAction; label: string; ev: number; value: number }>;
+  /** What the card draws: the same scale Blackjack uses (round 13). */
+  returns: {
+    stake: number;
+    scaleMax: number;
+    best: number;
+    equivalent: string[][];
+    example: { kind: string; win: number; tie: number; value: number } | null;
+  };
   /** One plain sentence, from the same solve as the grade. */
   sentence: string;
   /** Further lines, each shown only when it is true for this hand. */
@@ -1086,8 +1115,19 @@ export class UthSession {
     const { record, evaluation, holeClass } = last;
     const phase = evaluation.phase;
     const correct = record.evCost === 0;
+    /*
+     * The Ante and the Blind are already on the table at every decision, so
+     * they are what "per unit staked" means here — and folding, which forfeits
+     * both, reads 0.000: nothing comes back. Break-even is 1.000, as it is in
+     * Blackjack. `ev` stays the stored figure, net, in units of the ante.
+     */
     const ranked = record.legalActions
-      .map((action) => ({ action, label: this.label(action), ev: record.evByAction[action] ?? 0 }))
+      .map((action) => ({
+        action,
+        label: this.label(action),
+        ev: record.evByAction[action] ?? 0,
+        value: returned(record.evByAction[action] ?? 0, UTH_STAKE),
+      }))
       .sort((a, b) => b.ev - a.ev);
 
     return {
@@ -1111,6 +1151,23 @@ export class UthSession {
       optimal: record.optimalAction,
       evCost: record.evCost,
       ranked,
+      returns: {
+        stake: UTH_STAKE,
+        scaleMax: RETURN_SCALE_MAX,
+        best: ranked[0]?.value ?? 0,
+        equivalent: equivalentGroups(ranked),
+        // The river is the one decision whose odds are exact and countable, so
+        // it is the one that can show the player what is behind the figure.
+        example:
+          phase === 'river' && evaluation.wins !== undefined
+            ? {
+                kind: 'river',
+                win: (evaluation.wins ?? 0) / UTH_DEALER_HANDS,
+                tie: (evaluation.ties ?? 0) / UTH_DEALER_HANDS,
+                value: ranked.find((row) => row.action === 'raise1x')?.value ?? ranked[0]!.value,
+              }
+            : null,
+      },
       sentence: this.sentence(record, evaluation),
       notes: phase === 'preflop' ? this.preflopNotes(holeClass) : phase === 'river' ? this.riverNotes(evaluation) : [],
       solveMs: evaluation.solveMs,
@@ -1140,7 +1197,7 @@ export class UthSession {
       }
       if (record.optimalAction === 'raise4x') {
         return t(L, 'uth.s.preRaise', {
-          gap: iso(uthUnits((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
+          gap: iso(uthBackGap((ev.raise4x ?? 0) - (ev.check ?? 0)).replace('+', '')),
         });
       }
       return t(L, 'uth.s.preCheck', {
@@ -1150,9 +1207,10 @@ export class UthSession {
     }
 
     if (evaluation.phase === 'flop') {
+      // On the card's scale, like every other gap quoted beside these figures.
       const gap = Math.abs((ev.raise2x ?? 0) - (ev.check ?? 0));
       return t(L, record.optimalAction === 'raise2x' ? 'uth.s.flopRaise' : 'uth.s.flopCheck', {
-        gap: iso(gap.toFixed(3)),
+        gap: iso(uthBackGap(gap).replace('+', '')),
         riverFold: uthPercent(evaluation.riverFoldFrequency ?? 0),
       });
     }
@@ -1229,9 +1287,9 @@ export class UthSession {
       return [
         t(L, off.action !== same.action ? 'uth.note.suitOffFlips' : 'uth.note.suitOffSame', {
           best: this.label(off.action).toLowerCase(),
-          ev: iso(uthUnits(off.ev)),
+          ev: iso(uthBack(off.ev)),
           suitedBest: this.label(same.action).toLowerCase(),
-          suitedEv: iso(uthUnits(same.ev)),
+          suitedEv: iso(uthBack(same.ev)),
         }),
       ];
     }
@@ -1244,18 +1302,18 @@ export class UthSession {
       notes.push(
         t(L, 'uth.note.suitFlips', {
           best: this.label(suited.action).toLowerCase(),
-          ev: iso(uthUnits(suited.ev)),
+          ev: iso(uthBack(suited.ev)),
           offBest: this.label(off.action).toLowerCase(),
-          offEv: iso(uthUnits(off.ev)),
+          offEv: iso(uthBack(off.ev)),
         }),
       );
     } else {
       notes.push(
         t(L, 'uth.note.suitSame', {
           best: this.label(suited.action).toLowerCase(),
-          ev: iso(uthUnits(suited.ev)),
-          offEv: iso(uthUnits(off.ev)),
-          gap: iso(uthUnits(suited.ev - off.ev)),
+          ev: iso(uthBack(suited.ev)),
+          offEv: iso(uthBack(off.ev)),
+          gap: iso(uthBackGap(suited.ev - off.ev)),
         }),
       );
     }

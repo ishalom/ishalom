@@ -113,7 +113,7 @@ test('Ultimate follows Blackjack’s model: commentary below the table, the grad
   const js = source('ultimate.js');
   const cardFn = js.slice(js.indexOf('function uthRenderCard('), js.indexOf('function uthRenderActions('));
   const commentaryFn = js.slice(js.indexOf('function uthRenderCommentary('), js.indexOf('function uthRenderCard('));
-  for (const inCard of ["verdict.className = 'verdict'", "className = 'did'", "evs.className = 'evs'"]) {
+  for (const inCard of ["verdict.className = 'verdict'", "className = 'did'", "window.EVReturns.block("]) {
     assert.ok(cardFn.includes(inCard), `the dock card lost ${inCard}`);
   }
   for (const below of ["sentence.className = 'reason'", "uth-note", "result.className = 'uth-result uth-late'", "net.className = 'uth-net'"]) {

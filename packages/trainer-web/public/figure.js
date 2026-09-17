@@ -36,5 +36,18 @@
     return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
   }
 
-  window.EVFigure = { round, plain, units };
+  /**
+   * A return, as round 13 writes it: three decimals, always signed, a real
+   * minus sign. Not the two-decimal rule above — a return is a share of a
+   * stake, not a number of chips, and the third decimal is where hitting and
+   * standing part company. `src/returns.ts` carries the identical rule for the
+   * prose the sessions compose, and a test holds the two to the same output.
+   */
+  function ret(value) {
+    const text = Math.abs(value).toFixed(3);
+    const figure = Number(text) === 0 ? '0.000' : `${value < 0 ? '−' : '+'}${text}`;
+    return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${figure}⁩` : figure;
+  }
+
+  window.EVFigure = { round, plain, units, ret };
 })();

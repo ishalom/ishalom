@@ -120,6 +120,14 @@ test('keys the pages build at runtime resolve for every value', () => {
     // (units of the bet, card counting).
     ['info.uthEvLost.', ['title', 'body']],
     ['info.uthEdge.', ['title', 'body']],
+    // The decision block and its `?` (round 13): the page hands these to a
+    // helper rather than to `T` directly, so the scan above cannot see them.
+    ['ret.', [
+      'title', 'helpAria', 'same2', 'sameMany', 'helpWhat', 'helpSurrender', 'helpFold',
+      'helpStandBust', 'helpStandPush', 'helpRiver', 'helpHit', 'helpRaise', 'helpDouble',
+      'helpUthStake', 'helpLines',
+    ]],
+    ['intro.', ['title', 'body', 'ok']],
   ];
   for (const info of LOCALES) {
     const table = catalogue(info.code);

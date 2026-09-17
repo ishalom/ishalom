@@ -56,7 +56,12 @@ test('the suit line appears exactly on suited hands, with the table’s figures,
     assert.equal(suitLines.length, 1, `${row.label} is suited and has no suit line`);
     const off = PREFLOP_TABLE[`${row.label.slice(0, 2)}o`]!;
     const bestEv = (r: typeof row) => (r.optimalAction === 'raise4x' ? r.ev4x : r.optimalAction === 'raise3x' ? r.ev3x : r.evCheck);
-    const fmt = (v: number) => `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(3)}`;
+    const fmt = (v: number) => {
+      // Round 13: the figure is what one unit of the Ante and the Blind comes
+      // back, which is the stored EV over the two units at risk, plus one.
+      const back = 1 + v / 2;
+      return `${back < 0 ? '−' : '+'}${Math.abs(back).toFixed(3)}`;
+    };
     const line = suitLines[0];
     assert.ok(line.includes(fmt(bestEv(row))), `${row.label}: the suited figure is not the table’s: ${line}`);
     assert.ok(line.includes(fmt(bestEv(off))), `${row.label}: the offsuit figure is not the table’s: ${line}`);
@@ -67,12 +72,15 @@ test('the suit line appears exactly on suited hands, with the table’s figures,
   assert.equal(flips, 7, 'the table has 7 suited classes whose suit flips the decision');
 });
 
-test('K4s: raise 4× at +0.117, where K4o should check at −0.206', () => {
+test('K4s: raise 4× returns +1.059, where K4o checking returns +0.897 (round 13)', () => {
+  // The same two hands as before, on the scale the player now reads: the table
+  // holds +0.117 and −0.206 net of the two units at risk, and a player is shown
+  // what comes back per unit of them.
   const [line] = preflopCard('K4s').notes;
   assert.match(line, /raise 4×/);
-  assert.match(line, /\+0\.117/);
+  assert.match(line, /\+1\.059/);
   assert.match(line, /check/);
-  assert.match(line, /−0\.206/);
+  assert.match(line, /\+0\.897/);
   assert.match(line, /changes the decision/);
 });
 
@@ -96,7 +104,10 @@ test('no suit note for pairs; one for hands in different suits, from the table (
   for (const label of ['AA', '77', '22']) {
     assert.deepEqual(preflopCard(label, 'he').notes, [], `${label} got a note`);
   }
-  const fmt = (v: number) => `${v < 0 ? '−' : '+'}${Math.abs(v).toFixed(3)}`;
+  const fmt = (v: number) => {
+    const back = 1 + v / 2;
+    return `${back < 0 ? '−' : '+'}${Math.abs(back).toFixed(3)}`;
+  };
   const bestEv = (r: any) => (r.optimalAction === 'raise4x' ? r.ev4x : r.optimalAction === 'raise3x' ? r.ev3x : r.evCheck);
   const flipsLead = catalogue('en')['uth.note.suitOffFlips']!.split('**')[0]!;
   const sameLead = catalogue('en')['uth.note.suitOffSame']!.split('**')[0]!;
@@ -239,32 +250,34 @@ test('a fold has no showdown to name', () => {
   assert.equal((session.act('fold') as any).showdown, null);
 });
 
-// --- Equal-looking chips ----------------------------------------------------------------
+// --- Figures that come out equal (round 13) --------------------------------------------
 
-function lift(file: string, name: string): (evs: number[]) => number[] {
-  const source = readFileSync(join(HERE, '..', 'public', file), 'utf8');
-  const from = source.indexOf(`function ${name}`);
-  assert.ok(from > 0, `${name} is gone from ${file}`);
-  const end = source.indexOf('\n}\n', from);
-  return new Function(`${source.slice(from, end + 3)}\nreturn ${name};`)() as (evs: number[]) => number[];
-}
+/*
+ * Two actions can print the same figure. The old card gave both a fourth
+ * decimal so that no two chips looked equal, which taught a difference that is
+ * not there: at that distance the two plays really are worth the same. The
+ * figures now stay at three decimals and the card says so in words.
+ */
 
-test('chips that would print the same get a fourth decimal, in both games', () => {
-  for (const [file, name] of [['ultimate.js', 'uthChipDigits'], ['app.js', 'chipDigits']] as const) {
-    const digits = lift(file, name);
-    // K4s: 3× +0.0193 and check +0.0189 both print +0.019.
-    assert.deepEqual(digits([0.1170, 0.0193, 0.0189]), [3, 4, 4], `${file}: K4s`);
-    assert.deepEqual(digits([-0.3848, -0.3845, -0.2]), [4, 4, 3], `${file}: J5s`);
-    // Values that differ at three decimals, or are truly equal, stay at three.
-    assert.deepEqual(digits([0.5, 0.4, -1]), [3, 3, 3]);
-    assert.deepEqual(digits([0.5, 0.5, -1]), [3, 3, 3]);
+test('the pre-flop table has exactly two classes whose figures come out equal', () => {
+  const tied: string[] = [];
+  for (const row of Object.values(PREFLOP_TABLE)) {
+    const groups = preflopCard(row.label).returns.equivalent;
+    if (groups.length > 0) tied.push(`${row.label} ${groups.map((g: string[]) => g.join('=')).join(',')}`);
   }
+  assert.deepEqual(tied.sort(), ['J5s raise3x=raise4x', 'Q9o check=raise3x']);
 });
 
-test('the K4s card actually shows 0.0193 and 0.0189', () => {
-  const card = preflopCard('K4s');
-  const evs = card.ranked.map((r: { ev: number }) => r.ev);
-  const digits = lift('ultimate.js', 'uthChipDigits')(evs);
-  const printed = card.ranked.map((r: { ev: number }, i: number) => Math.abs(r.ev).toFixed(digits[i]!));
-  assert.ok(printed.includes('0.0193') && printed.includes('0.0189'), printed.join(' '));
+test('where they come out equal, the figures are identical and the card says they are the same', () => {
+  const card = preflopCard('J5s');
+  const shown = card.ranked.map((r: { action: string; value: number }) => [r.action, r.value.toFixed(3)]);
+  const [tie] = card.returns.equivalent;
+  assert.deepEqual(tie, ['raise3x', 'raise4x'], JSON.stringify(shown));
+  const figures = card.ranked
+    .filter((r: { action: string }) => tie.includes(r.action))
+    .map((r: { value: number }) => r.value.toFixed(3));
+  assert.equal(figures[0], figures[1], 'the two tied actions print different figures');
+  // And nothing is rounded to a fourth decimal to tell them apart any more.
+  assert.doesNotMatch(readFileSync(join(HERE, '..', 'public', 'ultimate.js'), 'utf8'), /toFixed\(4\)|ChipDigits/);
+  assert.doesNotMatch(readFileSync(join(HERE, '..', 'public', 'app.js'), 'utf8'), /toFixed\(4\)|chipDigits/);
 });

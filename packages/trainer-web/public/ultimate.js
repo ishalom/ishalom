@@ -127,19 +127,6 @@ function uthBack() {
   return node;
 }
 
-/**
- * How many decimals each EV chip shows.
- *
- * Three, unless two different values would print the same — K4s showed 3× and
- * check both as +0.019 when they are +0.0193 and +0.0189, and chips that look
- * equal but are ranked differently read as a bug. Those chips get a fourth
- * decimal. Truly equal values stay at three: there the chips should look equal.
- */
-function uthChipDigits(evs) {
-  const three = evs.map((ev) => ev.toFixed(3));
-  return evs.map((ev, i) => (evs.some((other, j) => j !== i && other !== ev && three[j] === three[i]) ? 4 : 3));
-}
-
 /** Bold the parts the copy marks with **, and nothing else — no HTML from data. */
 function uthRich(target, text) {
   target.replaceChildren();
@@ -344,6 +331,8 @@ function uthRenderTrack(view) {
 
 /** How to play, including the Trips line — worded, and figured, by the session. */
 function uthOpenHowTo() {
+  // The same passage a new player was shown once, where they would look for it.
+  window.EVIntro.passage(el('uth-howto-lead'));
   const list = el('uth-howto-list');
   list.replaceChildren();
   for (const line of (uthState.view && uthState.view.howTo) || []) {
@@ -580,18 +569,15 @@ function uthRenderCard(view) {
     box.appendChild(did);
   }
 
-  const evs = document.createElement('div');
-  evs.className = 'evs';
-  const digits = uthChipDigits(feedback.ranked.map((entry) => entry.ev));
-  feedback.ranked.forEach((entry, index) => {
-    const chip = document.createElement('span');
-    chip.className =
-      'ev' + (index === 0 ? ' best' : '') + (entry.action === feedback.chosen ? ' chosen' : '');
-    chip.textContent =
-      `${entry.label}: ` + uthFigure(`${entry.ev >= 0 ? '+' : '−'}${Math.abs(entry.ev).toFixed(digits[index])}`);
-    evs.appendChild(chip);
-  });
-  box.appendChild(evs);
+  // The same block Blackjack draws, on the same fixed scale (round 13). Here a
+  // unit staked is the Ante and the Blind together, so folding reads 0.000.
+  box.appendChild(
+    window.EVReturns.block(feedback, {
+      game: 'uth',
+      decisions: view.stats.decisions,
+      helpId: 'uth-returns-help',
+    }),
+  );
 
   // The reasoning, the notes and the result are commentary: they belong below
   // the table, not in the dock with the buttons (round 12). See uthRenderCommentary.
@@ -801,4 +787,8 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-Promise.resolve(window.EV && window.EV.ready).then(() => uthSend('/api/uth/state'));
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  // Before the very first hand this player ever plays, and never again.
+  window.EVIntro.showOnce('uth-intro', 'uth-intro-body');
+  return uthSend('/api/uth/state');
+});

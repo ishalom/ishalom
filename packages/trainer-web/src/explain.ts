@@ -29,6 +29,7 @@
  */
 
 import { t, type Locale } from './i18n.ts';
+import { returned, returnFigure } from './returns.ts';
 import {
   ACE,
   DEALER_BLACKJACK,
@@ -121,12 +122,13 @@ export function dealerOdds(upcard: BjRank, rules: BlackjackRules): DealerOdds {
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 /**
- * A signed EV, with a real minus sign rather than a hyphen.
- *
- * The client renders numeric runs in the display face, so these read as figures
- * rather than as more prose.
+ * An action's worth, as a player now reads it (round 13): what one unit already
+ * at risk comes back. The stored EV is untouched — this is the same number said
+ * the way a casino player already thinks, and the walkthrough has to say it the
+ * same way the card does, or the two would contradict each other on one screen.
  */
-const units = (value: number): string => `${value < 0 ? '−' : '+'}${Math.abs(value).toFixed(3)}`;
+const back = (ev: number, scenario: Scenario): string =>
+  returnFigure(returned(ev, scenario.kind === 'insurance' ? INSURANCE_STAKE : 1));
 
 export interface StandOutcome {
   win: number;
@@ -329,7 +331,7 @@ function pairName(rank: BjRank): string {
  * returns `2p - (1 - p)`, which is zero at exactly one in three.
  */
 /** Insurance stakes half the original wager, which is where its EV is quoted from. */
-const INSURANCE_STAKE = 0.5;
+export const INSURANCE_STAKE = 0.5;
 
 export function insuranceOdds(rules: BlackjackRules): { tens: number; breakEven: number } {
   const shoe = Shoe.fresh(rules.decks);
@@ -522,7 +524,7 @@ function supportingStat(
   }
 
   if (pair.has('surrender')) {
-    return t(locale, 'stat.surrender', { half: units(-0.5) });
+    return t(locale, 'stat.surrender', { half: back(-0.5, scenario) });
   }
   return '';
 }
@@ -538,10 +540,10 @@ export function readCombined(
   const c = contest(evaluation);
   const numbers =
     c.runnerUp === null
-      ? t(locale, 'combined.numbersOnly', { best: units(c.best.ev) })
+      ? t(locale, 'combined.numbersOnly', { best: back(c.best.ev, scenario) })
       : t(locale, 'combined.numbers', {
-          best: units(c.best.ev),
-          runnerUp: units(c.runnerUp.ev),
+          best: back(c.best.ev, scenario),
+          runnerUp: back(c.runnerUp.ev, scenario),
           runnerUpVerb: verbAfterTo(c.runnerUp.action, locale),
         });
 

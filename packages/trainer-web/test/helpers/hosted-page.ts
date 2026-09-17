@@ -44,8 +44,19 @@ export interface HostedPage {
 
 function element(): any {
   const queries = new Map<string, any>();
+  // Custom properties and classes are read by round 13's tests — the block's
+  // bar lengths and the two continuous lines are set through both — so the stub
+  // keeps them rather than swallowing them.
+  const custom = new Map<string, string>();
+  const attributes = new Map<string, string>();
+  const classes = new Set<string>();
   const node: any = {
-    style: { setProperty() {} },
+    style: {
+      setProperty(name: string, value: string) {
+        custom.set(name, value);
+      },
+      getPropertyValue: (name: string) => custom.get(name) ?? '',
+    },
     dataset: {},
     children: [] as any[],
     value: '',
@@ -54,9 +65,19 @@ function element(): any {
     hidden: false,
     lang: '',
     listeners: {} as Record<string, Function[]>,
-    classList: { add() {}, remove() {}, contains: () => false },
-    setAttribute() {},
-    getAttribute: () => null,
+    classList: {
+      add(...names: string[]) {
+        for (const name of names) classes.add(name);
+      },
+      remove(...names: string[]) {
+        for (const name of names) classes.delete(name);
+      },
+      contains: (name: string) => classes.has(name) || String(node.className ?? '').split(' ').includes(name),
+    },
+    setAttribute(name: string, value: string) {
+      attributes.set(name, String(value));
+    },
+    getAttribute: (name: string) => attributes.get(name) ?? null,
     appendChild(c: any) {
       node.children.push(c);
       return c;
