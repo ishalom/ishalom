@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="c0f3826db5052a02b38228612903661a58b1edf6-dirty" />
-<meta name="ev-build-at" content="2026-09-17T23:18:37.938Z" />
+<meta name="ev-build-commit" content="fb5c279626f19a2b7985f99b5db366131ef530d2-dirty" />
+<meta name="ev-build-at" content="2026-09-17T23:20:49.265Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2688,6 +2688,7 @@ function rulesKey(rules                )         {
  *   index 1 .. 8   -> 2 .. 9
  *   index 9        -> ten-valued (T, J, Q, K)
  */
+
 /** Bucketed rank used throughout the Blackjack engine. */
                             
 
@@ -2866,6 +2867,7 @@ class Shoe {
  * ace is still counted as eleven, so the solver carries those two numbers rather
  * than an array of cards. This module owns the conversion.
  */
+
 function handValue(ranks                   )            {
   let total = 0;
   let aces = 0;
@@ -3269,6 +3271,11 @@ function describeDistribution(dist                    )                         
  * it is not, so the dealer's natural stays in the distribution and collects the
  * player's doubled and split wagers too.
  */
+
+
+
+
+
 /**
  * How the dealer's distribution responds to the cards the player draws.
  *
@@ -3751,6 +3758,8 @@ function naturalEv(
  * with a rule-set id where a cell actually differs; deciding which cells those
  * are is `chart.ts`'s job, not this module's.
  */
+
+
 const INSURANCE_SCENARIO_KEY = 'bj:insurance';
 
                                                                   
