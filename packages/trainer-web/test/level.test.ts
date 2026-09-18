@@ -529,6 +529,20 @@ test('it does not nag, and never covers the buttons', () => {
 
 // --- It follows the player ------------------------------------------------------------------------
 
+test('the slogan is at the door, and at the head of the first screen', () => {
+  // Idan's line, and the app's stated purpose. It opens rather than signs off,
+  // so it is the first thing on both screens that carry it.
+  const first = source('table.html');
+  const slogan = first.indexOf('data-i18n="brand.slogan"');
+  assert.ok(slogan > 0 && slogan < first.indexOf('data-i18n="intro.title"'), 'the slogan does not open the first screen');
+  assert.ok(source('home.html').includes('data-i18n="brand.slogan"'), 'the door has no line');
+  const ui = readFileSync(join(HERE, '..', 'artifact', 'ui.js'), 'utf8');
+  // Wherever the app's name appears with room for a line, this is the line.
+  assert.ok(ui.indexOf("tr('brand.slogan')") > ui.indexOf("tr('ui.appName')"), 'the name stands without it');
+  assert.equal(catalogue('en')['brand.slogan'], 'Simply winning more hands.');
+  assert.ok((catalogue('he')['brand.slogan'] ?? '').length > 6, 'no Hebrew line');
+});
+
 test('the level rides in the saved record, and a device that has never been asked takes it', () => {
   const shell = readFileSync(join(HERE, '..', 'artifact', 'shell.js'), 'utf8');
   const full = shell.slice(shell.indexOf('function fullProgress()'), shell.indexOf('function readLocalProgress()'));

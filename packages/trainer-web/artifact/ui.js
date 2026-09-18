@@ -452,6 +452,7 @@ function askName() {
   wrap.className = 'shell welcome';
   wrap.innerHTML = `
     <h1 class="welcome-title">${tr('ui.appName')}</h1>
+    <p class="slogan">${tr('brand.slogan')}</p>
     <p class="welcome-line">${tr('welcome.line')}</p>
     <form class="welcome-form" id="welcome-form">
       <label class="welcome-label" for="welcome-name">${tr('welcome.nameLabel')}</label>
