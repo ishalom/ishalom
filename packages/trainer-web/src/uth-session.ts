@@ -1139,7 +1139,13 @@ export class UthSession {
         ? t(this.locale, 'fb.correct', { action: this.label(record.optimalAction) })
         : t(this.locale, 'fb.wrong', {
             severity: t(this.locale, `fb.${record.severityTier}`),
-            cost: isolateFor(this.locale)(record.evCost.toFixed(3)),
+            // Round 14, Idan's call: what the mistake cost, on the same scale
+            // as the bars an inch below it. `evCost` itself is untouched — the
+            // record, the rating, the leaderboard and EV-lost all keep the
+            // figure in units of the Ante. Only this line is converted, and
+            // only because a player can find the contradiction by subtracting
+            // two bars in front of him.
+            cost: isolateFor(this.locale)(uthBackGap(record.evCost).replace('+', '')),
           }),
       youChose: correct
         ? null
@@ -1191,7 +1197,7 @@ export class UthSession {
     if (evaluation.phase === 'preflop') {
       if (record.chosenAction === 'raise3x') {
         return t(L, 'uth.s.threeX', {
-          cost: iso(uthUnits(-record.evCost).replace('−', '')),
+          cost: iso(uthBackGap(record.evCost).replace('+', '')),
           best: this.label(record.optimalAction).toLowerCase(),
         });
       }

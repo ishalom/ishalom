@@ -14,11 +14,28 @@
     <script src="/chips.js"></script>
     <script src="/dock.js"></script>
     <script src="/returns.js"></script>
+    <script src="/level.js"></script>
+    <script src="/arrow.js"></script>
     <script src="/intro.js"></script>
   </head>
   <body>
     <div class="shell uth">
-      <!-- The rules are a statement, as on the Blackjack table. There is one
+      <!--
+        The first screen (round 14): what this app is, and one question — how
+        much should it explain? It takes over the table until it is answered.
+      -->
+      <section class="welcome" id="uth-welcome" hidden>
+        <p class="slogan" data-i18n="brand.slogan">Simply winning more hands.</p>
+        <div class="welcome-passage" id="uth-welcome-passage">
+          <h1 data-i18n="intro.title">Before your first hand</h1>
+          <p class="intro-body" id="uth-intro-body"></p>
+        </div>
+        <h2 class="welcome-ask" data-i18n="level.question">How much should the app explain?</h2>
+        <div class="levels" id="uth-level-choices"></div>
+        <p class="welcome-note" data-i18n="level.note">This changes only how much is explained, never your score.</p>
+      </section>
+
+            <!-- The rules are a statement, as on the Blackjack table. There is one
            paytable and it is the one the pre-flop table was solved against, so
            nothing here offers to change it. -->
       <header class="rules" id="rules-bar">
@@ -31,25 +48,25 @@
 
       <!-- The same strip as the Blackjack table, reading this game's figures. -->
       <section class="stats" id="uth-stats" data-i18n-attr="aria-label:ui.sessionStats">
-        <button class="stat" type="button" data-info="accuracy"
+        <button class="stat" type="button" data-info="accuracy" data-cell="accuracy"
                 aria-expanded="false" aria-controls="uth-stat-info">
           <span class="stat-value" id="uth-stat-accuracy">—</span>
           <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
           <span class="stat-more" aria-hidden="true">?</span>
         </button>
-        <button class="stat" type="button" data-info="uthEvLost"
+        <button class="stat" type="button" data-info="uthEvLost" data-cell="evLost"
                 aria-expanded="false" aria-controls="uth-stat-info">
           <span class="stat-value" id="uth-stat-evlost">—</span>
           <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
           <span class="stat-more" aria-hidden="true">?</span>
         </button>
-        <button class="stat" type="button" data-info="uthEdge"
+        <button class="stat" type="button" data-info="uthEdge" data-cell="edge"
                 aria-expanded="false" aria-controls="uth-stat-info">
           <span class="stat-value" id="uth-stat-edge">—</span>
           <span class="stat-label" data-i18n="ui.yourEdge">house edge you face</span>
           <span class="stat-more" aria-hidden="true">?</span>
         </button>
-        <button class="stat stat-quiet" type="button" data-info="units"
+        <button class="stat stat-quiet" type="button" data-info="units" data-cell="units"
                 aria-expanded="false" aria-controls="uth-stat-info">
           <span class="stat-value" id="uth-stat-units">—</span>
           <span class="stat-label" data-i18n="ui.units">units</span>
@@ -102,21 +119,21 @@
         <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
       </div>
 
-      <dialog id="uth-intro">
-        <form method="dialog">
-          <h2 data-i18n="intro.title">Before your first hand</h2>
-          <p class="intro-body" id="uth-intro-body"></p>
-          <menu>
-            <button value="ok" data-i18n="intro.ok">Deal me in</button>
-          </menu>
-        </form>
-      </dialog>
-
       <dialog id="uth-howto">
         <form method="dialog">
           <h2 data-i18n="howto.title">How this works</h2>
           <p class="howto-lead" id="uth-howto-lead"></p>
           <ol class="howto" id="uth-howto-list"></ol>
+
+          <!--
+            How much the app explains (round 14). This table has no rule panel
+            of its own — one paytable, nothing to change — so the one control
+            that is not a rule lives here, where a player looks for it.
+          -->
+          <h3 class="sub-title" data-i18n="level.question">How much should the app explain?</h3>
+          <div class="levels levels-settings" id="uth-level-settings"></div>
+          <p class="muted fine" data-i18n="level.note"></p>
+
           <menu>
             <button value="cancel" data-i18n="ui.close">Close</button>
           </menu>

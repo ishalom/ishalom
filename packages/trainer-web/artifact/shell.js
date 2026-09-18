@@ -374,7 +374,11 @@ function saveProgressLocally() {
  * to reach the Blackjack rating.
  */
 function fullProgress() {
-  return { ...session.progress, uth: uthSession.progress, activity, playedBefore };
+  // `level` is how much the app explains (round 14) — a preference, not a
+  // measure. It rides here so it follows the player to another device, exactly
+  // as the day count does, and nothing that grades a hand ever reads it.
+  const level = window.EVLevel ? window.EVLevel.read() : null;
+  return { ...session.progress, uth: uthSession.progress, activity, playedBefore, ...(level ? { level } : {}) };
 }
 
 function readLocalProgress() {
@@ -469,6 +473,17 @@ async function restoreMine() {
         if (remote.progress && (!local || there > here)) {
           session.restore(remote.progress);
           uthSession.restore(remote.progress.uth);
+        }
+        /*
+         * How much the app explains, carried across devices (round 14).
+         *
+         * A device that has never been asked takes the answer the player gave
+         * somewhere else; a device that has been asked keeps its own, because
+         * the last answer a player gave on the phone in his hand is the one he
+         * meant. It changes nothing measured either way.
+         */
+        if (window.EVLevel && window.EVLevel.read() === null && remote.progress?.level) {
+          window.EVLevel.set(remote.progress.level);
         }
         /*
          * The day count is merged whichever copy won, because each device may

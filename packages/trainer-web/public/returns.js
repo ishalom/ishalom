@@ -135,10 +135,23 @@
     box.id = opts.helpId;
 
     const add = (key, values) => {
+      if (!room()) return;
+      written++;
       const p = document.createElement('p');
       rich(p, T(key, values));
       box.appendChild(p);
     };
+
+    /*
+     * How much of it is drawn (round 14). The paragraphs are written in one
+     * order and a level reads a prefix of them: what the figure is, the anchor
+     * a player can check for himself, the worked example, what hitting does,
+     * what doubling does, and the two lines. A beginner is shown the first of
+     * the same words an expert reads — never different ones.
+     */
+    const depth = window.EVLevel ? window.EVLevel.helpDepth() : 6;
+    let written = 0;
+    const room = () => written < depth;
 
     add('ret.helpWhat');
     add(opts.game === 'uth' ? 'ret.helpFold' : 'ret.helpSurrender');

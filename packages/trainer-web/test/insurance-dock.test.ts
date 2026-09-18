@@ -98,7 +98,7 @@ test('a hand that ends on the insurance answer shows why before it offers the ne
   await press(page, 'actions', 'reveal-next');
   await press(page, 'actions', 'reveal-next');
   await until(() => actionsIn(page, 'actions').includes('deal'), 'Deal never came back');
-  const said = page.document.getElementById('say').textContent;
+  const said = page.document.getElementById('table-talk').textContent;
   assert.equal(said, catalogue('en')['dealer.dealerNatural'], 'the screen does not say the dealer had blackjack');
   page.stopWatching();
 });

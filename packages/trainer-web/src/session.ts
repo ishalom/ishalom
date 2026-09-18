@@ -35,6 +35,7 @@ import {
   actionName,
   bustOnNextCard,
   dealerOdds,
+  dealerOutcomes,
   explain,
   INSURANCE_STAKE,
   insuranceOdds,
@@ -727,6 +728,19 @@ export class TrainerSession {
       counterNote: this.counterNote(record),
       ranked,
       returns: this.returnsBlock(scenario, ranked, stake),
+      /*
+       * The Advanced breakdown's one piece of arithmetic that is not already on
+       * the card (round 14): everything the dealer can end up with, from this
+       * upcard, conditioned on the natural the peek has already ruled out.
+       *
+       * Computed at every level and for every hand, like everything else here.
+       * A level decides what is drawn, never what is worked out — otherwise a
+       * player who moves up a level would find a gap where his history was.
+       */
+      breakdown:
+        scenario.kind === 'insurance' || scenario.upcard === undefined
+          ? null
+          : { dealer: dealerOutcomes(scenario.upcard, this.rules) },
       sensitivity,
     };
   }

@@ -209,7 +209,7 @@ async function send(path, body) {
     // the reveal, rather than starting the reasoning over.
     if (!CHIP_PATHS.includes(path)) {
       state.reveal = feedback
-        ? { steps: feedback.steps, shown: showAllPreferred() ? 3 : 1 }
+        ? { steps: feedback.steps, shown: showAllPreferred() ? revealPlan().total : 1 }
         : null;
     }
     render();
@@ -539,8 +539,21 @@ const severityWord = (severity) => T('fb.' + severity);
  * be independent of the result, and a result visible two clicks before the grade
  * would break that far more thoroughly than showing the chips early.
  */
+/**
+ * Which of the three steps this level reads, and how many there are.
+ *
+ * The walkthrough is an argument in order — the dealer's card, then the hand,
+ * then the two together and what follows. The last step is the conclusion and
+ * stands on its own, so a player who asked for less reads that one; the others
+ * read the argument that reaches it. One explanation, not three (round 14).
+ */
+function revealPlan() {
+  const shown = window.EVLevel ? window.EVLevel.steps() : 3;
+  return { from: 3 - shown, total: shown };
+}
+
 function revealComplete() {
-  return !state.reveal || state.reveal.shown >= 3;
+  return !state.reveal || state.reveal.shown >= revealPlan().total;
 }
 
 const stepTitles = () => [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
@@ -742,14 +755,16 @@ function renderFeedback(view) {
   // time, so the card keeps its size and nothing under the cursor moves.
   const reveal = document.createElement('div');
   reveal.className = 'reveal';
-  for (let i = 0; i < 3; i++) {
-    const revealed = i < state.reveal.shown;
+  const plan = revealPlan();
+  for (let i = plan.from; i < 3; i++) {
+    const place = i - plan.from;
+    const revealed = place < state.reveal.shown;
     const step = document.createElement('div');
     step.className =
-      'step' + (revealed ? '' : ' pending') + (i === state.reveal.shown - 1 ? ' latest' : '');
+      'step' + (revealed ? '' : ' pending') + (place === state.reveal.shown - 1 ? ' latest' : '');
     const n = document.createElement('div');
     n.className = 'step-n';
-    n.textContent = String(i + 1);
+    n.textContent = String(place + 1);
     const body = document.createElement('div');
     const head = document.createElement('div');
     head.className = 'step-head';
@@ -775,7 +790,7 @@ function renderFeedback(view) {
     skip.title = T('fb.skipAlwaysHint');
     skip.addEventListener('click', () => {
       setShowAllPreferred(true);
-      state.reveal.shown = 3;
+      state.reveal.shown = revealPlan().total;
       render();
     });
     controls.append(next, skip);
@@ -802,8 +817,10 @@ function renderFeedback(view) {
     box.appendChild(note);
   }
 
-  // §7.1 item 6: flag answers that flip under another common rule set.
-  if (feedback.sensitivity.length > 0) {
+  // §7.1 item 6: flag answers that flip under another common rule set. Part of
+  // how the decision is computed, so it arrives with the reasoning rather than
+  // with the basics — and in full, inside the breakdown, at Advanced.
+  if (feedback.sensitivity.length > 0 && window.EVLevel.rank() > 0) {
     const note = document.createElement('p');
     note.className = 'sensitivity';
     note.textContent = T('fb.ruleSensitive', {
@@ -815,12 +832,76 @@ function renderFeedback(view) {
     });
     box.appendChild(note);
   }
+
+  const breakdown = renderBreakdown(feedback);
+  if (breakdown) box.appendChild(breakdown);
+}
+
+/**
+ * The whole spot, for a player who asked to see the numbers (round 14).
+ *
+ * Everything in here is already computed on every hand at every level; this is
+ * the one place it is drawn. Nothing in it is new arithmetic and nothing in it
+ * can move a grade — it is the same decision, with its working shown:
+ *
+ *   - everything the dealer can end up with from this upcard, in full;
+ *   - the exact figures, past the three decimals the bars round to;
+ *   - how rare the spot is, and what it rates;
+ *   - what another rule set would answer (§3.3).
+ */
+function renderBreakdown(feedback) {
+  if (!window.EVLevel.breakdown() || !revealComplete()) return null;
+  const box = document.createElement('section');
+  box.className = 'breakdown';
+  const head = document.createElement('p');
+  head.className = 'breakdown-head';
+  head.textContent = T('bd.title');
+  box.appendChild(head);
+
+  const line = (text) => {
+    const p = document.createElement('p');
+    renderRich(p, text);
+    box.appendChild(p);
+  };
+
+  if (feedback.breakdown) {
+    const pct = (p) => `${(p * 100).toFixed(1)}%`;
+    const list = feedback.breakdown.dealer
+      .map((row) => `${row.outcome === 'bust' ? T('bd.breaks') : row.outcome === 'blackjack' ? T('bd.natural') : row.outcome} ${pct(row.p)}`)
+      .join(' · ');
+    line(T('bd.dealer', { list }));
+  }
+
+  // The same figures the bars carry, to a decimal the bars deliberately round
+  // away — the card is for reading at a glance, this is for checking.
+  line(
+    T('bd.exact', {
+      list: feedback.ranked
+        .map((row) => `${row.label} ${row.value < 0 ? '−' : '+'}${Math.abs(row.value).toFixed(4)}`)
+        .join(' · '),
+    }),
+  );
+
+  if (feedback.spot) {
+    line(T('bd.rarity', { oneIn: feedback.spot.oneIn, difficulty: feedback.spot.rating, band: T(`spot.${feedback.spot.band}`) }));
+  }
+
+  line(
+    feedback.sensitivity.length === 0
+      ? T('bd.rulesNone')
+      : T('bd.rules', {
+          list: feedback.sensitivity
+            .map((s) => `${T('action.' + s.action).toLowerCase()} ${T('sens.' + s.id)}`)
+            .join('; '),
+        }),
+  );
+  return box;
 }
 
 function advanceReveal() {
   if (!state.reveal || revealComplete()) return false;
   state.reveal.shown++;
-  if (state.reveal.shown >= 3) setShowAllPreferred(false);
+  if (state.reveal.shown >= revealPlan().total) setShowAllPreferred(false);
   render();
   return true;
 }
@@ -963,6 +1044,10 @@ function renderActions(view) {
 
 function renderStats(view) {
   const stats = view.stats;
+  // Which cells are shown, and how their labels are worded (round 14). Every
+  // figure below is computed and saved whatever the level: only the cells a
+  // player is shown change, so moving up a level never finds a gap.
+  window.EVLevel.applyStrip(el('stats'));
   el('stat-accuracy').textContent =
     stats.decisions === 0 ? '—' : `${(stats.accuracy * 100).toFixed(1)}%`;
   el('stat-evlost').textContent = stats.hands === 0 ? '—' : stats.evLostPer100.toFixed(2);
@@ -1133,64 +1218,33 @@ function tableTalk(view) {
   return only ? T('dealer.iWin', { dealer: dealer.total }) : T('dealer.iWinPlain');
 }
 
-async function renderCoach(view) {
-  const say = el('say');
-  const answer = el('answer');
-  const asks = el('asks');
-  if (!say || !asks) return;
-
-  // A dealer natural can end a hand before the player decides anything, so
-  // there is no feedback card to hang the explanation on. The dealer says it
-  // instead — otherwise the screen goes straight back to "deal when ready" and
-  // the hand looks as though it was never played.
+/**
+ * What the cards did, in one line, below the table (round 14).
+ *
+ * Idan, watching people play: nobody pressed the dealer's questions and nobody
+ * read her bubble, so the avatar, the name, the speech and the two buttons are
+ * gone. The one thing that lived only there was the call on the hand itself —
+ * most of all on a dealer's blackjack, which ends a hand before the player
+ * decides anything and otherwise looks like the app skipping his turn.
+ *
+ * It says nothing about the decision. That separation is §3.1: the grade
+ * belongs to the decision and the table talk belongs to the cards, and a player
+ * who hears them in one voice starts reading "you played well" into a hand that
+ * merely won.
+ */
+function renderTalk(view) {
+  const line = el('table-talk');
+  if (!line) return;
   const spoken = view.phase === 'settled' && (view.feedback || dealerNatural(view));
-
-  if (view.feedback && !revealComplete()) {
-    say.textContent = T('ui.thinkPrompt');
-  } else if (spoken) {
-    say.textContent = tableTalk(view);
-  }
-
-  if (view.phase !== 'player' && view.phase !== 'insurance') {
-    if (!spoken) say.textContent = T('ui.dealWhenReady');
-    asks.replaceChildren();
-    answer.hidden = true;
+  // Held behind the same gate as everything else that shows a result: the hand
+  // is not called until the reveal is done (§3.1, §3.4).
+  if (!spoken || !revealComplete()) {
+    line.hidden = true;
+    line.textContent = '';
     return;
   }
-
-  const coach = await api('/api/coach');
-  if (coach.prompt) say.textContent = coach.prompt;
-
-  asks.replaceChildren();
-  answer.hidden = true;
-  for (const ask of coach.asks) {
-    const button = document.createElement('button');
-    button.className = 'ask';
-    button.type = 'button';
-    button.textContent = ask.question;
-    button.setAttribute('aria-pressed', 'false');
-    button.addEventListener('click', () => {
-      for (const b of asks.children) b.setAttribute('aria-pressed', 'false');
-      button.setAttribute('aria-pressed', 'true');
-      answer.hidden = false;
-      answer.textContent = ask.answer;
-    });
-    asks.appendChild(button);
-  }
-
-  // Once the decision is made the answer is already out, so the full reasoning
-  // can be asked for without giving anything away.
-  if (view.feedback && revealComplete()) {
-    const why = document.createElement('button');
-    why.className = 'ask';
-    why.type = 'button';
-    why.textContent = T('ui.why');
-    why.addEventListener('click', () => {
-      answer.hidden = false;
-      answer.textContent = view.feedback.steps.join(' ');
-    });
-    asks.appendChild(why);
-  }
+  line.hidden = false;
+  line.textContent = tableTalk(view);
 }
 
 /**
@@ -1250,7 +1304,8 @@ function render() {
   renderStats(view);
   renderTrack(view);
   settleChips(view);
-  renderCoach(view).catch(() => {});
+  renderTalk(view);
+  if (moreBelow) moreBelow.update();
 }
 
 // --- Settings and the reference chart --------------------------------------
@@ -1322,6 +1377,16 @@ function openHowTo() {
   window.EVIntro.passage(el('howto-lead'));
   const list = el('howto-list');
   list.replaceChildren();
+  // How the game itself works — what beats what, and what the dealer must do.
+  // A player who asked to be told everything gets all of it; one step up gets
+  // the one line that carries the most (the dealer has no choices); a player
+  // who asked for the numbers is not told how blackjack works.
+  for (let n = 1; n <= window.EVLevel.basics(); n++) {
+    const item = document.createElement('li');
+    item.className = 'howto-basic';
+    renderRich(item, T(`howto.basics${n === 1 && window.EVLevel.basics() === 1 ? 2 : n}`));
+    list.appendChild(item);
+  }
   for (const n of [1, 2, 3, 4]) {
     const item = document.createElement('li');
     renderRich(item, T(`howto.${n}`));
@@ -1474,8 +1539,32 @@ el('open-reference').addEventListener('click', openReference);
 el('open-howto').addEventListener('click', openHowTo);
 
 // After the locale handshake, so the first render is already in the right language.
+/** Redraw everything a level decides, without touching what is measured. */
+function relevel() {
+  window.EVLevel.applyStrip(el('stats'));
+  if (state.reveal) state.reveal.shown = Math.min(state.reveal.shown, revealPlan().total);
+  render();
+}
+
+window.addEventListener('ev:level', relevel);
+
+/*
+ * The arrow that says there is reasoning below the table (round 14). Its token
+ * is the decision count, so it can appear again on the next hand but never
+ * twice for the same one.
+ */
+const moreBelow = window.EVArrow.watch(el('feedback'), {
+  token: () => (state.view && state.view.stats ? String(state.view.stats.decisions) : ''),
+  label: T('ui.moreBelow'),
+});
+
 Promise.resolve(window.EV && window.EV.ready).then(() => {
-  // Before the very first hand this player ever plays, and never again.
-  window.EVIntro.showOnce('intro', 'intro-body');
+  // What this app is, and how much it should explain: one screen, in that
+  // order, before the first hand this player ever plays (rounds 13 and 14).
+  window.EVIntro.firstRun(
+    { welcome: 'welcome', body: 'intro-body', passage: 'welcome-passage', choices: 'level-choices' },
+    relevel,
+  );
+  window.EVIntro.settings(el('level-settings'), relevel);
   return send('/api/state');
 });

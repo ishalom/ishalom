@@ -277,7 +277,12 @@ test('where they come out equal, the figures are identical and the card says the
     .filter((r: { action: string }) => tie.includes(r.action))
     .map((r: { value: number }) => r.value.toFixed(3));
   assert.equal(figures[0], figures[1], 'the two tied actions print different figures');
-  // And nothing is rounded to a fourth decimal to tell them apart any more.
+  // And nothing on the card is rounded to a fourth decimal to tell them apart
+  // any more. The Advanced breakdown does print a fourth decimal (round 14) —
+  // deliberately, as the exact figure behind a bar that rounds to three — so it
+  // is lifted out before the check rather than exempted by a looser pattern.
+  const app = readFileSync(join(HERE, '..', 'public', 'app.js'), 'utf8');
+  const cardCode = app.slice(0, app.indexOf('function renderBreakdown(')) + app.slice(app.indexOf('function advanceReveal('));
   assert.doesNotMatch(readFileSync(join(HERE, '..', 'public', 'ultimate.js'), 'utf8'), /toFixed\(4\)|ChipDigits/);
-  assert.doesNotMatch(readFileSync(join(HERE, '..', 'public', 'app.js'), 'utf8'), /toFixed\(4\)|chipDigits/);
+  assert.doesNotMatch(cardCode, /toFixed\(4\)|chipDigits/);
 });

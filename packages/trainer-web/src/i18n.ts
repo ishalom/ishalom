@@ -293,6 +293,38 @@ const EN: Catalogue = {
   'intro.title': 'Before your first hand',
   'intro.body': 'This is not a blackjack game. Every decision you make is measured against the mathematically best play, and that is what you are scored on. **You will lose hands playing perfectly — that is the point.**',
   'intro.ok': 'Deal me in',
+
+  // --- The slogan, and what the app is for (round 14) ---
+  'brand.slogan': 'Simply winning more hands.',
+
+  // --- How much the app explains (round 14) ---
+  'level.question': 'How much should the app explain?',
+  'level.note': 'This changes only how much is explained — never your score. The grade, the figures and both your Blackjack and Ultimate ratings are the same at every setting, and you can change it whenever you like.',
+  'level.new.title': 'Explain everything',
+  'level.new.body': 'How the game itself works, and what the figures mean, in plain words.',
+  'level.intermediate.title': 'Explain the decision',
+  'level.intermediate.body': 'A little of the basics, and the full reasoning behind the best play.',
+  'level.advanced.title': 'Show me the numbers',
+  'level.advanced.body': 'The reasoning, and the whole breakdown: every dealer outcome, the exact figures, how rare the spot is, and what another rule set would answer.',
+  'ui.plain.accuracy': 'decisions played right',
+  'ui.plain.evLost': 'cost of mistakes / 100 hands',
+  'ui.plain.units': 'chips, up or down',
+  'ui.moreBelow': 'There is more below',
+
+  // --- The breakdown, at Advanced (round 14) ---
+  'bd.title': 'The whole breakdown',
+  'bd.dealer': 'The dealer, from this card: {list}.',
+  'bd.breaks': 'breaks',
+  'bd.natural': 'blackjack',
+  'bd.exact': 'Exactly: {list}.',
+  'bd.rarity': 'About one hand in {oneIn} is this spot, and it is a {band} one: difficulty {difficulty}.',
+  'bd.rules': 'Under another rule set: {list}.',
+  'bd.rulesNone': 'This answer holds under every rule set the app offers.',
+
+  // --- The game itself, for a player who asked to be told everything (round 14) ---
+  'howto.basics1': 'The aim is a hand closer to **21** than the dealer’s, without going over. Face cards count ten; an ace counts eleven until that would take you over, and then one.',
+  'howto.basics2': 'The dealer has no choices to make: he **draws to 16 and stands on 17** or more. That is why the card he is showing tells you so much.',
+  'howto.basics3': 'Going over 21 loses **at once**, even if the dealer goes over afterwards — which is the whole reason some hands are worth standing on.',
   'ui.why': 'Why?',
   'ui.thinkPrompt': 'Take a moment. What is my card telling you?',
   'ui.dealWhenReady': 'Deal when you are ready.',
@@ -675,19 +707,19 @@ const EN: Catalogue = {
   // that, and hearing it twice made her sound like a scoreboard rather than
   // someone dealing cards.
   'dealer.youBust': 'Too many.',
-  'dealer.iBust': 'And I break. Yours.',
+  'dealer.iBust': 'Dealer breaks. The hand is yours.',
   'dealer.blackjack': 'Blackjack. Pays {pays}.',
   'dealer.pays32': 'three to two',
   'dealer.pays65': 'six to five',
   'dealer.dealerNatural':
-    'Ace and a ten — blackjack, so the hand is over before you play it. Nothing was skipped; there was nothing left to decide.',
-  'dealer.bothNaturals': 'Blackjack here too. Push — your bet stays up.',
+    'Ace and a ten — dealer blackjack, so the hand is over before you play it. Nothing was skipped; there was nothing left to decide.',
+  'dealer.bothNaturals': 'Blackjack for the dealer too. Push — your bet stays up.',
   'dealer.push': 'Push — your bet stays up.',
   'dealer.surrendered': 'Half back. On to the next.',
-  'dealer.youWin': '{player} against my {dealer}. Yours.',
-  'dealer.iWin': '{dealer} here. That one is mine.',
-  'dealer.youWinPlain': 'Those are good. Paying you.',
-  'dealer.iWinPlain': 'Mine this time.',
+  'dealer.youWin': '{player} against the dealer’s {dealer}. The hand is yours.',
+  'dealer.iWin': 'Dealer {dealer}. That one goes to the house.',
+  'dealer.youWinPlain': 'Those are good. The hand pays.',
+  'dealer.iWinPlain': 'The house takes this one.',
 
   // --- Playing well (§3.4) ---
   //
@@ -1061,6 +1093,38 @@ const HE: Catalogue = {
   'intro.title': 'לפני היד הראשונה שלך',
   'intro.body': 'זה לא משחק בלאק ג׳ק. כל החלטה שלך נמדדת מול המהלך הנכון מתמטית, ועל זה אתה מקבל ציון. **תפסיד ידיים גם כששיחקת מושלם — וזאת בדיוק הנקודה.**',
   'intro.ok': 'קדימה, נתחיל',
+
+  // --- The slogan, and what the app is for (round 14) ---
+  'brand.slogan': 'פשוט לנצח ביותר ידיים.',
+
+  // --- How much the app explains (round 14) ---
+  'level.question': 'כמה שהאפליקציה תסביר?',
+  'level.note': 'זה משנה רק כמה מוסבר לך — אף פעם לא את הציון. הציון, המספרים והדירוג שלך בבלאק ג׳ק ובאולטימייט זהים בכל הבחירות, ואפשר לשנות מתי שרוצים.',
+  'level.new.title': 'תסביר לי הכול',
+  'level.new.body': 'איך המשחק עצמו עובד, ומה המספרים אומרים, במילים פשוטות.',
+  'level.intermediate.title': 'תסביר לי את ההחלטה',
+  'level.intermediate.body': 'קצת מהבסיס, וכל ההסבר איך מגיעים להחלטה הנכונה.',
+  'level.advanced.title': 'תראה לי את המספרים',
+  'level.advanced.body': 'ההסבר, וגם הפירוט המלא: כל התוצאות של הדילר, המספרים המדויקים, כמה המצב נדיר, ומה היה קורה בחוקים אחרים.',
+  'ui.plain.accuracy': 'החלטות נכונות',
+  'ui.plain.evLost': 'עלות הטעויות ל-100 ידיים',
+  'ui.plain.units': 'צ׳יפים, פלוס או מינוס',
+  'ui.moreBelow': 'יש עוד מתחת',
+
+  // --- The breakdown, at Advanced (round 14) ---
+  'bd.title': 'הפירוט המלא',
+  'bd.dealer': 'הדילר, מהקלף הזה: {list}.',
+  'bd.breaks': 'נשרף',
+  'bd.natural': 'בלאק ג׳ק',
+  'bd.exact': 'במדויק: {list}.',
+  'bd.rarity': 'בערך יד אחת מכל {oneIn} היא המצב הזה, והוא {band}: רמת קושי {difficulty}.',
+  'bd.rules': 'בחוקים אחרים: {list}.',
+  'bd.rulesNone': 'התשובה הזאת נכונה בכל מערכות החוקים שהאפליקציה מציעה.',
+
+  // --- The game itself, for a player who asked to be told everything (round 14) ---
+  'howto.basics1': 'המטרה היא יד קרובה ל-**21** יותר מזו של הדילר, בלי לעבור. קלפי תמונה שווים עשר; אס שווה אחת-עשרה עד שזה יעביר אותך, ואז אחת.',
+  'howto.basics2': 'לדילר אין החלטות: הוא **מושך עד 16 ועוצר ב-17** ומעלה. בגלל זה הקלף שהוא מראה אומר כל כך הרבה.',
+  'howto.basics3': 'מעבר ל-21 מפסיד **מיד**, גם אם הדילר עובר אחר כך — וזאת כל הסיבה שיש ידיים ששווה לעצור עליהן.',
   'ui.why': 'למה?',
   'ui.thinkPrompt': 'קח רגע. מה הקלף שלי מספר לך?',
   'ui.dealWhenReady': 'חלק כשאתה מוכן.',
@@ -1438,19 +1502,19 @@ const HE: Catalogue = {
 
   // --- Table talk (§3.4) ---
   'dealer.youBust': 'נשרפת.',
-  'dealer.iBust': 'ואני נשרף. שלך.',
+  'dealer.iBust': 'הדילר נשרף. היד שלך.',
   'dealer.blackjack': 'בלאק ג׳ק. משלם {pays}.',
   'dealer.pays32': '3 ל-2',
   'dealer.pays65': '6 ל-5',
   'dealer.dealerNatural':
-    'אס ועשר — בלאק ג׳ק, ולכן היד נגמרת לפני שמשחקת אותה. שום דבר לא דולג — פשוט לא נשאר מה להחליט.',
-  'dealer.bothNaturals': 'גם לי בלאק ג׳ק. תיקו — ההימור נשאר.',
+    'אס ועשר — בלאק ג׳ק לדילר, ולכן היד נגמרת לפני שמשחקים אותה. שום דבר לא דולג — פשוט לא נשאר מה להחליט.',
+  'dealer.bothNaturals': 'גם לדילר בלאק ג׳ק. תיקו — ההימור נשאר.',
   'dealer.push': 'תיקו — ההימור נשאר.',
   'dealer.surrendered': 'חצי בחזרה. עוברים לבאה.',
-  'dealer.youWin': '{player} מול {dealer} שלי. שלך.',
-  'dealer.iWin': '{dealer} אצלי. הפעם זה שלי.',
-  'dealer.youWinPlain': 'אלה טובות. משלם לך.',
-  'dealer.iWinPlain': 'הפעם זה שלי.',
+  'dealer.youWin': '{player} מול {dealer} של הדילר. היד שלך.',
+  'dealer.iWin': 'לדילר {dealer}. היד הזאת לקזינו.',
+  'dealer.youWinPlain': 'אלה טובות. היד משלמת.',
+  'dealer.iWinPlain': 'היד הזאת הולכת לקזינו.',
 
   // --- Playing well (§3.4) ---
   'fb.streak': '{n} החלטות נכונות ברצף',

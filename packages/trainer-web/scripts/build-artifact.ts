@@ -108,8 +108,12 @@ const chipsJs = read(PUBLIC, 'chips.js');
 const dockJs = read(PUBLIC, 'dock.js');
 // What comes back to you: the decision block, shared by both tables (round 13).
 const returnsJs = read(PUBLIC, 'returns.js');
-// Said once, before a player's first hand ever (round 13).
+// Said once, before a player's first hand ever (round 13); the level question
+// joined it in round 14.
 const introJs = read(PUBLIC, 'intro.js');
+// How much the app explains, and the arrow that says there is more (round 14).
+const levelJs = read(PUBLIC, 'level.js');
+const arrowJs = read(PUBLIC, 'arrow.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 // The usage page: who has played, how much, and who came back (round 9).
@@ -201,7 +205,13 @@ ${dockJs}
 /* What comes back to you: the decision block, both tables (round 13). */
 ${returnsJs}
 
-/* What this app is, said once before the first hand ever (round 13). */
+/* How much the app explains, both tables (round 14). */
+${levelJs}
+
+/* There is more below: the arrow, both tables (round 14). */
+${arrowJs}
+
+/* What this app is, and how much it should explain (rounds 13 and 14). */
 ${introJs}
 
 /* The three screen scripts, unchanged but for their transport. */

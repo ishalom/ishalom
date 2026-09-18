@@ -119,6 +119,38 @@ export function dealerOdds(upcard: BjRank, rules: BlackjackRules): DealerOdds {
   return odds;
 }
 
+/**
+ * Everything the dealer can end up with, for the Advanced breakdown (round 14).
+ *
+ * The same conditioning as `dealerOdds`: in a peek game the dealer has already
+ * looked, so a natural is off the table and the rest is scaled back up. This is
+ * the figure a player is actually facing, and it is what the breakdown claims
+ * to be showing. Cached with the same key, because it is derived from exactly
+ * the same distribution.
+ */
+export function dealerOutcomes(
+  upcard: BjRank,
+  rules: BlackjackRules,
+): Array<{ outcome: 'bust' | '17' | '18' | '19' | '20' | '21' | 'blackjack'; p: number }> {
+  const shoe = Shoe.fresh(rules.decks);
+  shoe.remove(upcard);
+  const raw = new DealerSolver(rules).distribution(upcard, shoe);
+  const natural = rules.peek ? raw[DEALER_BLACKJACK]! : 0;
+  const scale = natural < 1 ? 1 / (1 - natural) : 1;
+  const rows: Array<{ outcome: 'bust' | '17' | '18' | '19' | '20' | '21' | 'blackjack'; p: number }> = [
+    { outcome: 'bust', p: raw[DEALER_BUST]! * scale },
+  ];
+  for (let total = 17; total <= 21; total++) {
+    rows.push({ outcome: String(total) as '17', p: raw[total - 16]! * scale });
+  }
+  // A game that does not peek can still turn one over, and hiding that would
+  // make the percentages add up to something other than the hand being played.
+  if (!rules.peek && raw[DEALER_BLACKJACK]! > 0) {
+    rows.push({ outcome: 'blackjack', p: raw[DEALER_BLACKJACK]! });
+  }
+  return rows;
+}
+
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 /**

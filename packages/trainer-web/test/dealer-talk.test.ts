@@ -1,15 +1,19 @@
 /**
- * What the dealer says when a hand resolves.
+ * What the table says when a hand resolves.
  *
- * She used to restate the verdict — "Stand. That's the play." — directly above
- * a card that said the same thing in more detail, which made her a scoreboard
- * reading itself out rather than someone dealing cards.
+ * It used to restate the verdict — "Stand. That's the play." — directly above a
+ * card that said the same thing in more detail, which made it a scoreboard
+ * reading itself out rather than a table calling a hand.
  *
- * Now she calls the hand, the way a dealer actually does: what she made, who
- * took it, whether the bet stays up. The rule this protects is §3.1. The grade
- * belongs to the decision and the table talk belongs to the cards, and if the
- * two ever speak in one voice a player starts hearing "you played well" in a
- * hand that merely won.
+ * Now it calls the hand: what the dealer made, who took it, whether the bet
+ * stays up. Round 14 removed the dealer character herself — avatar, name,
+ * bubble and her two questions, none of which anybody pressed — and this line
+ * is what survived her, because it was the only place the table said what had
+ * just happened. It moved below the felt and into the third person with her.
+ *
+ * The rule it protects is §3.1: the grade belongs to the decision and the table
+ * talk belongs to the cards, and if the two ever speak in one voice a player
+ * starts hearing "you played well" in a hand that merely won.
  */
 
 import { test } from 'node:test';
@@ -20,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { catalogue, t, type Locale } from '../src/i18n.ts';
 
-/** Keys the dealer actually says out loud, where "I" is hers and correct. */
+/** The lines that call the hand, in the table’s own voice (round 14). */
 const SPEECH = new Set([
   'dealer.youBust', 'dealer.iBust', 'dealer.blackjack', 'dealer.push',
   'dealer.surrendered', 'dealer.youWin', 'dealer.iWin', 'dealer.youWinPlain',
@@ -83,12 +87,12 @@ function settled(options: {
 test('she calls a bust before anything else', () => {
   assert.equal(say(settled({ player: [24], dealer: null, net: -1 })), 'Too many.');
   // Even when she went on to break as well: the player was already out, and
-  // "and I break, yours" would be a lie about who won.
+  // "dealer breaks, the hand is yours" would be a lie about who won.
   assert.equal(say(settled({ player: [23], dealer: 25, net: -1 })), 'Too many.');
 });
 
 test('she says when she breaks', () => {
-  assert.equal(say(settled({ player: [18], dealer: 24, net: 1 })), 'And I break. Yours.');
+  assert.equal(say(settled({ player: [18], dealer: 24, net: 1 })), 'Dealer breaks. The hand is yours.');
 });
 
 test('a natural is called as one, and only when it is one', () => {
@@ -98,8 +102,8 @@ test('a natural is called as one, and only when it is one', () => {
   );
   // Twenty-one made from three cards is not a blackjack, and neither is
   // twenty-one on one half of a split.
-  assert.equal(say(settled({ player: [21], cards: 3, dealer: 20, net: 1 })), '21 against my 20. Yours.');
-  assert.equal(say(settled({ player: [21, 19], cards: 2, dealer: 20, net: 1 })), 'Those are good. Paying you.');
+  assert.equal(say(settled({ player: [21], cards: 3, dealer: 20, net: 1 })), '21 against the dealer’s 20. The hand is yours.');
+  assert.equal(say(settled({ player: [21, 19], cards: 2, dealer: 20, net: 1 })), 'Those are good. The hand pays.');
 });
 
 test('a dealer natural is named, because otherwise the hand looks skipped', () => {
@@ -119,12 +123,12 @@ test('a dealer natural is named, because otherwise the hand looks skipped', () =
 test('two naturals are a push, and are not paid three to two', () => {
   // The player-natural branch used to run first, so a push announced a payout.
   const view = settled({ player: [21], cards: 2, dealer: 21, dealerCards: 2, net: 0 });
-  assert.equal(say(view), 'Blackjack here too. Push — your bet stays up.');
+  assert.equal(say(view), 'Blackjack for the dealer too. Push — your bet stays up.');
 });
 
 test('the totals she names are the ones on the table', () => {
-  assert.equal(say(settled({ player: [20], dealer: 18, net: 1 })), '20 against my 18. Yours.');
-  assert.equal(say(settled({ player: [17], dealer: 19, net: -1 })), '19 here. That one is mine.');
+  assert.equal(say(settled({ player: [20], dealer: 18, net: 1 })), '20 against the dealer’s 18. The hand is yours.');
+  assert.equal(say(settled({ player: [17], dealer: 19, net: -1 })), 'Dealer 19. That one goes to the house.');
 });
 
 test('a push and a surrender each get their own line', () => {

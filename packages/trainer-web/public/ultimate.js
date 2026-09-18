@@ -216,6 +216,7 @@ function uthRender() {
   uthFitCard();
   uthRenderStats(view);
   uthRenderActions();
+  if (uthMoreBelow) uthMoreBelow.update();
 }
 
 // --- The strip, its tooltips, the hand log and How to play --------------------
@@ -243,6 +244,9 @@ function uthPinStrip() {
 function uthRenderStats(view) {
   const s = view.stats;
   if (!s) return;
+  // Which cells this level shows, and how they are worded (round 14). Every
+  // figure is computed and saved at every level.
+  window.EVLevel.applyStrip(el('uth-stats'));
   el('uth-stat-accuracy').textContent = s.decisions === 0 ? '—' : `${(s.accuracy * 100).toFixed(1)}%`;
   el('uth-stat-evlost').textContent = s.hands === 0 ? '—' : s.evLostPer100.toFixed(2);
   el('uth-stat-edge').textContent = `${s.effectiveHouseEdgePercent.toFixed(2)}%`;
@@ -787,8 +791,27 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+/** Redraw what a level decides. Nothing here is measured or graded. */
+function uthRelevel() {
+  window.EVLevel.applyStrip(el('uth-stats'));
+  uthRender();
+}
+
+window.addEventListener('ev:level', uthRelevel);
+
+/* The same arrow, watching Ultimate's commentary (round 14). */
+const uthMoreBelow = window.EVArrow.watch(el('uth-feedback'), {
+  token: () => (uthState.view && uthState.view.stats ? String(uthState.view.stats.decisions) : ''),
+  label: T('ui.moreBelow'),
+});
+
 Promise.resolve(window.EV && window.EV.ready).then(() => {
-  // Before the very first hand this player ever plays, and never again.
-  window.EVIntro.showOnce('uth-intro', 'uth-intro-body');
+  // What this app is, and how much it should explain: one screen, in that
+  // order, before the first hand this player ever plays (rounds 13 and 14).
+  window.EVIntro.firstRun(
+    { welcome: 'uth-welcome', body: 'uth-intro-body', passage: 'uth-welcome-passage', choices: 'uth-level-choices' },
+    uthRelevel,
+  );
+  window.EVIntro.settings(el('uth-level-settings'), uthRelevel);
   return uthSend('/api/uth/state');
 });

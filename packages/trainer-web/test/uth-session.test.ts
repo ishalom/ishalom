@@ -133,10 +133,16 @@ test('3x is always graded an error, and the card says why, with the cost', () =>
       assert.equal(card.correct, false, `${locale} ${hand}: 3x graded correct`);
       assert.ok(card.evCost > 0);
       assert.match(card.sentence, /169/, `${locale}: the card does not give the 169 fact`);
+      // Round 14: what a mistake cost is printed on the card's own scale — per
+      // unit of the Ante and the Blind, which is what the bars beside it are —
+      // so the sentence and the verdict quote half the stored cost, and the
+      // same half. `evCost` itself, above, is untouched.
+      const shown = (card.evCost / 2).toFixed(3);
       assert.ok(
-        card.sentence.includes(card.evCost.toFixed(3)),
+        card.sentence.includes(shown),
         `${locale}: the sentence quotes a different cost from the verdict: ${card.sentence}`,
       );
+      assert.ok(card.verdict.includes(shown), `${locale}: the verdict and the sentence disagree`);
     }
   }
 });

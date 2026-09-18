@@ -15,6 +15,16 @@
  * total stay exactly as they were, in units net of the stake. Nothing here is
  * ever written back into a record.
  *
+ * THE ONE PLACE TWO SCALES STILL MEET (round 14, carried deliberately).
+ * In Ultimate a unit staked is two units of the ante, so a cost shown on the
+ * card is half the cost the same mistake adds to EV-lost, the rating and the
+ * leaderboard, which stay in units of the ante. Idan's decision: the card is
+ * what a player can check by subtracting two bars, so the card wins, and the
+ * difference is accepted because the two figures live on different screens and
+ * nobody adds hands up by hand. If anything ever puts a card's cost and the
+ * session's EV-lost side by side — a per-hand log of costs, an end-of-session
+ * summary, a feed item quoting both — this is the decision to reopen.
+ *
  * WHY IT CANNOT CHANGE A RANKING. Within one spot the transform is
  * `1 + ev / stake` with the same stake for every option, which is affine and
  * increasing: it moves every option by the same constant and scales them all by

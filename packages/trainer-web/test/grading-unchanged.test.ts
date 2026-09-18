@@ -62,15 +62,49 @@ test('and the totals they add up to: the rating, the track, the log, what was lo
   assert.ok(stored.some((ev) => ev < 0), 'no stored EV is negative any more, which means one was converted');
 });
 
+/**
+ * The same for Ultimate, with one field held out.
+ *
+ * Round 14 puts the cost *printed on the Ultimate card* onto the card's own
+ * scale, so that it stops contradicting the bars an inch below it. The cost
+ * itself — the one that is graded, rated, ranked and accumulated — does not
+ * move, which is exactly what `evCost` below proves. The worded verdict is
+ * held out for the same reason the walkthrough's prose is: it is the display,
+ * and the display is what changed.
+ */
+const withoutVerdict = (row: Record<string, unknown>) => {
+  const { verdict, ...rest } = row;
+  return rest;
+};
+
 test('Ultimate too: forty hands, the same grades, costs, EVs and rating', () => {
   const now = gradedUthRun();
   assert.equal(now.decisions.length, golden.uth.decisions.length);
   now.decisions.forEach((row, index) => {
-    assert.deepEqual(row, golden.uth.decisions[index]!, `Ultimate decision ${index + 1} is graded differently`);
+    assert.deepEqual(
+      withoutVerdict(row),
+      withoutVerdict(golden.uth.decisions[index]!),
+      `Ultimate decision ${index + 1} is graded differently`,
+    );
   });
   assert.deepEqual(now.rating, golden.uth.rating, 'the Ultimate rating moved');
   assert.deepEqual(now.stats, golden.uth.stats, 'the Ultimate totals moved');
   assert.deepEqual(now.log, golden.uth.log, 'the Ultimate hand log moved');
+
+  // And the one field held out: the card quotes exactly half the stored cost,
+  // because a unit staked in Ultimate is the Ante and the Blind together.
+  let checked = 0;
+  for (const row of now.decisions) {
+    const quoted = /(\d\.\d{3})/.exec(String(row.verdict));
+    if (!quoted || row.correct) continue;
+    checked++;
+    assert.equal(
+      quoted[1],
+      ((row.evCost as number) / 2).toFixed(3),
+      `the card quotes ${String(quoted[1])} for a cost of ${String(row.evCost)}`,
+    );
+  }
+  assert.ok(checked > 10, `only ${checked} verdicts carried a cost`);
 });
 
 test('every figure the walkthrough now quotes is a return of an EV beside it', () => {

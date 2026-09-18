@@ -338,30 +338,18 @@ test('the ? explains the figures with this hand’s own numbers, and remembers b
   later.stopWatching();
 });
 
-test('a new player is told what this is, once, and can find it again under How to play', async () => {
+test('a new player is told what this is, and can find it again under How to play', async () => {
+  // Round 14 moved the passage out of its dialog and onto the first screen,
+  // where the level question follows it; `level.test.ts` covers that flow. What
+  // matters here is that the words survived the move, and are still reachable.
   const page = loadHosted('#table', [['ev:playerName', 'Dana']]);
   await page.booted;
   for (let i = 0; i < 40; i++) await settle();
   const body = page.document.getElementById('intro-body');
   assert.match(String(body.innerHTML), /not a blackjack game/i);
   assert.match(String(body.innerHTML), /<b>.*that is the point.*<\/b>/i, 'the point is not the emphasis');
-  assert.equal(page.storage().get('ev:introSeen'), '1', 'it was not marked as shown');
+
+  for (const handler of page.document.getElementById('open-howto').listeners.click ?? []) handler({ preventDefault() {} });
+  assert.match(String(page.document.getElementById('howto-lead').innerHTML), /not a blackjack game/i);
   page.stopWatching();
-
-  // Shown once, ever — a second visit opens nothing.
-  const again = loadHosted('#table', [['ev:playerName', 'Dana'], ['ev:introSeen', '1']]);
-  await again.booted;
-  for (let i = 0; i < 40; i++) await settle();
-  let opened = false;
-  const dialog = again.document.getElementById('intro');
-  dialog.showModal = () => {
-    opened = true;
-  };
-  for (let i = 0; i < 20; i++) await settle();
-  assert.equal(opened, false, 'a returning player was shown it again');
-
-  // The same words live at the head of How to play.
-  for (const handler of again.document.getElementById('open-howto').listeners.click ?? []) handler({ preventDefault() {} });
-  assert.match(String(again.document.getElementById('howto-lead').innerHTML), /not a blackjack game/i);
-  again.stopWatching();
 });
