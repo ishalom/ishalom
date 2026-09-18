@@ -293,6 +293,7 @@ function renderHands(view, uthView) {
 
     const steps = decisionBlocks(hand);
     row.addEventListener('click', () => {
+      if (steps.hidden && window.EVCount) window.EVCount.bump('hand');
       steps.hidden = !steps.hidden;
     });
     openable.set(`bj:${index}`, { row, steps, id: hand.id });
@@ -387,6 +388,7 @@ function uthHandRow(hand) {
   steps.appendChild(result);
 
   row.addEventListener('click', () => {
+    if (steps.hidden && window.EVCount) window.EVCount.bump('hand');
     steps.hidden = !steps.hidden;
   });
   return [row, steps];
@@ -406,6 +408,7 @@ function openHand(wanted) {
     )?.[1];
   }
   if (!found) return;
+  if (window.EVCount) window.EVCount.bump('hand');
   found.steps.hidden = false;
   if (found.row.classList) found.row.classList.add('opened');
   if (typeof found.row.scrollIntoView === 'function') found.row.scrollIntoView({ block: 'center' });

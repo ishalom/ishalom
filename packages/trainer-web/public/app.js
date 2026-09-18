@@ -454,7 +454,10 @@ function renderHands(view) {
 
   view.hands.forEach((hand, handIndex) => {
     const wrap = document.createElement('div');
-    wrap.className = 'hand' + (hand.active ? ' active' : '');
+    // A long hand says so, so the felt can hold it in the room it has: at 360px
+    // a seventh card was sitting under the dock until the player scrolled
+    // (round 15, found by measuring rather than by eye).
+    wrap.className = 'hand' + (hand.active ? ' active' : '') + (hand.cards.length >= 6 ? ' long' : '');
 
     const fresh = newCards(state.shown.hands[handIndex], previous[handIndex] ?? []);
     const cards = document.createElement('div');
@@ -783,12 +786,16 @@ function renderFeedback(view) {
     const next = document.createElement('button');
     next.className = 'reveal-next';
     next.innerHTML = `${T('ui.next')}<span class="key">${T('key.space')}</span>`;
-    next.addEventListener('click', advanceReveal);
+    next.addEventListener('click', () => {
+      window.EVCount.bump('next');
+      advanceReveal();
+    });
     const skip = document.createElement('button');
     skip.className = 'reveal-skip';
     skip.textContent = T('fb.skipAlways');
     skip.title = T('fb.skipAlwaysHint');
     skip.addEventListener('click', () => {
+      window.EVCount.bump('skip');
       setShowAllPreferred(true);
       state.reveal.shown = revealPlan().total;
       render();
@@ -1136,7 +1143,10 @@ function hideInfo() {
 for (const button of document.querySelectorAll('.stat[data-info]')) {
   button.addEventListener('click', () => {
     if (openInfo === button.dataset.info) hideInfo();
-    else showInfo(button.dataset.info);
+    else {
+      window.EVCount.bump('statInfo');
+      showInfo(button.dataset.info);
+    }
   });
 }
 
@@ -1372,21 +1382,20 @@ el('opt-sound').addEventListener('change', (event) => {
   if (event.target.checked) playCard(0);
 });
 
+/** What a natural pays at this table: the primer quotes the rules in force. */
+function blackjackPays() {
+  const payout = state.view && state.view.ruleSet ? state.view.ruleSet.blackjackPayout : null;
+  return payout === '6:5' ? '6:5' : '3:2';
+}
+
 function openHowTo() {
   // The same passage a new player was shown once, where they would look for it.
   window.EVIntro.passage(el('howto-lead'));
+  // The game itself, in whatever share this level reads — the same words the
+  // first screen taught, from the one source (round 15).
+  window.EVIntro.primer(el('howto-primer'), undefined, blackjackPays());
   const list = el('howto-list');
   list.replaceChildren();
-  // How the game itself works — what beats what, and what the dealer must do.
-  // A player who asked to be told everything gets all of it; one step up gets
-  // the one line that carries the most (the dealer has no choices); a player
-  // who asked for the numbers is not told how blackjack works.
-  for (let n = 1; n <= window.EVLevel.basics(); n++) {
-    const item = document.createElement('li');
-    item.className = 'howto-basic';
-    renderRich(item, T(`howto.basics${n === 1 && window.EVLevel.basics() === 1 ? 2 : n}`));
-    list.appendChild(item);
-  }
   for (const n of [1, 2, 3, 4]) {
     const item = document.createElement('li');
     renderRich(item, T(`howto.${n}`));
@@ -1533,15 +1542,45 @@ function pinStrip() {
 
 pinStrip();
 
-el('open-settings').addEventListener('click', openSettings);
+el('open-settings').addEventListener('click', () => {
+  window.EVCount.bump('rules');
+  openSettings();
+});
 el('change-rules').addEventListener('click', openSettings);
-el('open-reference').addEventListener('click', openReference);
-el('open-howto').addEventListener('click', openHowTo);
+el('open-reference').addEventListener('click', () => {
+  window.EVCount.bump('chart');
+  openReference();
+});
+el('open-howto').addEventListener('click', () => {
+  window.EVCount.bump('howto');
+  openHowTo();
+});
 
 // After the locale handshake, so the first render is already in the right language.
+/**
+ * The primer, one tap from the felt, for a player who asked to be taught the
+ * game (round 15). Shown only at the level that asks for it, and drawn from the
+ * same words as the first screen.
+ */
+function renderPrimerHere() {
+  const box = el('primer-here');
+  if (!box) return;
+  const wanted = window.EVLevel.primer().length > 2;
+  box.hidden = !wanted;
+  if (!wanted) return;
+  const body = el('primer-here-body');
+  if (body.children.length === 0) {
+    window.EVIntro.primer(body, undefined, blackjackPays());
+    // Closed until he asks for it — stated here rather than left to the markup,
+    // so a screen the shell rebuilds cannot come back open.
+    body.hidden = true;
+  }
+}
+
 /** Redraw everything a level decides, without touching what is measured. */
 function relevel() {
   window.EVLevel.applyStrip(el('stats'));
+  renderPrimerHere();
   if (state.reveal) state.reveal.shown = Math.min(state.reveal.shown, revealPlan().total);
   render();
 }
@@ -1562,9 +1601,28 @@ Promise.resolve(window.EV && window.EV.ready).then(() => {
   // What this app is, and how much it should explain: one screen, in that
   // order, before the first hand this player ever plays (rounds 13 and 14).
   window.EVIntro.firstRun(
-    { welcome: 'welcome', body: 'intro-body', passage: 'welcome-passage', choices: 'level-choices' },
+    {
+      welcome: 'welcome',
+      body: 'intro-body',
+      passage: 'welcome-passage',
+      choices: 'level-choices',
+      ask: 'first-screen-ask',
+      note: 'first-screen-note',
+      primer: 'primer',
+      primerBody: 'primer-body',
+      start: 'primer-start',
+    },
     relevel,
+    { pays: blackjackPays() },
   );
   window.EVIntro.settings(el('level-settings'), relevel);
+  renderPrimerHere();
+  el('primer-open').addEventListener('click', () => {
+    const body = el('primer-here-body');
+    const open = body.hidden;
+    if (open) window.EVCount.bump('primer');
+    body.hidden = !open;
+    el('primer-open').setAttribute('aria-expanded', String(open));
+  });
   return send('/api/state');
 });

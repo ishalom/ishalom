@@ -37,6 +37,7 @@
     button.textContent = '↓';
     button.setAttribute('aria-label', (opts && opts.label) || 'More below');
     button.addEventListener('click', () => {
+      if (window.EVCount) window.EVCount.bump('arrow');
       reached = token();
       button.hidden = true;
       if (target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'center' });

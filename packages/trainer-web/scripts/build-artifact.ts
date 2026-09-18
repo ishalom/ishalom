@@ -114,6 +114,8 @@ const introJs = read(PUBLIC, 'intro.js');
 // How much the app explains, and the arrow that says there is more (round 14).
 const levelJs = read(PUBLIC, 'level.js');
 const arrowJs = read(PUBLIC, 'arrow.js');
+// Which explanations get opened: counters, not logs (round 15).
+const countJs = read(PUBLIC, 'count.js');
 const identity = read(ARTIFACT, 'identity.js');
 const backends = read(ARTIFACT, 'backends.js');
 // The usage page: who has played, how much, and who came back (round 9).
@@ -210,6 +212,9 @@ ${levelJs}
 
 /* There is more below: the arrow, both tables (round 14). */
 ${arrowJs}
+
+/* Which explanations get opened, per player (round 15). */
+${countJs}
 
 /* What this app is, and how much it should explain (rounds 13 and 14). */
 ${introJs}

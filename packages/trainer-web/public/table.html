@@ -15,6 +15,7 @@
     <script src="/dock.js"></script>
     <script src="/returns.js"></script>
     <script src="/level.js"></script>
+    <script src="/count.js"></script>
     <script src="/arrow.js"></script>
     <script src="/intro.js"></script>
   </head>
@@ -32,9 +33,17 @@
         <h1 data-i18n="intro.title">Before your first hand</h1>
         <p class="intro-body" id="intro-body"></p>
       </div>
-      <h2 class="first-screen-ask" data-i18n="level.question">How much should the app explain?</h2>
+      <h2 class="first-screen-ask" id="first-screen-ask" data-i18n="level.question">How much should the app explain?</h2>
       <div class="levels" id="level-choices"></div>
-      <p class="first-screen-note" data-i18n="level.note">This changes only how much is explained, never your score.</p>
+      <p class="first-screen-note" id="first-screen-note" data-i18n="level.note">This changes only how much is explained, never your score.</p>
+
+      <!-- The answer to "explain everything": the game itself, here, before the
+           first hand — not behind a menu somewhere. -->
+      <div class="primer" id="primer" hidden>
+        <h2 data-i18n="prime.title">How the game works</h2>
+        <div id="primer-body"></div>
+        <button class="action primary" type="button" id="primer-start" data-i18n="prime.start">Start playing</button>
+      </div>
     </section>
 
     <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->
@@ -121,6 +130,17 @@
       that ends on a dealer's blackjack needs someone to say so. It is a line
       below the table now, in the table's own voice rather than a person's.
     -->
+    <!--
+      The game itself, one tap away from the felt for a player who asked to be
+      taught it (round 15). Not in the footer menu: he asked, so it is where he
+      is playing.
+    -->
+    <section class="primer-here" id="primer-here" hidden>
+      <button class="primer-open" id="primer-open" type="button" aria-expanded="false"
+              aria-controls="primer-here-body" data-i18n="prime.open">How the game works</button>
+      <div class="primer" id="primer-here-body" hidden></div>
+    </section>
+
     <p class="table-talk" id="table-talk" hidden aria-live="polite"></p>
 
     <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->
@@ -210,6 +230,7 @@
       <form method="dialog">
         <h2 data-i18n="howto.title">How this works</h2>
         <p class="howto-lead" id="howto-lead"></p>
+        <div class="primer" id="howto-primer"></div>
           <ol class="howto" id="howto-list"></ol>
         <menu>
           <button value="cancel" data-i18n="ui.close">Close</button>

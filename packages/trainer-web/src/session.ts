@@ -13,6 +13,7 @@
  */
 
 import {
+  ACE,
   formatCard,
   getPreset,
   houseEdge,
@@ -20,6 +21,7 @@ import {
   parseScenarioKey,
   scenarioKeyForHand,
   RULE_PRESETS,
+  RANK_VALUE,
   rankOf,
   suitOf,
   severityForCost,
@@ -45,6 +47,7 @@ import {
   equivalentGroups,
   RETURN_SCALE_MAX,
   returned,
+  returnFigure,
   sameFigure,
 } from './returns.ts';
 import {
@@ -307,6 +310,23 @@ function roundish(value: number): number {
   const scale = 10 ** (Math.floor(Math.log10(value)) - 1);
   return Math.round(value / scale) * scale;
 }
+
+/**
+ * What each kind of worked line adds up to, read off terms rounded to however
+ * many decimals they are about to be printed with. The same arithmetic the
+ * copy shows the player, in the same order.
+ */
+const REBUILD: Record<string, (t: (name: string) => number) => number> = {
+  stand: (t) => 2 * t('win'),
+  standPush: (t) => 2 * t('win') + t('push'),
+  hit: (t) => t('survive') * t('surviveValue'),
+  hitAlwaysBreaks: () => 0,
+  double: (t) => 2 * t('oneCard') - 1,
+  split: (t) => 2 * t('perHand') - 1,
+  surrender: () => 0.5,
+  insurance: (t) => 3 * t('ten'),
+  decline: () => 1,
+};
 
 function describeSpot(cell: ScenarioDifficulty, rating: Rating): SpotDescription {
   const difficulty = cell[rating.mode];
@@ -763,8 +783,119 @@ export class TrainerSession {
       best: ranked[0]?.value ?? 0,
       // Ties are read off the figures a player actually sees, not off the EVs.
       equivalent: equivalentGroups(ranked),
+      // One worked line per action, each rebuilding its own figure exactly
+      // (round 15). `example` is kept for the stand line the round 13 tests
+      // name, and is the same arithmetic.
+      worked: ranked.map((row) => this.workedFor(scenario, row)),
       example: this.standExample(scenario, ranked),
     };
+  }
+
+  /**
+   * How one action's figure is arrived at, in numbers a player can check.
+   *
+   * Idan rejected the prose this replaces — "hitting has no single sum" — and
+   * he was right to: an explanation that asks to be trusted is worth less than
+   * one that can be redone on a napkin. So every action gets its terms, its
+   * assumption, and an arithmetic that closes.
+   *
+   * WHY THE SECOND TERM IS DIVIDED OUT OF THE FIGURE RATHER THAN QUOTED. Each
+   * line borrows one number that can be computed on its own — the chance of
+   * breaking on the next card, the chance the dealer ties — and derives the
+   * rest from the figure being explained. The figures come from the chart,
+   * which averages over the hands that reach a total; anything computed beside
+   * it agrees to about the third decimal and not always beyond. Quoting both
+   * halves would print a sum that does not come out, in an explanation whose
+   * whole point is that it does. This way the sum is exact by construction and
+   * the only borrowed number is one the app already quotes elsewhere.
+   */
+  private workedFor(
+    scenario: Scenario,
+    row: { action: string; ev: number; value: number },
+  ): unknown {
+    return this.withDigits(this.workedTerms(scenario, row));
+  }
+
+  /**
+   * How many decimals the printed terms need for the printed sum to come out.
+   *
+   * The arithmetic closes exactly; the *printing* of it need not. `2 × 26% =
+   * +0.526` is what a reader is asked to check, and 2 × 26% is 0.520 — so the
+   * explanation would be caught lying by anybody who did the one thing it
+   * invites. The terms therefore carry as many decimals as it takes for the
+   * rounded sum to land on the figure beside it, starting at three and going
+   * up only when three will not do.
+   */
+  private withDigits(work: Record<string, unknown> | null): unknown {
+    if (!work) return null;
+    const rebuild = REBUILD[work.kind as string];
+    if (!rebuild) return work;
+    const wanted = returnFigure(work.value as number);
+    for (let digits = 3; digits <= 6; digits++) {
+      const round = (name: string) => {
+        const value = work[name];
+        return typeof value === 'number' ? Number(value.toFixed(digits)) : 0;
+      };
+      if (returnFigure(rebuild(round)) === wanted) return { ...work, digits };
+    }
+    // Six decimals and still not landing would mean the arithmetic itself is
+    // wrong, not the printing; say so rather than print a sum that is out.
+    return { ...work, digits: null };
+  }
+
+  private workedTerms(
+    scenario: Scenario,
+    row: { action: string; ev: number; value: number },
+  ): Record<string, unknown> | null {
+    const value = row.value;
+    const total = this.standingTotal(scenario);
+
+    switch (row.action) {
+      case 'surrender':
+        // Half the bet, always. Nothing to work out, which is the point of it.
+        return { action: row.action, kind: 'surrender', value };
+      case 'declineInsurance':
+        return { action: row.action, kind: 'decline', value };
+      case 'takeInsurance':
+        // 2:1 on half a unit: three units back per unit staked, when the hole
+        // card is a ten.
+        return { action: row.action, kind: 'insurance', value, ten: value / 3 };
+      case 'stand': {
+        if (total === null || scenario.upcard === undefined) return null;
+        // A stiff hand cannot tie: every total the dealer makes beats it.
+        const push = total <= 16 ? 0 : standOutcome(total, scenario.upcard, this.rules).push;
+        return { action: row.action, kind: push === 0 ? 'stand' : 'standPush', value, win: (value - push) / 2, push };
+      }
+      case 'hit': {
+        const bust = bustOnNextCard(scenario, this.rules);
+        const survive = 1 - bust;
+        if (survive <= 0) return { action: row.action, kind: 'hitAlwaysBreaks', value, bust, survive };
+        return { action: row.action, kind: 'hit', value, bust, survive, surviveValue: value / survive };
+      }
+      // Both put a second unit out, so both are the same shape: what one unit
+      // comes back, on two units, less the one that came out of pocket.
+      case 'double':
+        return { action: row.action, kind: 'double', value, oneCard: (value + 1) / 2 };
+      case 'split':
+        return { action: row.action, kind: 'split', value, perHand: (value + 1) / 2 };
+      default:
+        return null;
+    }
+  }
+
+  /**
+   * The total a hand would stand on, including a pair — which the chart's
+   * scenario keys leave implicit, and which round 13's stand example had no way
+   * to read, so pair spots carried no arithmetic at all.
+   */
+  private standingTotal(scenario: Scenario): number | null {
+    if (scenario.kind === 'insurance') return null;
+    if (scenario.total !== undefined) return scenario.total;
+    if (scenario.kind === 'pair' && scenario.pairRank !== undefined) {
+      // A pair of aces stands on twelve; every other pair is twice its rank.
+      return scenario.pairRank === ACE ? 12 : 2 * RANK_VALUE[scenario.pairRank]!;
+    }
+    return null;
   }
 
   /**

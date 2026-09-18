@@ -91,9 +91,31 @@ async function waitFor(check: () => boolean, tries = 100): Promise<void> {
 
 // --- Reading the table -------------------------------------------------------------
 
-test('an empty table reads as nobody', () => {
-  assert.deepEqual(U.summariseUsage([], '2026-09-20'), { people: [], played: 0, cameBack: 0, regulars: 0, recent: 0 });
+test('an empty table reads as nobody, and nothing opened', () => {
+  const empty = U.summariseUsage([], '2026-09-20');
+  const { opened, ...rest } = empty;
+  assert.deepEqual(rest, { people: [], played: 0, cameBack: 0, regulars: 0, recent: 0 });
+  // Round 15: every counted control is listed at zero rather than missing, so
+  // "nobody has ever opened this" is a row on the page rather than a gap.
+  assert.deepEqual(Object.values(opened as Record<string, number>).filter((n) => n !== 0), []);
+  assert.ok(Object.keys(opened as object).length >= 10, 'the controls are not all listed');
   assert.equal(U.summariseUsage(null, '2026-09-20').played, 0);
+});
+
+test('what people open is added up across everyone, and only what is known is shown (round 15)', () => {
+  const s = U.summariseUsage(
+    [
+      { name: 'A', blackjack: 40, ultimate: 0, activity: { firstDay: '2026-09-14', lastDay: '2026-09-18', days: 3 }, counters: { help: 4, chart: 1, nonsense: 99 } },
+      { name: 'B', blackjack: 10, ultimate: 0, activity: { firstDay: '2026-09-18', lastDay: '2026-09-18', days: 1 }, counters: { help: 2, primer: 5 } },
+      { name: 'C', blackjack: 1, ultimate: 0, activity: null, counters: null },
+    ],
+    '2026-09-20',
+  );
+  assert.equal(s.opened.help, 6, 'two people opening the explanation is six opens');
+  assert.equal(s.opened.primer, 5);
+  assert.equal(s.opened.chart, 1);
+  assert.equal(s.opened.howto, 0, 'a control nobody opened is zero, not missing');
+  assert.equal((s.opened as Record<string, number>).nonsense, undefined, 'an unknown key reached the page');
 });
 
 test('someone with no graded decision has not played; someone with no day count has played and not come back', () => {

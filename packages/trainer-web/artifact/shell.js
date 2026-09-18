@@ -378,7 +378,17 @@ function fullProgress() {
   // measure. It rides here so it follows the player to another device, exactly
   // as the day count does, and nothing that grades a hand ever reads it.
   const level = window.EVLevel ? window.EVLevel.read() : null;
-  return { ...session.progress, uth: uthSession.progress, activity, playedBefore, ...(level ? { level } : {}) };
+  // Which explanations this player opens (round 15): counts only, no sequence
+  // and no timestamps, riding beside the day count exactly as round 9 did.
+  const counters = window.EVCount ? window.EVCount.all() : null;
+  return {
+    ...session.progress,
+    uth: uthSession.progress,
+    activity,
+    playedBefore,
+    ...(level ? { level } : {}),
+    ...(counters && Object.keys(counters).length > 0 ? { counters } : {}),
+  };
 }
 
 function readLocalProgress() {
@@ -438,6 +448,7 @@ async function restoreMine() {
   }
   activity = activityOf(local);
   playedBefore = earlierDay(local?.playedBefore, null);
+  if (window.EVCount && local?.counters) window.EVCount.restore(local.counters);
   myFeed = readLocalFeed();
 
   if (backend && me.name) {
@@ -484,6 +495,15 @@ async function restoreMine() {
          */
         if (window.EVLevel && window.EVLevel.read() === null && remote.progress?.level) {
           window.EVLevel.set(remote.progress.level);
+        }
+        /*
+         * The counters are merged whichever copy won, the same way the day
+         * count is: the larger of each pair, never the sum. This device's own
+         * record is written and read back constantly, and adding would inflate
+         * every count by however often it synced.
+         */
+        if (window.EVCount && remote.progress?.counters) {
+          window.EVCount.restore(remote.progress.counters);
         }
         /*
          * The day count is merged whichever copy won, because each device may

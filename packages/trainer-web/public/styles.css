@@ -1241,8 +1241,16 @@ body { font-family: var(--body); }
   border-bottom: 1px solid var(--line);
   border-inline-start: 3px solid var(--line);
   text-align: start;
-  /* A long reveal must never push the buttons off the screen. */
-  max-height: 42dvh;
+  /*
+   * The dock has a ceiling, and round 15 lowered it.
+   *
+   * The explanation is open by default now, which made 42dvh the normal height
+   * rather than the tallest — and at that size the dock was covering the cards
+   * on a 360px phone. The card scrolls inside itself instead: the grade, the
+   * bars and the working are all still reachable, and the felt stays visible
+   * above them (§10.1).
+   */
+  max-height: 30dvh;
   overflow-y: auto;
 }
 .quickcard.optimal { border-inline-start-color: var(--optimal); }
@@ -2049,8 +2057,6 @@ button,
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #0d141b;
-  max-height: 38vh;
-  overflow-y: auto;
 }
 .returns-help p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 .returns-help p:last-child { margin-bottom: 0; }
@@ -2180,3 +2186,90 @@ button,
     50% { transform: translateY(4px); }
   }
 }
+
+/* --- The working, one action at a time (round 15) ------------------------------
+ * Idan rejected the prose this replaces: an explanation that asks to be trusted
+ * is worth less than one a player can redo himself. So each action states its
+ * condition and its odds, and the sum sits on its own line below it.
+ *
+ * The sum never wraps. A line break through the middle of `2 × 23% = +0.460` is
+ * unreadable, and worse in a right-to-left page, so it is laid out left to
+ * right on a line of its own and scrolls if it must. */
+.worked { margin: 0 0 9px; }
+.worked:last-child { margin-bottom: 0; }
+.worked-say { margin: 0 0 3px; }
+.worked-sum {
+  margin: 0;
+  direction: ltr;
+  text-align: start;
+  white-space: nowrap;
+  overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--ink);
+}
+:root[dir='rtl'] .worked-sum { text-align: right; }
+/* Every number in the explanation is bold (round 15). */
+.returns-help .num { font-weight: 700; color: var(--ink); }
+/* The control that closes it, at a size a thumb can find. */
+.returns-why { width: 34px; height: 34px; font-size: 17px; }
+
+/* --- The game itself, for whoever asked to be taught it (round 15) ------------
+ * Idan played at the beginner setting and found nothing explaining how
+ * blackjack is played. This is that, in three places from one source: on the
+ * first screen the moment he asks for it, one tap from the felt while he is
+ * playing, and under How to play afterwards. */
+.primer { margin: 0; }
+.primer h2 { margin: 0 0 12px; font-family: var(--display); font-size: 21px; }
+.primer-head {
+  margin: 16px 0 6px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.primer-head:first-child { margin-top: 0; }
+.primer-line { margin: 0 0 8px; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.primer-line b { color: var(--ink); font-weight: 600; }
+.primer .action { margin-top: 16px; width: 100%; }
+
+/* One tap from the felt, above the commentary — not in the footer menu. */
+.primer-here { margin: 10px 14px 0; }
+.primer-open {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.primer-open[aria-expanded='true'] { border-color: var(--brass); }
+.primer-here .primer { padding: 12px 13px 2px; }
+
+/* --- What people open (round 15) ---------------------------------------------
+ * A list of counts on the usage page. A control nobody has ever opened is the
+ * useful row, so it is marked rather than hidden. */
+.usage-subtitle { margin: 26px 0 4px; font-family: var(--display); font-size: 18px; }
+.usage-opened { display: grid; gap: 1px; margin-top: 10px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.usage-opened-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; background: var(--panel-2); font-size: 13.5px; }
+.usage-opened-label { color: var(--muted); }
+.usage-opened-count { font-variant-numeric: tabular-nums; color: var(--ink); }
+.usage-opened-row.never .usage-opened-count { color: var(--muted); opacity: 0.6; }
+
+/* --- A hand that keeps drawing (round 15) -------------------------------------
+ * Six cards or more, on the narrowest phone: the cards step down a size so the
+ * hand still ends above the dock rather than under it. Nothing else changes —
+ * the badges, the ring and the totals are all the same. */
+@media (max-width: 400px) {
+  .hand.long .card { width: 40px; height: 58px; font-size: 13px; }
+  .hand.long .card-suit { font-size: 12px; }
+}
+
+/* The control that closes the explanation belongs at the edge of its row, not
+   floating in the middle of it beside the heading (round 15). */
+.returns-head .returns-why { margin-inline-start: auto; }

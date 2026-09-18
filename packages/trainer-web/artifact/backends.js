@@ -76,6 +76,7 @@ function artifactBackend(db) {
           blackjack: row.lifetimeDecisions ?? row.decisions ?? 0,
           ultimate: row.uthDecisions ?? 0,
           activity: row.activity ?? null,
+          counters: row.counters ?? null,
           at: row.at ?? 0,
         }));
     },
@@ -247,7 +248,10 @@ function httpBackend({ url, key, table = 'players' }) {
     async usage() {
       const response = await fetch(
         `${endpoint}?select=name,decisions,lifetime_decisions,updated_at,` +
-          'activity:progress->activity,uth_decisions:progress->uth->>lifetimeDecisions' +
+          'activity:progress->activity,uth_decisions:progress->uth->>lifetimeDecisions,' +
+          // Which explanations people open (round 15). Read out of the record
+          // that already exists — no column, no migration.
+          'counters:progress->counters' +
           '&merged_into=is.null&order=updated_at.desc&limit=1000',
         { headers },
       );
@@ -262,6 +266,7 @@ function httpBackend({ url, key, table = 'players' }) {
         blackjack: row.lifetime_decisions ?? row.decisions ?? 0,
         ultimate: Number(row.uth_decisions) || 0,
         activity: row.activity && typeof row.activity === 'object' ? row.activity : null,
+        counters: row.counters && typeof row.counters === 'object' ? row.counters : null,
         at: Date.parse(row.updated_at) || 0,
       }));
     },

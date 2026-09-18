@@ -313,17 +313,18 @@ test('the ? explains the figures with this hand’s own numbers, and remembers b
   const card = page.document.getElementById('quickcard');
   const help = withClass(card, 'returns-help')[0];
   assert.ok(help, 'no explanation');
-  // Open by itself for a new player's first hands.
+  // Open by default now, for everyone, until closed (round 15).
   assert.equal(help.hidden, false);
 
   // The copy's own markup — bold, and figures set in the display face — is
   // stripped, so the assertions are about the words rather than the spans.
   const text = walk(help).map((n: any) => String(n.innerHTML ?? '').replace(/<[^>]*>/g, '')).join(' ');
-  assert.match(text, /half the bet comes back/i, 'surrender is not the anchor');
+  assert.match(text, /half the bet back, always/i, 'surrender is no longer the figure that needs no arithmetic');
   assert.match(text, /break-even/i);
   const example = (page.session().view as any).feedback.returns.example;
   assert.match(text, new RegExp(`${Math.round(example.win * 100)}%`), 'the example is not this hand’s');
   assert.match(text, /× 2/, 'the example is not a sum the player can redo');
+  // `worked-lines.test.ts` holds every action's line to its own arithmetic.
 
   // Closing it is remembered, for this player and the next hand.
   const why = withClass(card, 'returns-why')[0];

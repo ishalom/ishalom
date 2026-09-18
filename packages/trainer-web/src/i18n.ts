@@ -275,19 +275,34 @@ const EN: Catalogue = {
   // --- What comes back to you: the decision block and its `?` (round 13) ---
   'ret.title': 'What comes back, per unit staked',
   'ret.helpAria': 'What do these figures mean?',
+  'ret.helpClose': 'Close the explanation',
   'ret.same2': '{a} and {b} are worth the same here — they differ past the third decimal.',
   'ret.sameMany': '{list} are worth the same here — they differ past the third decimal.',
   'ret.helpWhat': 'Each figure is what **one unit already at risk comes back**, on average, if this spot were played over and over. **1.000 is break-even**: the stake comes back and nothing more.',
-  'ret.helpSurrender': 'Surrender is the one you can check without trusting anything: **half the bet comes back, always**, so it reads +0.500.',
   'ret.helpFold': 'Folding is the one you can check without trusting anything: the Ante and the Blind are gone and **nothing comes back**, so it reads 0.000.',
-  'ret.helpStandBust': 'Standing here wins only when the dealer breaks, and a win returns two units: **{win} × 2 = {value}**.',
-  'ret.helpStandPush': 'Standing here wins {win} of the time and ties {push} of it. A win returns two units and a tie returns one: **{win} × 2 + {push} = {value}**.',
   'ret.helpRiver': 'On the river nothing is estimated: your hand beats **{win}** of the dealer’s possible hands and ties {tie} of them, and the Ante, the Blind and the Play bet together come to {value}.',
-  'ret.helpHit': 'Hitting has no single sum. Some of the time you break and nothing comes back; the rest of the time you are holding a new hand, and the engine keeps solving forward from it.',
   'ret.helpRaise': 'Raising has no single sum: the Play bet joins what is already at risk, and the engine plays your hand against every holding the dealer can have.',
-  'ret.helpDouble': 'Doubling and splitting put more money out, and that money is already inside the figure — which is what makes it comparable with the rest, and why it can fall below zero.',
   'ret.helpUthStake': 'Every figure here is per unit of the Ante and the Blind, the two bets already on the table. A raise adds the Play bet on top of them, and it is already inside the figure.',
-  'ret.helpLines': 'The dashed line is **1.000**, break-even. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
+  // --- One action, worked out, with this hand's own numbers (round 15) ---
+  'work.stand': 'Choosing **{action}** wins when the dealer breaks, which is **{win}** of the time, and a win returns two units:',
+  'work.stand.sum': '2 × {win} = {value}',
+  'work.standPush': 'Choosing **{action}** wins **{win}** of the time and ties **{push}**. A win returns two units, a tie returns one:',
+  'work.standPush.sum': '2 × {win} + {push} = {value}',
+  'work.hit': 'Choosing **{action}** breaks the hand **{bust}** of the time, and then nothing comes back. The other **{survive}** you are holding a new hand, which comes back **{surviveValue}** on average — assuming the rest of it is played as well as it can be:',
+  'work.hit.sum': '{survive} × {surviveValue} = {value}',
+  'work.hitAlwaysBreaks': 'Choosing **{action}** breaks the hand every time from here, so nothing comes back:',
+  'work.hitAlwaysBreaks.sum': '{value}',
+  'work.double': 'Choosing **{action}** puts a second unit beside the first and takes exactly one card, standing on whatever it is. That hand comes back **{oneCard}** per unit — on two units now, less the one just put up:',
+  'work.double.sum': '2 × {oneCard} − 1 = {value}',
+  'work.split': 'Choosing **{action}** puts a second bet out and plays two hands. Each comes back **{perHand}** per unit, played on as well as it can be — on two units, less the one just put up:',
+  'work.split.sum': '2 × {perHand} − 1 = {value}',
+  'work.surrender': 'Choosing **{action}** gives up the hand and takes half the bet back, always. It is the one figure here that needs no arithmetic at all:',
+  'work.surrender.sum': '{value}',
+  'work.insurance': 'Insurance pays 2:1, so every unit on it comes back three when the hole card is a ten — which it is **{ten}** of the time:',
+  'work.insurance.sum': '3 × {ten} = {value}',
+  'work.decline': 'Declining puts nothing on the side bet, so there is nothing there to lose and nothing to come back:',
+  'work.decline.sum': '{value}',
+  'ret.helpLines': 'The dashed line is **1.000**. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
 
   // --- Said once, before the first hand ever played (round 13) ---
   'intro.title': 'Before your first hand',
@@ -296,6 +311,26 @@ const EN: Catalogue = {
 
   // --- The slogan, and what the app is for (round 14) ---
   'brand.slogan': 'Simply winning more hands.',
+
+  // --- The game itself, for a player who asked to be taught it (round 15) ---
+  'prime.title': 'How the game works',
+  'prime.open': 'How the game works',
+  'prime.start': 'Start playing',
+  'prime.headOrder': 'The order of play',
+  'prime.order': 'You put a bet up, and then you are dealt **two cards face up**. The dealer takes two as well: **one face up**, which you can see, and one face down, which you cannot. Then it is your turn — you choose, one card at a time, until you stand or go over 21. Only when you are done does the dealer turn his hidden card and play his own hand.',
+  'prime.cards': 'A hand is worth what its cards add up to. Numbers count themselves, **a picture card counts ten**, and **an ace counts eleven** until that would take you over 21 — and then it counts one. So A-6 is seventeen, or seven if another card would break it.',
+  'prime.dealerRule': 'The dealer has no choices to make: he **draws to 16 and stands on 17** or more. That is why the card he is showing tells you so much.',
+  'prime.headActions': 'What each choice does',
+  'prime.hit': '**Hit** — take one more card. You can keep taking them; go over 21 and the hand is lost at once, whatever the dealer does afterwards.',
+  'prime.stand': '**Stand** — take no more cards, and let the dealer play his hand out.',
+  'prime.double': '**Double** — put a second bet out beside the first and take exactly one more card. You stand on whatever it turns out to be.',
+  'prime.split': '**Split** — offered only when your two cards are the same rank. Put up a second bet and play them as two separate hands.',
+  'prime.surrender': '**Surrender** — give the hand up before playing it and take half your bet back. Some tables do not offer it.',
+  'prime.insurance': '**Insurance** — offered only when the dealer shows an ace. It is a side bet, half your stake, that his hidden card is worth ten. It pays 2:1 and it has nothing to do with your own hand.',
+  'prime.headWin': 'When you win',
+  'prime.win': 'You win when your total is **closer to 21 than the dealer’s** without going over, and when the dealer goes over and you have not. Equal totals are a **push**: your bet simply comes back. An ace with a ten-card in your first two cards is a **blackjack**, and it pays {pays} — unless the dealer has one too, and then it is a push.',
+  'prime.headPoint': 'What this is',
+  'prime.point': 'Every hand is a small decision: your two cards against the dealer’s one, and one choice that is better than the others. This app measures the **choice**, not the result — so a correct play that loses is still correct, and that is the whole idea.',
 
   // --- How much the app explains (round 14) ---
   'level.question': 'How much should the app explain?',
@@ -321,10 +356,6 @@ const EN: Catalogue = {
   'bd.rules': 'Under another rule set: {list}.',
   'bd.rulesNone': 'This answer holds under every rule set the app offers.',
 
-  // --- The game itself, for a player who asked to be told everything (round 14) ---
-  'howto.basics1': 'The aim is a hand closer to **21** than the dealer’s, without going over. Face cards count ten; an ace counts eleven until that would take you over, and then one.',
-  'howto.basics2': 'The dealer has no choices to make: he **draws to 16 and stands on 17** or more. That is why the card he is showing tells you so much.',
-  'howto.basics3': 'Going over 21 loses **at once**, even if the dealer goes over afterwards — which is the whole reason some hands are worth standing on.',
   'ui.why': 'Why?',
   'ui.thinkPrompt': 'Take a moment. What is my card telling you?',
   'ui.dealWhenReady': 'Deal when you are ready.',
@@ -854,6 +885,21 @@ const EN: Catalogue = {
   'usage.refused': 'The shared table refused the question ({status}), so nothing is shown rather than a wrong count.',
   'usage.counting':
     'Days are counted from {day}. Someone who played before then and has not played since shows the day they were last seen; when they play again, the earlier visit counts as a day.',
+  // --- What people open (round 15): counts, not logs ---
+  'usage.opened': 'What people open',
+  'usage.openedNote': 'How many times each of these has been opened, by everyone, ever. Counts only — no order, no times of day, and nothing that says who did what when.',
+  'usage.open.help': 'The explanation of the figures',
+  'usage.open.helpShut': '…and closed again',
+  'usage.open.primer': 'How the game works',
+  'usage.open.howto': 'How this works',
+  'usage.open.chart': 'The strategy chart',
+  'usage.open.statInfo': 'What a figure on the strip means',
+  'usage.open.next': 'Stepped through the reasoning',
+  'usage.open.skip': 'Skipped to the answer',
+  'usage.open.arrow': 'Followed the arrow to the reasoning',
+  'usage.open.hand': 'Opened a hand in the log',
+  'usage.open.rules': 'The rule panel',
+  'usage.open.level': 'Changed how much is explained',
   'usage.public':
     'Not private. Nothing links to this page, but the table it reads is open to anyone who has the app’s address, so anyone who looked could read these same numbers.',
 };
@@ -1075,19 +1121,34 @@ const HE: Catalogue = {
   // --- What comes back to you: the decision block and its `?` (round 13) ---
   'ret.title': 'כמה חוזר לך על כל יחידה בסיכון',
   'ret.helpAria': 'מה המספרים האלה אומרים?',
+  'ret.helpClose': 'לסגור את ההסבר',
   'ret.same2': '{a} ו{b} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
   'ret.sameMany': '{list} שוות בדיוק כאן — ההפרש ביניהן נמצא מעבר לספרה השלישית.',
   'ret.helpWhat': 'כל מספר הוא **כמה חוזר אליך על כל יחידה שכבר בסיכון**, בממוצע, אילו שיחקת את המצב הזה שוב ושוב. **1.000 זאת נקודת האיזון**: הכסף חוזר אליך ולא יותר מזה.',
-  'ret.helpSurrender': 'ויתור הוא המספר שאפשר לבדוק בלי להאמין לאף אחד: **חצי מההימור חוזר, תמיד** — ולכן הוא +0.500.',
   'ret.helpFold': 'פרישה היא המספר שאפשר לבדוק בלי להאמין לאף אחד: האנטה והבליינד אבודים ו**לא חוזר כלום** — ולכן היא 0.000.',
-  'ret.helpStandBust': 'עצירה כאן מנצחת רק כשהדילר נשרף, וניצחון מחזיר שתי יחידות: **{win} × 2 = {value}**.',
-  'ret.helpStandPush': 'עצירה כאן מנצחת ב-{win} מהמקרים ויוצאת תיקו ב-{push}. ניצחון מחזיר שתי יחידות ותיקו מחזיר אחת: **{win} × 2 + {push} = {value}**.',
   'ret.helpRiver': 'בריבר שום דבר אינו הערכה: היד שלך מנצחת **{win}** מהידיים האפשריות של הדילר ויוצאת תיקו מול {tie} מהן, והאנטה, הבליינד וה-Play יחד יוצאים {value}.',
-  'ret.helpHit': 'לקלף אין חשבון אחד. בחלק מהמקרים אתה נשרף ולא חוזר כלום; בשאר אתה מחזיק יד חדשה, והמנוע ממשיך לפתור ממנה הלאה.',
   'ret.helpRaise': 'להעלאה אין חשבון אחד: הימור ה-Play מצטרף למה שכבר בסיכון, והמנוע משחק את היד שלך מול כל יד שהדילר יכול להחזיק.',
-  'ret.helpDouble': 'הכפלה ופיצול מוציאים עוד כסף, והכסף הזה כבר בתוך המספר — בגלל זה אפשר להשוות אותו לשאר, ובגלל זה הוא יכול לרדת מתחת לאפס.',
   'ret.helpUthStake': 'כל מספר כאן הוא על כל יחידה של האנטה והבליינד, שני ההימורים שכבר על השולחן. העלאה מוסיפה עליהם את הימור ה-Play, והוא כבר בתוך המספר.',
-  'ret.helpLines': 'הקו המקווקו הוא **1.000**, נקודת האיזון. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
+  // --- One action, worked out, with this hand's own numbers (round 15) ---
+  'work.stand': 'בחירה ב**{action}** תנצח כאשר הדילר נשרף, וזה קורה ב-**{win}** מהמקרים, וניצחון מחזיר שתי יחידות:',
+  'work.stand.sum': '2 × {win} = {value}',
+  'work.standPush': 'בחירה ב**{action}** תנצח ב-**{win}** מהמקרים ותצא תיקו ב-**{push}**. ניצחון מחזיר שתי יחידות, ותיקו מחזיר אחת:',
+  'work.standPush.sum': '2 × {win} + {push} = {value}',
+  'work.hit': 'בחירה ב**{action}** תשרוף את היד ב-**{bust}** מהמקרים, ואז לא חוזר כלום. ב-**{survive}** הנותרים תחזיק יד חדשה, שמחזירה בממוצע **{surviveValue}** — בהנחה שממשיכים לשחק אותה בצורה הטובה ביותר:',
+  'work.hit.sum': '{survive} × {surviveValue} = {value}',
+  'work.hitAlwaysBreaks': 'בחירה ב**{action}** תשרוף את היד בכל מקרה מכאן, ולכן לא חוזר כלום:',
+  'work.hitAlwaysBreaks.sum': '{value}',
+  'work.double': 'בחירה ב**{action}** מוסיפה יחידה שנייה לצד הראשונה ולוקחת קלף אחד בדיוק, ואז עוצרים. היד הזאת מחזירה **{oneCard}** ליחידה — אבל על שתי יחידות, פחות זו שהרגע הוספת:',
+  'work.double.sum': '2 × {oneCard} − 1 = {value}',
+  'work.split': 'בחירה ב**{action}** מוציאה הימור שני ומשחקת שתי ידיים. כל אחת מחזירה **{perHand}** ליחידה, בהנחה שממשיכים לשחק אותן היטב — על שתי יחידות, פחות זו שהרגע הוספת:',
+  'work.split.sum': '2 × {perHand} − 1 = {value}',
+  'work.surrender': 'בחירה ב**{action}** מוותרת על היד ומחזירה חצי מההימור, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
+  'work.surrender.sum': '{value}',
+  'work.insurance': 'ביטוח משלם 2:1, ולכן כל יחידה עליו חוזרת פי שלוש כשהקלף הסמוי הוא עשר — וזה קורה ב-**{ten}** מהמקרים:',
+  'work.insurance.sum': '3 × {ten} = {value}',
+  'work.decline': 'ויתור על הביטוח לא שם כלום בצד, ולכן אין שם מה להפסיד ואין מה שיחזור:',
+  'work.decline.sum': '{value}',
+  'ret.helpLines': 'הקו המקווקו הוא **1.000**. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
 
   // --- Said once, before the first hand ever played (round 13) ---
   'intro.title': 'לפני היד הראשונה שלך',
@@ -1096,6 +1157,26 @@ const HE: Catalogue = {
 
   // --- The slogan, and what the app is for (round 14) ---
   'brand.slogan': 'פשוט לנצח ביותר ידיים.',
+
+  // --- The game itself, for a player who asked to be taught it (round 15) ---
+  'prime.title': 'איך המשחק עובד',
+  'prime.open': 'איך המשחק עובד',
+  'prime.start': 'להתחיל לשחק',
+  'prime.headOrder': 'סדר המשחק',
+  'prime.order': 'אתה שם הימור, ואז מקבל **שני קלפים גלויים**. גם הדילר לוקח שניים: **אחד גלוי**, שאתה רואה, ואחד הפוך שאתה לא רואה. אחר כך זה התור שלך — אתה בוחר, קלף אחרי קלף, עד שאתה עוצר או עובר את 21. רק כשסיימת הדילר הופך את הקלף הסמוי ומשחק את היד שלו.',
+  'prime.cards': 'שווי היד הוא סכום הקלפים שבה. מספרים שווים את עצמם, **קלף תמונה שווה עשר**, ו**אס שווה אחת-עשרה** — עד שזה יעביר אותך את 21, ואז הוא שווה אחת. כך שא׳-6 היא שבע-עשרה, או שבע אם קלף נוסף היה שורף אותה.',
+  'prime.dealerRule': 'לדילר אין החלטות: הוא **מושך עד 16 ועוצר ב-17** ומעלה. בגלל זה הקלף שהוא מראה אומר כל כך הרבה.',
+  'prime.headActions': 'מה כל בחירה עושה',
+  'prime.hit': '**קלף** — לקחת עוד קלף אחד. אפשר להמשיך לקחת; אם עוברים את 21 היד מפסידה מיד, לא משנה מה הדילר יעשה אחר כך.',
+  'prime.stand': '**עצירה** — לא לקחת עוד קלפים, ולתת לדילר לשחק את היד שלו.',
+  'prime.double': '**הכפלה** — לשים הימור שני לצד הראשון ולקחת בדיוק קלף אחד נוסף. אחריו עוצרים, מה שלא יהיה.',
+  'prime.split': '**פיצול** — מוצע רק כששני הקלפים שלך באותו ערך. שמים הימור שני ומשחקים אותם כשתי ידיים נפרדות.',
+  'prime.surrender': '**ויתור** — לוותר על היד לפני שמשחקים אותה ולקבל חצי מההימור בחזרה. יש שולחנות שלא מציעים את זה.',
+  'prime.insurance': '**ביטוח** — מוצע רק כשלדילר יש אס גלוי. זה הימור צדדי, חצי מהסכום שלך, על כך שהקלף הסמוי שלו שווה עשר. הוא משלם 2:1 ואין לו שום קשר ליד שלך.',
+  'prime.headWin': 'מתי מנצחים',
+  'prime.win': 'אתה מנצח כשהסכום שלך **קרוב ל-21 יותר משל הדילר** בלי לעבור, וגם כשהדילר עובר ואתה לא. סכום זהה הוא **תיקו**: ההימור פשוט חוזר אליך. אס עם קלף בשווי עשר בשני הקלפים הראשונים הוא **בלאק ג׳ק**, והוא משלם {pays} — אלא אם גם לדילר יש, ואז זה תיקו.',
+  'prime.headPoint': 'מה זה בעצם',
+  'prime.point': 'כל יד היא החלטה קטנה: שני הקלפים שלך מול הקלף של הדילר, ובחירה אחת שהיא טובה מהאחרות. האפליקציה מודדת את **הבחירה**, לא את התוצאה — ולכן מהלך נכון שהפסיד הוא עדיין נכון, וזה כל הרעיון.',
 
   // --- How much the app explains (round 14) ---
   'level.question': 'כמה שהאפליקציה תסביר?',
@@ -1121,10 +1202,6 @@ const HE: Catalogue = {
   'bd.rules': 'בחוקים אחרים: {list}.',
   'bd.rulesNone': 'התשובה הזאת נכונה בכל מערכות החוקים שהאפליקציה מציעה.',
 
-  // --- The game itself, for a player who asked to be told everything (round 14) ---
-  'howto.basics1': 'המטרה היא יד קרובה ל-**21** יותר מזו של הדילר, בלי לעבור. קלפי תמונה שווים עשר; אס שווה אחת-עשרה עד שזה יעביר אותך, ואז אחת.',
-  'howto.basics2': 'לדילר אין החלטות: הוא **מושך עד 16 ועוצר ב-17** ומעלה. בגלל זה הקלף שהוא מראה אומר כל כך הרבה.',
-  'howto.basics3': 'מעבר ל-21 מפסיד **מיד**, גם אם הדילר עובר אחר כך — וזאת כל הסיבה שיש ידיים ששווה לעצור עליהן.',
   'ui.why': 'למה?',
   'ui.thinkPrompt': 'קח רגע. מה הקלף שלי מספר לך?',
   'ui.dealWhenReady': 'חלק כשאתה מוכן.',
@@ -1643,6 +1720,21 @@ const HE: Catalogue = {
   'usage.refused': 'הטבלה המשותפת סירבה לשאלה ({status}), אז לא מוצג כלום במקום ספירה שגויה.',
   'usage.counting':
     'הימים נספרים מ־{day}. מי ששיחק לפני כן ולא שיחק מאז מופיע עם היום שבו נראה לאחרונה; כשישחק שוב, הביקור הקודם ייספר כיום.',
+  // --- What people open (round 15): counts, not logs ---
+  'usage.opened': 'מה אנשים פותחים',
+  'usage.openedNote': 'כמה פעמים כל אחד מאלה נפתח, על ידי כולם, אי פעם. רק ספירות — בלי סדר, בלי שעות, ובלי שום דבר שאומר מי עשה מה ומתי.',
+  'usage.open.help': 'ההסבר על המספרים',
+  'usage.open.helpShut': '…ונסגר בחזרה',
+  'usage.open.primer': 'איך המשחק עובד',
+  'usage.open.howto': 'איך זה עובד',
+  'usage.open.chart': 'טבלת האסטרטגיה',
+  'usage.open.statInfo': 'מה אומר מספר בסרגל',
+  'usage.open.next': 'התקדמות שלב-שלב בהסבר',
+  'usage.open.skip': 'דילוג ישר לתשובה',
+  'usage.open.arrow': 'מעבר בעקבות החץ אל ההסבר',
+  'usage.open.hand': 'פתיחת יד ביומן',
+  'usage.open.rules': 'חלונית החוקים',
+  'usage.open.level': 'שינוי כמה מוסבר',
   'usage.public':
     'לא פרטי. שום דבר לא מקשר לדף הזה, אבל הטבלה שהוא קורא פתוחה לכל מי שיש לו את כתובת האפליקציה, כך שכל מי שיחפש יוכל לקרוא את אותם מספרים.',
 };

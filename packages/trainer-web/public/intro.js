@@ -64,6 +64,40 @@
     }
   }
 
+  /**
+   * The game itself, written out for whoever asked to be taught it (round 15).
+   *
+   * Headings only where a heading is earned: the order of play, what each
+   * choice does, when you win, and what this is. Whatever level asks for it
+   * reads the same words — a level takes fewer of them, never different ones.
+   *
+   * @param into  where to draw it
+   * @param level whose share to draw; defaults to the level in force
+   * @param pays  what a blackjack pays at this table, so the one figure in it
+   *              is this table's own rather than a guess
+   */
+  function primer(into, level, pays) {
+    if (!into) return 0;
+    into.replaceChildren();
+    const items = window.EVLevel.primer(level ?? window.EVLevel.get());
+    const HEADS = { order: 'prime.headOrder', hit: 'prime.headActions', win: 'prime.headWin', point: 'prime.headPoint' };
+    for (const item of items) {
+      // A heading belongs to the item that opens its section, and only when
+      // that item is actually being shown.
+      if (HEADS[item]) {
+        const head = document.createElement('h3');
+        head.className = 'primer-head';
+        head.textContent = T(HEADS[item]);
+        into.appendChild(head);
+      }
+      const line = document.createElement('p');
+      line.className = 'primer-line';
+      rich(line, T(`prime.${item}`, { pays: pays || '3:2' }));
+      into.appendChild(line);
+    }
+    return items.length;
+  }
+
   /** Everything else on the screen, hidden while the question stands. */
   function siblings(node) {
     const parent = node && node.parentElement;
@@ -75,7 +109,7 @@
    *
    * @returns whether it took over the screen
    */
-  function firstRun(ids, onDone) {
+  function firstRun(ids, onDone, opts) {
     const welcome = document.getElementById(ids.welcome);
     if (!welcome) return false;
     passage(document.getElementById(ids.body));
@@ -110,15 +144,37 @@
     }
     welcome.hidden = false;
 
-    choices(document.getElementById(ids.choices), (level) => {
-      window.EVLevel.set(level);
-      markSeen();
+    const finish = (level) => {
       welcome.hidden = true;
       for (const node of hidden) {
         node.hidden = false;
         if (node.style) node.style.display = '';
       }
       if (onDone) onDone(level);
+    };
+
+    choices(document.getElementById(ids.choices), (level) => {
+      window.EVLevel.set(level);
+      markSeen();
+      /*
+       * A player who chose "explain everything" has just *asked* to be taught
+       * the game. Sending him to find it behind a menu is the opposite of an
+       * answer, so it is on the next screen, and the table waits.
+       */
+      const teach = document.getElementById(ids.primer);
+      if (teach && window.EVLevel.primer(level).length > 2) {
+        const question = document.getElementById(ids.ask);
+        const choiceBox = document.getElementById(ids.choices);
+        for (const node of [question, choiceBox, document.getElementById(ids.note), document.getElementById(ids.passage)]) {
+          if (node) node.hidden = true;
+        }
+        primer(document.getElementById(ids.primerBody), level, opts && opts.pays);
+        teach.hidden = false;
+        const start = document.getElementById(ids.start);
+        if (start) start.addEventListener('click', () => finish(level), { once: true });
+        return;
+      }
+      finish(level);
     });
     return true;
   }
@@ -142,5 +198,5 @@
     draw();
   }
 
-  window.EVIntro = { firstRun, settings, passage, SEEN_KEY };
+  window.EVIntro = { firstRun, settings, passage, primer, SEEN_KEY };
 })();

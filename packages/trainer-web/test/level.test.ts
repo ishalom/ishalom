@@ -104,7 +104,10 @@ test('the answer is remembered, and reading it back is what the page draws by', 
 test('less, never different: every level is shown a subset of the one above it', () => {
   const { level } = levels();
   const steps = ['the dealer', 'the hand', 'the two together'];
-  const help = ['what', 'anchor', 'example', 'hit', 'double', 'lines'];
+  // The fixed paragraphs of the explanation, in the order the panel builds
+  // them (round 15). The worked lines are outside this: every level sees one
+  // per action, because a beginner needs the working most.
+  const help = ['what', 'lines', 'anchor', 'detail', 'stake'];
 
   const shownSteps = (at: string) => steps.slice(3 - level.steps(at));
   const shownHelp = (at: string) => help.slice(0, level.helpDepth(at));
@@ -123,7 +126,7 @@ test('less, never different: every level is shown a subset of the one above it',
   // And the ends of the scale are what they say they are.
   assert.deepEqual(shownSteps('new'), ['the two together'], 'a beginner reads more than the conclusion');
   assert.deepEqual(shownSteps('advanced'), steps);
-  assert.equal(level.helpDepth('new'), 2);
+  assert.equal(level.helpDepth('new'), 3);
   assert.equal(level.helpDepth('advanced'), help.length);
   assert.deepEqual(level.cells('new'), ['accuracy', 'units']);
   assert.deepEqual(level.cells('advanced'), ['accuracy', 'evLost', 'edge', 'units']);
@@ -233,6 +236,87 @@ test('and the session itself is the same run whatever a page is drawing', () => 
   const a = gradedRun(20);
   const b = gradedRun(20);
   assert.deepEqual(a, b);
+});
+
+// --- The game itself -----------------------------------------------------------------------------
+
+test('the beginner is taught the game: the order of play, every action, when he wins, and what this is', () => {
+  const { level } = levels();
+  const english = catalogue('en');
+  const hebrew = catalogue('he');
+  const all = level.primer('new');
+
+  // Idan's four questions, in his order.
+  assert.deepEqual(all, ['order', 'cards', 'dealerRule', 'hit', 'stand', 'double', 'split', 'surrender', 'insurance', 'win', 'point']);
+  for (const item of all) {
+    for (const [code, table] of [['en', english], ['he', hebrew]] as const) {
+      const copy = table[`prime.${item}`];
+      assert.ok(copy && copy.length > 40, `${code} says too little about ${item}`);
+    }
+  }
+  // Every action a player can be offered is explained, by name.
+  for (const action of ['hit', 'stand', 'double', 'split', 'surrender', 'insurance']) {
+    assert.ok(all.includes(action), `${action} is never explained`);
+  }
+  // The order of play says what is face up, what is hidden, and whose turn it is.
+  assert.match(english['prime.order']!, /bet up[\s\S]*face up[\s\S]*face down[\s\S]*your turn/i);
+  // Read as a first-timer: "closer to 21" means nothing until a hand adds up.
+  assert.match(english['prime.cards']!, /picture card counts ten/i);
+  assert.match(english['prime.cards']!, /ace counts eleven/i);
+  assert.match(catalogue('he')['prime.cards']!, /אס שווה אחת-עשרה/);
+  assert.match(english['prime.dealerRule']!, /draws to 16 and stands on 17/i);
+  // When he wins: closer to 21, the dealer going over, a push, and what a natural pays.
+  assert.match(english['prime.win']!, /closer to 21/i);
+  assert.match(english['prime.win']!, /push/i);
+  assert.match(english['prime.win']!, /\{pays\}/);
+  // And what the whole thing is.
+  assert.match(english['prime.point']!, /measures the \*\*choice\*\*, not the result/i);
+
+  // The levels above it read fewer of the same lines, never different ones.
+  assert.deepEqual(level.primer('intermediate'), ['dealerRule']);
+  assert.deepEqual(level.primer('advanced'), []);
+  for (const item of level.primer('intermediate')) assert.ok(all.includes(item), `${item} is not one of the beginner's lines`);
+});
+
+test('choosing "explain everything" is answered there and then, not behind a menu', async () => {
+  const page = loadHosted('#table', [['ev:playerName', 'Dana']]);
+  await page.booted;
+  for (let i = 0; i < 60; i++) await settle();
+
+  const choices = page.document.getElementById('level-choices').children;
+  for (const handler of choices[0].listeners.click ?? []) handler({ preventDefault() {} });
+
+  // The question is put away and the game is taught, on the same screen.
+  const primer = page.document.getElementById('primer');
+  assert.equal(primer.hidden, false, 'the beginner was sent to look for it');
+  assert.equal(page.document.getElementById('welcome').hidden, false, 'the first screen closed before teaching him');
+  assert.equal(page.document.getElementById('first-screen-ask').hidden, true, 'the question is still on screen');
+  const taught = textOf(page.document.getElementById('primer-body'));
+  assert.ok(taught.length > 600, `the primer is ${taught.length} characters — that is the three lines again`);
+  for (const word of ['bet up', 'face up', 'counts ten', 'draws to 16', 'Hit', 'Stand', 'Double', 'Split', 'Surrender', 'Insurance', 'push', 'blackjack']) {
+    assert.ok(taught.includes(word), `a player who has never played is not told about ${word}`);
+  }
+  // What a natural pays is this table's own rule, not a guess.
+  assert.match(taught, /3\s*:\s*2/, 'the primer does not quote the table it is standing at');
+
+  // And then he starts playing.
+  for (const handler of page.document.getElementById('primer-start').listeners.click ?? []) handler({ preventDefault() {} });
+  assert.equal(page.document.getElementById('welcome').hidden, true, 'the table never came back');
+  assert.equal(page.storage().get('ev:level'), 'new');
+  page.stopWatching();
+});
+
+test('and it stays one tap from the felt for him, and nowhere for an expert', async () => {
+  const beginner = await playOne('new');
+  const here = beginner.document.getElementById('primer-here');
+  assert.equal(here.hidden, false, 'the beginner has to go looking for it while he plays');
+  const body = beginner.document.getElementById('primer-here-body');
+  assert.ok(textOf(body).includes('draws to 16'), 'the tap opens nothing');
+  beginner.stopWatching();
+
+  const expert = await playOne('advanced');
+  assert.equal(expert.document.getElementById('primer-here').hidden, true, 'the expert is offered the rules of blackjack');
+  expert.stopWatching();
 });
 
 // --- The first screen ---------------------------------------------------------------------------

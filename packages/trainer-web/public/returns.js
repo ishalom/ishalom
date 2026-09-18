@@ -64,12 +64,16 @@
     }
   }
 
-  /** Open by itself for a new player's first hands; after that, as last left. */
-  function helpOpen(decisions) {
-    const stored = readPreference();
-    if (stored === 'open') return true;
-    if (stored === 'closed') return false;
-    return decisions <= NEW_PLAYER_DECISIONS;
+  /**
+   * Open unless this player has closed it (round 15).
+   *
+   * It used to open for a new player's first five decisions and then keep
+   * whatever he last did. Idan's correction: open by default, for everyone,
+   * until closed — the figures are the product, and a panel that explains them
+   * is not an interruption.
+   */
+  function helpOpen() {
+    return readPreference() !== 'closed';
   }
 
   const percent = (share) => `${(share * 100).toFixed(2)}%`;
@@ -134,49 +138,120 @@
     box.className = 'returns-help';
     box.id = opts.helpId;
 
-    const add = (key, values) => {
-      if (!room()) return;
-      written++;
+    /** A paragraph of the fixed explanation. */
+    const say = (key, values) => {
       const p = document.createElement('p');
       rich(p, T(key, values));
-      box.appendChild(p);
+      return p;
     };
 
     /*
-     * How much of it is drawn (round 14). The paragraphs are written in one
-     * order and a level reads a prefix of them: what the figure is, the anchor
-     * a player can check for himself, the worked example, what hitting does,
-     * what doubling does, and the two lines. A beginner is shown the first of
-     * the same words an expert reads — never different ones.
+     * The fixed part, in one order for both games, and a level reads a prefix
+     * of it: what the figure is, then what the two lines mean, then — on
+     * Ultimate, whose settlement is three bets against a paytable and does not
+     * close into one sum — the anchor and the notes that stand in for the
+     * worked lines Blackjack gets.
      */
-    const depth = window.EVLevel ? window.EVLevel.helpDepth() : 6;
-    let written = 0;
-    const room = () => written < depth;
-
-    add('ret.helpWhat');
-    add(opts.game === 'uth' ? 'ret.helpFold' : 'ret.helpSurrender');
-
-    const example = returns.example;
-    if (example && example.kind === 'bust') {
-      add('ret.helpStandBust', { win: wholePercent(example.win), value: figure(example.value) });
-    } else if (example && example.kind === 'winPush') {
-      add('ret.helpStandPush', {
-        win: wholePercent(example.win),
-        push: wholePercent(example.push),
-        value: figure(example.value),
-      });
-    } else if (example && example.kind === 'river') {
-      add('ret.helpRiver', {
-        win: wholePercent(example.win),
-        tie: wholePercent(example.tie),
-        value: figure(example.value),
-      });
+    const fixed = [['what', 'ret.helpWhat'], ['lines', 'ret.helpLines']];
+    if (opts.game === 'uth') {
+      fixed.push(['anchor', 'ret.helpFold']);
+      if (returns.example && returns.example.kind === 'river') {
+        fixed.push(['river', 'ret.helpRiver']);
+      } else {
+        fixed.push(['raise', 'ret.helpRaise']);
+      }
+      fixed.push(['stake', 'ret.helpUthStake']);
     }
+    const depth = window.EVLevel ? window.EVLevel.helpDepth() : fixed.length;
 
-    add(opts.game === 'uth' ? 'ret.helpRaise' : 'ret.helpHit');
-    add(opts.game === 'uth' ? 'ret.helpUthStake' : 'ret.helpDouble');
-    add('ret.helpLines');
+    const values = (key) =>
+      key === 'ret.helpRiver'
+        ? {
+            win: wholePercent(returns.example.win),
+            tie: wholePercent(returns.example.tie),
+            value: figure(returns.example.value),
+          }
+        : undefined;
+
+    for (const [, key] of fixed.slice(0, depth)) box.appendChild(say(key, values(key)));
+
+    /*
+     * And the part Idan asked for: every action, in every hand, with its own
+     * numbers and an arithmetic that closes on the figure beside it. Shown at
+     * every level — a beginner needs the working more than an expert does.
+     */
+    for (const work of returns.worked || []) {
+      const line = workedLine(work, feedback);
+      if (line) box.appendChild(line);
+    }
     return box;
+  }
+
+  /**
+   * One action's working: a sentence naming the action and its condition, and
+   * the sum on its own line underneath.
+   *
+   * The sum is never allowed to wrap. A line break through the middle of
+   * `2 × 23% = +0.460` is unreadable in either direction and worse in Hebrew,
+   * so it sits on its own line, left to right, and scrolls rather than breaks.
+   */
+  function workedLine(work, feedback) {
+    if (!work) return null;
+    const row = (feedback.ranked || []).find((entry) => entry.action === work.action);
+    if (!row) return null;
+
+    /*
+     * The terms are printed to as many decimals as the session worked out the
+     * sum needs — usually three, sometimes four — and the *same* string is used
+     * in the sentence and in the sum. `2 × 26% = +0.526` invites a reader to
+     * check it and then fails his check; `2 × 26.3%` does not.
+     */
+    const digits = work.digits === null || work.digits === undefined ? 3 : work.digits;
+    const pct = (value) => {
+      if (typeof value !== 'number') return undefined;
+      const text = (value * 100).toFixed(Math.max(0, digits - 2));
+      // 23.0% is the same number as 23%, and one of them reads like a figure
+      // somebody typed by hand. Only a decimal part is trimmed: trimming "20" to
+      // "2" would be a different number altogether.
+      const trimmed = text.indexOf('.') < 0 ? text : text.replace(/0+$/, '').replace(/\.$/, '');
+      return `${trimmed}%`;
+    };
+    const money = (value) => {
+      if (typeof value !== 'number') return undefined;
+      const text = Math.abs(value).toFixed(digits);
+      const signed = Number(text) === 0 ? `0.${'0'.repeat(digits)}` : `${value < 0 ? '−' : '+'}${text}`;
+      return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${signed}⁩` : signed;
+    };
+    const params = {
+      action: row.label,
+      // The right-hand side is the figure on the bar, written the way the bar
+      // writes it.
+      value: figure(work.value),
+      win: pct(work.win),
+      push: pct(work.push),
+      bust: pct(work.bust),
+      survive: pct(work.survive),
+      surviveValue: money(work.surviveValue),
+      oneCard: money(work.oneCard),
+      perHand: money(work.perHand),
+      ten: pct(work.ten),
+    };
+
+    const holder = document.createElement('div');
+    holder.className = 'worked';
+    const sentence = document.createElement('p');
+    sentence.className = 'worked-say';
+    rich(sentence, T(`work.${work.kind}`, params));
+    holder.appendChild(sentence);
+    const sum = T(`work.${work.kind}.sum`, params);
+    if (sum && sum !== `work.${work.kind}.sum`) {
+      const line = document.createElement('p');
+      line.className = 'worked-sum';
+      line.dir = 'ltr';
+      rich(line, sum);
+      holder.appendChild(line);
+    }
+    return holder;
   }
 
   /**
@@ -201,12 +276,12 @@
     // The one place the quantity is named, which is what keeps it apart from
     // the chips, the stack and the hand's own figure — those stay net.
     title.textContent = T('ret.title');
+    // One control, big enough to hit: it opens the explanation and — far more
+    // often, now that the panel is open by default — closes it (round 15).
     const why = document.createElement('button');
     why.type = 'button';
     why.className = 'returns-why';
-    why.textContent = '?';
     why.setAttribute('aria-controls', helpId);
-    why.setAttribute('aria-label', T('ret.helpAria'));
     head.append(title, why);
     section.appendChild(head);
 
@@ -259,15 +334,20 @@
     if (note) section.appendChild(note);
 
     const help = helpPanel(feedback, { ...opts, helpId });
-    let open = helpOpen(opts.decisions ?? 0);
+    let open = helpOpen();
     const apply = () => {
       help.hidden = !open;
       why.setAttribute('aria-expanded', String(open));
+      why.textContent = open ? '×' : '?';
+      why.setAttribute('aria-label', T(open ? 'ret.helpClose' : 'ret.helpAria'));
     };
     apply();
     why.addEventListener('click', () => {
       open = !open;
       writePreference(open ? 'open' : 'closed');
+      // Counted: whether people open the explanation, and — now that it opens
+      // by default — whether they close it (round 15).
+      if (window.EVCount) window.EVCount.bump(open ? 'help' : 'helpShut');
       apply();
     });
     section.appendChild(help);

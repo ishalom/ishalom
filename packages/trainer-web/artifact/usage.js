@@ -15,6 +15,15 @@
  * name the player chose, both games' decisions, and three facts about days.
  */
 
+/**
+ * The controls whose opening is counted (round 15), in the order the page lists
+ * them: the explanations first, because "what nobody opens" is the question.
+ */
+const USAGE_COUNTED = [
+  'help', 'helpShut', 'primer', 'howto', 'chart', 'statInfo',
+  'next', 'skip', 'arrow', 'hand', 'rules', 'level',
+];
+
 /** A regular: this many different days, and this many graded decisions in all. */
 const USAGE_REGULAR_DAYS = 3;
 const USAGE_REGULAR_DECISIONS = 100;
@@ -69,12 +78,32 @@ function summariseUsage(rows, today) {
         (b.lastPlayed ?? b.lastSeen ?? '').localeCompare(a.lastPlayed ?? a.lastSeen ?? '') ||
         b.decisions - a.decisions,
     );
+  /*
+   * What people open, added up across everyone (round 15).
+   *
+   * Counts only: how many times each control has been opened, by everybody,
+   * ever. There is no sequence in them and no clock, so they can say that
+   * nobody ever opens the strategy chart and they cannot say what anyone did
+   * on Tuesday. Unknown keys are dropped rather than shown, so a record from a
+   * later build cannot put something unexplained on this page.
+   */
+  const opened = {};
+  for (const id of USAGE_COUNTED) opened[id] = 0;
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const counters = row && typeof row.counters === 'object' && row.counters ? row.counters : {};
+    for (const id of USAGE_COUNTED) {
+      const n = Number(counters[id]);
+      if (Number.isFinite(n) && n > 0) opened[id] += Math.floor(n);
+    }
+  }
+
   return {
     people,
     played: people.length,
     cameBack: people.filter((p) => p.cameBack).length,
     regulars: people.filter((p) => p.regular).length,
     recent: people.filter((p) => p.recent).length,
+    opened,
   };
 }
 
@@ -85,6 +114,9 @@ const usageHtml = () => `
     <p class="usage-line">${tr('usage.line')}</p>
     <section class="usage-figures" id="usage-figures"></section>
     <section class="usage-people" id="usage-people"></section>
+    <h2 class="usage-subtitle" id="usage-opened-title" hidden>${tr('usage.opened')}</h2>
+    <p class="usage-note" id="usage-opened-note" hidden>${tr('usage.openedNote')}</p>
+    <section class="usage-opened" id="usage-opened"></section>
     <p class="usage-note" id="usage-counting"></p>
     <p class="usage-note usage-public" id="usage-public">${tr('usage.public')}</p>
   </div>`;
@@ -194,5 +226,30 @@ async function initUsage() {
       card.append(head, days, decisions);
       return card;
     }),
+  );
+
+  /* What people open, and what nobody ever touches. */
+  const openedBox = document.getElementById('usage-opened');
+  const openedTitle = document.getElementById('usage-opened-title');
+  const openedNote = document.getElementById('usage-opened-note');
+  if (!openedBox) return;
+  const total = USAGE_COUNTED.reduce((sum, id) => sum + summary.opened[id], 0);
+  if (openedTitle) openedTitle.hidden = total === 0;
+  if (openedNote) openedNote.hidden = total === 0;
+  openedBox.replaceChildren(
+    ...(total === 0
+      ? []
+      : USAGE_COUNTED.map((id) => {
+          const row = document.createElement('div');
+          row.className = 'usage-opened-row' + (summary.opened[id] === 0 ? ' never' : '');
+          const label = document.createElement('span');
+          label.className = 'usage-opened-label';
+          label.textContent = tr(`usage.open.${id}`);
+          const value = document.createElement('span');
+          value.className = 'usage-opened-count';
+          value.textContent = usageCount(summary.opened[id]);
+          row.append(label, value);
+          return row;
+        })),
   );
 }

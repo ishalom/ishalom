@@ -123,11 +123,17 @@ test('keys the pages build at runtime resolve for every value', () => {
     // The decision block and its `?` (round 13): the page hands these to a
     // helper rather than to `T` directly, so the scan above cannot see them.
     ['ret.', [
-      'title', 'helpAria', 'same2', 'sameMany', 'helpWhat', 'helpSurrender', 'helpFold',
-      'helpStandBust', 'helpStandPush', 'helpRiver', 'helpHit', 'helpRaise', 'helpDouble',
-      'helpUthStake', 'helpLines',
+      'title', 'helpAria', 'helpClose', 'same2', 'sameMany', 'helpWhat', 'helpFold',
+      'helpRiver', 'helpRaise', 'helpUthStake', 'helpLines',
     ]],
     ['intro.', ['title', 'body', 'ok']],
+    // One worked line per action (round 15), keyed by the shape of its sum.
+    ['work.', [
+      'stand', 'stand.sum', 'standPush', 'standPush.sum', 'hit', 'hit.sum',
+      'hitAlwaysBreaks', 'hitAlwaysBreaks.sum', 'double', 'double.sum',
+      'split', 'split.sum', 'surrender', 'surrender.sum', 'insurance',
+      'insurance.sum', 'decline', 'decline.sum',
+    ]],
   ];
   for (const info of LOCALES) {
     const table = catalogue(info.code);

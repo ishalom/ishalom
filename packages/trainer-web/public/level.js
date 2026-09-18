@@ -55,6 +55,7 @@
       // Storage off: the choice lasts as long as the page does, which is worse
       // than remembering it and much better than refusing to take it.
     }
+    if (window.EVCount) window.EVCount.bump('level');
     // The strip, the walkthrough and the breakdown all redraw off this.
     try {
       window.dispatchEvent(new CustomEvent('ev:level', { detail: value }));
@@ -77,11 +78,16 @@
   const steps = (level) => (rank(level) === 0 ? 1 : 3);
 
   /**
-   * How many paragraphs of the returns explanation are drawn, in the order the
-   * copy is written: what the figure is, the anchor a player can check, the
-   * worked example, what hitting does, what doubling does, and the two lines.
+   * How many of the explanation's *fixed* paragraphs are drawn, in the order
+   * the panel builds them: what the figure is, what the two lines mean, and
+   * then — on Ultimate only — the anchor and the two notes that stand in for
+   * the worked lines Blackjack has (round 15).
+   *
+   * The worked lines themselves are outside this count and are shown at every
+   * level: a beginner needs the working more than an expert does, and they are
+   * this hand's own numbers rather than another paragraph of prose.
    */
-  const helpDepth = (level) => [2, 4, 6][rank(level)];
+  const helpDepth = (level) => [3, 5, 5][rank(level)];
 
   /** Which cells of the stat strip are shown, in the order the strip has them. */
   const CELLS = ['accuracy', 'evLost', 'edge', 'units'];
@@ -90,8 +96,21 @@
   /** The full breakdown of the spot — advanced only, and nowhere else. */
   const breakdown = (level) => rank(level) === 2;
 
-  /** Whether the basics of the game itself are offered, and how much of them. */
-  const basics = (level) => [3, 1, 0][rank(level)];
+  /**
+   * How much of the game itself a level is taught (round 15).
+   *
+   * Idan played at the beginner setting and found no explanation of how
+   * blackjack is played — the order of play, what each action does, when he
+   * wins. Three lines under a menu was not it. A player who chose "explain
+   * everything" is taught the whole thing; the middle keeps the one line that
+   * carries the most, which is the dealer having no choices; a player who asked
+   * for the numbers is not told how blackjack works.
+   *
+   * The list is in reading order, and each level's share is a subset of the one
+   * above it — the same rule as everything else the level decides.
+   */
+  const PRIMER = ['order', 'cards', 'dealerRule', 'hit', 'stand', 'double', 'split', 'surrender', 'insurance', 'win', 'point'];
+  const primer = (level) => [PRIMER, ['dealerRule'], []][rank(level)];
 
   /** The same measure, in words somebody who arrived today already owns. */
   const PLAIN = { accuracy: 'ui.plain.accuracy', evLost: 'ui.plain.evLost', units: 'ui.plain.units' };
@@ -142,7 +161,8 @@
     helpDepth,
     cells,
     breakdown,
-    basics,
+    primer,
+    PRIMER,
     applyStrip,
   };
 })();

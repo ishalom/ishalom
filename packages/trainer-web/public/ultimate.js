@@ -809,7 +809,17 @@ Promise.resolve(window.EV && window.EV.ready).then(() => {
   // What this app is, and how much it should explain: one screen, in that
   // order, before the first hand this player ever plays (rounds 13 and 14).
   window.EVIntro.firstRun(
-    { welcome: 'uth-welcome', body: 'uth-intro-body', passage: 'uth-welcome-passage', choices: 'uth-level-choices' },
+    {
+      welcome: 'uth-welcome',
+      body: 'uth-intro-body',
+      passage: 'uth-welcome-passage',
+      choices: 'uth-level-choices',
+      ask: 'uth-first-screen-ask',
+      note: 'uth-first-screen-note',
+      primer: 'uth-primer',
+      primerBody: 'uth-primer-body',
+      start: 'uth-primer-start',
+    },
     uthRelevel,
   );
   window.EVIntro.settings(el('uth-level-settings'), uthRelevel);
