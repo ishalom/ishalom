@@ -57,6 +57,7 @@ function bodyOf(html: string): string {
  */
 const DOORS: ReadonlyArray<[RegExp, string]> = [
   [/href="\/home\.html"/g, 'href="#home"'],
+  [/href="\/analyse\.html"/g, 'href="#analyse"'],
   [/href="\/table\.html"/g, 'href="#table"'],
   [/href="\/ultimate\.html"/g, 'href="#ultimate"'],
 ];
@@ -90,14 +91,23 @@ function jsString(value: string): string {
   return JSON.stringify(value);
 }
 
-const engine = bundle([join(PKG, 'src', 'session.ts'), join(PKG, 'src', 'uth-session.ts')]);
+const engine = bundle([
+  join(PKG, 'src', 'session.ts'),
+  join(PKG, 'src', 'uth-session.ts'),
+  // The hand analyser (round 16): a pure function, folded in beside the two
+  // sessions so the page can answer a query without one.
+  join(PKG, 'src', 'analyse.ts'),
+]);
 const styles = read(PUBLIC, 'styles.css') + read(ARTIFACT, 'extra.css');
 const homeHtml = localLinks(bodyOf(read(PUBLIC, 'home.html')), 'home.html');
 const tableHtml = localLinks(bodyOf(read(PUBLIC, 'table.html')), 'table.html');
 const ultimateHtml = localLinks(bodyOf(read(PUBLIC, 'ultimate.html')), 'ultimate.html');
+// The hand analyser: a screen worth opening without playing (round 16).
+const analyseHtml = localLinks(bodyOf(read(PUBLIC, 'analyse.html')), 'analyse.html');
 const homeJs = screenScript(read(PUBLIC, 'home.js'), 'initHome');
 const tableJs = screenScript(read(PUBLIC, 'app.js'), 'initTable');
 const ultimateJs = screenScript(read(PUBLIC, 'ultimate.js'), 'initUltimate');
+const analyseJs = screenScript(read(PUBLIC, 'analyse.js'), 'initAnalyse');
 // How every units and chips figure is written, loaded before anything that writes one (round 8).
 const figureJs = read(PUBLIC, 'figure.js');
 // Shared by both tables, and read by home to open the hand a row names.
@@ -191,6 +201,7 @@ ${engine}
 const HOME_HTML = ${jsString(homeHtml)};
 const TABLE_HTML = ${jsString(tableHtml)};
 const ULTIMATE_HTML = ${jsString(ultimateHtml)};
+const ANALYSE_HTML = ${jsString(analyseHtml)};
 
 /* How a figure is written on screen, for every page (round 8). */
 ${figureJs}
@@ -223,6 +234,7 @@ ${introJs}
 ${homeJs}
 ${tableJs}
 ${ultimateJs}
+${analyseJs}
 
 ${identity}
 

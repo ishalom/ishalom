@@ -2273,3 +2273,149 @@ button,
 /* The control that closes the explanation belongs at the edge of its row, not
    floating in the middle of it beside the heading (round 15). */
 .returns-head .returns-why { margin-inline-start: auto; }
+
+/* --- The hand analyser (round 16) ---------------------------------------------
+ * Cards in, an answer out, without playing. The whole screen is built around
+ * three taps on a phone: two slots that fill in order, one keypad of ranks, and
+ * no keyboard, no suits and no scrolling before the answer. */
+.analyser { padding-bottom: 28px; }
+.analyser-head .rules-title { font-family: var(--display); font-size: 16px; }
+.analyser-head .rules-sub { font-size: 12px; color: var(--muted); }
+
+.an-slots { display: flex; gap: 10px; padding: 14px 14px 0; }
+.an-group {
+  flex: 1;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-2);
+}
+/* Which slot the next tap fills, said in the frame rather than in a sentence. */
+.an-group.active { border-color: var(--brass); }
+.an-label { font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.an-cards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; min-height: 46px; }
+.an-card-slot {
+  width: 34px;
+  height: 46px;
+  border-radius: 7px;
+  border: none;
+  background: #f7fafc;
+  color: #10151b;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.an-card-slot.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.an-hint { margin: 9px 14px 0; font-size: 13px; color: var(--muted); }
+
+/* Ten keys, each a real target, and all of them on screen at once. */
+.an-pad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px 14px 0;
+}
+.an-key {
+  height: 50px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.an-key:hover { border-color: #4a5966; }
+
+.an-controls { display: flex; gap: 8px; padding: 10px 14px 0; }
+.an-control {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.an-control:disabled { opacity: 0.4; cursor: default; }
+
+/* A hand that cannot exist, or one with nothing left to decide: a sentence, and
+   no figures at all. */
+.an-says {
+  margin: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--brass);
+  border-radius: 12px;
+  background: var(--panel-2);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.an-result { padding: 14px 14px 0; }
+.an-headline { margin: 0; font-family: var(--display); font-size: 16px; color: var(--muted); }
+.an-best { margin: 2px 0 10px; font-family: var(--display); font-size: 20px; color: var(--ink); }
+/* The card is the table's card, off the dock: nothing here has to fit above a
+   row of buttons, so it is not capped. */
+.an-card { max-height: none; overflow: visible; border-inline-start: 3px solid var(--line); }
+.an-steps { margin-top: 12px; }
+.an-step { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.an-note { margin: 16px 14px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+
+/* The third door on the home screen. */
+.door.analyse { background: var(--panel-2); }
+.door.analyse .door-pip { color: var(--brass); }
+
+/* --- The felt, tightened (round 16) -------------------------------------------
+ * Idan: the space between the two card rows is the tallest thing on the table
+ * and shows nothing. Two changes, both measured:
+ *
+ *   - the rail becomes a readout while a hand is in play. Between hands it is
+ *     where chips are placed and it keeps its room; once the cards are out the
+ *     bet cannot change, and a stacked column of chip art was spending 188px to
+ *     say two numbers that were not going to move.
+ *   - the paddings above and below the cards come in, which is the gap itself.
+ *
+ * What sets the floor is the cards: two rows at the size Idan asked for, plus
+ * the seat titles that name the totals. Nothing here touches either. */
+.rail.playing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.rail.playing .rail-spot { display: flex; align-items: baseline; gap: 6px; }
+.rail.playing .chips { display: none; }
+.rail.playing .rail-label { font-size: 10.5px; }
+/* The limits are a thing to read before betting, not during a hand. */
+.rail.playing .table-limits { display: none; }
+
+@media (max-width: 560px) {
+  /* The gap between the rows: paddings, and nothing that carries a word. */
+  .felt .cards { padding-bottom: 4px; }
+  .felt .seat { padding: 2px 8px; }
+  .table { gap: 4px; }
+}
+
+/* Two hands, or a hand that kept drawing, on the narrowest phone: the cards
+   step down so the felt still ends above the dock (round 16). */
+@media (max-width: 400px) {
+  #player-hands.split .card { width: 40px; height: 58px; font-size: 13px; }
+  #player-hands.split .card-suit { font-size: 12px; }
+}
+
+/* The ten key names what it covers, and still fits on one line. */
+.an-key[data-rank='10'] { font-size: 13px; letter-spacing: 0.01em; }

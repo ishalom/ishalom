@@ -107,12 +107,13 @@ const app = () => document.getElementById('app');
  * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
 // `#usage` (round 9) is the one screen nothing links to: see usage.js.
-const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage' };
+const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage', '#analyse': 'analyse' };
 const SCREEN_HTML = {
   home: () => HOME_HTML,
   table: () => TABLE_HTML,
   ultimate: () => ULTIMATE_HTML,
   usage: () => usageHtml(),
+  analyse: () => ANALYSE_HTML,
 };
 const screenFromHash = () => SCREENS[location.hash] ?? null;
 
@@ -136,6 +137,8 @@ function mount(name) {
     initUltimate();
   } else if (name === 'usage') {
     void initUsage();
+  } else if (name === 'analyse') {
+    initAnalyse();
   } else {
     initTable();
   }

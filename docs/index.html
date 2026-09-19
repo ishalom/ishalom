@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="8292cbeb006568c19741f04480b3774c0e8a6a52-dirty" />
-<meta name="ev-build-at" content="2026-09-18T22:52:47.246Z" />
+<meta name="ev-build-commit" content="16ae28785e8d007e9a83992177281a5b76d1f726-dirty" />
+<meta name="ev-build-at" content="2026-09-19T19:09:48.513Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2297,6 +2297,152 @@ button,
 /* The control that closes the explanation belongs at the edge of its row, not
    floating in the middle of it beside the heading (round 15). */
 .returns-head .returns-why { margin-inline-start: auto; }
+
+/* --- The hand analyser (round 16) ---------------------------------------------
+ * Cards in, an answer out, without playing. The whole screen is built around
+ * three taps on a phone: two slots that fill in order, one keypad of ranks, and
+ * no keyboard, no suits and no scrolling before the answer. */
+.analyser { padding-bottom: 28px; }
+.analyser-head .rules-title { font-family: var(--display); font-size: 16px; }
+.analyser-head .rules-sub { font-size: 12px; color: var(--muted); }
+
+.an-slots { display: flex; gap: 10px; padding: 14px 14px 0; }
+.an-group {
+  flex: 1;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-2);
+}
+/* Which slot the next tap fills, said in the frame rather than in a sentence. */
+.an-group.active { border-color: var(--brass); }
+.an-label { font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.an-cards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; min-height: 46px; }
+.an-card-slot {
+  width: 34px;
+  height: 46px;
+  border-radius: 7px;
+  border: none;
+  background: #f7fafc;
+  color: #10151b;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.an-card-slot.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.an-hint { margin: 9px 14px 0; font-size: 13px; color: var(--muted); }
+
+/* Ten keys, each a real target, and all of them on screen at once. */
+.an-pad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px 14px 0;
+}
+.an-key {
+  height: 50px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.an-key:hover { border-color: #4a5966; }
+
+.an-controls { display: flex; gap: 8px; padding: 10px 14px 0; }
+.an-control {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.an-control:disabled { opacity: 0.4; cursor: default; }
+
+/* A hand that cannot exist, or one with nothing left to decide: a sentence, and
+   no figures at all. */
+.an-says {
+  margin: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--brass);
+  border-radius: 12px;
+  background: var(--panel-2);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.an-result { padding: 14px 14px 0; }
+.an-headline { margin: 0; font-family: var(--display); font-size: 16px; color: var(--muted); }
+.an-best { margin: 2px 0 10px; font-family: var(--display); font-size: 20px; color: var(--ink); }
+/* The card is the table's card, off the dock: nothing here has to fit above a
+   row of buttons, so it is not capped. */
+.an-card { max-height: none; overflow: visible; border-inline-start: 3px solid var(--line); }
+.an-steps { margin-top: 12px; }
+.an-step { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.an-note { margin: 16px 14px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+
+/* The third door on the home screen. */
+.door.analyse { background: var(--panel-2); }
+.door.analyse .door-pip { color: var(--brass); }
+
+/* --- The felt, tightened (round 16) -------------------------------------------
+ * Idan: the space between the two card rows is the tallest thing on the table
+ * and shows nothing. Two changes, both measured:
+ *
+ *   - the rail becomes a readout while a hand is in play. Between hands it is
+ *     where chips are placed and it keeps its room; once the cards are out the
+ *     bet cannot change, and a stacked column of chip art was spending 188px to
+ *     say two numbers that were not going to move.
+ *   - the paddings above and below the cards come in, which is the gap itself.
+ *
+ * What sets the floor is the cards: two rows at the size Idan asked for, plus
+ * the seat titles that name the totals. Nothing here touches either. */
+.rail.playing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.rail.playing .rail-spot { display: flex; align-items: baseline; gap: 6px; }
+.rail.playing .chips { display: none; }
+.rail.playing .rail-label { font-size: 10.5px; }
+/* The limits are a thing to read before betting, not during a hand. */
+.rail.playing .table-limits { display: none; }
+
+@media (max-width: 560px) {
+  /* The gap between the rows: paddings, and nothing that carries a word. */
+  .felt .cards { padding-bottom: 4px; }
+  .felt .seat { padding: 2px 8px; }
+  .table { gap: 4px; }
+}
+
+/* Two hands, or a hand that kept drawing, on the narrowest phone: the cards
+   step down so the felt still ends above the dock (round 16). */
+@media (max-width: 400px) {
+  #player-hands.split .card { width: 40px; height: 58px; font-size: 13px; }
+  #player-hands.split .card-suit { font-size: 12px; }
+}
+
+/* The ten key names what it covers, and still fits on one line. */
+.an-key[data-rank='10'] { font-size: 13px; letter-spacing: 0.01em; }
 
 /* ===========================================================================
  * The shared build only.
@@ -7512,6 +7658,44 @@ const EN            = {
   'intro.body': 'This is not a blackjack game. Every decision you make is measured against the mathematically best play, and that is what you are scored on. **You will lose hands playing perfectly — that is the point.**',
   'intro.ok': 'Deal me in',
 
+  // --- The hand analyser (round 16) ---
+  'an.title': 'Analyse a hand',
+  'an.tenKey': '10 J Q K',
+  'ui.analyseTitle': 'EV Trainer — Analyse a hand',
+  'an.open': 'Analyse a hand',
+  'an.sub': 'Any cards, without playing',
+  'an.yours': 'Your cards',
+  'an.dealers': 'Dealer shows',
+  'an.tapYours': 'Tap two cards.',
+  'an.tapDealer': 'Now the dealer’s card.',
+  'an.tapMore': 'Add a card, or change the rules.',
+  'an.addCard': 'Add a card',
+  'an.clear': 'Start again',
+  'an.rules': 'Rules',
+  'an.best': 'Best play: {action}',
+  'an.notCounted': 'Nothing here counts towards your Blackjack or Ultimate ratings, your accuracy, or anything else. It is a question, not a hand.',
+  'an.needCards': 'Pick two cards for yourself and one for the dealer.',
+  'an.tooManyCards': 'A hand here holds at most {max} cards.',
+  'an.badRank': 'Those are not cards this game deals.',
+  'an.badRules': 'That is not a rule set this app knows.',
+  'an.impossible': 'This game deals {decks}. That is {held} {rank}s, and this hand asks for {count}.',
+  'an.oneDeck': 'a single deck',
+  'an.decks': '{n} decks',
+  'an.impossibleShort': 'There are not enough cards left in the shoe for that hand.',
+  'an.bust': 'That hand is already {total} — over 21, so there is nothing left to decide.',
+  'an.blackjack': 'That is a blackjack. It pays itself; there is no decision to make.',
+  'an.twentyOne': 'Twenty-one. The hand stands itself, so there is nothing to decide.',
+  'an.rank.A': 'ace',
+  'an.rank.2': 'two',
+  'an.rank.3': 'three',
+  'an.rank.4': 'four',
+  'an.rank.5': 'five',
+  'an.rank.6': 'six',
+  'an.rank.7': 'seven',
+  'an.rank.8': 'eight',
+  'an.rank.9': 'nine',
+  'an.rank.10': 'ten-card',
+
   // --- The slogan, and what the app is for (round 14) ---
   'brand.slogan': 'Simply winning more hands.',
 
@@ -8357,6 +8541,44 @@ const HE            = {
   'intro.title': 'לפני היד הראשונה שלך',
   'intro.body': 'זה לא משחק בלאק ג׳ק. כל החלטה שלך נמדדת מול המהלך הנכון מתמטית, ועל זה אתה מקבל ציון. **תפסיד ידיים גם כששיחקת מושלם — וזאת בדיוק הנקודה.**',
   'intro.ok': 'קדימה, נתחיל',
+
+  // --- The hand analyser (round 16) ---
+  'an.title': 'ניתוח יד',
+  'an.tenKey': '10 J Q K',
+  'ui.analyseTitle': 'EV Trainer — ניתוח יד',
+  'an.open': 'לנתח יד',
+  'an.sub': 'כל קלפים, בלי לשחק',
+  'an.yours': 'הקלפים שלך',
+  'an.dealers': 'לדילר יש',
+  'an.tapYours': 'בחר שני קלפים.',
+  'an.tapDealer': 'עכשיו הקלף של הדילר.',
+  'an.tapMore': 'אפשר להוסיף קלף או לשנות חוקים.',
+  'an.addCard': 'עוד קלף',
+  'an.clear': 'להתחיל מחדש',
+  'an.rules': 'חוקים',
+  'an.best': 'המהלך הנכון: {action}',
+  'an.notCounted': 'שום דבר כאן לא נספר לדירוג שלך בבלאק ג׳ק או באולטימייט, לדיוק שלך או לשום דבר אחר. זאת שאלה, לא יד.',
+  'an.needCards': 'בחר שני קלפים לעצמך ואחד לדילר.',
+  'an.tooManyCards': 'יד כאן מחזיקה עד {max} קלפים.',
+  'an.badRank': 'אלה לא קלפים שהמשחק הזה מחלק.',
+  'an.badRules': 'זאת לא מערכת חוקים שהאפליקציה מכירה.',
+  'an.impossible': 'המשחק הזה מחלק {decks}. זה {held} קלפי {rank}, והיד הזאת מבקשת {count}.',
+  'an.oneDeck': 'חפיסה אחת',
+  'an.decks': '{n} חפיסות',
+  'an.impossibleShort': 'לא נשארו מספיק קלפים בחפיסה ליד כזאת.',
+  'an.bust': 'היד הזאת כבר {total} — מעל 21, ולכן אין מה להחליט.',
+  'an.blackjack': 'זה בלאק ג׳ק. הוא משלם מעצמו; אין כאן החלטה.',
+  'an.twentyOne': 'עשרים ואחת. היד עוצרת מעצמה, ולכן אין מה להחליט.',
+  'an.rank.A': 'אס',
+  'an.rank.2': '2',
+  'an.rank.3': '3',
+  'an.rank.4': '4',
+  'an.rank.5': '5',
+  'an.rank.6': '6',
+  'an.rank.7': '7',
+  'an.rank.8': '8',
+  'an.rank.9': '9',
+  'an.rank.10': 'עשר',
 
   // --- The slogan, and what the app is for (round 14) ---
   'brand.slogan': 'פשוט לנצח ביותר ידיים.',
@@ -9718,6 +9940,248 @@ function explain(
   };
 }
 
+/* ===== packages/trainer-web/src/restrictions.ts ===== */
+/**
+ * House restrictions layered over a rule preset.
+ *
+ * Its own module since round 16, so that the hand analyser can apply the same
+ * two switches without importing the file that holds the ratings. What the
+ * analyser may not touch is easier to believe when it cannot reach it at all.
+ */
+
+                                                           
+
+                               
+                                                 
+                       
+                                                                       
+                         
+ 
+
+function applyRestrictions(
+  rules                ,
+  restrictions              ,
+)                 {
+  return {
+    ...rules,
+    surrender: restrictions.noSurrender ? 'none' : rules.surrender,
+    splitUnlikeTens: !restrictions.likeRanksOnly,
+  };
+}
+
+/* ===== packages/trainer-web/src/returns-block.ts ===== */
+/**
+ * What the card draws, and the arithmetic under every figure on it.
+ *
+ * Lifted out of `TrainerSession` in round 16 so that the hand analyser can ask
+ * the same question about cards nobody played. It answers from the scenario,
+ * the ranked actions and the rules, and holds no state of its own — which is
+ * what lets one implementation serve a live hand and a query, and is why the
+ * two can never drift apart and start telling a player different things about
+ * the same cards.
+ */
+
+
+
+/** What the spot puts at risk: a unit for a hand, half of one for insurance. */
+const stakeFor = (scenarioKey        )         =>
+  scenarioKey === 'bj:insurance' ? INSURANCE_STAKE : 1;
+
+/**
+ * What each kind of worked line adds up to, read off terms rounded to however
+ * many decimals they are about to be printed with. The same arithmetic the
+ * copy shows the player, in the same order.
+ */
+const REBUILD                                                          = {
+  stand: (t) => 2 * t('win'),
+  standPush: (t) => 2 * t('win') + t('push'),
+  hit: (t) => t('survive') * t('surviveValue'),
+  hitAlwaysBreaks: () => 0,
+  double: (t) => 2 * t('oneCard') - 1,
+  split: (t) => 2 * t('perHand') - 1,
+  surrender: () => 0.5,
+  insurance: (t) => 3 * t('ten'),
+  decline: () => 1,
+};
+
+/**
+ * Everything the card needs to draw the returns, and nothing it has to work out.
+ *
+ * The page draws bars and prints figures; which stake the spot puts at risk,
+ * which actions come to the same figure, and whether this hand can carry the
+ * worked example are all decided here, where the scenario and the rules are.
+ */
+function returnsBlock(
+  scenario          ,
+  ranked                                                      ,
+  stake        ,
+  rules                ,
+)          {
+  return {
+    stake,
+    scaleMax: RETURN_SCALE_MAX,
+    best: ranked[0]?.value ?? 0,
+    // Ties are read off the figures a player actually sees, not off the EVs.
+    equivalent: equivalentGroups(ranked),
+    // One worked line per action, each rebuilding its own figure exactly
+    // (round 15). `example` is kept for the stand line the round 13 tests
+    // name, and is the same arithmetic.
+    worked: ranked.map((row) => workedFor(scenario, row, rules)),
+    example: standExample(scenario, ranked, rules),
+  };
+}
+
+/**
+ * How one action's figure is arrived at, in numbers a player can check.
+ *
+ * Idan rejected the prose this replaces — "hitting has no single sum" — and
+ * he was right to: an explanation that asks to be trusted is worth less than
+ * one that can be redone on a napkin. So every action gets its terms, its
+ * assumption, and an arithmetic that closes.
+ *
+ * WHY THE SECOND TERM IS DIVIDED OUT OF THE FIGURE RATHER THAN QUOTED. Each
+ * line borrows one number that can be computed on its own — the chance of
+ * breaking on the next card, the chance the dealer ties — and derives the
+ * rest from the figure being explained. The figures come from the chart,
+ * which averages over the hands that reach a total; anything computed beside
+ * it agrees to about the third decimal and not always beyond. Quoting both
+ * halves would print a sum that does not come out, in an explanation whose
+ * whole point is that it does. This way the sum is exact by construction and
+ * the only borrowed number is one the app already quotes elsewhere.
+ */
+function workedFor(
+  scenario          ,
+  row                                               ,
+  rules                ,
+)          {
+  return withDigits(workedTerms(scenario, row, rules));
+}
+
+/**
+ * How many decimals the printed terms need for the printed sum to come out.
+ *
+ * The arithmetic closes exactly; the *printing* of it need not. `2 × 26% =
+ * +0.526` is what a reader is asked to check, and 2 × 26% is 0.520 — so the
+ * explanation would be caught lying by anybody who did the one thing it
+ * invites. The terms therefore carry as many decimals as it takes for the
+ * rounded sum to land on the figure beside it, starting at three and going
+ * up only when three will not do.
+ */
+function withDigits(work                                )          {
+  if (!work) return null;
+  const rebuild = REBUILD[work.kind          ];
+  if (!rebuild) return work;
+  const wanted = returnFigure(work.value          );
+  for (let digits = 3; digits <= 6; digits++) {
+    const round = (name        ) => {
+      const value = work[name];
+      return typeof value === 'number' ? Number(value.toFixed(digits)) : 0;
+    };
+    if (returnFigure(rebuild(round)) === wanted) return { ...work, digits };
+  }
+  // Six decimals and still not landing would mean the arithmetic itself is
+  // wrong, not the printing; say so rather than print a sum that is out.
+  return { ...work, digits: null };
+}
+
+function workedTerms(
+  scenario          ,
+  row                                               ,
+  rules                ,
+)                                 {
+  const value = row.value;
+  const total = standingTotal(scenario);
+
+  switch (row.action) {
+    case 'surrender':
+      // Half the bet, always. Nothing to work out, which is the point of it.
+      return { action: row.action, kind: 'surrender', value };
+    case 'declineInsurance':
+      return { action: row.action, kind: 'decline', value };
+    case 'takeInsurance':
+      // 2:1 on half a unit: three units back per unit staked, when the hole
+      // card is a ten.
+      return { action: row.action, kind: 'insurance', value, ten: value / 3 };
+    case 'stand': {
+      if (total === null || scenario.upcard === undefined) return null;
+      // A stiff hand cannot tie: every total the dealer makes beats it.
+      const push = total <= 16 ? 0 : standOutcome(total, scenario.upcard, rules).push;
+      return { action: row.action, kind: push === 0 ? 'stand' : 'standPush', value, win: (value - push) / 2, push };
+    }
+    case 'hit': {
+      const bust = bustOnNextCard(scenario, rules);
+      const survive = 1 - bust;
+      if (survive <= 0) return { action: row.action, kind: 'hitAlwaysBreaks', value, bust, survive };
+      return { action: row.action, kind: 'hit', value, bust, survive, surviveValue: value / survive };
+    }
+    // Both put a second unit out, so both are the same shape: what one unit
+    // comes back, on two units, less the one that came out of pocket.
+    case 'double':
+      return { action: row.action, kind: 'double', value, oneCard: (value + 1) / 2 };
+    case 'split':
+      return { action: row.action, kind: 'split', value, perHand: (value + 1) / 2 };
+    default:
+      return null;
+  }
+}
+
+/**
+ * The total a hand would stand on, including a pair — which the chart's
+ * scenario keys leave implicit, and which round 13's stand example had no way
+ * to read, so pair spots carried no arithmetic at all.
+ */
+function standingTotal(scenario          )                {
+  if (scenario.kind === 'insurance') return null;
+  if (scenario.total !== undefined) return scenario.total;
+  if (scenario.kind === 'pair' && scenario.pairRank !== undefined) {
+    // A pair of aces stands on twelve; every other pair is twice its rank.
+    return scenario.pairRank === ACE ? 12 : 2 * RANK_VALUE[scenario.pairRank] ;
+  }
+  return null;
+}
+
+/**
+ * The hand's own arithmetic, for the explanation behind the `?`.
+ *
+ * Standing is the one action whose figure a player can rebuild unaided: a win
+ * returns two units and a push returns one, so the figure is
+ * `2 × P(win) + 1 × P(push)` and nothing else. The odds come from the same
+ * chart the decision was graded against — and the identity is *checked* here
+ * rather than asserted, so a spot where the two would not agree to the last
+ * decimal simply carries no example instead of teaching a sum that does not
+ * come out.
+ */
+function standExample(
+  scenario          ,
+  ranked                                                      ,
+  rules                ,
+)          {
+  const stand = ranked.find((row) => row.action === 'stand');
+  if (!stand || scenario.kind === 'insurance') return null;
+  if (scenario.total === undefined || scenario.upcard === undefined) return null;
+
+  /*
+   * A stiff hand cannot tie: sixteen loses to every total the dealer makes and
+   * wins only when he breaks. A pat hand can tie, so it needs the push term
+   * as well, and that comes from the dealer's own outcomes.
+   */
+  const push = scenario.total <= 16 ? 0 : standOutcome(scenario.total, scenario.upcard, rules).push;
+
+  /*
+   * The win rate is read back out of the figure rather than quoted from the
+   * dealer's outcomes, and deliberately so. The chart cell each figure comes
+   * from is an average over the two-card hands that reach this total, and the
+   * dealer's outcomes are computed against one composition — so the two agree
+   * to about the third decimal and not always beyond it. Quoting both would
+   * print a sum that does not come out, in an explanation whose whole purpose
+   * is that the player can check it. Written this way the example always
+   * rebuilds the figure it explains, exactly, and the only borrowed number is
+   * the push, which is zero for every stiff hand and small for the rest.
+   */
+  const win = (stand.value - push) / 2;
+  return { kind: push === 0 ? 'bust' : 'winPush', win, push, value: stand.value };
+}
+
 /* ===== packages/trainer-web/src/difficulty.ts ===== */
 /**
  * Scenario difficulty and the player's rating (docs/elo-difficulty.md).
@@ -10284,24 +10748,7 @@ function readChipBook(
 
 
 
-/** House restrictions layered over a preset. See `TrainerSession.restrictions`. */
-                               
-                                                 
-                       
-                                                                       
-                         
- 
 
-function applyRestrictions(
-  rules                ,
-  restrictions              ,
-)                 {
-  return {
-    ...rules,
-    surrender: restrictions.noSurrender ? 'none' : rules.surrender,
-    splitUnlikeTens: !restrictions.likeRanksOnly,
-  };
-}
 
 const RANKS = '23456789TJQKA';
 const SUITS = 'cdhs';
@@ -10519,23 +10966,6 @@ function roundish(value        )         {
   const scale = 10 ** (Math.floor(Math.log10(value)) - 1);
   return Math.round(value / scale) * scale;
 }
-
-/**
- * What each kind of worked line adds up to, read off terms rounded to however
- * many decimals they are about to be printed with. The same arithmetic the
- * copy shows the player, in the same order.
- */
-const REBUILD                                                          = {
-  stand: (t) => 2 * t('win'),
-  standPush: (t) => 2 * t('win') + t('push'),
-  hit: (t) => t('survive') * t('surviveValue'),
-  hitAlwaysBreaks: () => 0,
-  double: (t) => 2 * t('oneCard') - 1,
-  split: (t) => 2 * t('perHand') - 1,
-  surrender: () => 0.5,
-  insurance: (t) => 3 * t('ten'),
-  decline: () => 1,
-};
 
 function describeSpot(cell                    , rating        )                  {
   const difficulty = cell[rating.mode];
@@ -10871,7 +11301,7 @@ class TrainerSession {
      * never written into a record. Both are carried so that the card can show
      * one while everything that grades, costs or rates reads the other.
      */
-    const stake = record.scenarioKey === 'bj:insurance' ? INSURANCE_STAKE : 1;
+    const stake = stakeFor(record.scenarioKey);
     const ranked = record.legalActions
       .map((action) => ({
         action,
@@ -10956,7 +11386,7 @@ class TrainerSession {
       evCost: record.evCost,
       counterNote: this.counterNote(record),
       ranked,
-      returns: this.returnsBlock(scenario, ranked, stake),
+      returns: returnsBlock(scenario, ranked, stake, this.rules),
       /*
        * The Advanced breakdown's one piece of arithmetic that is not already on
        * the card (round 14): everything the dealer can end up with, from this
@@ -10972,180 +11402,6 @@ class TrainerSession {
           : { dealer: dealerOutcomes(scenario.upcard, this.rules) },
       sensitivity,
     };
-  }
-
-  /**
-   * Everything the card needs to draw the returns, and nothing it has to work out.
-   *
-   * The page draws bars and prints figures; which stake the spot puts at risk,
-   * which actions come to the same figure, and whether this hand can carry the
-   * worked example are all decided here, where the scenario and the rules are.
-   */
-          returnsBlock(
-    scenario          ,
-    ranked                                                      ,
-    stake        ,
-  )          {
-    return {
-      stake,
-      scaleMax: RETURN_SCALE_MAX,
-      best: ranked[0]?.value ?? 0,
-      // Ties are read off the figures a player actually sees, not off the EVs.
-      equivalent: equivalentGroups(ranked),
-      // One worked line per action, each rebuilding its own figure exactly
-      // (round 15). `example` is kept for the stand line the round 13 tests
-      // name, and is the same arithmetic.
-      worked: ranked.map((row) => this.workedFor(scenario, row)),
-      example: this.standExample(scenario, ranked),
-    };
-  }
-
-  /**
-   * How one action's figure is arrived at, in numbers a player can check.
-   *
-   * Idan rejected the prose this replaces — "hitting has no single sum" — and
-   * he was right to: an explanation that asks to be trusted is worth less than
-   * one that can be redone on a napkin. So every action gets its terms, its
-   * assumption, and an arithmetic that closes.
-   *
-   * WHY THE SECOND TERM IS DIVIDED OUT OF THE FIGURE RATHER THAN QUOTED. Each
-   * line borrows one number that can be computed on its own — the chance of
-   * breaking on the next card, the chance the dealer ties — and derives the
-   * rest from the figure being explained. The figures come from the chart,
-   * which averages over the hands that reach a total; anything computed beside
-   * it agrees to about the third decimal and not always beyond. Quoting both
-   * halves would print a sum that does not come out, in an explanation whose
-   * whole point is that it does. This way the sum is exact by construction and
-   * the only borrowed number is one the app already quotes elsewhere.
-   */
-          workedFor(
-    scenario          ,
-    row                                               ,
-  )          {
-    return this.withDigits(this.workedTerms(scenario, row));
-  }
-
-  /**
-   * How many decimals the printed terms need for the printed sum to come out.
-   *
-   * The arithmetic closes exactly; the *printing* of it need not. `2 × 26% =
-   * +0.526` is what a reader is asked to check, and 2 × 26% is 0.520 — so the
-   * explanation would be caught lying by anybody who did the one thing it
-   * invites. The terms therefore carry as many decimals as it takes for the
-   * rounded sum to land on the figure beside it, starting at three and going
-   * up only when three will not do.
-   */
-          withDigits(work                                )          {
-    if (!work) return null;
-    const rebuild = REBUILD[work.kind          ];
-    if (!rebuild) return work;
-    const wanted = returnFigure(work.value          );
-    for (let digits = 3; digits <= 6; digits++) {
-      const round = (name        ) => {
-        const value = work[name];
-        return typeof value === 'number' ? Number(value.toFixed(digits)) : 0;
-      };
-      if (returnFigure(rebuild(round)) === wanted) return { ...work, digits };
-    }
-    // Six decimals and still not landing would mean the arithmetic itself is
-    // wrong, not the printing; say so rather than print a sum that is out.
-    return { ...work, digits: null };
-  }
-
-          workedTerms(
-    scenario          ,
-    row                                               ,
-  )                                 {
-    const value = row.value;
-    const total = this.standingTotal(scenario);
-
-    switch (row.action) {
-      case 'surrender':
-        // Half the bet, always. Nothing to work out, which is the point of it.
-        return { action: row.action, kind: 'surrender', value };
-      case 'declineInsurance':
-        return { action: row.action, kind: 'decline', value };
-      case 'takeInsurance':
-        // 2:1 on half a unit: three units back per unit staked, when the hole
-        // card is a ten.
-        return { action: row.action, kind: 'insurance', value, ten: value / 3 };
-      case 'stand': {
-        if (total === null || scenario.upcard === undefined) return null;
-        // A stiff hand cannot tie: every total the dealer makes beats it.
-        const push = total <= 16 ? 0 : standOutcome(total, scenario.upcard, this.rules).push;
-        return { action: row.action, kind: push === 0 ? 'stand' : 'standPush', value, win: (value - push) / 2, push };
-      }
-      case 'hit': {
-        const bust = bustOnNextCard(scenario, this.rules);
-        const survive = 1 - bust;
-        if (survive <= 0) return { action: row.action, kind: 'hitAlwaysBreaks', value, bust, survive };
-        return { action: row.action, kind: 'hit', value, bust, survive, surviveValue: value / survive };
-      }
-      // Both put a second unit out, so both are the same shape: what one unit
-      // comes back, on two units, less the one that came out of pocket.
-      case 'double':
-        return { action: row.action, kind: 'double', value, oneCard: (value + 1) / 2 };
-      case 'split':
-        return { action: row.action, kind: 'split', value, perHand: (value + 1) / 2 };
-      default:
-        return null;
-    }
-  }
-
-  /**
-   * The total a hand would stand on, including a pair — which the chart's
-   * scenario keys leave implicit, and which round 13's stand example had no way
-   * to read, so pair spots carried no arithmetic at all.
-   */
-          standingTotal(scenario          )                {
-    if (scenario.kind === 'insurance') return null;
-    if (scenario.total !== undefined) return scenario.total;
-    if (scenario.kind === 'pair' && scenario.pairRank !== undefined) {
-      // A pair of aces stands on twelve; every other pair is twice its rank.
-      return scenario.pairRank === ACE ? 12 : 2 * RANK_VALUE[scenario.pairRank] ;
-    }
-    return null;
-  }
-
-  /**
-   * The hand's own arithmetic, for the explanation behind the `?`.
-   *
-   * Standing is the one action whose figure a player can rebuild unaided: a win
-   * returns two units and a push returns one, so the figure is
-   * `2 × P(win) + 1 × P(push)` and nothing else. The odds come from the same
-   * chart the decision was graded against — and the identity is *checked* here
-   * rather than asserted, so a spot where the two would not agree to the last
-   * decimal simply carries no example instead of teaching a sum that does not
-   * come out.
-   */
-          standExample(
-    scenario          ,
-    ranked                                                      ,
-  )          {
-    const stand = ranked.find((row) => row.action === 'stand');
-    if (!stand || scenario.kind === 'insurance') return null;
-    if (scenario.total === undefined || scenario.upcard === undefined) return null;
-
-    /*
-     * A stiff hand cannot tie: sixteen loses to every total the dealer makes and
-     * wins only when he breaks. A pat hand can tie, so it needs the push term
-     * as well, and that comes from the dealer's own outcomes.
-     */
-    const push = scenario.total <= 16 ? 0 : standOutcome(scenario.total, scenario.upcard, this.rules).push;
-
-    /*
-     * The win rate is read back out of the figure rather than quoted from the
-     * dealer's outcomes, and deliberately so. The chart cell each figure comes
-     * from is an average over the two-card hands that reach this total, and the
-     * dealer's outcomes are computed against one composition — so the two agree
-     * to about the third decimal and not always beyond it. Quoting both would
-     * print a sum that does not come out, in an explanation whose whole purpose
-     * is that the player can check it. Written this way the example always
-     * rebuilds the figure it explains, exactly, and the only borrowed number is
-     * the push, which is zero for every stiff hand and small for the rest.
-     */
-    const win = (stand.value - push) / 2;
-    return { kind: push === 0 ? 'bust' : 'winPush', win, push, value: stand.value };
   }
 
   /** The card-counter remark, or nothing at all. Costs and rating never see it. */
@@ -13270,13 +13526,255 @@ class UthSession {
   }
 }
 
+/* ===== packages/trainer-web/src/analyse.ts ===== */
+/**
+ * The hand analyser (round 16).
+ *
+ * A player names cards — his own and the dealer's upcard — and asks what they
+ * are worth, without playing a hand. It is the first thing in the app worth
+ * opening without playing, and it answers with exactly what the table answers
+ * with: the same evaluation, the same ranked actions, the same figures and the
+ * same worked lines.
+ *
+ * FIVE THINGS IDAN SETTLED, AND HOW EACH IS HELD TO HERE.
+ *
+ * 1. CARDS GO IN, NOT A TOTAL. Sixteen is not sixteen: 10-6 may be surrendered,
+ *    8-8 may also be split, and 5-6-5 may be neither. The input is a list of
+ *    ranks and the analysis is of those cards.
+ * 2. RANKS ONLY. Blackjack ignores suits, so nothing here asks for one. A ten
+ *    covers the jack, the queen and the king, which is what they are.
+ * 3. LEGAL ACTIONS ARE DERIVED, NEVER ASSUMED. The hand is played out on a real
+ *    table with a stacked shoe, and the table says what is legal — so surrender
+ *    on the first two cards only, doubling by the rules in force, splitting only
+ *    on a pair, all come from the one implementation the game already has.
+ * 4. IT COUNTS TOWARDS NOTHING. This module cannot reach a score, because it
+ *    holds none: no `TrainerSession`, no rating, no accuracy, no EV-lost, no
+ *    streak, no day count, no storage. Like the level in round 14, that is
+ *    structural and can be checked by reading the imports.
+ * 5. THE RULE SET IS PART OF THE INPUT. Which is where it stops being a lookup:
+ *    the same hand under four rule sets, sometimes with the answer reversed
+ *    (§3.3).
+ *
+ * An impossible hand is refused rather than answered, and a hand with no
+ * decision left in it says so.
+ */
+
+
+
+
+
+
+/** What a player can tap. A ten stands for every ten-valued card. */
+const ANALYSER_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10']         ;
+                                                           
+
+/** The most cards a hand can be analysed with: two dealt and two drawn. */
+const ANALYSER_MAX_CARDS = 4;
+
+                                  
+                                                                
+                            
+                                       
+                 
+                    
+                                                                  
+                  
+ 
+
+/** Which concrete cards stand for a named rank, in the order they are used. */
+const CARDS_FOR                           = {
+  // Aces and numbers: the four suits of that rank.
+  A: [0, 1, 2, 3].map((suit) => makeCard(12, suit     )),
+  // A ten is any ten-valued card, so there are sixteen of them in a deck: tens,
+  // jacks, queens and kings, spread so that four tens in one hand is possible.
+  '10': [8, 9, 10, 11].flatMap((rank) => [0, 1, 2, 3].map((suit) => makeCard(rank     , suit     ))),
+};
+for (let value = 2; value <= 9; value++) {
+  CARDS_FOR[String(value)] = [0, 1, 2, 3].map((suit) => makeCard((value - 2)     , suit     ));
+}
+
+/** How many of a named rank a shoe of this many decks holds. */
+const HELD = (rank        , decks        ) => (rank === '10' ? 16 : 4) * decks;
+
+/** What a rank is worth, with an ace at eleven. */
+const VALUE_OF                         = { A: 11, '10': 10 };
+for (let value = 2; value <= 9; value++) VALUE_OF[String(value)] = value;
+
+/** The best total of a set of named ranks, and whether an ace is still soft. */
+function handValueOf(ranks                   )                                   {
+  let total = 0;
+  let aces = 0;
+  for (const rank of ranks) {
+    total += VALUE_OF[rank] ?? 0;
+    if (rank === 'A') aces++;
+  }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  return { total, soft: aces > 0 };
+}
+
+const refuse = (problem        , says        ) => ({ ok: false, problem, says });
+
+/**
+ * Cards for the shoe, chosen so that a legal request always finds them.
+ *
+ * Suits are irrelevant to blackjack and to the analysis, so they are handed out
+ * in order and the only thing that matters is that no card is asked for twice.
+ */
+function pickCards(ranks                   , used                     )                  {
+  const out           = [];
+  for (const rank of ranks) {
+    const taken = used.get(rank) ?? 0;
+    const available = CARDS_FOR[rank];
+    if (!available) return null;
+    used.set(rank, taken + 1);
+    // A six-deck shoe holds six of every card, so the same code comes round
+    // again rather than running out; how many a shoe really holds was checked
+    // before this point.
+    out.push(available[taken % available.length] );
+  }
+  return out;
+}
+
+/**
+ * A hole card that cannot end the hand before it is asked about.
+ *
+ * The hole card is never turned face up here, so it is not part of what the
+ * evaluation sees — but a dealer natural would end the hand and leave nothing
+ * to analyse, so it is chosen not to make one.
+ */
+function pickHole(upcard        , used                     )                {
+  const banned = upcard === 'A' ? '10' : upcard === '10' ? 'A' : '';
+  for (const rank of ['7', '8', '9', '6', '5', '4', '3', '2', '10', 'A']) {
+    if (rank === banned) continue;
+    const card = pickCards([rank], used);
+    if (card) return card[0] ;
+  }
+  return null;
+}
+
+/**
+ * Analyse a hand that nobody played.
+ *
+ * Everything it answers with comes from the same places the table's own card
+ * comes from: the table for what is legal and what each action is worth, the
+ * explanation for the words, and the returns block for the figures and their
+ * working.
+ */
+function analyse(request                 )          {
+  const locale = request.locale ?? 'en';
+  const say = (key        , params                                  ) => t(locale, key, params ?? {});
+  const player = [...request.player];
+  const dealer = request.dealer;
+
+  // --- What the request has to be before it can be answered ---------------------
+  const known = (rank        ) => (ANALYSER_RANKS                     ).includes(rank);
+  if (player.length < 2 || !dealer) return refuse('needCards', say('an.needCards'));
+  if (player.length > ANALYSER_MAX_CARDS) {
+    return refuse('tooManyCards', say('an.tooManyCards', { max: ANALYSER_MAX_CARDS }));
+  }
+  if (!player.every(known) || !known(dealer)) return refuse('badRank', say('an.badRank'));
+
+  const presetId = request.presetId ?? RULE_PRESETS[0] .id;
+  const preset = RULE_PRESETS.find((p) => p.id === presetId);
+  if (!preset) return refuse('badRules', say('an.badRules'));
+  const rules                 = applyRestrictions(
+    getPreset(presetId).rules,
+    request.restrictions ?? { noSurrender: false, likeRanksOnly: false },
+  );
+
+  // A shoe holds what it holds: four of a rank per deck, sixteen ten-cards.
+  const wanted = new Map                ();
+  for (const rank of [...player, dealer]) wanted.set(rank, (wanted.get(rank) ?? 0) + 1);
+  for (const [rank, count] of wanted) {
+    if (count > HELD(rank, rules.decks)) {
+      return refuse(
+        'impossible',
+        say('an.impossible', {
+          count,
+          rank: say(`an.rank.${rank}`),
+          held: HELD(rank, rules.decks),
+          // "1 decks" reads like a bug in both languages.
+          decks: rules.decks === 1 ? say('an.oneDeck') : say('an.decks', { n: rules.decks }),
+        }),
+      );
+    }
+  }
+
+  // --- Hands with nothing left to decide ----------------------------------------
+  const { total, soft } = handValueOf(player);
+  if (total > 21) return refuse('bust', say('an.bust', { total }));
+  if (player.length === 2 && total === 21) return refuse('blackjack', say('an.blackjack'));
+
+  // --- The hand, on a table of its own ------------------------------------------
+  const used = new Map                ();
+  const opening = pickCards([player[0] , dealer, player[1] ], used);
+  const extras = pickCards(player.slice(2), used);
+  const hole = pickHole(dealer, used);
+  if (!opening || !extras || hole === null) return refuse('impossible', say('an.impossibleShort'));
+
+  const table = new BlackjackTable({ rules, seed: 1, grading: 'chart' });
+  table.shoe.stack([opening[0] , opening[1] , opening[2] , hole, ...extras]);
+  table.startHand(1);
+  // An ace showing offers insurance before the hand can be played. It is a
+  // different question from the one being asked, and declining is what gets to
+  // the hand itself; the hole card was chosen so that declining cannot lose.
+  if ((table.view                     ).phase === 'insurance') table.takeInsurance(false);
+  for (let i = 0; i < extras.length; i++) {
+    if ((table.view                     ).phase !== 'player') break;
+    table.act('hit');
+  }
+  if ((table.view                     ).phase !== 'player') {
+    // Three cards to twenty-one stands itself, and a hand that broke on the way
+    // is over. Either way there is no decision left to analyse.
+    return refuse('noDecision', say(total === 21 ? 'an.twentyOne' : 'an.bust', { total }));
+  }
+
+  const legalActions = table.legalActions();
+  const evaluation = table.currentEvaluation();
+  const cards = [opening[0] , opening[2] , ...extras];
+  const ranks = cards.map(bjRankOfCard);
+  const upcard = bjRankOfCard(opening[1] );
+  const scenarioKey = scenarioKeyForHand(ranks, upcard, legalActions.includes('split'));
+  const scenario = parseScenarioKey(scenarioKey);
+  const explanation = explain(scenario, evaluation, rules, locale);
+
+  const ranked = legalActions
+    .map((action) => ({
+      action,
+      label: t(locale, `action.${action}`),
+      ev: evaluation.evByAction[action] ?? 0,
+      value: 1 + (evaluation.evByAction[action] ?? 0),
+    }))
+    .sort((a, b) => b.ev - a.ev);
+
+  return {
+    ok: true,
+    ruleSet: { id: preset.id, name: preset.name, note: preset.note ?? null, decks: rules.decks },
+    hand: { cards: player, total, soft, dealer },
+    scenarioKey,
+    headline: explanation.headline,
+    steps: explanation.steps,
+    best: { action: evaluation.optimalAction, label: t(locale, `action.${evaluation.optimalAction}`) },
+    ranked,
+    returns: returnsBlock(scenario, ranked, 1, rules),
+    // §3.3, which a player has never been able to see until now: what another
+    // rule set would answer for these same cards.
+    sensitivity: ruleSensitivity(scenarioKey, rules, evaluation.optimalAction),
+    breakdown: scenario.upcard === undefined ? null : { dealer: dealerOutcomes(scenario.upcard, rules) },
+  };
+}
+
 </script>
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n            <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <!--\n            How much the app explains (round 14). This table has no rule panel\n            of its own — one paytable, nothing to change — so the one control\n            that is not a rule lives here, where a player looks for it.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
+const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
 /*
@@ -15693,6 +16191,15 @@ function renderRail(view) {
 
   const between = view.phase !== 'player' && view.phase !== 'insurance';
   const onSpot = between && chips ? chips.bet : stack.wager;
+  /*
+   * The rail is a betting rail between hands and a readout during one.
+   *
+   * Between hands the chips are placed here, so it needs the room. Once the
+   * cards are out the bet cannot change, and a stacked column of chip art was
+   * taking 188px of the felt to say two numbers that were not going to move —
+   * which is the height that pushes the reasoning below the fold (round 16).
+   */
+  box.className = 'rail' + (between ? '' : ' playing');
 
   const wager = document.createElement('div');
   wager.className = 'rail-spot rail-bet';
@@ -15749,12 +16256,17 @@ function renderHands(view) {
   const previous = state.shown.hands;
   state.shown.hands = view.hands.map((hand) => hand.cards.map(cardKey));
 
+  // Two hands after a split need the room of one: the felt says so, and the
+  // stylesheet steps the cards down on a narrow phone (round 16).
+  box.className = view.hands.length > 1 ? 'split' : '';
+
   view.hands.forEach((hand, handIndex) => {
     const wrap = document.createElement('div');
     // A long hand says so, so the felt can hold it in the room it has: at 360px
-    // a seventh card was sitting under the dock until the player scrolled
-    // (round 15, found by measuring rather than by eye).
-    wrap.className = 'hand' + (hand.active ? ' active' : '') + (hand.cards.length >= 6 ? ' long' : '');
+    // a seventh card sat under the dock until the player scrolled (round 15),
+    // and a fifth did once the felt was tightened (round 16). Both found by
+    // measuring rather than by eye.
+    wrap.className = 'hand' + (hand.active ? ' active' : '') + (hand.cards.length >= 5 ? ' long' : '');
 
     const fresh = newCards(state.shown.hands[handIndex], previous[handIndex] ?? []);
     const cards = document.createElement('div');
@@ -17747,6 +18259,247 @@ Promise.resolve(window.EV && window.EV.ready).then(() => {
 
 }
 
+function initAnalyse() {
+/*
+ * The hand analyser's screen (round 16).
+ *
+ * A player names cards and gets the same answer the table gives: the same bars,
+ * the same figures, the same worked lines, at whatever level he is on. The
+ * screen's whole job is to make naming a hand cost three taps on a phone — no
+ * keyboard, no scrolling, no suit picker, because blackjack has no use for one.
+ *
+ * It asks `/api/analyse`, which is a pure function with no session behind it.
+ * Nothing this screen can do reaches a rating, an accuracy, a streak or the day
+ * count, and that is structural rather than remembered.
+ */
+
+const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+const el = (id) => document.getElementById(id);
+
+/** What a player can tap. A ten stands for the jack, the queen and the king. */
+const AN_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const AN_MAX_CARDS = 4;
+
+const anState = {
+  /** The player's cards, by rank, in the order they were tapped. */
+  player: [],
+  /** The dealer's one card. */
+  dealer: null,
+  /** Whether the next tap adds a card beyond the first two. */
+  adding: false,
+  presetId: null,
+  presets: [],
+  result: null,
+};
+
+
+/** Which slot the next tap fills. */
+function anWanting() {
+  if (anState.player.length < 2) return 'player';
+  if (!anState.dealer) return 'dealer';
+  return anState.adding && anState.player.length < AN_MAX_CARDS ? 'player' : null;
+}
+
+function anRenderSlots() {
+  const box = el('an-slots');
+  box.replaceChildren();
+  const wanting = anWanting();
+
+  const group = (labelKey, ranks, active) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'an-group' + (active ? ' active' : '');
+    const label = document.createElement('div');
+    label.className = 'an-label';
+    label.textContent = T(labelKey);
+    const cards = document.createElement('div');
+    cards.className = 'an-cards';
+    ranks.forEach((rank, index) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'an-card-slot';
+      card.dataset.rank = rank;
+      card.textContent = rank;
+      // Tapping a card that is already down takes it back, which is the whole
+      // undo this screen needs.
+      card.addEventListener('click', () => {
+        if (labelKey === 'an.dealers') anState.dealer = null;
+        else anState.player.splice(index, 1);
+        anState.adding = false;
+        anRun();
+      });
+      cards.appendChild(card);
+    });
+    if (active) {
+      const slot = document.createElement('span');
+      slot.className = 'an-card-slot empty';
+      slot.textContent = '?';
+      cards.appendChild(slot);
+    }
+    wrap.append(label, cards);
+    return wrap;
+  };
+
+  box.appendChild(group('an.yours', anState.player, wanting === 'player'));
+  box.appendChild(group('an.dealers', anState.dealer ? [anState.dealer] : [], wanting === 'dealer'));
+
+  el('an-hint').textContent = T(
+    wanting === 'player' && anState.player.length < 2
+      ? 'an.tapYours'
+      : wanting === 'dealer'
+        ? 'an.tapDealer'
+        : 'an.tapMore',
+  );
+  el('an-add').disabled = !anState.dealer || anState.player.length >= AN_MAX_CARDS || anState.adding;
+}
+
+function anRenderPad() {
+  const pad = el('an-pad');
+  if (pad.children.length > 0) return;
+  for (const rank of AN_RANKS) {
+    const key = document.createElement('button');
+    key.type = 'button';
+    key.className = 'an-key';
+    key.dataset.rank = rank;
+    // The ten key says what it covers: in blackjack a picture card is a ten.
+    key.textContent = rank === '10' ? T('an.tenKey') : rank;
+    key.addEventListener('click', () => anTap(rank));
+    pad.appendChild(key);
+  }
+}
+
+function anTap(rank) {
+  const wanting = anWanting();
+  if (wanting === 'player') anState.player.push(rank);
+  else if (wanting === 'dealer') anState.dealer = rank;
+  else return;
+  anState.adding = false;
+  anRun();
+}
+
+/** Ask, and draw whatever comes back — an answer, or a sentence saying why not. */
+async function anRun() {
+  anRenderSlots();
+  const ready = anState.player.length >= 2 && anState.dealer;
+  el('an-says').hidden = true;
+  el('an-result').hidden = true;
+  if (!ready) return;
+
+  let result;
+  try {
+    result = await api('/api/analyse', {
+      player: anState.player,
+      dealer: anState.dealer,
+      presetId: anState.presetId ?? undefined,
+      locale: window.EV ? window.EV.locale : 'en',
+    });
+  } catch (error) {
+    el('an-says').hidden = false;
+    el('an-says').textContent = String(error.message ?? error);
+    return;
+  }
+  anState.result = result;
+
+  if (!result.ok) {
+    // A hand that cannot exist, or one with nothing left to decide, gets a
+    // sentence and no figures. A figure for an impossible hand would be a lie
+    // told confidently.
+    el('an-says').hidden = false;
+    el('an-says').textContent = result.says;
+    // And nothing of the last answer is left standing behind the sentence.
+    el('an-card').replaceChildren();
+    el('an-steps').replaceChildren();
+    return;
+  }
+
+  el('an-result').hidden = false;
+  el('an-headline').textContent = result.headline;
+  el('an-best').textContent = T('an.best', { action: result.best.label });
+  el('an-rules-line').textContent = result.ruleSet.name;
+
+  // The same block the table draws, from the same data — including the worked
+  // line under every action, and the explanation panel at this player's level.
+  const card = el('an-card');
+  card.replaceChildren();
+  card.appendChild(
+    window.EVReturns.block(
+      { ranked: result.ranked, returns: result.returns, chosen: null, breakdown: result.breakdown },
+      { game: 'bj', helpId: 'an-returns-help' },
+    ),
+  );
+
+  /*
+   * §3.3, which a player has never been able to see until now: the same cards
+   * under another rule set, sometimes with the answer reversed. Shown here at
+   * every level, because choosing the rules is part of what this screen is for.
+   */
+  const sensitivity = el('an-sensitivity');
+  sensitivity.hidden = result.sensitivity.length === 0;
+  if (result.sensitivity.length > 0) {
+    sensitivity.textContent = T('fb.ruleSensitive', {
+      list: result.sensitivity
+        .map((s) => `${T('action.' + s.action).toLowerCase()} ${T('sens.' + s.id)}`)
+        .join('; '),
+    });
+  }
+
+  // The reasoning, in the share this level reads — the same three steps, and
+  // the same one for a beginner.
+  const steps = el('an-steps');
+  steps.replaceChildren();
+  const shown = window.EVLevel ? window.EVLevel.steps() : 3;
+  result.steps.slice(3 - shown).forEach((text) => {
+    const step = document.createElement('p');
+    step.className = 'an-step';
+    window.EVReturns.rich(step, text);
+    steps.appendChild(step);
+  });
+}
+
+async function anOpenRules() {
+  if (anState.presets.length === 0) anState.presets = await api('/api/presets');
+  const list = el('an-preset-list');
+  list.replaceChildren();
+  for (const preset of anState.presets) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'preset' + (preset.id === (anState.presetId ?? anState.presets[0].id) ? ' current' : '');
+    const name = document.createElement('strong');
+    name.textContent = preset.name;
+    const note = document.createElement('small');
+    note.textContent = preset.badge ?? preset.note ?? '';
+    button.append(name, note);
+    button.addEventListener('click', () => {
+      anState.presetId = preset.id;
+      el('an-rule-picker').close();
+      anRun();
+    });
+    list.appendChild(button);
+  }
+  el('an-rule-picker').showModal();
+}
+
+el('an-add').addEventListener('click', () => {
+  anState.adding = true;
+  anRenderSlots();
+});
+el('an-clear').addEventListener('click', () => {
+  anState.player = [];
+  anState.dealer = null;
+  anState.adding = false;
+  anRun();
+});
+el('an-rules').addEventListener('click', () => {
+  window.EVCount.bump('rules');
+  void anOpenRules();
+});
+
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  anRenderPad();
+  anRun();
+});
+
+}
+
 
 /*
  * Who is playing, on more than one device.
@@ -18905,6 +19658,20 @@ async function api(path, body) {
     case '/api/state':
       return session.view;
 
+    /*
+     * The hand analyser (round 16): cards nobody played. Answered by a pure
+     * function with no session in it, which is what makes "it counts towards
+     * nothing" structural rather than remembered — there is no rating, no
+     * accuracy and no day count within its reach.
+     */
+    case '/api/analyse':
+      return analyse({
+        player: Array.isArray(b.player) ? b.player : [],
+        dealer: typeof b.dealer === 'string' ? b.dealer : '',
+        presetId: typeof b.presetId === 'string' ? b.presetId : undefined,
+        locale,
+      });
+
     case '/api/presets':
       // In the language on screen, as the rules bar is (round 11).
       return RULE_PRESETS.map((p) => ({
@@ -19393,12 +20160,13 @@ const app = () => document.getElementById('app');
  * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
 // `#usage` (round 9) is the one screen nothing links to: see usage.js.
-const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage' };
+const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage', '#analyse': 'analyse' };
 const SCREEN_HTML = {
   home: () => HOME_HTML,
   table: () => TABLE_HTML,
   ultimate: () => ULTIMATE_HTML,
   usage: () => usageHtml(),
+  analyse: () => ANALYSE_HTML,
 };
 const screenFromHash = () => SCREENS[location.hash] ?? null;
 
@@ -19422,6 +20190,8 @@ function mount(name) {
     initUltimate();
   } else if (name === 'usage') {
     void initUsage();
+  } else if (name === 'analyse') {
+    initAnalyse();
   } else {
     initTable();
   }

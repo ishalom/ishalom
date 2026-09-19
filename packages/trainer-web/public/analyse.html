@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Analyse a hand</title>
+    <meta name="ev-title" content="ui.analyseTitle" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+    <script src="/figure.js"></script>
+    <script src="/level.js"></script>
+    <script src="/count.js"></script>
+    <script src="/returns.js"></script>
+  </head>
+  <body>
+    <div class="shell analyser">
+      <header class="rules analyser-head">
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
+        <div class="rules-main">
+          <div class="rules-title" data-i18n="an.title">Analyse a hand</div>
+          <div class="rules-sub" id="an-rules-line"></div>
+        </div>
+        <button class="link" id="an-rules" data-i18n="an.rules">Rules</button>
+      </header>
+
+      <!--
+        Three taps and an answer. The slots fill in order — your two cards, then
+        the dealer's — so the keypad never has to ask which one a tap is for,
+        and a hand is entered without a keyboard and without scrolling.
+      -->
+      <section class="an-slots" id="an-slots" aria-live="polite"></section>
+      <p class="an-hint" id="an-hint" data-i18n="an.tapYours">Tap two cards.</p>
+
+      <section class="an-pad" id="an-pad" data-i18n-attr="aria-label:an.yours"></section>
+
+      <div class="an-controls">
+        <button class="an-control" id="an-add" type="button" data-i18n="an.addCard">Add a card</button>
+        <button class="an-control" id="an-clear" type="button" data-i18n="an.clear">Start again</button>
+      </div>
+
+      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->
+      <p class="an-says" id="an-says" hidden></p>
+
+      <section class="an-result" id="an-result" hidden>
+        <p class="an-headline" id="an-headline"></p>
+        <p class="an-best" id="an-best"></p>
+        <section class="quickcard an-card" id="an-card"></section>
+        <p class="sensitivity" id="an-sensitivity" hidden></p>
+        <section class="an-steps" id="an-steps"></section>
+      </section>
+
+      <p class="an-note" data-i18n="an.notCounted">Nothing here counts towards anything.</p>
+
+      <dialog id="an-rule-picker">
+        <form method="dialog">
+          <h2 data-i18n="ui.ruleSet">Rule set</h2>
+          <div id="an-preset-list"></div>
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+    </div>
+
+    <script src="/analyse.js"></script>
+  </body>
+</html>

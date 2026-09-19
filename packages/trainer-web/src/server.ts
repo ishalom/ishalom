@@ -19,6 +19,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { RULE_PRESETS, type BlackjackAction } from '@evtrainer/ev-engine';
+import { analyse } from './analyse.ts';
 import { TrainerSession, type Restrictions } from './session.ts';
 import { UthSession } from './uth-session.ts';
 import { type BetOp } from './chips.ts';
@@ -72,6 +73,22 @@ const server = createServer(async (request, response) => {
       switch (url.pathname) {
         case '/api/state':
           return json(session.view);
+
+        /*
+         * The hand analyser (round 16). It is answered by a pure function that
+         * has no session in it at all: a query about cards nobody played
+         * cannot reach a rating, an accuracy or a day count, because it never
+         * touches the object that holds them.
+         */
+        case '/api/analyse':
+          return json(
+            analyse({
+              player: Array.isArray(body.player) ? (body.player as string[]) : [],
+              dealer: typeof body.dealer === 'string' ? body.dealer : '',
+              presetId: typeof body.presetId === 'string' ? body.presetId : undefined,
+              locale: body.locale === 'he' ? 'he' : 'en',
+            }),
+          );
 
         case '/api/presets':
           return json(

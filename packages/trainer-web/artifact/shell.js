@@ -625,6 +625,20 @@ async function api(path, body) {
     case '/api/state':
       return session.view;
 
+    /*
+     * The hand analyser (round 16): cards nobody played. Answered by a pure
+     * function with no session in it, which is what makes "it counts towards
+     * nothing" structural rather than remembered — there is no rating, no
+     * accuracy and no day count within its reach.
+     */
+    case '/api/analyse':
+      return analyse({
+        player: Array.isArray(b.player) ? b.player : [],
+        dealer: typeof b.dealer === 'string' ? b.dealer : '',
+        presetId: typeof b.presetId === 'string' ? b.presetId : undefined,
+        locale,
+      });
+
     case '/api/presets':
       // In the language on screen, as the rules bar is (round 11).
       return RULE_PRESETS.map((p) => ({

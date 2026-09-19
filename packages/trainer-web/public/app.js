@@ -396,6 +396,15 @@ function renderRail(view) {
 
   const between = view.phase !== 'player' && view.phase !== 'insurance';
   const onSpot = between && chips ? chips.bet : stack.wager;
+  /*
+   * The rail is a betting rail between hands and a readout during one.
+   *
+   * Between hands the chips are placed here, so it needs the room. Once the
+   * cards are out the bet cannot change, and a stacked column of chip art was
+   * taking 188px of the felt to say two numbers that were not going to move —
+   * which is the height that pushes the reasoning below the fold (round 16).
+   */
+  box.className = 'rail' + (between ? '' : ' playing');
 
   const wager = document.createElement('div');
   wager.className = 'rail-spot rail-bet';
@@ -452,12 +461,17 @@ function renderHands(view) {
   const previous = state.shown.hands;
   state.shown.hands = view.hands.map((hand) => hand.cards.map(cardKey));
 
+  // Two hands after a split need the room of one: the felt says so, and the
+  // stylesheet steps the cards down on a narrow phone (round 16).
+  box.className = view.hands.length > 1 ? 'split' : '';
+
   view.hands.forEach((hand, handIndex) => {
     const wrap = document.createElement('div');
     // A long hand says so, so the felt can hold it in the room it has: at 360px
-    // a seventh card was sitting under the dock until the player scrolled
-    // (round 15, found by measuring rather than by eye).
-    wrap.className = 'hand' + (hand.active ? ' active' : '') + (hand.cards.length >= 6 ? ' long' : '');
+    // a seventh card sat under the dock until the player scrolled (round 15),
+    // and a fifth did once the felt was tightened (round 16). Both found by
+    // measuring rather than by eye.
+    wrap.className = 'hand' + (hand.active ? ' active' : '') + (hand.cards.length >= 5 ? ' long' : '');
 
     const fresh = newCards(state.shown.hands[handIndex], previous[handIndex] ?? []);
     const cards = document.createElement('div');
