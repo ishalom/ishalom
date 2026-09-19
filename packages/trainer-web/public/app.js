@@ -468,7 +468,11 @@ function renderRail(view) {
 function seatHeader(total, outcome, startTotal) {
   // The path, where there is one: "12 → 20" says the draw worked, which is the
   // part of his question a final total alone cannot answer.
-  const figure = startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} → ${total}`;
+  // The arrow follows the page: a right-to-left reader meets 14 first and the
+  // arrow has to point the way he is reading, or the path runs backwards.
+  const arrow = document.documentElement.getAttribute('dir') === 'rtl' ? '←' : '→';
+  const figure =
+    startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} ${arrow} ${total}`;
   return ` · ${figure}${outcome ? ` · ${outcome}` : ''}`;
 }
 

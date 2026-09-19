@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="a590844464eaeef4e4a5ab6e6c281c2b2294f1eb-dirty" />
-<meta name="ev-build-at" content="2026-09-19T21:21:56.767Z" />
+<meta name="ev-build-commit" content="2f87373a61513ce9f9ce60b473595c78d35d3731-dirty" />
+<meta name="ev-build-at" content="2026-09-19T21:22:35.261Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -16333,7 +16333,11 @@ function renderRail(view) {
 function seatHeader(total, outcome, startTotal) {
   // The path, where there is one: "12 → 20" says the draw worked, which is the
   // part of his question a final total alone cannot answer.
-  const figure = startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} → ${total}`;
+  // The arrow follows the page: a right-to-left reader meets 14 first and the
+  // arrow has to point the way he is reading, or the path runs backwards.
+  const arrow = document.documentElement.getAttribute('dir') === 'rtl' ? '←' : '→';
+  const figure =
+    startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} ${arrow} ${total}`;
   return ` · ${figure}${outcome ? ` · ${outcome}` : ''}`;
 }
 

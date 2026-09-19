@@ -103,6 +103,16 @@ test('the header shows the path when the hand drew, and just the total when it d
   for (let i = 0; i < 20; i++) await settle();
   assert.match(heads(page).player, /· 11 → 16/, 'the draw is not shown as a path');
   page.stopWatching();
+
+  // And in a right-to-left page the arrow points the way the reader is going.
+  const hebrew = table([['ev:locale', 'he']]);
+  await hebrew.booted;
+  hebrew.session().table.shoe.stack(hebrew.parseCards('5s Td 6h 7c 5d'));
+  await press(hebrew, 'deal');
+  await press(hebrew, 'hit');
+  for (let i = 0; i < 20; i++) await settle();
+  assert.match(heads(hebrew).player, /· 11 ← 16/, 'the path runs backwards in Hebrew');
+  hebrew.stopWatching();
 });
 
 test('a bust says so in the header, the way the dealer’s already did', async () => {
