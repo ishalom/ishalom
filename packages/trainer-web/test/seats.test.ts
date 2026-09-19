@@ -256,4 +256,22 @@ test('the explanation scrolls, so a row of the block is never cut in half', () =
     block.indexOf('section.appendChild(grid)') < block.indexOf('section.appendChild(help)'),
     'the explanation is appended before the rows, so the rows are what gets cut',
   );
+
+  /*
+   * And the rows sit directly under the grade. At 360px in Hebrew a hand with
+   * all five actions ran 267px into a 239px card, and what the ceiling cut was
+   * the last row. The lines that comment on the rows follow them now: those can
+   * be scrolled to, and half a sentence still reads as a sentence.
+   */
+  const app = source('app.js');
+  const quickCard = app.slice(app.indexOf('function renderQuickCard('), app.indexOf('function renderFeedback('));
+  const at = (needle: string) => {
+    const index = quickCard.indexOf(needle);
+    assert.ok(index > 0, `${needle} is not on the card`);
+    return index;
+  };
+  assert.ok(at('box.appendChild(verdict)') < at('window.EVReturns.block('), 'the bars come before the grade');
+  assert.ok(at('window.EVReturns.block(') < at("className = 'did'"), 'a comment on the rows is drawn above them');
+  assert.ok(at('window.EVReturns.block(') < at('describeSpotLine('), 'the spot tag is drawn above the rows');
+  assert.ok(at('window.EVReturns.block(') < at("className = 'milestone'"), 'the milestone is drawn above the rows');
 });

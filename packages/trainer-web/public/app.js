@@ -763,7 +763,32 @@ function renderQuickCard(view) {
   }
   box.appendChild(verdict);
 
-  // How hard the spot was \u2014 the same line whether it was played right or wrong.
+  /*
+   * The bars come straight after the grade (round 17).
+   *
+   * The card has a ceiling so the buttons stay put, and whatever falls past it
+   * is cut. At 360px in Hebrew, a hand offering all five actions ran 267px into
+   * a 239px card and the last row — "hit +0.148" — was sliced in half, which is
+   * what Idan photographed. A row is either shown or it is not, so the rows go
+   * directly under the verdict and the lines that comment on them follow: those
+   * can be scrolled to, and half a sentence still reads as a sentence.
+   */
+  box.appendChild(
+    window.EVReturns.block(feedback, { game: 'bj', decisions: view.stats.decisions, helpId: 'bj-returns-help' }),
+  );
+
+  if (!feedback.correct) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent =
+      T('fb.youChose', {
+        chosen: feedback.chosenLabel.toLowerCase(),
+        best: feedback.optimalLabel.toLowerCase(),
+      }) + (feedback.closeCall ? ' ' + T('fb.closeCall') : '');
+    box.appendChild(did);
+  }
+
+  // How hard the spot was — the same line whether it was played right or wrong.
   // Only the last clause differs, which is what stops the tag being a prize.
   const spotLine = describeSpotLine(feedback);
   if (spotLine) box.appendChild(spotLine);
@@ -781,24 +806,6 @@ function renderQuickCard(view) {
     );
     box.appendChild(note);
   }
-
-  if (!feedback.correct) {
-    const did = document.createElement('p');
-    did.className = 'did';
-    did.textContent =
-      T('fb.youChose', {
-        chosen: feedback.chosenLabel.toLowerCase(),
-        best: feedback.optimalLabel.toLowerCase(),
-      }) + (feedback.closeCall ? ' ' + T('fb.closeCall') : '');
-    box.appendChild(did);
-  }
-
-  // §7.1 item 3, as round 13 draws it: one row per legal action, longest bar
-  // best, on a scale that does not move from hand to hand. The pills this
-  // replaces are gone — they showed four minus signs and no distances.
-  box.appendChild(
-    window.EVReturns.block(feedback, { game: 'bj', decisions: view.stats.decisions, helpId: 'bj-returns-help' }),
-  );
 }
 
 function renderFeedback(view) {
