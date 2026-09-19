@@ -40,8 +40,11 @@
   document.documentElement.setAttribute('data-font', stored ?? 'warm');
 
   document.addEventListener('DOMContentLoaded', () => {
+    // A screen with a panel of its own takes the bar there: the felt has no
+    // room for a setting changed once in a lifetime (round 17).
+    const slot = document.getElementById('lang-slot');
     const bar = document.createElement('div');
-    bar.className = 'fontbar';
+    bar.className = slot ? 'fontbar in-panel' : 'fontbar';
     const label = document.createElement('span');
     label.textContent = window.EV ? window.EV.t('ui.font') : 'Font';
     bar.appendChild(label);
@@ -75,7 +78,8 @@
     }
 
     const shell = document.querySelector('.shell');
-    if (shell) shell.insertBefore(bar, shell.firstChild);
+    if (slot) slot.replaceChildren(bar);
+    else if (shell) shell.insertBefore(bar, shell.firstChild);
     apply(stored ?? 'warm');
   });
 })();

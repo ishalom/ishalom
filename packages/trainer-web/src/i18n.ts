@@ -766,6 +766,11 @@ const EN: Catalogue = {
   'ui.cardDrawn': '{card}, drawn on hit {n}',
 
   'hand.doubled': 'doubled',
+  // What became of a hand, in one word, for the seat's header (round 17).
+  'hand.won': 'won',
+  'hand.lost': 'lost',
+  'hand.push': 'push',
+  'hand.nth': 'Hand {n}',
   'hand.surrendered': 'surrendered',
   'hand.units': '{n} units',
 
@@ -1650,6 +1655,11 @@ const HE: Catalogue = {
   'ui.cardDrawn': '{card}, נמשך בלקיחה {n}',
 
   'hand.doubled': 'הוכפל',
+  // What became of a hand, in one word, for the seat's header (round 17).
+  'hand.won': 'ניצחת',
+  'hand.lost': 'הפסדת',
+  'hand.push': 'תיקו',
+  'hand.nth': 'יד {n}',
   'hand.surrendered': 'ויתור',
   'hand.units': '{n} יחידות',
 

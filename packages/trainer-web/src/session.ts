@@ -816,6 +816,16 @@ export class TrainerSession {
       hands: view.hands.map((hand, index) => ({
         cards: hand.cards.map(cardView),
         total: totalOf(hand.cards),
+        /*
+         * What the hand was before it drew (round 17).
+         *
+         * Idan's question at showdown is "what did I win with — especially if I
+         * hit", and the answer reads better as a path than as an endpoint: 12 →
+         * 20 says the draw worked. It is the same arithmetic as `total`, over
+         * the two cards the hand was dealt, so the header can never disagree
+         * with the grade about what this hand is worth.
+         */
+        startTotal: hand.cards.length > 2 ? totalOf(hand.cards.slice(0, 2)) : null,
         // In chips at the bet; `units` is what the engine staked.
         bet: roundChips(hand.bet * this.handBet),
         units: hand.bet,

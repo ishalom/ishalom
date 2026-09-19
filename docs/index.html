@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="16ae28785e8d007e9a83992177281a5b76d1f726-dirty" />
-<meta name="ev-build-at" content="2026-09-19T19:09:48.513Z" />
+<meta name="ev-build-commit" content="a590844464eaeef4e4a5ab6e6c281c2b2294f1eb-dirty" />
+<meta name="ev-build-at" content="2026-09-19T21:21:56.767Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -179,21 +179,19 @@ body {
   box-shadow: inset 0 0 0 2px #3d5f88, 0 2px 6px rgba(0, 0, 0, 0.45);
 }
 
-.hand { padding: 8px; border-radius: 10px; border: 1px solid transparent; }
-.hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
-/* Four times what it was. It is the number the player is actually reading, and
-   it had ended up the smallest thing on a felt whose cards had already grown. */
-.hand-total {
-  margin-top: 4px;
-  font-family: var(--display);
-  font-weight: var(--display-weight);
-  font-size: 48px;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  letter-spacing: var(--display-tracking);
-}
-.hand-total.bust { color: var(--blunder); }
+/*
+ * The frame around a hand says one thing: which of two hands is being played.
+ * With a single hand there is nothing to tell apart and the header names the
+ * seat, so it is padding on four sides and it goes (round 17).
+ */
+.hand { padding: 0; border-radius: 10px; border: 1px solid transparent; }
+#player-hands.split .hand { padding: 8px; }
+#player-hands.split .hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
+/*
+ * The total lives in the seat's header now (round 17), so the box holds cards
+ * and nothing else. It was 48px of number inside a frame, and it left the
+ * player with no total at all at showdown — the one moment he wanted it.
+ */
 .hand-meta { margin-top: 4px; font-size: 12px; color: var(--muted); }
 .hand-net { font-weight: 600; }
 .hand-net.win { color: var(--optimal); }
@@ -1476,7 +1474,6 @@ body { font-family: var(--body); }
 
 @media (max-width: 560px) {
   .rail { gap: 12px; }
-  .hand-total { font-size: 38px; }
   .rail-bank .rail-value { font-size: 24px; }
   .seat-title { font-size: 15px; }
   .seat-total { font-size: 20px; }
@@ -1729,7 +1726,6 @@ button,
   .felt .seat { padding: 4px 8px; }
   .seat-title { margin-bottom: 4px; font-size: 12px; }
   .hand { padding: 4px; }
-  .hand-total { font-size: 32px; }
 
   .rail { gap: 4px; margin-top: 6px; padding-top: 6px; }
   .rail-bet .chips { height: 34px; min-width: 56px; margin-bottom: 2px; }
@@ -2075,12 +2071,23 @@ button,
    says so rather than printing a decimal nobody can act on. */
 .ret-same { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
 
+/*
+ * The explanation scrolls; the bars never do (round 17).
+ *
+ * Idan's screenshot had the last row of the block — "Hit +0.148" — cut in half
+ * by the button bar. The card has a ceiling so the buttons stay put, and what
+ * was being clipped was whatever fell past it. A row is either shown or it is
+ * not, so the explanation takes a ceiling of its own and the rows above it
+ * always fit inside the card's.
+ */
 .returns-help {
   margin: 8px 0 0;
   padding: 9px 11px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: #0d141b;
+  max-height: 24vh;
+  overflow-y: auto;
 }
 .returns-help p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 .returns-help p:last-child { margin-bottom: 0; }
@@ -2443,6 +2450,49 @@ button,
 
 /* The ten key names what it covers, and still fits on one line. */
 .an-key[data-rank='10'] { font-size: 13px; letter-spacing: 0.01em; }
+
+/* --- One header for both seats (round 17) -------------------------------------
+ * "Dealer · 26 · bust" and "You · 12 → 20 · won", in the same place, at the same
+ * weight, in both phases. The total has one home; the path is shown where there
+ * is one, because "what did I win with" is usually asked about a hand that drew.
+ *
+ * §3.1: the header states the total and what became of the hand. It says nothing
+ * about whether the decision was good — the grade does that, once. */
+.seat-total { font-variant-numeric: tabular-nums; color: var(--ink); }
+.hand-head {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.hand-head.bust { color: var(--blunder); }
+
+/* The language and font controls, where a screen has a panel to keep them in
+   (round 17). On the felt they were a permanent bar for a setting changed once. */
+.fontbar.in-panel {
+  position: static;
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+/* One line on the felt: the name of the rule set. The rest is behind Rules. */
+.rules-sub { margin: 0 0 12px; }
+.lang-slot { margin-bottom: 4px; }
+
+/* Two hands sit side by side (round 17). Stacked, a split ran 351px of felt and
+   put its second hand under the dock; beside each other it is how a split looks
+   at a real table, and it fits. */
+#player-hands.split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
 
 /* ===========================================================================
  * The shared build only.
@@ -8115,6 +8165,11 @@ const EN            = {
   'ui.cardDrawn': '{card}, drawn on hit {n}',
 
   'hand.doubled': 'doubled',
+  // What became of a hand, in one word, for the seat's header (round 17).
+  'hand.won': 'won',
+  'hand.lost': 'lost',
+  'hand.push': 'push',
+  'hand.nth': 'Hand {n}',
   'hand.surrendered': 'surrendered',
   'hand.units': '{n} units',
 
@@ -8999,6 +9054,11 @@ const HE            = {
   'ui.cardDrawn': '{card}, נמשך בלקיחה {n}',
 
   'hand.doubled': 'הוכפל',
+  // What became of a hand, in one word, for the seat's header (round 17).
+  'hand.won': 'ניצחת',
+  'hand.lost': 'הפסדת',
+  'hand.push': 'תיקו',
+  'hand.nth': 'יד {n}',
   'hand.surrendered': 'ויתור',
   'hand.units': '{n} יחידות',
 
@@ -11493,6 +11553,16 @@ class TrainerSession {
       hands: view.hands.map((hand, index) => ({
         cards: hand.cards.map(cardView),
         total: totalOf(hand.cards),
+        /*
+         * What the hand was before it drew (round 17).
+         *
+         * Idan's question at showdown is "what did I win with — especially if I
+         * hit", and the answer reads better as a path than as an endpoint: 12 →
+         * 20 says the draw worked. It is the same arithmetic as `total`, over
+         * the two cards the hand was dealt, so the header can never disagree
+         * with the grade about what this hand is worth.
+         */
+        startTotal: hand.cards.length > 2 ? totalOf(hand.cards.slice(0, 2)) : null,
         // In chips at the bet; `units` is what the engine staked.
         bet: roundChips(hand.bet * this.handBet),
         units: hand.bet,
@@ -13772,8 +13842,8 @@ function analyse(request                 )          {
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
-const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n        <!--\n          The badge states the rules; it is not a control (§10.1). The link\n          beside it is, so the surrender switch is one tap from the statement it\n          contradicts rather than behind a button labelled \"Rules\" that reads as\n          reference material.\n        -->\n        <div class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </div>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
-const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n            <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <!--\n            How much the app explains (round 14). This table has no rule panel\n            of its own — one paytable, nothing to change — so the one control\n            that is not a rule lives here, where a player looks for it.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
+const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <!--\n          The badge states the rules; it is not a control (§10.1). It was a\n          second line on the felt, printed on every hand in both phases, saying\n          what the name above it already half said — so round 17 moved it in\n          here, where the switches that change it are, and left one line on the\n          table. The link beside it opens nothing new: it is the anchor the\n          restrictions below answer to.\n        -->\n        <p class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </p>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n        <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n            <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <!--\n            How much the app explains (round 14). This table has no rule panel\n            of its own — one paytable, nothing to change — so the one control\n            that is not a rule lives here, where a player looks for it.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
@@ -16091,12 +16161,12 @@ function renderDealer(view) {
 
   box.replaceChildren(...cards.map((card, i) => cardNode(card, i, fresh.get(i))));
   if (view.dealer.hidden || withhold) box.appendChild(faceDownNode(fresh.get(cards.length)));
+  // The word comes from the catalogue, as the player's own does: the Hebrew
+  // sweep found the dealer's reading "23 bust" (round 12).
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
       ? ''
-      // The word comes from the catalogue, as the player's own total does: the
-      // Hebrew sweep found the dealer's reading "23 bust" (round 12).
-      : `· ${view.dealer.total}${view.dealer.total > 21 ? ` ${T('ui.bust')}` : ''}`;
+      : seatHeader(view.dealer.total, view.dealer.total > 21 ? T('ui.bust') : null);
 
   // §3.1 again: a bare total after the player busts reads as "you would have won
   // by standing", which is the opposite of true.
@@ -16247,9 +16317,44 @@ function renderRail(view) {
   if (chips && window.EVChips) box.appendChild(window.EVChips.limits(chips));
 }
 
+/**
+ * What a seat's header says after its name: the total, and what became of the
+ * hand (round 17).
+ *
+ * Idan, playing: at showdown his own total was nowhere. The dealer's seat read
+ * "Dealer · 26 · bust" and his read "You". The big number inside his box was
+ * there while he decided and gone the moment he wanted it — "what did I win
+ * with, especially if I hit?"
+ *
+ * So both seats read the same way, in both phases, and the total has one home.
+ * §3.1: it states the total and what happened to the hand. It says nothing
+ * about whether the decision was any good — that is the grade's job, once.
+ */
+function seatHeader(total, outcome, startTotal) {
+  // The path, where there is one: "12 → 20" says the draw worked, which is the
+  // part of his question a final total alone cannot answer.
+  const figure = startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} → ${total}`;
+  return ` · ${figure}${outcome ? ` · ${outcome}` : ''}`;
+}
+
+/** What became of a hand, in one word, and only once the grade is out (§3.1). */
+function handOutcome(hand) {
+  if (hand.total > 21) return T('ui.bust');
+  if (hand.surrendered) return T('hand.surrendered');
+  if (!revealComplete() || hand.net === null || hand.net === undefined) return null;
+  return T(hand.net > 0 ? 'hand.won' : hand.net < 0 ? 'hand.lost' : 'hand.push');
+}
+
 function renderHands(view) {
   const box = el('player-hands');
   box.replaceChildren();
+
+  // One hand: the seat header carries it, exactly as the dealer's does. Two:
+  // each hand carries its own and the seat header steps back.
+  const only = view.hands.length === 1 ? view.hands[0] : null;
+  el('player-total').textContent = only
+    ? seatHeader(only.total, handOutcome(only), only.startTotal)
+    : '';
 
   // Each seat keeps its own record, so splitting into a second hand does not
   // make the first one look newly dealt.
@@ -16285,19 +16390,25 @@ function renderHands(view) {
       wrap.appendChild(wager);
     }
 
-    // The total is the thing the player is actually reading, so it is its own
-    // element and sized like it — the notes beside it stay small and quiet.
-    const total = document.createElement('div');
-    total.className = 'hand-total' + (hand.total > 21 ? ' bust' : '');
-    total.textContent = hand.total;
-    wrap.appendChild(total);
+    /*
+     * The total lives in a header, not in the box (round 17). With one hand
+     * that header is the seat's own, which is what makes the two seats read as
+     * one design; with two it is the hand's, because each has a total of its
+     * own and a split must not lose them.
+     */
+    const header = view.hands.length > 1 ? document.createElement('div') : null;
+    if (header) {
+      header.className = 'hand-head' + (hand.total > 21 ? ' bust' : '');
+      header.textContent =
+        T('hand.nth', { n: handIndex + 1 }) + seatHeader(hand.total, handOutcome(hand), hand.startTotal);
+      wrap.insertBefore(header, wrap.firstChild);
+    }
 
     const meta = document.createElement('div');
     meta.className = 'hand-meta';
     const bits = [];
-    if (hand.total > 21) bits.push(T('ui.bust'));
     if (hand.doubled) bits.push(T('hand.doubled'));
-    if (hand.surrendered) bits.push(T('hand.surrendered'));
+
     // A doubled or split hand says what it carries, in chips.
     if (hand.units !== 1) bits.push(T('hand.chips', { n: chipFigure(hand.bet) }));
     meta.textContent = bits.join(' · ');
@@ -20238,11 +20349,20 @@ function mountSwitchPlayer() {
   footer.parentElement.insertBefore(button, footer);
 }
 
+/**
+ * Where the language is chosen.
+ *
+ * It used to be a permanent bar at the top of every screen — 33px on the felt,
+ * on every hand, for a setting somebody changes once in a lifetime (round 17).
+ * A screen that has a panel of its own offers it there, in `#lang-slot`;
+ * everywhere else it stays where it was.
+ */
 function mountLanguageBar() {
   const shell = app().querySelector('.shell');
   if (!shell) return;
+  const slot = app().querySelector('#lang-slot');
   const bar = document.createElement('div');
-  bar.className = 'fontbar';
+  bar.className = slot ? 'fontbar in-panel' : 'fontbar';
   const label = document.createElement('span');
   label.textContent = tr('ui.language');
   bar.appendChild(label);
@@ -20255,7 +20375,8 @@ function mountLanguageBar() {
     button.addEventListener('click', () => setLocale(info.code));
     bar.appendChild(button);
   }
-  shell.insertBefore(bar, shell.firstChild);
+  if (slot) slot.replaceChildren(bar);
+  else shell.insertBefore(bar, shell.firstChild);
 }
 
 /* --- The two shared panels ------------------------------------------------ */

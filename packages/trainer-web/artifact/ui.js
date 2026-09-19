@@ -185,11 +185,20 @@ function mountSwitchPlayer() {
   footer.parentElement.insertBefore(button, footer);
 }
 
+/**
+ * Where the language is chosen.
+ *
+ * It used to be a permanent bar at the top of every screen — 33px on the felt,
+ * on every hand, for a setting somebody changes once in a lifetime (round 17).
+ * A screen that has a panel of its own offers it there, in `#lang-slot`;
+ * everywhere else it stays where it was.
+ */
 function mountLanguageBar() {
   const shell = app().querySelector('.shell');
   if (!shell) return;
+  const slot = app().querySelector('#lang-slot');
   const bar = document.createElement('div');
-  bar.className = 'fontbar';
+  bar.className = slot ? 'fontbar in-panel' : 'fontbar';
   const label = document.createElement('span');
   label.textContent = tr('ui.language');
   bar.appendChild(label);
@@ -202,7 +211,8 @@ function mountLanguageBar() {
     button.addEventListener('click', () => setLocale(info.code));
     bar.appendChild(button);
   }
-  shell.insertBefore(bar, shell.firstChild);
+  if (slot) slot.replaceChildren(bar);
+  else shell.insertBefore(bar, shell.firstChild);
 }
 
 /* --- The two shared panels ------------------------------------------------ */

@@ -51,17 +51,6 @@
       <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
       <div class="rules-main">
         <span class="rules-name" id="rules-name">—</span>
-        <!--
-          The badge states the rules; it is not a control (§10.1). The link
-          beside it is, so the surrender switch is one tap from the statement it
-          contradicts rather than behind a button labelled "Rules" that reads as
-          reference material.
-        -->
-        <div class="rules-sub">
-          <span class="rules-badge" id="rules-badge"></span>
-          <button class="link rules-change" id="change-rules" type="button"
-                  data-i18n="ui.change">change</button>
-        </div>
       </div>
       <button class="link" id="open-settings" data-i18n-attr="aria-label:ui.changeRuleSet" data-i18n="ui.rules">Rules</button>
     </header>
@@ -162,6 +151,19 @@
     <dialog id="settings">
       <form method="dialog">
         <h2 data-i18n="ui.ruleSet">Rule set</h2>
+        <!--
+          The badge states the rules; it is not a control (§10.1). It was a
+          second line on the felt, printed on every hand in both phases, saying
+          what the name above it already half said — so round 17 moved it in
+          here, where the switches that change it are, and left one line on the
+          table. The link beside it opens nothing new: it is the anchor the
+          restrictions below answer to.
+        -->
+        <p class="rules-sub">
+          <span class="rules-badge" id="rules-badge"></span>
+          <button class="link rules-change" id="change-rules" type="button"
+                  data-i18n="ui.change">change</button>
+        </p>
         <p class="muted" data-i18n="ui.ruleSetNote">
           Changing the rules starts a new session. The correct play changes with
           them, which is the point.
@@ -203,6 +205,9 @@
           it changes nothing that is graded, rated or ranked, so it restarts
           nothing and has its own listener.
         -->
+        <h3 class="sub-title" data-i18n="ui.language">Language</h3>
+        <div class="lang-slot" id="lang-slot"></div>
+
         <h3 class="sub-title" data-i18n="level.question">How much should the app explain?</h3>
         <div class="levels levels-settings" id="level-settings"></div>
         <p class="muted fine" data-i18n="level.note"></p>

@@ -296,12 +296,12 @@ function renderDealer(view) {
 
   box.replaceChildren(...cards.map((card, i) => cardNode(card, i, fresh.get(i))));
   if (view.dealer.hidden || withhold) box.appendChild(faceDownNode(fresh.get(cards.length)));
+  // The word comes from the catalogue, as the player's own does: the Hebrew
+  // sweep found the dealer's reading "23 bust" (round 12).
   el('dealer-total').textContent =
     view.dealer.total === null || withhold
       ? ''
-      // The word comes from the catalogue, as the player's own total does: the
-      // Hebrew sweep found the dealer's reading "23 bust" (round 12).
-      : `· ${view.dealer.total}${view.dealer.total > 21 ? ` ${T('ui.bust')}` : ''}`;
+      : seatHeader(view.dealer.total, view.dealer.total > 21 ? T('ui.bust') : null);
 
   // §3.1 again: a bare total after the player busts reads as "you would have won
   // by standing", which is the opposite of true.
@@ -452,9 +452,44 @@ function renderRail(view) {
   if (chips && window.EVChips) box.appendChild(window.EVChips.limits(chips));
 }
 
+/**
+ * What a seat's header says after its name: the total, and what became of the
+ * hand (round 17).
+ *
+ * Idan, playing: at showdown his own total was nowhere. The dealer's seat read
+ * "Dealer · 26 · bust" and his read "You". The big number inside his box was
+ * there while he decided and gone the moment he wanted it — "what did I win
+ * with, especially if I hit?"
+ *
+ * So both seats read the same way, in both phases, and the total has one home.
+ * §3.1: it states the total and what happened to the hand. It says nothing
+ * about whether the decision was any good — that is the grade's job, once.
+ */
+function seatHeader(total, outcome, startTotal) {
+  // The path, where there is one: "12 → 20" says the draw worked, which is the
+  // part of his question a final total alone cannot answer.
+  const figure = startTotal === null || startTotal === undefined ? `${total}` : `${startTotal} → ${total}`;
+  return ` · ${figure}${outcome ? ` · ${outcome}` : ''}`;
+}
+
+/** What became of a hand, in one word, and only once the grade is out (§3.1). */
+function handOutcome(hand) {
+  if (hand.total > 21) return T('ui.bust');
+  if (hand.surrendered) return T('hand.surrendered');
+  if (!revealComplete() || hand.net === null || hand.net === undefined) return null;
+  return T(hand.net > 0 ? 'hand.won' : hand.net < 0 ? 'hand.lost' : 'hand.push');
+}
+
 function renderHands(view) {
   const box = el('player-hands');
   box.replaceChildren();
+
+  // One hand: the seat header carries it, exactly as the dealer's does. Two:
+  // each hand carries its own and the seat header steps back.
+  const only = view.hands.length === 1 ? view.hands[0] : null;
+  el('player-total').textContent = only
+    ? seatHeader(only.total, handOutcome(only), only.startTotal)
+    : '';
 
   // Each seat keeps its own record, so splitting into a second hand does not
   // make the first one look newly dealt.
@@ -490,19 +525,25 @@ function renderHands(view) {
       wrap.appendChild(wager);
     }
 
-    // The total is the thing the player is actually reading, so it is its own
-    // element and sized like it — the notes beside it stay small and quiet.
-    const total = document.createElement('div');
-    total.className = 'hand-total' + (hand.total > 21 ? ' bust' : '');
-    total.textContent = hand.total;
-    wrap.appendChild(total);
+    /*
+     * The total lives in a header, not in the box (round 17). With one hand
+     * that header is the seat's own, which is what makes the two seats read as
+     * one design; with two it is the hand's, because each has a total of its
+     * own and a split must not lose them.
+     */
+    const header = view.hands.length > 1 ? document.createElement('div') : null;
+    if (header) {
+      header.className = 'hand-head' + (hand.total > 21 ? ' bust' : '');
+      header.textContent =
+        T('hand.nth', { n: handIndex + 1 }) + seatHeader(hand.total, handOutcome(hand), hand.startTotal);
+      wrap.insertBefore(header, wrap.firstChild);
+    }
 
     const meta = document.createElement('div');
     meta.className = 'hand-meta';
     const bits = [];
-    if (hand.total > 21) bits.push(T('ui.bust'));
     if (hand.doubled) bits.push(T('hand.doubled'));
-    if (hand.surrendered) bits.push(T('hand.surrendered'));
+
     // A doubled or split hand says what it carries, in chips.
     if (hand.units !== 1) bits.push(T('hand.chips', { n: chipFigure(hand.bet) }));
     meta.textContent = bits.join(' · ');
