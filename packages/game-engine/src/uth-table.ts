@@ -198,6 +198,18 @@ export interface UthEvaluation {
     boards?: number;
     checkPlayBoards?: number;
     checkPlayTotal?: number;
+    /*
+     * Pre-flop only (round 20), from the offline table. The Ante and the Blind
+     * across the winning endings and across all of them, which is what lets one
+     * enumeration rebuild 4x and 3x alike; and the check branch's two groups —
+     * the flops it raises on and the flops it checks again.
+     */
+    winSide?: number;
+    side?: number;
+    flops?: number;
+    flopRaises?: number;
+    flopRaiseValue?: number;
+    flopCheckValue?: number;
   };
   /** How long the solve took, in milliseconds. Zero for a table lookup. */
   solveMs: number;
@@ -411,12 +423,38 @@ export class UthTable {
     let evaluation: Omit<UthEvaluation, 'optimalAction' | 'solveMs'>;
     if (this.phase === 'preflop') {
       const row = preflopRow(this.holeClass);
+      /*
+       * The counts the offline job took while it walked the 2,097,572,400
+       * endings (round 20). A table solved before they existed carries none,
+       * and then the card says less rather than estimating.
+       */
+      const outcomes = 2_118_760 * 990;
+      const counted =
+        row.wins === undefined || row.losses === undefined || row.winSide === undefined || row.side === undefined
+          ? undefined
+          : {
+              wins: row.wins,
+              losses: row.losses,
+              ties: outcomes - row.wins - row.losses,
+              // At 4x, which is the raise this decision point is about; `winSide`
+              // and `side` ride along so 3x can be rebuilt from the same counts.
+              winUnits: row.winSide + 4 * row.wins,
+              lossUnits: row.side - row.winSide - 4 * row.losses,
+              outcomes,
+              winSide: row.winSide,
+              side: row.side,
+              flops: row.flops,
+              flopRaises: row.flopRaises,
+              flopRaiseValue: row.flopRaiseValue,
+              flopCheckValue: row.flopCheckValue,
+            };
       evaluation = {
         phase: 'preflop',
         evByAction: { raise4x: row.ev4x, raise3x: row.ev3x, check: row.evCheck },
         holeClass: row.label,
         flopRaiseFrequency: row.flopRaiseFrequency,
         riverFoldFrequency: row.riverFoldFrequency,
+        ...(counted ? { counts: counted } : {}),
       };
     } else if (this.phase === 'flop') {
       const solved = solveFlop(this.hole, this.board.slice(0, 3), this.paytable);

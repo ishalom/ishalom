@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="6d8554f453e85451dba6d3003cf0220d97ddb092-dirty" />
-<meta name="ev-build-at" content="2026-09-20T15:41:39.328Z" />
+<meta name="ev-build-commit" content="a43b0c39d4aaf776846e5e6647c1fbc405e7af4d-dirty" />
+<meta name="ev-build-at" content="2026-09-20T15:59:10.582Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -6887,6 +6887,31 @@ function holeClassLabel(a      , b      )         {
                              
                                                             
                              
+
+    
+                                                                                
+                                                             
+    
+                                                                            
+                                                          
+                                            
+                                                       
+                                                                     
+    
+                                                                             
+                                                         
+     
+                                                                            
+                
+                  
+                                                                                 
+                   
+                
+                                                                                     
+                 
+                      
+                          
+                          
  
 
 /** The blind paytable these numbers were solved against. */
@@ -7274,6 +7299,18 @@ const RAISE_SIZE                                     = {
                     
                              
                             
+      
+                                                                               
+                                                                                
+                                                                               
+                                                            
+       
+                     
+                  
+                   
+                        
+                            
+                            
     
                                                                            
                   
@@ -7487,12 +7524,38 @@ class UthTable {
     let evaluation                                                  ;
     if (this.phase === 'preflop') {
       const row = preflopRow(this.holeClass);
+      /*
+       * The counts the offline job took while it walked the 2,097,572,400
+       * endings (round 20). A table solved before they existed carries none,
+       * and then the card says less rather than estimating.
+       */
+      const outcomes = 2_118_760 * 990;
+      const counted =
+        row.wins === undefined || row.losses === undefined || row.winSide === undefined || row.side === undefined
+          ? undefined
+          : {
+              wins: row.wins,
+              losses: row.losses,
+              ties: outcomes - row.wins - row.losses,
+              // At 4x, which is the raise this decision point is about; `winSide`
+              // and `side` ride along so 3x can be rebuilt from the same counts.
+              winUnits: row.winSide + 4 * row.wins,
+              lossUnits: row.side - row.winSide - 4 * row.losses,
+              outcomes,
+              winSide: row.winSide,
+              side: row.side,
+              flops: row.flops,
+              flopRaises: row.flopRaises,
+              flopRaiseValue: row.flopRaiseValue,
+              flopCheckValue: row.flopCheckValue,
+            };
       evaluation = {
         phase: 'preflop',
         evByAction: { raise4x: row.ev4x, raise3x: row.ev3x, check: row.evCheck },
         holeClass: row.label,
         flopRaiseFrequency: row.flopRaiseFrequency,
         riverFoldFrequency: row.riverFoldFrequency,
+        ...(counted ? { counts: counted } : {}),
       };
     } else if (this.phase === 'flop') {
       const solved = solveFlop(this.hole, this.board.slice(0, 3), this.paytable);
@@ -7956,6 +8019,10 @@ const EN            = {
   'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthFlopCheck': 'Checking keeps the river decision, and the river is then played properly. Of the **{boards}** ways the turn and river can come, **{playBoards}** are worth betting — **{playValue}** on average — and on the other **{foldBoards}** the right move there is to fold for −2. Their average joins the 1.000 the stake comes back as:',
   'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthPreflopPlay': 'Nothing is solved at the table before the flop: this was worked out once, over **{outcomes}** endings for your two cards — every board that can come, every hand the dealer can hold behind it. You finish ahead in **{wins}**, level in {ties} and behind in {losses}. Ahead pays **{winPay}** on average, behind costs **{losePay}**, and their average joins the 1.000 the stake comes back as:',
+  'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthPreflopCheck': 'Checking keeps both later decisions. Of the **{flops}** flops that can come, **{flopRaises}** are worth raising 2× on — **{raiseValue}** on average — and on the other **{flopChecks}** you check again and play the river, worth **{checkValue}**:',
+  'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
   'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -8893,6 +8960,10 @@ const HE            = {
   'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthFlopCheck': 'צ׳ק שומר את ההחלטה של הריבר, ושם משחקים נכון. מתוך **{boards}** הדרכים שבהן הטרן והריבר יכולים לצאת, ב-**{playBoards}** שווה להמר — **{playValue}** בממוצע — ובשאר **{foldBoards}** המהלך הנכון שם הוא לפרוש ב-2−. הממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
   'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthPreflopPlay': 'לפני הפלופ שום דבר לא נפתר ליד השולחן: זה חושב פעם אחת, על פני **{outcomes}** סיומים לשני הקלפים שלך — כל בורד שיכול לצאת וכל יד שהדילר יכול להחזיק מאחוריו. אתה מסיים מלפנים ב-**{wins}**, בתיקו ב-{ties} ומאחור ב-{losses}. סיום מלפנים מחזיר בממוצע **{winPay}**, סיום מאחור עולה **{losePay}**, והממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthPreflopCheck': 'צ׳ק שומר את שתי ההחלטות שאחריו. מתוך **{flops}** הפלופים שיכולים לצאת, ב-**{flopRaises}** שווה להעלות 2× — **{raiseValue}** בממוצע — ובשאר **{flopChecks}** עושים צ׳ק שוב ומשחקים את הריבר, בשווי **{checkValue}**:',
+  'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
   'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -12932,6 +13003,13 @@ const PLAY_MULTIPLE                         = {
                   
                            
                           
+                                                                                        
+                   
+                
+                 
+                      
+                          
+                          
  
 
 /**
@@ -12953,6 +13031,18 @@ const UTH_REBUILD                                                          = {
     1 + (t('playBoards') * t('playValue') + t('foldBoards') * -2) / t('boards') / UTH_STAKE,
   // Folding forfeits both units. Nothing comes back, and nothing is worked out.
   uthFold: () => 0,
+  /*
+   * Before the flop the shape is the river's, over two billion endings instead
+   * of 990 — and the same line serves 4x and 3x, because what a win pays and
+   * what a loss costs are computed for whichever raise is being explained.
+   */
+  uthPreflopPlay: (t) => 1 + (t('wins') * t('winPay') - t('losses') * t('losePay')) / t('outcomes') / UTH_STAKE,
+  /*
+   * And checking keeps both later decisions: of the flops that can come, some
+   * are raised and the rest are checked again and played out from the river.
+   */
+  uthPreflopCheck: (t) =>
+    1 + (t('flopRaises') * t('raiseValue') + t('flopChecks') * t('checkValue')) / t('flops') / UTH_STAKE,
 };
 
                           
@@ -13030,6 +13120,42 @@ function uthWorkedFor(
       outcomes: counts.outcomes,
       winPay: counts.wins > 0 ? counts.winUnits / counts.wins : 0,
       losePay: counts.losses > 0 ? -counts.lossUnits / counts.losses : 0,
+    });
+  }
+
+  /*
+   * Before the flop (round 20). The figure is a lookup, so the counts come with
+   * the table rather than from a solve at the table — and they are the counts
+   * that produced the figure, not a second calculation beside it.
+   */
+  if (phase === 'preflop' && (action === 'raise4x' || action === 'raise3x')) {
+    if (counts.winSide === undefined || counts.side === undefined) return null;
+    const bet = action === 'raise4x' ? 4 : 3;
+    return uthWithDigits({
+      action,
+      kind: 'uthPreflopPlay',
+      value,
+      wins: counts.wins,
+      ties: counts.ties,
+      losses: counts.losses,
+      outcomes: counts.outcomes,
+      winPay: counts.wins > 0 ? (counts.winSide + bet * counts.wins) / counts.wins : 0,
+      losePay: counts.losses > 0 ? -(counts.side - counts.winSide - bet * counts.losses) / counts.losses : 0,
+    });
+  }
+
+  if (phase === 'preflop' && action === 'check') {
+    if (counts.flops === undefined || counts.flopRaises === undefined) return null;
+    const flopChecks = counts.flops - counts.flopRaises;
+    return uthWithDigits({
+      action,
+      kind: 'uthPreflopCheck',
+      value,
+      flops: counts.flops,
+      flopRaises: counts.flopRaises,
+      flopChecks,
+      raiseValue: counts.flopRaises > 0 ? (counts.flopRaiseValue ?? 0) / counts.flopRaises : 0,
+      checkValue: flopChecks > 0 ? (counts.flopCheckValue ?? 0) / flopChecks : 0,
     });
   }
 
@@ -15772,6 +15898,13 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
       winPay: amount(work.winPay),
       losePay: amount(work.losePay),
       playValue: money(work.playValue),
+      // Before the flop: the flops that are raised, the flops that are checked
+      // again, and what each group is worth (round 20).
+      flops: count(work.flops),
+      flopRaises: count(work.flopRaises),
+      flopChecks: count(work.flopChecks),
+      raiseValue: money(work.raiseValue),
+      checkValue: money(work.checkValue),
     };
 
     const holder = document.createElement('div');

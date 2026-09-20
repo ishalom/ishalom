@@ -309,6 +309,10 @@ const EN: Catalogue = {
   'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthFlopCheck': 'Checking keeps the river decision, and the river is then played properly. Of the **{boards}** ways the turn and river can come, **{playBoards}** are worth betting — **{playValue}** on average — and on the other **{foldBoards}** the right move there is to fold for −2. Their average joins the 1.000 the stake comes back as:',
   'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthPreflopPlay': 'Nothing is solved at the table before the flop: this was worked out once, over **{outcomes}** endings for your two cards — every board that can come, every hand the dealer can hold behind it. You finish ahead in **{wins}**, level in {ties} and behind in {losses}. Ahead pays **{winPay}** on average, behind costs **{losePay}**, and their average joins the 1.000 the stake comes back as:',
+  'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthPreflopCheck': 'Checking keeps both later decisions. Of the **{flops}** flops that can come, **{flopRaises}** are worth raising 2× on — **{raiseValue}** on average — and on the other **{flopChecks}** you check again and play the river, worth **{checkValue}**:',
+  'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
   'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -1246,6 +1250,10 @@ const HE: Catalogue = {
   'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthFlopCheck': 'צ׳ק שומר את ההחלטה של הריבר, ושם משחקים נכון. מתוך **{boards}** הדרכים שבהן הטרן והריבר יכולים לצאת, ב-**{playBoards}** שווה להמר — **{playValue}** בממוצע — ובשאר **{foldBoards}** המהלך הנכון שם הוא לפרוש ב-2−. הממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
   'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthPreflopPlay': 'לפני הפלופ שום דבר לא נפתר ליד השולחן: זה חושב פעם אחת, על פני **{outcomes}** סיומים לשני הקלפים שלך — כל בורד שיכול לצאת וכל יד שהדילר יכול להחזיק מאחוריו. אתה מסיים מלפנים ב-**{wins}**, בתיקו ב-{ties} ומאחור ב-{losses}. סיום מלפנים מחזיר בממוצע **{winPay}**, סיום מאחור עולה **{losePay}**, והממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthPreflopCheck': 'צ׳ק שומר את שתי ההחלטות שאחריו. מתוך **{flops}** הפלופים שיכולים לצאת, ב-**{flopRaises}** שווה להעלות 2× — **{raiseValue}** בממוצע — ובשאר **{flopChecks}** עושים צ׳ק שוב ומשחקים את הריבר, בשווי **{checkValue}**:',
+  'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
   'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---

@@ -31,6 +31,16 @@ interface Row {
   margin: number;
   flopRaiseFrequency: number;
   riverFoldFrequency: number;
+  /* What the enumeration counted on the way (round 20). Absent in a table
+     solved before the counters existed, and then the card simply says less. */
+  wins?: number;
+  losses?: number;
+  winSide?: number;
+  side?: number;
+  flops?: number;
+  flopRaises?: number;
+  flopRaiseValue?: number;
+  flopCheckValue?: number;
 }
 
 interface Asset {
@@ -66,6 +76,18 @@ const rows = labels
       `margin: ${row.margin}`,
       `flopRaiseFrequency: ${row.flopRaiseFrequency}`,
       `riverFoldFrequency: ${row.riverFoldFrequency}`,
+      ...(row.wins === undefined
+        ? []
+        : [
+            `wins: ${row.wins}`,
+            `losses: ${row.losses}`,
+            `winSide: ${row.winSide}`,
+            `side: ${row.side}`,
+            `flops: ${row.flops}`,
+            `flopRaises: ${row.flopRaises}`,
+            `flopRaiseValue: ${row.flopRaiseValue}`,
+            `flopCheckValue: ${row.flopCheckValue}`,
+          ]),
     ].join(', ');
     return `  ${JSON.stringify(label)}: { label: ${JSON.stringify(label)}, ${fields} },`;
   })
@@ -104,6 +126,31 @@ export interface PreflopRow {
   flopRaiseFrequency: number;
   /** How often a checked hand goes on to fold the river. */
   riverFoldFrequency: number;
+
+  /*
+   * What the enumeration counted on the way (round 20), so the card can say the
+   * pre-flop figure forward instead of asking to be trusted.
+   *
+   * The Ante and the Blind do not depend on the raise size and the Play bet
+   * *is* the raise, so these rebuild every raise exactly:
+   *   winUnits(bet)  = winSide + bet * wins
+   *   lossUnits(bet) = (side - winSide) - bet * losses
+   * and their sum over the 2,097,572,400 endings is that raise's EV.
+   *
+   * Optional because a table solved before they existed has none, and a card
+   * that says less is better than a card that estimates.
+   */
+  /** Endings the player finishes ahead in and behind. Ties are the rest. */
+  wins?: number;
+  losses?: number;
+  /** Ante and Blind units across the winning endings, and across all of them. */
+  winSide?: number;
+  side?: number;
+  /** The check branch: flops, how many it raises on, and the value of each group. */
+  flops?: number;
+  flopRaises?: number;
+  flopRaiseValue?: number;
+  flopCheckValue?: number;
 }
 
 /** The blind paytable these numbers were solved against. */

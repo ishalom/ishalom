@@ -26,7 +26,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { TRIPS_PAYTABLES, evaluateCards, parseCards, categoryOf } from '@evtrainer/ev-engine/uth';
+import { TRIPS_PAYTABLES, evaluateCards, parseCards, preflopRow, categoryOf } from '@evtrainer/ev-engine/uth';
 import type { UthTable } from '@evtrainer/game-engine';
 
 import { catalogue } from '../src/i18n.ts';
@@ -51,6 +51,10 @@ function rebuild(work: any): number | null {
       return 1 + (work.wins * work.winPay - work.losses * work.losePay) / work.outcomes / UTH_STAKE;
     case 'uthFlopCheck':
       return 1 + (work.playBoards * work.playValue + work.foldBoards * -2) / work.boards / UTH_STAKE;
+    case 'uthPreflopPlay':
+      return 1 + (work.wins * work.winPay - work.losses * work.losePay) / work.outcomes / UTH_STAKE;
+    case 'uthPreflopCheck':
+      return 1 + (work.flopRaises * work.raiseValue + work.flopChecks * work.checkValue) / work.flops / UTH_STAKE;
     case 'uthFold':
       return 0;
     default:
@@ -113,7 +117,9 @@ test('every Ultimate worked line rebuilds the figure it explains, exactly', () =
   assert.ok(checked > 100, `only ${checked} lines were checked`);
   assert.deepEqual(
     [...kinds].sort(),
-    ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthRiverPlay'],
+    preflopRow('AA').wins === undefined
+      ? ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthRiverPlay']
+      : ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthPreflopCheck', 'uthPreflopPlay', 'uthRiverPlay'],
     'a kind of line went unchecked',
   );
 });
@@ -161,11 +167,31 @@ test('the counts are the solve’s own, not a second calculation', () => {
   }
 });
 
-test('nothing is worked out before the flop, where nothing was counted', () => {
+test('before the flop: a line if the table counted, and no line if it did not', () => {
+  /*
+   * Round 20 gave the offline job three counters, so the pre-flop figure can be
+   * said forward like the river's. A table solved before that carries none, and
+   * then the card says nothing rather than deriving an approximation from the
+   * answer — which is the trap round 15 removed. Both states are correct; what
+   * is never correct is a line without counts behind it.
+   */
+  const counted = preflopRow('AA').wins !== undefined;
+  let preflop = 0;
   for (const { work, phase } of lines(55, 30)) {
-    if (phase === 'preflop') assert.fail('a pre-flop action carries a worked line derived from a lookup');
-    assert.ok(['flop', 'river'].includes(phase));
+    if (phase !== 'preflop') continue;
+    preflop++;
+    assert.ok(counted, 'a pre-flop action carries a worked line derived from a lookup');
+    assert.ok(['uthPreflopPlay', 'uthPreflopCheck'].includes(work.kind), `pre-flop line of kind ${work.kind}`);
+    if (work.kind === 'uthPreflopPlay') {
+      assert.equal(work.outcomes, PREFLOP_OUTCOMES);
+      assert.equal(work.wins + work.ties + work.losses, PREFLOP_OUTCOMES, 'the pre-flop counts do not add up');
+    } else {
+      assert.equal(work.flops, 19600, `${work.flops} flops`);
+      assert.equal(work.flopRaises + work.flopChecks, work.flops);
+    }
   }
+  if (counted) assert.ok(preflop > 0, 'the table has counts and the card says nothing');
+  else assert.equal(preflop, 0, 'a line appeared with no counts behind it');
   // And the size of that lookup is stated instead — C(50,5) x C(45,2).
   assert.equal(PREFLOP_OUTCOMES, 2118760 * 990);
   for (const { feedback } of play(3, 6)) {

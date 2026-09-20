@@ -52,6 +52,13 @@ export interface UthCounts {
   boards?: number;
   checkPlayBoards?: number;
   checkPlayTotal?: number;
+  /** Pre-flop only: enough to rebuild any raise size, and the check branch's groups. */
+  winSide?: number;
+  side?: number;
+  flops?: number;
+  flopRaises?: number;
+  flopRaiseValue?: number;
+  flopCheckValue?: number;
 }
 
 /**
@@ -73,6 +80,18 @@ const UTH_REBUILD: Record<string, (t: (name: string) => number) => number> = {
     1 + (t('playBoards') * t('playValue') + t('foldBoards') * -2) / t('boards') / UTH_STAKE,
   // Folding forfeits both units. Nothing comes back, and nothing is worked out.
   uthFold: () => 0,
+  /*
+   * Before the flop the shape is the river's, over two billion endings instead
+   * of 990 — and the same line serves 4x and 3x, because what a win pays and
+   * what a loss costs are computed for whichever raise is being explained.
+   */
+  uthPreflopPlay: (t) => 1 + (t('wins') * t('winPay') - t('losses') * t('losePay')) / t('outcomes') / UTH_STAKE,
+  /*
+   * And checking keeps both later decisions: of the flops that can come, some
+   * are raised and the rest are checked again and played out from the river.
+   */
+  uthPreflopCheck: (t) =>
+    1 + (t('flopRaises') * t('raiseValue') + t('flopChecks') * t('checkValue')) / t('flops') / UTH_STAKE,
 };
 
 export interface UthWork {
@@ -150,6 +169,42 @@ export function uthWorkedFor(
       outcomes: counts.outcomes,
       winPay: counts.wins > 0 ? counts.winUnits / counts.wins : 0,
       losePay: counts.losses > 0 ? -counts.lossUnits / counts.losses : 0,
+    });
+  }
+
+  /*
+   * Before the flop (round 20). The figure is a lookup, so the counts come with
+   * the table rather than from a solve at the table — and they are the counts
+   * that produced the figure, not a second calculation beside it.
+   */
+  if (phase === 'preflop' && (action === 'raise4x' || action === 'raise3x')) {
+    if (counts.winSide === undefined || counts.side === undefined) return null;
+    const bet = action === 'raise4x' ? 4 : 3;
+    return uthWithDigits({
+      action,
+      kind: 'uthPreflopPlay',
+      value,
+      wins: counts.wins,
+      ties: counts.ties,
+      losses: counts.losses,
+      outcomes: counts.outcomes,
+      winPay: counts.wins > 0 ? (counts.winSide + bet * counts.wins) / counts.wins : 0,
+      losePay: counts.losses > 0 ? -(counts.side - counts.winSide - bet * counts.losses) / counts.losses : 0,
+    });
+  }
+
+  if (phase === 'preflop' && action === 'check') {
+    if (counts.flops === undefined || counts.flopRaises === undefined) return null;
+    const flopChecks = counts.flops - counts.flopRaises;
+    return uthWithDigits({
+      action,
+      kind: 'uthPreflopCheck',
+      value,
+      flops: counts.flops,
+      flopRaises: counts.flopRaises,
+      flopChecks,
+      raiseValue: counts.flopRaises > 0 ? (counts.flopRaiseValue ?? 0) / counts.flopRaises : 0,
+      checkValue: flopChecks > 0 ? (counts.flopCheckValue ?? 0) / flopChecks : 0,
     });
   }
 

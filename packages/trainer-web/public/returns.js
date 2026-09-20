@@ -276,6 +276,13 @@
       winPay: amount(work.winPay),
       losePay: amount(work.losePay),
       playValue: money(work.playValue),
+      // Before the flop: the flops that are raised, the flops that are checked
+      // again, and what each group is worth (round 20).
+      flops: count(work.flops),
+      flopRaises: count(work.flopRaises),
+      flopChecks: count(work.flopChecks),
+      raiseValue: money(work.raiseValue),
+      checkValue: money(work.checkValue),
     };
 
     const holder = document.createElement('div');
