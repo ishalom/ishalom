@@ -86,7 +86,7 @@ test('with no shared table: close the tab, reopen, and the UTH stack and stats a
   assert.equal(played.stats.hands, 4);
   const saved = JSON.parse(first.storage().get('ev:progress') ?? 'null');
   assert.ok(saved, 'nothing was saved to this browser');
-  assert.equal(saved.version, 4);
+  assert.equal(saved.version, 5);
   assert.equal(saved.uth.hands, 4, 'the UTH part of the saved record is missing its hands');
 
   // A new page on the same browser storage: the tab reopened.

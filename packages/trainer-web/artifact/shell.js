@@ -506,6 +506,18 @@ async function restoreMine() {
           window.EVCount.restore(remote.progress.counters);
         }
         /*
+         * And the streak's record, by the larger of the two (round 20).
+         *
+         * It is the one number the gestures keep, and it belongs to the player
+         * rather than to a device: a run of 31 on the phone is not undone by
+         * opening the laptop, whichever copy of the session won above.
+         */
+        const bestHere = Number(local?.records?.streakBest) || 0;
+        const bestThere = Number(remote.progress?.records?.streakBest) || 0;
+        if (Math.max(bestHere, bestThere) > 0) {
+          session.absorbRecords({ streakBest: Math.max(bestHere, bestThere) });
+        }
+        /*
          * The day count is merged whichever copy won, because each device may
          * have seen days the other has not. A row no build with the count has
          * written yet belongs to a player from before it, who played on or

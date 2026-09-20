@@ -279,7 +279,7 @@ test('the stack, the bet and the limits are saved, and an older save opens at a 
   blackjack.deal();
   finishBlackjack(blackjack);
   const saved = JSON.parse(JSON.stringify(blackjack.progress));
-  assert.equal(saved.version, 4);
+  assert.equal(saved.version, 5);
   assert.deepEqual(saved.chips.limits, { min: 1, max: 100 });
   const reopened = new TrainerSession('vegas-strip-6d-s17', 13);
   reopened.restore(saved);
@@ -344,7 +344,7 @@ test('on the built page, the stack and the bet survive closing the tab, in both 
   first.stopWatching();
 
   const saved = JSON.parse(first.storage().get('ev:progress') ?? 'null');
-  assert.equal(saved.version, 4);
+  assert.equal(saved.version, 5);
   assert.equal(saved.chips.bet, 26);
   assert.equal(saved.uth.bet, 5);
 

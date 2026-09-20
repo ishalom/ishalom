@@ -806,6 +806,46 @@ function renderQuickCard(view) {
     );
     box.appendChild(note);
   }
+
+  /*
+   * And the gesture, last and quietest (round 20).
+   *
+   * It is the only line on this card that is about the player rather than the
+   * hand, so it goes after everything the hand has to say. Two rules it keeps
+   * by being here: it never interrupts a decision — the card is drawn after the
+   * decision was graded — and it looks the same the fiftieth time as the first.
+   */
+  const gesture = gestureLine(feedback.gesture || view.settlementGesture);
+  if (gesture) box.appendChild(gesture);
+}
+
+/**
+ * One gesture, in words. Evidence, not a compliment: every number in it is
+ * something the player did, and the session worked all of them out.
+ */
+function gestureLine(gesture) {
+  if (!gesture) return null;
+  const note = document.createElement('p');
+  note.className = 'gesture';
+  if (gesture.kind === 'improved') {
+    renderRich(
+      note,
+      gesture.playedLabel
+        ? T('gest.improved', {
+            spot: gesture.spot,
+            wrongs: gesture.wrongs,
+            played: gesture.playedLabel.toLowerCase(),
+          })
+        : T('gest.improvedPlain', { spot: gesture.spot, wrongs: gesture.wrongs }),
+    );
+  } else if (gesture.kind === 'record') {
+    renderRich(note, T('gest.record', { streak: gesture.streak, previous: gesture.previous }));
+  } else if (gesture.kind === 'rightAndLost') {
+    renderRich(note, T('gest.rightAndLost'));
+  } else {
+    return null;
+  }
+  return note;
 }
 
 function renderFeedback(view) {
@@ -1476,7 +1516,14 @@ const PAIRS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', 'T'];
 const UPCARDS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
 const LETTER = { hit: 'H', stand: 'S', double: 'D', split: 'P', surrender: 'R' };
 
-function chartTable(title, rows, cells) {
+/**
+ * One of the three tables, in either reading.
+ *
+ * With `mastery` the letters stay — a grid of what you have mastered is only
+ * useful if it still says what the right play is — and the colour changes from
+ * "what to do" to "how well you know it". Same cells, same keys, one table.
+ */
+function chartTable(title, rows, cells, mastery) {
   const table = document.createElement('table');
   table.className = 'chart';
 
@@ -1498,8 +1545,9 @@ function chartTable(title, rows, cells) {
     tr.appendChild(label);
     for (const up of UPCARDS) {
       const td = document.createElement('td');
-      const letter = LETTER[cells[row.key(up)]] ?? '';
-      td.className = letter;
+      const key = row.key(up);
+      const letter = LETTER[cells[key]] ?? '';
+      td.className = mastery ? `m-${mastery[key] || 'none'}` : letter;
       td.textContent = letter;
       tr.appendChild(td);
     }
@@ -1508,16 +1556,56 @@ function chartTable(title, rows, cells) {
   return table;
 }
 
+/* Which reading of the 311 cells is on screen: the chart, or the mastery grid. */
+let chartMode = 'chart';
+
 async function openReference() {
   const { cells } = await api('/api/chart');
-  const grid = document.createElement('div');
-  grid.className = 'chart-grid';
-  grid.append(
-    chartTable(T('ui.chart.hard'), HARD.map((t) => ({ label: String(t), key: (up) => `bj:hard${t}:vs${up}` })), cells),
-    chartTable(T('ui.chart.soft'), SOFT.map((t) => ({ label: `A${t - 11}`, key: (up) => `bj:soft${t}:vs${up}` })), cells),
-    chartTable(T('ui.chart.pairs'), PAIRS.map((p) => ({ label: `${p},${p}`, key: (up) => `bj:pair${p}:vs${up}` })), cells),
-  );
-  el('chart-container').replaceChildren(grid);
+  const draw = () => {
+    const mastery = chartMode === 'mastery' ? (state.view && state.view.mastery) || {} : null;
+    const grid = document.createElement('div');
+    grid.className = 'chart-grid' + (mastery ? ' mastery' : '');
+    grid.append(
+      chartTable(T('ui.chart.hard'), HARD.map((t) => ({ label: String(t), key: (up) => `bj:hard${t}:vs${up}` })), cells, mastery),
+      chartTable(T('ui.chart.soft'), SOFT.map((t) => ({ label: `A${t - 11}`, key: (up) => `bj:soft${t}:vs${up}` })), cells, mastery),
+      chartTable(T('ui.chart.pairs'), PAIRS.map((p) => ({ label: `${p},${p}`, key: (up) => `bj:pair${p}:vs${up}` })), cells, mastery),
+    );
+    el('chart-container').replaceChildren(grid);
+
+    // The legend, and how much of the grid is lit — both only in the second mode.
+    const legend = el('mastery-legend');
+    if (legend) {
+      legend.hidden = !mastery;
+      if (mastery) {
+        const records = (state.view && state.view.records) || { mastered: 0, cells: 0 };
+        legend.replaceChildren();
+        const count = document.createElement('span');
+        renderRich(count, T('mastery.count', { n: records.mastered, total: records.cells }));
+        const rule = document.createElement('span');
+        rule.className = 'mastery-rule';
+        renderRich(rule, T('mastery.legend'));
+        legend.append(count, document.createTextNode(' '), rule);
+      }
+    }
+
+    const modes = el('chart-modes');
+    if (modes) {
+      modes.replaceChildren();
+      for (const mode of ['chart', 'mastery']) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'chart-mode';
+        button.textContent = T(`chart.mode.${mode}`);
+        button.setAttribute('aria-pressed', String(mode === chartMode));
+        button.addEventListener('click', () => {
+          chartMode = mode;
+          draw();
+        });
+        modes.appendChild(button);
+      }
+    }
+  };
+  draw();
   el('reference').showModal();
 }
 

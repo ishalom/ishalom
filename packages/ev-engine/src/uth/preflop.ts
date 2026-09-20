@@ -115,6 +115,34 @@ export interface PreflopResult {
   flopRaiseFrequency: number;
   /** Share of all boards this hand would fold on the river. */
   riverFoldFrequency: number;
+
+  /*
+   * What was counted on the way (round 20).
+   *
+   * The card shows a player the arithmetic behind the figure it grades him on,
+   * and the standard set in round 15 is that the arithmetic has to be the one
+   * the grade came from rather than a second calculation that nearly agrees.
+   * Before the flop the figure is a lookup, so the counts have to be taken
+   * here, inside the enumeration, and shipped in the table with the EVs.
+   *
+   * They cost five additions in a loop that already walks 2,097,572,400
+   * endings, and they are enough to rebuild every raise size exactly: the Ante
+   * and the Blind do not depend on how much was raised, and the Play bet is the
+   * raise. So `winUnits(bet) = winSide + bet * wins` and
+   * `lossUnits(bet) = (side - winSide) - bet * losses`, and their sum over the
+   * endings is that raise's EV, to the last bit.
+   */
+  /** Endings the player finishes ahead in. Ties are the rest: outcomes - wins - losses. */
+  wins: number;
+  losses: number;
+  /** Ante and Blind units across the winning endings, and across all of them. */
+  winSide: number;
+  side: number;
+  /** Flops (of 19,600) the check branch then raises 2x on, and the value of both groups. */
+  flops: number;
+  flopRaises: number;
+  flopRaiseValue: number;
+  flopCheckValue: number;
 }
 
 /**
@@ -238,6 +266,16 @@ export function solvePreflop(
 
   const dealerPool = new Int32Array(45);
 
+  /*
+   * The class's counts (round 20). Kept as plain numbers: the largest is under
+   * 2.1 billion, which a double holds exactly, and the sides are sums of small
+   * per-board totals rather than of individual outcomes.
+   */
+  let wins = 0;
+  let losses = 0;
+  let winSide = 0;
+  let side = 0;
+
   for (let i0 = 0; i0 < 46; i0++) {
     extend(1, 0, available[i0]!);
     const rank0 = choose(i0, 1);
@@ -268,13 +306,18 @@ export function solvePreflop(
 
             let ab = 0;
             let sign = 0;
+            let boardWins = 0;
+            let boardWinSide = 0;
             for (let a = 0; a < 45; a++) {
               const cardA = dealerPool[a]!;
               for (let b = a + 1; b < 45; b++) {
                 const dealerScore = scoreWithTwo(board, cardA, dealerPool[b]!);
                 if (playerScore > dealerScore) {
-                  ab += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+                  const won = (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+                  ab += won;
                   sign++;
+                  boardWins++;
+                  boardWinSide += won;
                 } else if (playerScore < dealerScore) {
                   ab += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
                   sign--;
@@ -283,6 +326,10 @@ export function solvePreflop(
             }
             anteAndBlind[index] = ab / HOLDINGS;
             net[index] = sign / HOLDINGS;
+            wins += boardWins;
+            losses += boardWins - sign; // sign is wins - losses, so this is losses
+            winSide += boardWinSide;
+            side += ab;
           }
         }
       }
@@ -290,7 +337,7 @@ export function solvePreflop(
     options.onProgress?.((i0 + 1) / 46);
   }
 
-  return summarise(holeClass.label, anteAndBlind, net);
+  return summarise(holeClass.label, anteAndBlind, net, { wins, losses, winSide, side });
 }
 
 /**
@@ -306,6 +353,7 @@ function summarise(
   label: string,
   anteAndBlind: Float64Array,
   net: Float64Array,
+  counted: { wins: number; losses: number; winSide: number; side: number },
 ): PreflopResult {
   let sum4 = 0;
   let sum3 = 0;
@@ -323,6 +371,10 @@ function summarise(
   let checkSum = 0;
   let flops = 0;
   let flopRaises = 0;
+  // The check branch's own two groups (round 20): the flops it raises on, and
+  // the flops it checks again and plays the river from.
+  let flopRaiseValue = 0;
+  let flopCheckValue = 0;
 
   for (let f0 = 0; f0 < 48; f0++) {
     for (let f1 = f0 + 1; f1 < 49; f1++) {
@@ -353,9 +405,11 @@ function summarise(
         const evFlopCheck = checkTotal / completions;
         if (evFlopBet >= evFlopCheck) {
           checkSum += evFlopBet;
+          flopRaiseValue += evFlopBet;
           flopRaises++;
         } else {
           checkSum += evFlopCheck;
+          flopCheckValue += evFlopCheck;
         }
         flops++;
       }
@@ -375,6 +429,14 @@ function summarise(
     margin: Math.abs(ev4x - evCheck),
     flopRaiseFrequency: flopRaises / flops,
     riverFoldFrequency: riverFolds / PREFLOP_BOARDS,
+    wins: counted.wins,
+    losses: counted.losses,
+    winSide: counted.winSide,
+    side: counted.side,
+    flops,
+    flopRaises,
+    flopRaiseValue,
+    flopCheckValue,
   };
 }
 

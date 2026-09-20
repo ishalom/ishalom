@@ -305,6 +305,76 @@ td.D { background: #2c3a52; }
 td.P { background: #402c4f; }
 td.R { background: #4a3d21; }
 
+/* ===========================================================================
+ * The mastery grid (round 20): the same 311 cells, read the other way.
+ *
+ * The letters stay, because a grid of what you have mastered is only useful if
+ * it still says what the right play is. What changes is what the colour means:
+ * not "what to do here" but "how well you know it" — dark for a spot never
+ * played, faint for one met, lit for one mastered. A collection that also says
+ * what to practise next, which is the dark half.
+ * ======================================================================== */
+
+.chart-grid.mastery td { color: var(--muted); }
+td.m-none { background: transparent; color: rgba(230, 233, 238, 0.22); }
+td.m-met { background: #2b3440; color: var(--ink); }
+td.m-mastered { background: #23402f; color: var(--ink); font-weight: 700; }
+.chart-modes { display: flex; gap: 8px; margin: 0 0 8px; }
+.chart-mode {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chart-mode[aria-pressed='true'] { background: #23402f; color: var(--ink); border-color: #2c8f61; }
+#mastery-legend { margin: 0 0 8px; line-height: 1.5; }
+#mastery-legend b { color: var(--ink); font-weight: 600; }
+.mastery-rule { color: var(--muted); }
+
+/* ===========================================================================
+ * The gestures (round 20).
+ *
+ * Evidence, not a compliment, and quiet: one line, the same size the fiftieth
+ * time as the first, no colour of its own beyond the brass that says "this is
+ * about you rather than about the hand", and nothing that moves. §16 — the app
+ * is not a slot machine and a line that celebrated like one would read as the
+ * thing it is trying not to be.
+ * ======================================================================== */
+
+.gesture {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.gesture b { color: #d7b56d; font-weight: 600; }
+
+/* The records line on home, and the sentence that ends a sitting. */
+.records {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 12px;
+}
+.records-title {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.records-line { font-size: 13.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sitting {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.sitting b { color: var(--ink); font-weight: 600; }
+
 @media (max-width: 420px) {
   .card { width: 46px; height: 66px; }
   .stat-value { font-size: 16px; }

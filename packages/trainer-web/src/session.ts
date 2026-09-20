@@ -55,6 +55,13 @@ import {
   type Rating,
 } from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
+import {
+  gestureForDecision,
+  gestureForSettlement,
+  masteryState,
+  sittingSummary,
+  type Gesture,
+} from './gestures.ts';
 import { t, type Locale } from './i18n.ts';
 import { TRACK_HANDS, trackDot, type TrackRow } from './track.ts';
 import {
@@ -212,7 +219,29 @@ export interface SessionProgressV4 extends Omit<SessionProgressV3, 'version'> {
   chips: { stack: number; bet: number; lastBet: number; limits: { min: number; max: number } };
 }
 
-export type SessionProgress = SessionProgressV4 | SessionProgressV3 | SessionProgressV2 | SessionProgressV1;
+/**
+ * Version 5: version 4, plus the one thing the gestures keep (round 20).
+ *
+ * The best run of correct decisions this player has ever had. Not the live run —
+ * a run that survives closing the tab is a chain, and §16 says the app does not
+ * hand anybody a chain. A record is a thing that already happened.
+ *
+ * No database change: `progress` is a single JSON column, and a version 4 blob
+ * read here opens with no record and sets one the first time a run beats five.
+ * Two devices merge it the way the counters merge — by the larger of the two,
+ * which is the only correct rule for a record.
+ */
+export interface SessionProgressV5 extends Omit<SessionProgressV4, 'version'> {
+  version: 5;
+  records?: { streakBest: number };
+}
+
+export type SessionProgress =
+  | SessionProgressV5
+  | SessionProgressV4
+  | SessionProgressV3
+  | SessionProgressV2
+  | SessionProgressV1;
 
 export interface ScenarioStat {
   scenarioKey: string;
@@ -351,6 +380,37 @@ export class TrainerSession {
    */
   private streak = 0;
   private streakBest = 0;
+  /*
+   * The streak's record, and the only thing the gestures keep (round 20).
+   *
+   * The *run* is deliberately not saved: a run that survives closing the tab is
+   * a chain a player must not break, which is the §16 failure. A record is the
+   * opposite — it has already happened, and nothing done with a browser tab can
+   * take it away. So the record is saved and the run is not.
+   */
+  private streakRecord = 0;
+  /** Whether this run has already been announced as a record. */
+  private recordAnnounced = false;
+  /** What this sitting has shown, and whether this hand has had one. */
+  private gesturesShown = 0;
+  private gestureThisHand = false;
+  private rightAndLostShown = false;
+  /** The gesture the settlement earned, if any. */
+  private settlementGesture: Gesture | null = null;
+  /** This sitting, for the line that ends it. Not saved: a sitting is a sitting. */
+  private sittingDecisions = 0;
+  private sittingMistakes = 0;
+  /*
+   * And this sitting's spots, separately from the lifetime ones.
+   *
+   * The sentence says "this sitting: 11 decisions, 3 of them wrong" and then
+   * names the spot that cost the most. Taking that spot's count from the
+   * lifetime record produced "3 wrong … 5 times" on one line — two numbers in
+   * the same sentence measuring different spans, which is the contradiction
+   * every figure in this app is supposed to avoid. So the sitting has its own
+   * tally, and it is thrown away with the sitting.
+   */
+  private sittingSpots = new Map<string, { attempts: number; correct: number; evCostTotal: number }>();
   private streakHard = 0;
   private streakMilestone: number | null = null;
   private bySeverity: Record<SeverityTier, number> = {
@@ -488,6 +548,9 @@ export class TrainerSession {
     this.lastRatingDelta = null;
     // A milestone belongs to the decision that reached it, not to the run.
     this.streakMilestone = null;
+    // And a gesture belongs to the hand that earned it: one a hand, at most.
+    this.gestureThisHand = false;
+    this.settlementGesture = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -682,8 +745,37 @@ export class TrainerSession {
     }
     this.scenarioStats.set(record.scenarioKey, stat);
 
+    /*
+     * The gesture, chosen from what has just been written and never writing any
+     * of it (round 20). `gestures.ts` is handed a snapshot and hands back a
+     * gesture or nothing; it cannot reach a grade, an EV or a rating, because it
+     * imports nothing that has one.
+     */
+    this.sittingDecisions++;
+    if (!correct) this.sittingMistakes++;
+    const sittingSpot = this.sittingSpots.get(record.scenarioKey) ?? { attempts: 0, correct: 0, evCostTotal: 0 };
+    sittingSpot.attempts++;
+    if (correct) sittingSpot.correct++;
+    sittingSpot.evCostTotal += record.evCost;
+    this.sittingSpots.set(record.scenarioKey, sittingSpot);
+    const gesture = gestureForDecision({
+      correct,
+      stat: { attempts: stat.attempts, correct: stat.correct, consecutiveCorrect: stat.consecutiveCorrect, confusion: { ...stat.confusion } },
+      streak: { current: this.streak, record: this.streakRecord, announcedThisRun: this.recordAnnounced },
+      shown: { sitting: this.gesturesShown, thisHand: this.gestureThisHand },
+    });
+    if (gesture) {
+      this.gesturesShown++;
+      this.gestureThisHand = true;
+      if (gesture.kind === 'record') this.recordAnnounced = true;
+    }
+    // The record itself rises whether or not anything was said about it.
+    if (this.streak > this.streakRecord) this.streakRecord = this.streak;
+    if (this.streak === 0) this.recordAnnounced = false;
+
     this.lastFeedback = {
       scenarioKey: record.scenarioKey,
+      gesture: this.wordGesture(gesture, record.scenarioKey),
       // Anchors every step of the reveal to what was actually decided, which
       // matters once a split has replaced the hand on the board with two others.
       headline: explanation.headline,
@@ -751,6 +843,27 @@ export class TrainerSession {
     // Exact, and allowed below zero: a hand that needed more than the stack
     // still played (round 6b, option B).
     this.chips = { ...this.chips, stack: roundChips(this.chips.stack + record.netUnits * this.handBet) };
+
+    /*
+     * And the one that can only fire on a hand that lost (round 20). It reads
+     * the outcome on purpose: a won hand can never produce it, which is what
+     * makes it the inverse of the rule the other three follow.
+     */
+    const allOptimal = this.pending.length > 0 && this.pending.every((d) => d.evCost === 0);
+    this.settlementGesture = gestureForSettlement({
+      net: record.netUnits,
+      decisions: this.pending.length,
+      allOptimal,
+      shown: {
+        sitting: this.gesturesShown,
+        thisHand: this.gestureThisHand,
+        rightAndLostThisSitting: this.rightAndLostShown,
+      },
+    });
+    if (this.settlementGesture) {
+      this.gesturesShown++;
+      this.rightAndLostShown = true;
+    }
 
     this.history.unshift({
       id: record.id,
@@ -887,7 +1000,99 @@ export class TrainerSession {
       ),
       stats: this.stats,
       ruleSet: this.ruleSet,
+      /*
+       * The gestures' three surfaces (round 20). All three are read-only views
+       * of state written elsewhere: nothing here is a score, and nothing here
+       * can move one.
+       */
+      // The hand that was played perfectly and lost, said once a sitting.
+      settlementGesture: settled ? this.settlementGesture : null,
+      // The records line on home: chip-shaped, and it touches no figure.
+      records: {
+        streak: this.streakRecord,
+        mastered: this.masteredCount,
+        cells: chartFor(this.rules).cells.size,
+        decisions: this.lifetimeDecisions,
+      },
+      // Which spots have been met and which are mastered, for the chart's
+      // second mode. Only the keys with something behind them travel.
+      mastery: this.masteryMap,
+      // What this sitting came to, for the one sentence that ends it. The leak
+      // is worded here, where the language is, and never on the page.
+      sitting: this.sittingLine,
     };
+  }
+
+  /**
+   * A gesture with its spot and its action in words (round 20).
+   *
+   * The numbers are the gesture; these two are how it reads. They are worded
+   * here, beside everything else the card carries, and re-worded by `recompose`
+   * when the language changes — a gesture left in English on a Hebrew card is
+   * the bug round 4a spent a round removing.
+   */
+  private wordGesture(gesture: Gesture | null, scenarioKey: string): unknown {
+    if (!gesture) return null;
+    return {
+      ...gesture,
+      spot: describeScenarioKey(scenarioKey, this.locale),
+      playedLabel:
+        gesture.kind === 'improved' && gesture.played
+          ? prettyAction(gesture.played, this.locale)
+          : null,
+    };
+  }
+
+  /**
+   * Take a record from another copy of this player (round 20).
+   *
+   * The larger of the two, never the sum — the same rule the counters and the
+   * day count merge by, and the only correct one for a record. It writes one
+   * number and can touch nothing else.
+   */
+  absorbRecords(records: { streakBest?: number } | null | undefined): void {
+    const best = Number(records?.streakBest);
+    if (Number.isFinite(best) && best > this.streakRecord) this.streakRecord = Math.floor(best);
+  }
+
+  /** The sitting's summary, with its one leak in words (round 20). */
+  private get sittingLine(): unknown {
+    const summary = sittingSummary({
+      decisions: this.sittingDecisions,
+      mistakes: this.sittingMistakes,
+      spots: [...this.sittingSpots.entries()].map(([scenarioKey, spot]) => ({
+        scenarioKey,
+        attempts: spot.attempts,
+        correct: spot.correct,
+        evCostTotal: spot.evCostTotal,
+      })),
+    });
+    if (!summary) return null;
+    return {
+      ...summary,
+      leakSpot: summary.leak ? describeScenarioKey(summary.leak, this.locale) : null,
+    };
+  }
+
+  /*
+   * How many cells there are to master: the chart's own, counted rather than
+   * written down — the reference screen draws exactly these keys, and a number
+   * typed here by hand would be a second source for the same fact.
+   */
+  /** Every spot the player has met, and whether it is mastered (round 20). */
+  private get masteryMap(): Record<string, 'met' | 'mastered'> {
+    const out: Record<string, 'met' | 'mastered'> = {};
+    for (const stat of this.scenarioStats.values()) {
+      const state = masteryState(stat);
+      if (state !== 'none') out[stat.scenarioKey] = state;
+    }
+    return out;
+  }
+
+  private get masteredCount(): number {
+    let count = 0;
+    for (const stat of this.scenarioStats.values()) if (masteryState(stat) === 'mastered') count++;
+    return count;
   }
 
   /** Finished hands, newest first — the reviewable record of the session. */
@@ -1087,9 +1292,10 @@ export class TrainerSession {
    * boundary where resuming is unambiguous — half a split restored into a
    * freshly shuffled shoe would be a different hand wearing the same cards.
    */
-  get progress(): SessionProgressV4 {
+  get progress(): SessionProgressV5 {
     return {
-      version: 4,
+      version: 5,
+      records: { streakBest: this.streakRecord },
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -1129,7 +1335,16 @@ export class TrainerSession {
     // `uth`, which is `UthSession`'s to read.
     // Versions 2 to 4 hold the same Blackjack fields; 3 adds `uth`, which is
     // `UthSession`'s to read, and 4 adds the chips.
-    if (!saved || (saved.version !== 1 && saved.version !== 2 && saved.version !== 3 && saved.version !== 4)) return;
+    if (
+      !saved ||
+      (saved.version !== 1 &&
+        saved.version !== 2 &&
+        saved.version !== 3 &&
+        saved.version !== 4 &&
+        saved.version !== 5)
+    ) {
+      return;
+    }
     const n = (value: unknown, fallback = 0): number =>
       typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
@@ -1185,12 +1400,26 @@ export class TrainerSession {
      * that is where it reopens — at a bet of 1, the bet every one of those
      * hands was played at.
      */
-    const chips = saved.version === 4 ? saved.chips : undefined;
+    const chips = saved.version === 4 || saved.version === 5 ? saved.chips : undefined;
     this.chips = readChipBook(
       chips,
       chips && typeof chips.stack === 'number' ? chips.stack : TrainerSession.STARTING_STACK + n(saved.netUnits),
     );
     this.handBet = 1;
+    /*
+     * The record comes back; the run does not (round 20). Reopening the app
+     * with a live streak of 31 would make closing the tab a thing to be afraid
+     * of, and the record is the part that was actually earned.
+     */
+    this.streakRecord = saved.version === 5 ? Math.max(0, Math.floor(n(saved.records?.streakBest))) : 0;
+    this.recordAnnounced = false;
+    this.gesturesShown = 0;
+    this.gestureThisHand = false;
+    this.rightAndLostShown = false;
+    this.settlementGesture = null;
+    this.sittingDecisions = 0;
+    this.sittingMistakes = 0;
+    this.sittingSpots = new Map();
     // A restored session is between hands by construction, so nothing from the
     // previous one is left pointing at a table that no longer exists.
     this.pending = [];
@@ -1326,6 +1555,17 @@ export class TrainerSession {
         ...entry,
         label: prettyAction(entry.action as string, this.locale),
       })),
+      // The gesture's numbers do not change with the language; its two words do.
+      gesture: previous.gesture
+        ? {
+            ...(previous.gesture as Record<string, unknown>),
+            spot: describeScenarioKey(record.scenarioKey, this.locale),
+            playedLabel:
+              (previous.gesture as { played?: string }).played
+                ? prettyAction((previous.gesture as { played: string }).played, this.locale)
+                : null,
+          }
+        : null,
     };
   }
 

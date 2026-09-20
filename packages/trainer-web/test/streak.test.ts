@@ -84,12 +84,21 @@ test('the number on screen is what the hand log says it is', () => {
   assert.ok(view.feedback.streak.best >= view.feedback.streak.current);
 });
 
-test('the run does not survive the tab closing', () => {
+test('the run does not survive the tab closing — and the record does (round 20)', () => {
   const played = new TrainerSession('vegas-strip-6d-s17', 20260915);
   play(played, 40);
 
-  const saved = JSON.stringify(played.progress);
-  assert.ok(!saved.includes('streak'), 'the streak was persisted, which it must not be');
+  /*
+   * Round 20 draws the line the gestures needed: the *run* is still not saved,
+   * because a run that survives closing the tab is a chain a player must not
+   * break (§16). The *record* is, because it has already happened and nothing
+   * done with a browser tab can take it away.
+   */
+  const record = played.progress as { records?: { streakBest: number } };
+  const saved = JSON.stringify({ ...played.progress, records: undefined });
+  assert.ok(!saved.includes('streak'), 'the live run was persisted, which it must not be');
+  assert.deepEqual(Object.keys(record.records ?? {}), ['streakBest'], 'the record carries more than a record');
+  assert.equal(record.records!.streakBest, (played.view as any).feedback.streak.best);
 
   const restored = new TrainerSession('vegas-strip-6d-s17', 3);
   restored.restore(played.progress);

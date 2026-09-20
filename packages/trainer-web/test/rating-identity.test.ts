@@ -208,7 +208,7 @@ test('a saved record round-trips all three ladders', () => {
   const saved = session.progress;
   // Version 3 since round 4b (a UTH part) and 4 since round 6b (the chips):
   // so the ladders round-trip exactly as they did.
-  assert.equal(saved.version, 4);
+  assert.equal(saved.version, 5);
   assert.ok(saved.lifetimeDecisions > 0);
 
   const restored = new TrainerSession('vegas-strip-6d-s17', 12);

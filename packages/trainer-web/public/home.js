@@ -455,6 +455,66 @@ function tripsFigures(uthView) {
   ];
 }
 
+/**
+ * The records line (round 20).
+ *
+ * The chip Idan asked for, in the one currency that cannot lie: things he did.
+ * The best run he has ever had, how much of the chart he has mastered, and how
+ * many decisions he has been graded on in his life. No chips, no units, no
+ * stack — §16 — and nothing here is a score anybody is ranked on.
+ */
+function renderRecords(view) {
+  const box = el('records');
+  const line = el('records-line');
+  if (!box || !line) return;
+  const records = view.records;
+  const parts = [];
+  if (records) {
+    if (records.streak > 0) parts.push(T('records.streak', { n: window.EVFigure.units(records.streak) }));
+    if (records.mastered > 0) {
+      parts.push(T('records.mastered', {
+        n: window.EVFigure.units(records.mastered),
+        total: window.EVFigure.units(records.cells),
+      }));
+    }
+    if (records.decisions > 0) parts.push(T('records.decisions', { n: window.EVFigure.units(records.decisions) }));
+  }
+  // Nothing to show is not a line saying there is nothing to show.
+  box.hidden = parts.length === 0;
+  line.textContent = parts.join(' · ');
+}
+
+/**
+ * The sentence that ends a sitting.
+ *
+ * It appears here rather than on the felt because a sitting ends by leaving the
+ * table, and because nothing that sums up a session belongs over the top of a
+ * live hand. It names the one leak, which is the half a player can act on.
+ */
+function renderSitting(view) {
+  const box = el('sitting');
+  if (!box) return;
+  const sitting = view.sitting;
+  if (!sitting) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  const said = sitting.mistakes === 0
+    ? T('sitting.clean', { decisions: window.EVFigure.units(sitting.decisions) })
+    : T('sitting.line', {
+        decisions: window.EVFigure.units(sitting.decisions),
+        mistakes: window.EVFigure.units(sitting.mistakes),
+      });
+  const leak = !sitting.leak
+    ? ''
+    : sitting.leakCount === sitting.mistakes
+      ? ' ' + T('sitting.allOne', { spot: sitting.leakSpot })
+      : ' ' + T('sitting.leak', { spot: sitting.leakSpot, n: window.EVFigure.units(sitting.leakCount) });
+  boldParts(box, said + leak);
+}
+
 function renderStats(view, profile, uthView) {
   const s = view.stats;
   const box = el('stats');
@@ -530,6 +590,8 @@ async function refresh() {
   });
 
   renderStanding(profile);
+  renderRecords(view);
+  renderSitting(view);
   renderUthStanding(uthView.rating);
   renderHands(view, uthView);
   renderStats(view, profile, uthView);

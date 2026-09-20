@@ -224,6 +224,15 @@
           <span data-i18n="ui.chartNote">Derived from the EV computation, not copied from a chart.</span>
           <span class="legend" data-i18n="ui.legend">H hit · S stand · D double · P split · R surrender</span>
         </p>
+        <!--
+          Two readings of the same 311 cells (round 20): what the right play is,
+          and which of them this player has mastered. The second is the mastery
+          grid — a collection that also says what to practise next — and it is a
+          mode here rather than a screen of its own, because the keys are the
+          same keys and two screens would be two places to keep them right.
+        -->
+        <div class="chart-modes" id="chart-modes"></div>
+        <p class="muted fine" id="mastery-legend" hidden></p>
         <div id="chart-container"></div>
         <menu>
           <button value="cancel" data-i18n="ui.close">Close</button>
