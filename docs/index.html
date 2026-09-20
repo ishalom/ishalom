@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="fee8b2db232f4f00812d928ffa7e34359566913a-dirty" />
-<meta name="ev-build-at" content="2026-09-19T21:34:01.864Z" />
+<meta name="ev-build-commit" content="a41bfc2131d6622302a75caaed3471f76e2c646e-dirty" />
+<meta name="ev-build-at" content="2026-09-20T13:10:25.176Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -528,6 +528,21 @@ td.R { background: #4a3d21; }
 
 .shell {
   max-width: 540px;
+  /*
+   * The width of what holds it, and never of what is inside it (round 19).
+   *
+   * Ultimate's worked sums are one long unbreakable line — `(809,564 × +2.860
+   * − 250,716 × 3.410) ÷ 1,070,190 ÷ 2 = 1.234`. The shell was sized by its
+   * contents, so on a 360px phone that one line made the shell 520px and took
+   * the felt, the seats and the dock off the side of the screen with it.
+   * Measured, bisected, and fixed here rather than by shortening the sum: a
+   * page whose width depends on its longest line is a page waiting for the
+   * next long line. The sum scrolls inside `.worked-sum`, which is what that
+   * rule was written for.
+   */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
   min-height: 100dvh;
   border-inline: 1px solid rgba(255, 255, 255, 0.04);
@@ -1346,6 +1361,24 @@ body { font-family: var(--body); }
 }
 .seat-total { font-size: 24px; letter-spacing: 0; }
 
+/*
+ * Ultimate's seat header (round 19): what the seat is holding, in words.
+ *
+ * The same place as the Blackjack total and deliberately not the same size —
+ * a total is two characters and a hand is a phrase, so 24px would take the
+ * felt. Words, not a figure: no tabular numerals, and it may wrap at showdown,
+ * where the five ranks join it.
+ */
+.seat-hand {
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .seat-hand { font-size: 13px; }
+}
+
 /* ===========================================================================
  * The rail.
  *
@@ -2066,6 +2099,56 @@ button,
 }
 .ret-fig.best { color: var(--ink); }
 
+/* ===========================================================================
+ * The same choices in chips (round 19).
+ *
+ * Idan: "you could simply add how many chips he expects to get back on each
+ * choice." In Ultimate the unclear part is not the odds but how much is on the
+ * table — 4x is six units at risk and a check is two — and no return figure
+ * says that. Four columns, one row an action, under the bars rather than
+ * between them: the bars are the grade, this is the money, and round 17's
+ * ordering rule keeps the grade's rows whole by putting everything that
+ * follows them below.
+ * ======================================================================== */
+
+.money { margin: 9px 0 0; }
+.money-title {
+  margin: 0 0 5px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.money-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.money-head {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: end;
+  line-height: 1.2;
+}
+.money-name { font-size: 12.5px; color: var(--muted); }
+.money-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.money-fig {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--muted);
+}
+/* What comes back is the one a player is reading for. */
+.money-back { color: var(--ink); font-weight: 600; }
+.money-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.money-note b { color: var(--ink); font-weight: 600; }
+
+/* The size of the pre-flop answer, at the level that asked for the numbers. */
+.ret-scale { margin: 7px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ret-scale b { color: var(--ink); font-weight: 600; }
+
 /* Two actions can come to the same figure — on 16 against a ten, hitting and
    standing differ in the fourth decimal. They are equivalent, and the screen
    says so rather than printing a decimal nobody can act on. */
@@ -2244,6 +2327,26 @@ button,
 .returns-help .num { font-weight: 700; color: var(--ink); }
 /* The control that closes it, at a size a thumb can find. */
 .returns-why { width: 34px; height: 34px; font-size: 17px; }
+
+/* ===========================================================================
+ * Fourteen pixels, found on the smallest screen (round 19).
+ *
+ * Measured, at 360x800 in Hebrew, on Ultimate's pre-flop card: the anchor runs
+ * to two lines there, and with three actions the third row ended 14px below
+ * what the card can show. Round 17's rule is that a graded row is never the
+ * thing that falls past the fold, so the chrome around the rows gives the
+ * fourteen back — four from the gap above the block, four from the card's own
+ * padding, four from the heading, and two from the control that opens the
+ * explanation, which stays a 30px target.
+ *
+ * Only below 380px, because 390 and 412 already fit with room to spare.
+ * ======================================================================== */
+@media (max-width: 380px) {
+  .quickcard { padding-top: 6px; padding-bottom: 7px; }
+  .returns { margin-top: 5px; }
+  .returns-head { margin-bottom: 2px; }
+  .returns-why { width: 30px; height: 30px; font-size: 16px; }
+}
 
 /* --- The game itself, for whoever asked to be taught it (round 15) ------------
  * Idan played at the beginner setting and found nothing explaining how
@@ -6253,16 +6356,25 @@ function solveRiver(
   let wins = 0;
   let ties = 0;
   let losses = 0;
+  let winUnits = 0;
+  let lossUnits = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     dealerCards[5] = unseen[i] ;
     for (let j = i + 1; j < unseen.length; j++) {
       dealerCards[6] = unseen[j] ;
       const dealerScore = evaluate7(dealerCards);
-      if (playerScore > dealerScore) wins++;
-      else if (playerScore === dealerScore) ties++;
-      else losses++;
-      total += settle(playerScore, dealerScore, RIVER_RAISE, paytable);
+      const net = settle(playerScore, dealerScore, RIVER_RAISE, paytable);
+      if (playerScore > dealerScore) {
+        wins++;
+        winUnits += net;
+      } else if (playerScore === dealerScore) {
+        ties++;
+      } else {
+        losses++;
+        lossUnits += net;
+      }
+      total += net;
       count++;
     }
   }
@@ -6278,6 +6390,8 @@ function solveRiver(
     wins,
     ties,
     losses,
+    winUnits,
+    lossUnits,
   };
 }
 
@@ -6441,6 +6555,12 @@ function solveFlop(
   let riverFolds = 0;
   let boards = 0;
   let outcomes = 0;
+  let wins = 0;
+  let ties = 0;
+  let losses = 0;
+  let winUnits = 0;
+  let lossUnits = 0;
+  let checkPlayTotal = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     const turn = unseen[i] ;
@@ -6474,11 +6594,19 @@ function solveFlop(
           dealerCards[6] = remaining[b] ;
           const dealerScore = evaluate7(dealerCards);
           if (playerScore > dealerScore) {
-            anteAndBlind += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+            const side = (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+            anteAndBlind += side;
             net += 1;
+            wins++;
+            winUnits += side + FLOP_RAISE;
           } else if (playerScore < dealerScore) {
-            anteAndBlind += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+            const side = (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+            anteAndBlind += side;
             net -= 1;
+            losses++;
+            lossUnits += side - FLOP_RAISE;
+          } else {
+            ties++;
           }
           outcomes++;
         }
@@ -6492,6 +6620,7 @@ function solveFlop(
       // At the river the player takes the better of betting and folding.
       if (evRiverPlay >= FOLD_RESULT) {
         checkTotal += evRiverPlay;
+        checkPlayTotal += evRiverPlay;
       } else {
         checkTotal += FOLD_RESULT;
         riverFolds++;
@@ -6511,6 +6640,13 @@ function solveFlop(
     riverFoldFrequency: riverFolds / boards,
     boards,
     outcomes,
+    wins,
+    ties,
+    losses,
+    winUnits,
+    lossUnits,
+    checkPlayBoards: boards - riverFolds,
+    checkPlayTotal,
   };
 }
 
@@ -7046,6 +7182,29 @@ const RAISE_SIZE                                     = {
                 
                 
                   
+     
+                                                                           
+                                                                              
+    
+                                                                             
+                                                                             
+                                                                   
+     
+            
+                                                    
+                 
+                 
+                   
+                                                                                 
+                     
+                      
+                                                                                      
+                     
+                                                                                                   
+                    
+                             
+                            
+    
                                                                            
                   
  
@@ -7271,6 +7430,17 @@ class UthTable {
         phase: 'flop',
         evByAction: { raise2x: solved.evPlay, check: solved.evCheck },
         riverFoldFrequency: solved.riverFoldFrequency,
+        counts: {
+          wins: solved.wins,
+          ties: solved.ties,
+          losses: solved.losses,
+          winUnits: solved.winUnits,
+          lossUnits: solved.lossUnits,
+          outcomes: solved.outcomes,
+          boards: solved.boards,
+          checkPlayBoards: solved.checkPlayBoards,
+          checkPlayTotal: solved.checkPlayTotal,
+        },
       };
     } else {
       const solved = solveRiver(this.hole, this.board, this.paytable);
@@ -7280,6 +7450,14 @@ class UthTable {
         wins: solved.wins,
         ties: solved.ties,
         losses: solved.losses,
+        counts: {
+          wins: solved.wins,
+          ties: solved.ties,
+          losses: solved.losses,
+          winUnits: solved.winUnits,
+          lossUnits: solved.lossUnits,
+          outcomes: solved.wins + solved.ties + solved.losses,
+        },
       };
     }
     const solveMs = this.phase === 'preflop' ? 0 : now() - started;
@@ -7701,6 +7879,22 @@ const EN            = {
   'work.insurance.sum': '3 × {ten} = {value}',
   'work.decline': 'Declining puts nothing on the side bet, so there is nothing there to lose and nothing to come back:',
   'work.decline.sum': '{value}',
+  // --- Ultimate's own worked lines (round 19) ---
+  'work.uthRiverPlay': 'Every card is out, so nothing here is estimated. Against the **{outcomes}** hands the dealer can be holding you beat **{wins}**, tie {ties} and lose to {losses}. A win here pays **{winPay}** on average — the Play bet, the Ante when the dealer qualifies, and the Blind — and a loss costs **{losePay}**. The average of all that is added to the 1.000 the stake itself comes back as:',
+  'work.uthRiverPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopPlay': 'Choosing **{action}** plays this hand through every turn and river and against every hand the dealer can hold — **{outcomes}** endings in all. You finish ahead in **{wins}** of them, level in {ties} and behind in {losses}. Ahead pays **{winPay}** on average, behind costs **{losePay}**, and their average joins the 1.000 the stake comes back as:',
+  'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopCheck': 'Checking keeps the river decision, and the river is then played properly. Of the **{boards}** ways the turn and river can come, **{playBoards}** are worth betting — **{playValue}** on average — and on the other **{foldBoards}** the right move there is to fold for −2. Their average joins the 1.000 the stake comes back as:',
+  'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
+  'work.uthFold.sum': '{value}',
+  // --- The same decision in chips, which is what Ultimate hides (round 19) ---
+  'ret.money.title': 'The same choices in chips',
+  'ret.money.puts': 'puts out',
+  'ret.money.risk': 'at risk',
+  'ret.money.back': 'comes back',
+  'ret.money.note': 'The Ante and the Blind are already on the table, so **at risk** counts them and **comes back** is what the choice is worth on average. Folding leaves two chips at risk and brings back nothing.',
+  'ret.scale': 'Before the flop nothing is solved at the table. This figure was worked out once, over **{outcomes}** endings for your two cards: every board that can come, every hand the dealer can hold behind it, all three bets settled, averaged.',
   'ret.helpLines': 'The dashed line is **1.000**. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
 
   // --- Said once, before the first hand ever played (round 13) ---
@@ -8038,6 +8232,20 @@ const EN            = {
     'Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.',
   'uth.rulesLine':
     'Blind pays a straight or better · dealer qualifies with a pair',
+  // --- The rule panel this table gained in round 19 ---
+  'uth.blind.standard':
+    'Blind pays: straight 1 · flush 3:2 · full house 3 · four of a kind 10 · straight flush 50 · royal flush 500',
+  'uth.blind.fixed':
+    'The Blind pay table is fixed, and this is the one honest reason: every figure the trainer shows was solved against it, and the pre-flop table alone took **two billion endings for each starting hand**. A second one would mean solving the game again, not flipping a switch.',
+  'uth.rules.trips': 'Trips pay table',
+  'uth.rules.tripsNote':
+    'Trips settles on your own seven cards and no solve reads it, so changing it moves nothing that is graded, rated or ranked. What it does reset is the Trips row of your stats — a cost measured against two pay tables at once measures nothing.',
+  'uth.rules.pays': 'three of a kind · straight · flush · full house · four of a kind · straight flush · royal',
+  'uth.rules.costs': 'costs {edge} of what goes on it',
+  'uth.rules.limits': 'Table limits: {min} to {max} a hand',
+  'uth.trips.trips-a': 'Pay table I',
+  'uth.trips.trips-b': 'Pay table II',
+  'uth.trips.trips-c': 'Pay table III',
   'uth.readingFlop':
     'Reading the flop…',
   'uth.h.preflop':
@@ -8590,6 +8798,22 @@ const HE            = {
   'work.insurance.sum': '3 × {ten} = {value}',
   'work.decline': 'ויתור על הביטוח לא שם כלום בצד, ולכן אין שם מה להפסיד ואין מה שיחזור:',
   'work.decline.sum': '{value}',
+  // --- Ultimate's own worked lines (round 19) ---
+  'work.uthRiverPlay': 'כל הקלפים כבר על השולחן, ולכן אין כאן שום הערכה. מול **{outcomes}** הידיים שהדילר יכול להחזיק אתה מנצח **{wins}**, יוצא תיקו מול {ties} ומפסיד ל-{losses}. ניצחון כאן מחזיר בממוצע **{winPay}** — הימור ה-Play, האנטה כשהדילר עומד בתנאי, והבליינד — והפסד עולה **{losePay}**. הממוצע של כל זה מתווסף ל-1.000 שהוא ההימור עצמו חוזר:',
+  'work.uthRiverPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopPlay': 'בחירה ב**{action}** משחקת את היד הזאת מול כל טרן וריבר אפשריים ומול כל יד שהדילר יכול להחזיק — **{outcomes}** סיומים. אתה מסיים מלפנים ב-**{wins}** מהם, בתיקו ב-{ties} ומאחור ב-{losses}. סיום מלפנים מחזיר בממוצע **{winPay}**, סיום מאחור עולה **{losePay}**, והממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopCheck': 'צ׳ק שומר את ההחלטה של הריבר, ושם משחקים נכון. מתוך **{boards}** הדרכים שבהן הטרן והריבר יכולים לצאת, ב-**{playBoards}** שווה להמר — **{playValue}** בממוצע — ובשאר **{foldBoards}** המהלך הנכון שם הוא לפרוש ב-2−. הממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
+  'work.uthFold.sum': '{value}',
+  // --- The same decision in chips, which is what Ultimate hides (round 19) ---
+  'ret.money.title': 'אותן בחירות, בציפים',
+  'ret.money.puts': 'מוציא עכשיו',
+  'ret.money.risk': 'בסיכון',
+  'ret.money.back': 'חוזר בממוצע',
+  'ret.money.note': 'האנטה והבליינד כבר על השולחן, ולכן **בסיכון** סופר גם אותם ו**חוזר בממוצע** הוא מה שהבחירה שווה. פרישה משאירה שני ציפים בסיכון ולא מחזירה כלום.',
+  'ret.scale': 'לפני הפלופ שום דבר לא נפתר ליד השולחן. המספר הזה חושב פעם אחת, על פני **{outcomes}** סיומים לשני הקלפים שלך: כל בורד שיכול לצאת, כל יד שהדילר יכול להחזיק מאחוריו, שלושת ההימורים מסודרים, והכול ממוצע.',
   'ret.helpLines': 'הקו המקווקו הוא **1.000**. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
 
   // --- Said once, before the first hand ever played (round 13) ---
@@ -8927,6 +9151,20 @@ const HE            = {
     'מקשים: 4 · 3 · C לפני הפלופ, 2 · C בפלופ, 1 · F בריבר, N ליד הבאה.',
   'uth.rulesLine':
     'הבליינד משלם על רצף ומעלה · הדילר מתאים עם זוג',
+  // --- The rule panel this table gained in round 19 ---
+  'uth.blind.standard':
+    'הבליינד משלם: רצף 1 · פלאש 3:2 · פול האוס 3 · רביעייה 10 · רצף פלאש 50 · רויאל פלאש 500',
+  'uth.blind.fixed':
+    'טבלת התשלום של הבליינד קבועה, ויש לכך סיבה אחת אמיתית: כל מספר שהמאמן מציג נפתר מולה, והטבלה שלפני הפלופ לבדה דרשה **שני מיליארד סיומים לכל יד פתיחה**. טבלה שנייה פירושה לפתור את המשחק מחדש, לא להזיז מתג.',
+  'uth.rules.trips': 'טבלת התשלום של Trips',
+  'uth.rules.tripsNote':
+    'Trips נסגר על שבעת הקלפים שלך בלבד ואף פתרון לא קורא אותו, ולכן שינוי כאן לא מזיז שום דבר שנבדק, מדורג או מנוקד. מה שכן מתאפס היא שורת ה-Trips בסטטיסטיקה — עלות שנמדדת מול שתי טבלאות בבת אחת לא מודדת כלום.',
+  'uth.rules.pays': 'שלישייה · רצף · פלאש · פול האוס · רביעייה · רצף פלאש · רויאל',
+  'uth.rules.costs': 'עולה {edge} מכל מה שמונח עליו',
+  'uth.rules.limits': 'מגבלות השולחן: {min} עד {max} ליד',
+  'uth.trips.trips-a': 'טבלה I',
+  'uth.trips.trips-b': 'טבלה II',
+  'uth.trips.trips-c': 'טבלה III',
   'uth.readingFlop':
     'קורא את הפלופ…',
   'uth.h.preflop':
@@ -12120,6 +12358,205 @@ function describeScenarioKey(key        , locale         = 'en')         {
   return t(locale, 'label.vs', { hand: String(scenario.total), up });
 }
 
+/* ===== packages/trainer-web/src/uth-worked.ts ===== */
+/**
+ * Ultimate's worked lines and its money lines (round 19).
+ *
+ * Blackjack has had both halves of this since round 15: every action on the
+ * card carries the arithmetic behind its figure, and the *printed* arithmetic
+ * comes out on the *printed* figure. Ultimate had neither. It had one sentence,
+ * which Idan rejected, and two paragraphs of prose standing in for the working.
+ *
+ * Two things are built here.
+ *
+ * **The worked line**, where the solve counted something. The river enumerates
+ * all 990 hands the dealer can hold and the flop all 1,070,190 ways the turn,
+ * the river and the dealer's two cards can fall — so both can be said forward,
+ * in counts a player could in principle check, rather than backwards from the
+ * answer. Every term is taken during the solve the grade already ran; nothing
+ * here computes a second, similar number that might not agree with the first.
+ * Before the flop there is nothing to say this way: the EVs are a lookup into a
+ * table solved offline, and the table stores no counts. Deriving one would print
+ * an approximation, which is exactly what round 15 removed.
+ *
+ * **The money line**, for every action at every decision point. What Ultimate
+ * hides is not the probability, it is how much is on the table: raising 4x means
+ * an Ante of one, a Blind of one and a Play bet of four — six units at risk —
+ * while checking risks two. No player feels that from a return figure. So each
+ * action states what it puts out now, what is then at risk altogether, and what
+ * comes back on average, all in the chips this hand is being played for.
+ */
+
+/** The Ante and the Blind, which are what an Ultimate figure is per unit of. */
+const UTH_STAKE = 2;
+
+/** The Play bet each action makes, as a multiple of the Ante. */
+const PLAY_MULTIPLE                         = {
+  raise4x: 4,
+  raise3x: 3,
+  raise2x: 2,
+  raise1x: 1,
+  check: 0,
+  fold: 0,
+};
+
+/** The counts a solve took while it ran; see `UthEvaluation.counts`. */
+                            
+               
+               
+                 
+                   
+                    
+                   
+                  
+                           
+                          
+ 
+
+/**
+ * What each kind of Ultimate worked line adds up to, read off terms rounded to
+ * however many decimals they are about to be printed with — the same arithmetic
+ * the copy shows the player, in the same order, ending on the figure beside it.
+ *
+ * Each returns the *return* figure, not the EV, because that is what is printed
+ * on the bar: one unit of the Ante and the Blind, and what comes back of it.
+ */
+const UTH_REBUILD                                                          = {
+  // The river and the flop raise are the same shape: what you win across the
+  // outcomes you win, less what you lose across the ones you lose, averaged.
+  uthRiverPlay: (t) => 1 + (t('wins') * t('winPay') - t('losses') * t('losePay')) / t('outcomes') / UTH_STAKE,
+  uthFlopPlay: (t) => 1 + (t('wins') * t('winPay') - t('losses') * t('losePay')) / t('outcomes') / UTH_STAKE,
+  // Checking the flop is not a showdown: it is the river, played right, on every
+  // board it can reach — betting on most of them and folding for -2 on the rest.
+  uthFlopCheck: (t) =>
+    1 + (t('playBoards') * t('playValue') + t('foldBoards') * -2) / t('boards') / UTH_STAKE,
+  // Folding forfeits both units. Nothing comes back, and nothing is worked out.
+  uthFold: () => 0,
+};
+
+                          
+                 
+               
+                
+                        
+                          
+ 
+
+/**
+ * How many decimals the printed terms need for the printed sum to come out.
+ *
+ * Blackjack's rule, applied to Ultimate's kinds: start at three, go up only
+ * when three will not do, and if six will not do either say so with a null
+ * rather than print a sum that is out by one in the last place. Counts are
+ * whole numbers and rounding leaves them alone, so only the money terms move.
+ */
+function uthWithDigits(work                                )                 {
+  if (!work) return null;
+  const rebuild = UTH_REBUILD[work.kind          ];
+  if (!rebuild) return null;
+  const wanted = returnFigure(work.value          );
+  for (let digits = 3; digits <= 6; digits++) {
+    const round = (name        )         => {
+      const value = work[name];
+      return typeof value === 'number' ? Number(value.toFixed(digits)) : 0;
+    };
+    if (returnFigure(rebuild(round)) === wanted) return { ...work, digits }           ;
+  }
+  return { ...work, digits: null }           ;
+}
+
+/**
+ * One action's working, or null where the solve counted nothing.
+ *
+ * @param action  the action this line explains
+ * @param value   its figure on the card's scale, which the sum must reach
+ * @param phase   which decision point it is
+ * @param counts  what the solve counted, absent before the flop
+ */
+function uthWorkedFor(
+  action        ,
+  value        ,
+  phase                              ,
+  counts                       ,
+)                 {
+  if (action === 'fold') return uthWithDigits({ action, kind: 'uthFold', value });
+  if (!counts) return null;
+
+  if (phase === 'river' && action === 'raise1x') {
+    return uthWithDigits({
+      action,
+      kind: 'uthRiverPlay',
+      value,
+      wins: counts.wins,
+      ties: counts.ties,
+      losses: counts.losses,
+      outcomes: counts.outcomes,
+      // What a win pays and what a loss costs, on average, counting all three
+      // bets. Taken from the solve's own sums, so they cannot disagree with it.
+      winPay: counts.wins > 0 ? counts.winUnits / counts.wins : 0,
+      losePay: counts.losses > 0 ? -counts.lossUnits / counts.losses : 0,
+    });
+  }
+
+  if (phase === 'flop' && action === 'raise2x') {
+    return uthWithDigits({
+      action,
+      kind: 'uthFlopPlay',
+      value,
+      wins: counts.wins,
+      ties: counts.ties,
+      losses: counts.losses,
+      outcomes: counts.outcomes,
+      winPay: counts.wins > 0 ? counts.winUnits / counts.wins : 0,
+      losePay: counts.losses > 0 ? -counts.lossUnits / counts.losses : 0,
+    });
+  }
+
+  if (phase === 'flop' && action === 'check' && counts.boards !== undefined) {
+    const boards = counts.boards;
+    const playBoards = counts.checkPlayBoards ?? 0;
+    return uthWithDigits({
+      action,
+      kind: 'uthFlopCheck',
+      value,
+      boards,
+      playBoards,
+      foldBoards: boards - playBoards,
+      playValue: playBoards > 0 ? (counts.checkPlayTotal ?? 0) / playBoards : 0,
+    });
+  }
+
+  return null;
+}
+
+/**
+ * What an action puts out, what it leaves at risk, and what comes back — in
+ * chips, at the Ante this hand is being played for.
+ *
+ * `back` is the honest one and the reason the three are shown together: it is
+ * what is at risk plus what the decision is worth, so folding at the river
+ * reads two chips at risk and nothing coming back, which is what folding is.
+ */
+function uthMoneyFor(
+  action        ,
+  ev        ,
+  bet        ,
+)                                               {
+  const multiple = action === 'fold' ? 0 : (PLAY_MULTIPLE[action] ?? 0);
+  const risk = (UTH_STAKE + multiple) * bet;
+  return {
+    puts: multiple * bet,
+    risk,
+    back: risk + ev * bet,
+  };
+}
+
+/** The scale behind the pre-flop figure: every board, every dealer holding. */
+const PREFLOP_OUTCOMES = 2_097_572_400;
+
+/** Break-even on the card's scale, for anything that needs to name it. */
+const UTH_EVEN = returned(0, UTH_STAKE);
+
 /* ===== packages/trainer-web/src/figure.ts ===== */
 /**
  * How a figure is written in the prose the sessions compose (round 8).
@@ -12244,6 +12681,7 @@ function updateUthRating(
 
 
 
+
 /*
  * Named for the game rather than generically. The shared build folds every
  * module into one scope, and `session.ts` and `explain.ts` already declare
@@ -12290,13 +12728,13 @@ const ACTIONS                                                                  =
 const UTH_ACTIONS = Object.keys(ACTIONS)               ;
 const TIERS                 = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
 
-/**
- * What is already at risk at every Ultimate decision: the Ante and the Blind,
- * which are equal, mandatory and both forfeited by folding. The engine quotes
- * its EVs in units of the ante and folding is exactly −2, so this is the stake
- * round 13's figures are per unit of.
+/*
+ * What is already at risk at every Ultimate decision — the Ante and the Blind,
+ * which are equal, mandatory and both forfeited by folding — now lives in
+ * `uth-worked.ts` beside the arithmetic that divides by it. The engine quotes
+ * its EVs in units of the ante and folding is exactly −2, so `UTH_STAKE` is the
+ * stake round 13's figures are per unit of.
  */
-const UTH_STAKE = 2;
 
 /** Dealer holdings the river solve enumerates: 45 unseen cards, taken two at a time. */
 const UTH_DEALER_HANDS = 990;
@@ -12357,8 +12795,21 @@ function wholePercents(counts                   )           {
   return floors;
 }
 
-/** The one Trips paytable offered (round 11): paytable I, 3-4-7-8-30-40-50, California's UTH-03. */
-const UTH_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0] ;
+/**
+ * The Trips paytable this table is dealing (round 11, made changeable in round 19).
+ *
+ * Paytable I — 3-4-7-8-30-40-50, California's UTH-03 — is the default and was
+ * the only one offered while there was no panel to change it in.
+ *
+ * WHY THIS ONE MAY BE A SETTING AND THE BLIND PAYTABLE MAY NOT. Trips is settled
+ * on the player's own seven cards and the dealer is irrelevant to it: no solver
+ * reads it, no graded decision depends on it, and so no difficulty and no rating
+ * can move when it changes. The Blind paytable is the opposite — `solveRiver`,
+ * `solveFlop` and the offline pre-flop job all take it, so changing it would
+ * change every EV in the game, and the pre-flop table was solved against the
+ * standard one and no other. `preflop-table.ts` says so in its own header.
+ */
+const DEFAULT_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0] ;
 
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
@@ -12430,14 +12881,30 @@ function uthPerfectPlayEdgePercent()         {
                     
                      
                  
-                                                                                 
-                                                                                 
+     
+                                                                                
+                                                                               
+                                                                           
+     
+                 
+                      
+                  
+               
+                  
+                                                        
+     
                                                                        
             
                   
                      
                  
                            
+                                                                                            
+                                                  
+                                                                                      
+                
+                                                                                       
+                         
                                                                               
     
                                                               
@@ -12512,6 +12979,8 @@ function uthPerfectPlayEdgePercent()         {
                            
      
                   
+                                                                                       
+                      
      
                                                                                
                                                                           
@@ -12591,6 +13060,11 @@ class UthSession {
    * and it stays for the next hand like the Ante.
    */
           trips           = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+  /**
+   * Which Trips paytable this table is dealing (round 19). A setting rather
+   * than a constant, and safe to be one: see `DEFAULT_TRIPS_PAYTABLE`.
+   */
+          tripsPaytable = DEFAULT_TRIPS_PAYTABLE;
   /** The Trips bet on the felt for the hand being played; 0 for none. */
           handTrips = 0;
   /** The last settled hand's Trips, for its settlement line. */
@@ -12716,7 +13190,7 @@ class UthSession {
        */
       let trips                                               ;
       if (this.handTrips > 0) {
-        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, UTH_TRIPS_PAYTABLE);
+        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, this.tripsPaytable);
         trips = { bet: this.handTrips, multiple };
         this.chips = { ...this.chips, stack: roundChips(this.chips.stack + this.handTrips * (1 + multiple)) };
         this.tripsHands++;
@@ -12881,6 +13355,7 @@ class UthSession {
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
       rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
+      tripsTable: this.tripsPaytable.id,
       trips: {
         bet: this.trips.bet,
         lastBet: this.trips.lastBet,
@@ -12945,6 +13420,8 @@ class UthSession {
       };
     }
     this.ratingAtDeal = { ...this.rating };
+    const savedTable = TRIPS_PAYTABLES.find((table) => table.id === s.tripsTable);
+    if (savedTable) this.tripsPaytable = savedTable;
     const trips = s.trips                                                            ;
     if (trips && typeof trips === 'object') {
       const bet = typeof trips.bet === 'number' && (trips.bet === 0 || validBet(trips.bet)) ? trips.bet : 0;
@@ -12967,6 +13444,31 @@ class UthSession {
       .slice(0, UTH_HISTORY_KEPT);
   }
 
+  /**
+   * Change the Trips paytable (round 19).
+   *
+   * Nothing graded moves: Trips is settled on the player's own seven cards and
+   * no solver reads it, so the rating, the accuracy and every EV on the card
+   * are the same figures before and after. What does not survive is the Trips
+   * row of the Stats: what the bet has cost this player is measured against one
+   * paytable's house edge, and a figure averaged over two of them would measure
+   * nothing. So those three counters start again, and nothing else does.
+   *
+   * Between hands only, like every other change to the table.
+   */
+  setTripsPaytable(id        )          {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') return false;
+    const table = TRIPS_PAYTABLES.find((entry) => entry.id === id);
+    if (!table || table.id === this.tripsPaytable.id) return false;
+    this.tripsPaytable = table;
+    this.tripsHands = 0;
+    this.tripsWagered = 0;
+    this.tripsNet = 0;
+    this.tripsNoteHand = null;
+    return true;
+  }
+
           reset()       {
     this.chips = newChipBook();
     this.handBet = 1;
@@ -12986,6 +13488,8 @@ class UthSession {
     this.rating = newRating('basic');
     this.ratingAtDeal = newRating('basic');
     this.lastRatingDelta = null;
+    // The paytable is the table's, not the session's, so a reset leaves it alone
+    // and `restore` sets it from the saved record when there is one.
     this.trips = { stack: 0, bet: 0, lastBet: 0, placed: [] };
     this.handTrips = 0;
     this.lastTrips = null;
@@ -13010,6 +13514,28 @@ class UthSession {
       dealerRevealed: table.dealerRevealed,
       board: table.board.map(pokerCardView),
       boardHidden: inHand ? 5 - table.board.length : 0,
+      /*
+       * What each seat is holding, in words, under its name (round 19; round
+       * 17's treatment on the Blackjack table, same principle).
+       *
+       * The player's from the flop on, because before it there are two cards
+       * and no five-card hand to name. The dealer's only once his cards are
+       * turned over, exactly as his total is withheld on the other table. The
+       * five ranks ride along for the showdown, where both hands are ringed and
+       * a shared board card carries both marks, so "which five are mine" is the
+       * one moment the list earns its space.
+       */
+      seats: {
+        you:
+          inHand && table.board.length >= 3
+            ? this.handWords([...table.hole, ...table.board])
+            : null,
+        dealer:
+          table.dealerRevealed && table.board.length >= 3
+            ? this.handWords([...table.dealerHole, ...table.board])
+            : null,
+        showFive: settled,
+      },
       // Notation for the tooltip; words for the player.
       holeClass: inHand ? this.table.holeClass : null,
       holeWords: inHand ? this.classWords(this.table.holeClass) : null,
@@ -13031,6 +13557,35 @@ class UthSession {
       stats: this.stats,
       // The floor under the effective edge, as the tooltip quotes it.
       rulesEdge: iso(`${uthPerfectPlayEdgePercent().toFixed(2)}%`),
+      /*
+       * What the panel behind "Rules" states and what it lets a player change
+       * (round 19).
+       *
+       * One control, and it is the Trips paytable. The Blind paytable is stated
+       * and not offered: every EV in the game is solved against it, and the
+       * pre-flop table was computed against the standard one over two billion
+       * outcomes a class. The table limits are stated for the same reason they
+       * are on the other table — they are the rules, and §10.1 says the rules
+       * are visible.
+       */
+      rules: {
+        blindName: t(this.locale, 'uth.blind.standard'),
+        blindNote: t(this.locale, 'uth.blind.fixed'),
+        limits: { ...TABLE_LIMITS },
+        trips: this.tripsPaytable.id,
+        tripsOptions: TRIPS_PAYTABLES.map((table) => ({
+          id: table.id,
+          name: t(this.locale, `uth.trips.${table.id}`),
+          // Every payout, so the choice is a fact and not a name.
+          pays: iso(
+            [table.threeOfAKind, table.straight, table.flush, table.fullHouse, table.fourOfAKind, table.straightFlush, table.royalFlush]
+              .map((multiple) => `${multiple}`)
+              .join(' · '),
+          ),
+          // And what it costs, worked out for that paytable rather than quoted.
+          edge: iso(`${analyseTrips(table).houseEdgePercent.toFixed(2)}%`),
+        })),
+      },
       legalActions: table.legalActions.map((action) => ({
         action,
         label: t(this.locale, ACTIONS[action].label),
@@ -13051,9 +13606,9 @@ class UthSession {
       tripsStats: {
         hands: this.tripsHands,
         wagered: this.tripsWagered,
-        expectedCost: roundChips((this.tripsWagered * analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent) / 100),
+        expectedCost: roundChips((this.tripsWagered * analyseTrips(this.tripsPaytable).houseEdgePercent) / 100),
         net: this.tripsNet,
-        edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`),
+        edge: iso(`${analyseTrips(this.tripsPaytable).houseEdgePercent.toFixed(2)}%`),
       },
       settlement:
         settled && table.settlement
@@ -13090,7 +13645,7 @@ class UthSession {
    * `analyseTrips` works it out exactly under the default paytable, 3.50%.
    */
           howTo()           {
-    const trips = analyseTrips(TRIPS_PAYTABLES[0] );
+    const trips = analyseTrips(this.tripsPaytable);
     return [
       t(this.locale, 'uth.howto.1'),
       t(this.locale, 'uth.howto.2'),
@@ -13131,6 +13686,45 @@ class UthSession {
   }
 
   /**
+   * One hand named, with the five cards that make it and their ranks in
+   * playing order — extracted in round 19 so the seat headers and the
+   * showdown lines cannot drift apart: both call this.
+   *
+   * `bestFive` asks the same evaluator the settlement was paid on, so the cards
+   * ringed on the felt, the ranks in the header and the hand in words are one
+   * answer written three ways.
+   */
+          handWords(cards        )                                                                 {
+    /*
+     * Five cards on the flop, seven at the river. `bestFive` answers which five
+     * of seven scored the hand; with five there is nothing to choose, and
+     * `evaluateCards` is the same evaluator asked about the five directly — so
+     * the flop's header and the river's come from one source either way.
+     */
+    const best =
+      cards.length === 7
+        ? bestFive(cards)
+        : { value: evaluateCards(cards), cards: [...cards] };
+    const category = categoryOf(best.value);
+    const counts = new Map                ();
+    for (const card of best.cards) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
+    const ordered = [...best.cards].sort((a, b) => {
+      const byCount = counts.get(rankOf(b))  - counts.get(rankOf(a)) ;
+      return byCount !== 0 ? byCount : rankOf(b) - rankOf(a);
+    });
+    // A wheel reads 5-4-3-2-A, the way it is played.
+    const ranks = ordered.map((card) => rankOf(card));
+    const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
+    const shown = wheel ? [...ranks.slice(1), 12] : ranks;
+    return {
+      phrase: this.handPhrase(category, significantRanks(best.value)),
+      five: shown.map(rankSymbol).join('-'),
+      cards: best.cards,
+      value: best.value,
+    };
+  }
+
+  /**
    * Both final hands, named, with the five cards that make each.
    *
    * `bestFive` asks the same evaluator which five of the seven scored the hand,
@@ -13141,24 +13735,12 @@ class UthSession {
     const L = this.locale;
     const iso = isolateFor(L);
     const describe = (cards        , key        ) => {
-      const best = bestFive(cards);
-      const category = categoryOf(best.value);
-      const counts = new Map                ();
-      for (const card of best.cards) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
-      const ordered = [...best.cards].sort((a, b) => {
-        const byCount = counts.get(rankOf(b))  - counts.get(rankOf(a)) ;
-        return byCount !== 0 ? byCount : rankOf(b) - rankOf(a);
-      });
-      // A wheel reads 5-4-3-2-A, the way it is played.
-      const ranks = ordered.map((card) => rankOf(card));
-      const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
-      const shown = wheel ? [...ranks.slice(1), 12] : ranks;
-      const phrase = this.handPhrase(category, significantRanks(best.value));
+      const hand = this.handWords(cards);
       return {
-        words: t(L, key, { hand: phrase, five: iso(shown.map(rankSymbol).join('-')) }),
-        cards: best.cards,
-        value: best.value,
-        phrase,
+        words: t(L, key, { hand: hand.phrase, five: iso(hand.five) }),
+        cards: hand.cards,
+        value: hand.value,
+        phrase: hand.phrase,
       };
     };
     const player = describe([...hole, ...board], 'uth.show.you');
@@ -13303,6 +13885,14 @@ class UthSession {
         label: this.label(action),
         ev: record.evByAction[action] ?? 0,
         value: returned(record.evByAction[action] ?? 0, UTH_STAKE),
+        /*
+         * And the same action in chips (round 19, Idan's ask). What Ultimate
+         * hides is not the odds, it is how much is on the table: 4x is an Ante,
+         * a Blind and four more — six units — while a check is two. `back` is
+         * what is at risk plus what the choice is worth, so folding at the
+         * river reads two chips at risk and nothing coming back.
+         */
+        money: uthMoneyFor(action, record.evByAction[action] ?? 0, this.handBet),
       }))
       .sort((a, b) => b.ev - a.ev);
 
@@ -13338,6 +13928,24 @@ class UthSession {
         scaleMax: RETURN_SCALE_MAX,
         best: ranked[0]?.value ?? 0,
         equivalent: equivalentGroups(ranked),
+        /*
+         * One worked line per action, each rebuilding its own figure exactly —
+         * Blackjack's round 15 rule, arriving here in round 19. The river and
+         * the flop counted something on the way to the grade, so both can be
+         * said forward; before the flop the EVs are a lookup and there is
+         * nothing counted to show, so those actions carry no line rather than a
+         * line derived backwards from the answer.
+         */
+        worked: ranked.map((row) => uthWorkedFor(row.action, row.value, phase, evaluation.counts                         )),
+        /* What the whole decision is worth in chips, for the money lines. */
+        bet: this.handBet,
+        /*
+         * The size of the pre-flop answer (round 19). Every board against every
+         * dealer holding, for one pair of hole cards — the figure is a lookup
+         * because this cannot be run while somebody waits. Advanced only; the
+         * page decides, as it does with every other level.
+         */
+        scale: phase === 'preflop' ? PREFLOP_OUTCOMES : null,
         // The river is the one decision whose odds are exact and countable, so
         // it is the one that can show the player what is behind the figure.
         example:
@@ -13544,7 +14152,7 @@ class UthSession {
     }
     if (costNote) {
       out.lines.push(
-        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`) }),
+        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(this.tripsPaytable).houseEdgePercent.toFixed(2)}%`) }),
       );
     }
     return out;
@@ -13843,7 +14451,7 @@ function analyse(request                 )          {
 /* Screen markup, lifted from the pages the local app serves. */
 const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <!--\n          The badge states the rules; it is not a control (§10.1). It was a\n          second line on the felt, printed on every hand in both phases, saying\n          what the name above it already half said — so round 17 moved it in\n          here, where the switches that change it are, and left one line on the\n          table. The link beside it opens nothing new: it is the anchor the\n          restrictions below answer to.\n        -->\n        <p class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </p>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n        <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
-const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n            <!-- The rules are a statement, as on the Blackjack table. There is one\n           paytable and it is the one the pre-flop table was solved against, so\n           nothing here offers to change it. -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n          <span class=\"rules-badge\" data-i18n=\"uth.rulesLine\">Blind pays a straight or better · dealer qualifies with a pair</span>\n        </div>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <!--\n            How much the app explains (round 14). This table has no rule panel\n            of its own — one paytable, nothing to change — so the one control\n            that is not a rule lives here, where a player looks for it.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
+const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n      <!--\n        The rules are a statement (§10.1), and since round 19 there is a door\n        beside them: the Trips pay table can be chosen, and the language and the\n        level live behind it, where a player looks for them on the other table.\n        The Blind pay table is stated inside and is not a control — every figure\n        the trainer shows was solved against it.\n      -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n        </div>\n        <button class=\"link\" id=\"uth-open-rules\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <!-- What he is holding, in words, once his cards are turned over —\n               round 17's treatment of his total on the Blackjack table. -->\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span><span class=\"seat-hand\" id=\"uth-dealer-hand\"></span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span><span class=\"seat-hand\" id=\"uth-you-hand\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"uth-rules\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n\n          <!-- Stated, not offered. The note says why, in one sentence. -->\n          <p class=\"rules-sub\"><span class=\"rules-badge\" id=\"uth-blind-line\"></span></p>\n          <p class=\"muted fine\" id=\"uth-blind-note\"></p>\n\n          <h3 class=\"sub-title\" data-i18n=\"uth.rules.trips\">Trips pay table</h3>\n          <div id=\"uth-trips-list\"></div>\n          <p class=\"muted fine\" id=\"uth-trips-note\"></p>\n\n          <p class=\"muted fine\" id=\"uth-limits-line\"></p>\n\n          <!--\n            Not rules: the language and how much the app explains. They were\n            behind \"How to play\" while this table had no panel; they belong\n            here, in the same place as on the Blackjack table.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
@@ -14396,6 +15004,25 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
   const figure = (value) => window.EVFigure.ret(value);
 
   /**
+   * A count, grouped, and kept in one piece inside right-to-left text.
+   *
+   * Ultimate's worked lines are built on counts — 990 dealer hands, 1,070,190
+   * endings — and an ungrouped seven-digit number is not a number a reader can
+   * take in. The isolate is the same treatment every other figure gets in
+   * Hebrew: without it the bidirectional algorithm can hand a neighbouring
+   * comma or minus to the wrong side.
+   */
+  const count = (value) => {
+    if (typeof value !== 'number') return undefined;
+    const text = String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
+  };
+
+  /** A chip figure, by the one figure rule, so the money lines read like the rail. */
+  const chips = (value) =>
+    window.EVChips ? window.EVChips.figure(value) : String(Math.round(value * 100) / 100);
+
+  /**
    * The help copy's own emphasis and figures, marked up the way the reveal's
    * steps are: `**` around the words that carry the point, numbers set in the
    * display face. Engine copy only — nothing a player typed reaches here — and
@@ -14589,6 +15216,12 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
       const signed = Number(text) === 0 ? `0.${'0'.repeat(digits)}` : `${value < 0 ? '−' : '+'}${text}`;
       return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${signed}⁩` : signed;
     };
+    /** A magnitude: no sign, because the sentence around it carries the sign. */
+    const amount = (value) => {
+      if (typeof value !== 'number') return undefined;
+      const text = Math.abs(value).toFixed(digits);
+      return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
+    };
     const params = {
       action: row.label,
       // The right-hand side is the figure on the bar, written the way the bar
@@ -14602,6 +15235,22 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
       oneCard: money(work.oneCard),
       perHand: money(work.perHand),
       ten: pct(work.ten),
+      // Ultimate's terms (round 19): counts of endings, and what one of them
+      // pays. `winPay` and `losePay` are averages over the solve's own sums, so
+      // the line is the arithmetic the grade came from.
+      wins: count(work.wins),
+      ties: count(work.ties),
+      losses: count(work.losses),
+      outcomes: count(work.outcomes),
+      boards: count(work.boards),
+      playBoards: count(work.playBoards),
+      foldBoards: count(work.foldBoards),
+      // What a win pays and what a loss costs are magnitudes: the sum already
+      // adds the first and subtracts the second, and "− 246 × +3.000" asks a
+      // reader to hold two signs for one quantity.
+      winPay: amount(work.winPay),
+      losePay: amount(work.losePay),
+      playValue: money(work.playValue),
     };
 
     const holder = document.createElement('div');
@@ -14619,6 +15268,60 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
       holder.appendChild(line);
     }
     return holder;
+  }
+
+  /**
+   * The same decision in chips (round 19).
+   *
+   * Idan's observation, and it is the missing half of the card: in Ultimate the
+   * unclear part is not the odds, it is how much is on the table. Raising 4x is
+   * an Ante, a Blind and four more — six units — and a check is two. So each
+   * action states what it puts out now, what is at risk once it has, and what
+   * comes back on average, in the chips this hand is being played for.
+   *
+   * Nothing here is computed in the page: the session sends all three, because
+   * a figure worked out beside another figure is how two numbers on one screen
+   * come to disagree.
+   */
+  function moneyTable(feedback) {
+    const rows = (feedback.ranked || []).filter((row) => row && row.money);
+    if (rows.length === 0) return null;
+
+    const box = document.createElement('section');
+    box.className = 'money';
+    const title = document.createElement('p');
+    title.className = 'money-title';
+    title.textContent = T('ret.money.title');
+    box.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'money-grid';
+    const cell = (text, className, column, row) => {
+      const node = document.createElement('span');
+      node.className = className;
+      node.textContent = text;
+      node.style.gridColumn = String(column);
+      node.style.gridRow = String(row);
+      grid.appendChild(node);
+    };
+    cell('', 'money-head', 1, 1);
+    [T('ret.money.puts'), T('ret.money.risk'), T('ret.money.back')].forEach((head, index) => {
+      cell(head, 'money-head', index + 2, 1);
+    });
+    rows.forEach((row, index) => {
+      const line = index + 2;
+      cell(row.label, 'money-name' + (row.action === feedback.chosen ? ' chosen' : ''), 1, line);
+      cell(chips(row.money.puts), 'money-fig', 2, line);
+      cell(chips(row.money.risk), 'money-fig', 3, line);
+      cell(chips(row.money.back), 'money-fig money-back', 4, line);
+    });
+    box.appendChild(grid);
+
+    const note = document.createElement('p');
+    note.className = 'money-note';
+    rich(note, T('ret.money.note'));
+    box.appendChild(note);
+    return box;
   }
 
   /**
@@ -14699,6 +15402,25 @@ const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rule
     };
     const note = sameNote(returns.equivalent, labelOf);
     if (note) section.appendChild(note);
+
+    const money = moneyTable(feedback);
+    if (money) section.appendChild(money);
+
+    /*
+     * How big the answer is (round 19, Ultimate's pre-flop figure).
+     *
+     * A lookup with nothing behind it on screen reads like an opinion. This is
+     * the number that makes it a computation: two billion endings for one pair
+     * of hole cards, run once because it cannot be run while somebody waits.
+     * Advanced only — it belongs with the breakdown, and a beginner is not
+     * helped by it.
+     */
+    if (returns.scale && window.EVLevel && window.EVLevel.breakdown()) {
+      const scale = document.createElement('p');
+      scale.className = 'ret-scale';
+      rich(scale, T('ret.scale', { outcomes: count(returns.scale) }));
+      section.appendChild(scale);
+    }
 
     const help = helpPanel(feedback, { ...opts, helpId });
     let open = helpOpen();
@@ -17748,6 +18470,7 @@ function uthRender() {
   el('uth-board').replaceChildren(...board);
 
   el('uth-hole').replaceChildren(...view.hole.map(uthCard));
+  uthSeatHands(view);
   /*
    * At showdown, ring the five cards that make each hand: gold for yours, blue
    * for the dealer's, with equal weight. A board card in both hands carries
@@ -17769,7 +18492,43 @@ function uthRender() {
   uthFitCard();
   uthRenderStats(view);
   uthRenderActions();
+  // While the panel is open the radio that was just pressed, and what it costs,
+  // have to say what the session now holds rather than what it held.
+  if (el('uth-rules') && el('uth-rules').open) uthRenderRules(view);
   if (uthMoreBelow) uthMoreBelow.update();
+}
+
+/**
+ * What each seat is holding, under its name (round 19).
+ *
+ * Round 17 put the total in the seat header on the Blackjack table and the two
+ * tables have read differently ever since. This is the same thing in the game
+ * that has hands instead of totals: the category, which is what the hand *is*,
+ * and — at showdown only — the five ranks that make it.
+ *
+ * The list is held back until then on purpose. While a hand is live the gold
+ * ring already says which cards are yours and nothing competes with it; at
+ * showdown both hands are ringed and a shared board card carries both marks at
+ * once, which is the one moment "which five are mine" is worth writing out.
+ *
+ * The dealer's line waits for his cards to be turned over, exactly as his total
+ * does on the other table. Nothing here says anything about the decision.
+ */
+function uthSeatHands(view) {
+  const seats = view.seats || {};
+  const write = (id, hand) => {
+    const node = el(id);
+    if (!node) return;
+    if (!hand) {
+      node.textContent = '';
+      node.hidden = true;
+      return;
+    }
+    node.hidden = false;
+    node.textContent = seats.showFive ? ` · ${hand.phrase} · ${hand.five}` : ` · ${hand.phrase}`;
+  };
+  write('uth-you-hand', seats.you);
+  write('uth-dealer-hand', seats.dealer);
 }
 
 // --- The strip, its tooltips, the hand log and How to play --------------------
@@ -17901,6 +18660,74 @@ function uthOpenHowTo() {
 }
 
 el('uth-open-howto')?.addEventListener('click', uthOpenHowTo);
+
+/**
+ * The rule panel (round 19).
+ *
+ * One control and two statements. The control is the Trips pay table: Trips is
+ * settled on the player's own seven cards, no solve reads it, and so nothing
+ * graded or rated can move when it changes — which is why this panel, unlike
+ * the Blackjack one, starts no new session. The statements are the Blind pay
+ * table, which cannot be a control because every figure in the game was solved
+ * against it, and the table limits.
+ *
+ * Every figure below is the session's: the payouts, the house edge of each pay
+ * table and the limits all arrive in the view, worked out where the rules are.
+ */
+function uthRenderRules(view) {
+  const rules = view.rules;
+  if (!rules) return;
+  const blind = el('uth-blind-line');
+  if (blind) blind.textContent = rules.blindName;
+  const note = el('uth-blind-note');
+  if (note) uthRich(note, rules.blindNote);
+  const limits = el('uth-limits-line');
+  if (limits) {
+    limits.textContent = T('uth.rules.limits', {
+      min: window.EVChips ? window.EVChips.figure(rules.limits.min) : rules.limits.min,
+      max: window.EVChips ? window.EVChips.figure(rules.limits.max) : rules.limits.max,
+    });
+  }
+  const tripsNote = el('uth-trips-note');
+  if (tripsNote) uthRich(tripsNote, T('uth.rules.tripsNote'));
+
+  const list = el('uth-trips-list');
+  if (!list) return;
+  list.replaceChildren();
+  const legend = document.createElement('p');
+  legend.className = 'muted fine';
+  legend.textContent = T('uth.rules.pays');
+  list.appendChild(legend);
+  for (const option of rules.tripsOptions) {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'uth-trips';
+    input.value = option.id;
+    input.checked = option.id === rules.trips;
+    // Between hands only, like every other change to a table.
+    input.disabled = view.phase !== 'idle' && view.phase !== 'settled';
+    input.addEventListener('change', () => {
+      if (input.checked) void uthSend('/api/uth/rules', { trips: option.id });
+    });
+    const text = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = option.name;
+    const pays = document.createElement('small');
+    // What it pays, then what it costs — both facts, neither an opinion.
+    pays.textContent = `${option.pays} · ${T('uth.rules.costs', { edge: option.edge })}`;
+    text.append(name, pays);
+    label.append(input, text);
+    list.appendChild(label);
+  }
+}
+
+el('uth-open-rules')?.addEventListener('click', () => {
+  if (uthState.view) uthRenderRules(uthState.view);
+  el('uth-rules').showModal();
+  if (window.EVCount) window.EVCount.bump('rules');
+});
 uthPinStrip();
 
 function uthRenderRail(view) {
@@ -18064,12 +18891,9 @@ function uthRenderCommentary(view) {
     result.className = 'uth-result uth-late';
     result.hidden = true;
     if (view.showdown) {
-      for (const line of [view.showdown.player.words, view.showdown.dealer.words]) {
-        const p = document.createElement('p');
-        p.className = 'uth-hand-name';
-        p.textContent = line;
-        result.appendChild(p);
-      }
+      // The two hands themselves are in the seat headers now (round 19), where
+      // each sits beside the cards it is made of. Repeating them here was the
+      // same sentence twice on one screen.
       // Who won, by the cards: with the two hands, after the grade, quieter than it.
       const winner = document.createElement('p');
       winner.className = 'uth-winner';
@@ -18119,15 +18943,16 @@ function uthRenderCard(view) {
   verdict.textContent = feedback.verdict;
   box.appendChild(verdict);
 
-  if (feedback.youChose) {
-    const did = document.createElement('p');
-    did.className = 'did';
-    did.textContent = feedback.youChose;
-    box.appendChild(did);
-  }
-
-  // The same block Blackjack draws, on the same fixed scale (round 13). Here a
-  // unit staked is the Ante and the Blind together, so folding reads 0.000.
+  /*
+   * The same block Blackjack draws, on the same fixed scale (round 13) — and
+   * in round 17's order, which Ultimate had not been given (round 19).
+   *
+   * The rows come directly under the grade, and the line that comments on them
+   * — "you chose check; best was raise 2x" — goes below. A clipped row reads as
+   * a broken app; a clipped sentence reads as a sentence with more under it.
+   * Here a unit staked is the Ante and the Blind together, so folding reads
+   * 0.000.
+   */
   box.appendChild(
     window.EVReturns.block(feedback, {
       game: 'uth',
@@ -18135,6 +18960,13 @@ function uthRenderCard(view) {
       helpId: 'uth-returns-help',
     }),
   );
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    box.appendChild(did);
+  }
 
   // The reasoning, the notes and the result are commentary: they belong below
   // the table, not in the dock with the buttons (round 12). See uthRenderCommentary.
@@ -19862,6 +20694,14 @@ async function api(path, body) {
     }
     case '/api/uth/prepare':
       return uthSession.prepare();
+
+    /*
+     * The Trips paytable (round 19). Saved with the record, because it is the
+     * table this player sat down at; graded nothing, so nothing restarts.
+     */
+    case '/api/uth/rules':
+      if (typeof b.trips === 'string' && uthSession.setTripsPaytable(b.trips)) saveProgressLocally();
+      return uthSession.view;
 
     case '/api/deal':
       session.deal();

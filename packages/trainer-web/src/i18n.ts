@@ -302,6 +302,22 @@ const EN: Catalogue = {
   'work.insurance.sum': '3 × {ten} = {value}',
   'work.decline': 'Declining puts nothing on the side bet, so there is nothing there to lose and nothing to come back:',
   'work.decline.sum': '{value}',
+  // --- Ultimate's own worked lines (round 19) ---
+  'work.uthRiverPlay': 'Every card is out, so nothing here is estimated. Against the **{outcomes}** hands the dealer can be holding you beat **{wins}**, tie {ties} and lose to {losses}. A win here pays **{winPay}** on average — the Play bet, the Ante when the dealer qualifies, and the Blind — and a loss costs **{losePay}**. The average of all that is added to the 1.000 the stake itself comes back as:',
+  'work.uthRiverPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopPlay': 'Choosing **{action}** plays this hand through every turn and river and against every hand the dealer can hold — **{outcomes}** endings in all. You finish ahead in **{wins}** of them, level in {ties} and behind in {losses}. Ahead pays **{winPay}** on average, behind costs **{losePay}**, and their average joins the 1.000 the stake comes back as:',
+  'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopCheck': 'Checking keeps the river decision, and the river is then played properly. Of the **{boards}** ways the turn and river can come, **{playBoards}** are worth betting — **{playValue}** on average — and on the other **{foldBoards}** the right move there is to fold for −2. Their average joins the 1.000 the stake comes back as:',
+  'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
+  'work.uthFold.sum': '{value}',
+  // --- The same decision in chips, which is what Ultimate hides (round 19) ---
+  'ret.money.title': 'The same choices in chips',
+  'ret.money.puts': 'puts out',
+  'ret.money.risk': 'at risk',
+  'ret.money.back': 'comes back',
+  'ret.money.note': 'The Ante and the Blind are already on the table, so **at risk** counts them and **comes back** is what the choice is worth on average. Folding leaves two chips at risk and brings back nothing.',
+  'ret.scale': 'Before the flop nothing is solved at the table. This figure was worked out once, over **{outcomes}** endings for your two cards: every board that can come, every hand the dealer can hold behind it, all three bets settled, averaged.',
   'ret.helpLines': 'The dashed line is **1.000**. The unbroken one is where the best action reaches, so the gap between a bar and that line is what the move gives up. The scale ends at 2.0 on every hand, which is why a short best bar means a hand that was never going far.',
 
   // --- Said once, before the first hand ever played (round 13) ---
@@ -639,6 +655,20 @@ const EN: Catalogue = {
     'Keys: 4 · 3 · C before the flop, 2 · C on the flop, 1 · F on the river, N for the next hand.',
   'uth.rulesLine':
     'Blind pays a straight or better · dealer qualifies with a pair',
+  // --- The rule panel this table gained in round 19 ---
+  'uth.blind.standard':
+    'Blind pays: straight 1 · flush 3:2 · full house 3 · four of a kind 10 · straight flush 50 · royal flush 500',
+  'uth.blind.fixed':
+    'The Blind pay table is fixed, and this is the one honest reason: every figure the trainer shows was solved against it, and the pre-flop table alone took **two billion endings for each starting hand**. A second one would mean solving the game again, not flipping a switch.',
+  'uth.rules.trips': 'Trips pay table',
+  'uth.rules.tripsNote':
+    'Trips settles on your own seven cards and no solve reads it, so changing it moves nothing that is graded, rated or ranked. What it does reset is the Trips row of your stats — a cost measured against two pay tables at once measures nothing.',
+  'uth.rules.pays': 'three of a kind · straight · flush · full house · four of a kind · straight flush · royal',
+  'uth.rules.costs': 'costs {edge} of what goes on it',
+  'uth.rules.limits': 'Table limits: {min} to {max} a hand',
+  'uth.trips.trips-a': 'Pay table I',
+  'uth.trips.trips-b': 'Pay table II',
+  'uth.trips.trips-c': 'Pay table III',
   'uth.readingFlop':
     'Reading the flop…',
   'uth.h.preflop':
@@ -1191,6 +1221,22 @@ const HE: Catalogue = {
   'work.insurance.sum': '3 × {ten} = {value}',
   'work.decline': 'ויתור על הביטוח לא שם כלום בצד, ולכן אין שם מה להפסיד ואין מה שיחזור:',
   'work.decline.sum': '{value}',
+  // --- Ultimate's own worked lines (round 19) ---
+  'work.uthRiverPlay': 'כל הקלפים כבר על השולחן, ולכן אין כאן שום הערכה. מול **{outcomes}** הידיים שהדילר יכול להחזיק אתה מנצח **{wins}**, יוצא תיקו מול {ties} ומפסיד ל-{losses}. ניצחון כאן מחזיר בממוצע **{winPay}** — הימור ה-Play, האנטה כשהדילר עומד בתנאי, והבליינד — והפסד עולה **{losePay}**. הממוצע של כל זה מתווסף ל-1.000 שהוא ההימור עצמו חוזר:',
+  'work.uthRiverPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopPlay': 'בחירה ב**{action}** משחקת את היד הזאת מול כל טרן וריבר אפשריים ומול כל יד שהדילר יכול להחזיק — **{outcomes}** סיומים. אתה מסיים מלפנים ב-**{wins}** מהם, בתיקו ב-{ties} ומאחור ב-{losses}. סיום מלפנים מחזיר בממוצע **{winPay}**, סיום מאחור עולה **{losePay}**, והממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthFlopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
+  'work.uthFlopCheck': 'צ׳ק שומר את ההחלטה של הריבר, ושם משחקים נכון. מתוך **{boards}** הדרכים שבהן הטרן והריבר יכולים לצאת, ב-**{playBoards}** שווה להמר — **{playValue}** בממוצע — ובשאר **{foldBoards}** המהלך הנכון שם הוא לפרוש ב-2−. הממוצע שלהם מצטרף ל-1.000 שההימור עצמו חוזר:',
+  'work.uthFlopCheck.sum': '1 + ({playBoards} × {playValue} + {foldBoards} × −2) ÷ {boards} ÷ 2 = {value}',
+  'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
+  'work.uthFold.sum': '{value}',
+  // --- The same decision in chips, which is what Ultimate hides (round 19) ---
+  'ret.money.title': 'אותן בחירות, בציפים',
+  'ret.money.puts': 'מוציא עכשיו',
+  'ret.money.risk': 'בסיכון',
+  'ret.money.back': 'חוזר בממוצע',
+  'ret.money.note': 'האנטה והבליינד כבר על השולחן, ולכן **בסיכון** סופר גם אותם ו**חוזר בממוצע** הוא מה שהבחירה שווה. פרישה משאירה שני ציפים בסיכון ולא מחזירה כלום.',
+  'ret.scale': 'לפני הפלופ שום דבר לא נפתר ליד השולחן. המספר הזה חושב פעם אחת, על פני **{outcomes}** סיומים לשני הקלפים שלך: כל בורד שיכול לצאת, כל יד שהדילר יכול להחזיק מאחוריו, שלושת ההימורים מסודרים, והכול ממוצע.',
   'ret.helpLines': 'הקו המקווקו הוא **1.000**. הקו המלא הוא המקום שאליו מגיעה הפעולה הטובה ביותר, ולכן המרווח בין עמודה לקו הזה הוא מה שהמהלך מוותר עליו. הסקאלה נגמרת ב-2.0 בכל יד — ולכן עמודה טובה שנשארת קצרה מספרת על יד שלא היה בה הרבה מלכתחילה.',
 
   // --- Said once, before the first hand ever played (round 13) ---
@@ -1528,6 +1574,20 @@ const HE: Catalogue = {
     'מקשים: 4 · 3 · C לפני הפלופ, 2 · C בפלופ, 1 · F בריבר, N ליד הבאה.',
   'uth.rulesLine':
     'הבליינד משלם על רצף ומעלה · הדילר מתאים עם זוג',
+  // --- The rule panel this table gained in round 19 ---
+  'uth.blind.standard':
+    'הבליינד משלם: רצף 1 · פלאש 3:2 · פול האוס 3 · רביעייה 10 · רצף פלאש 50 · רויאל פלאש 500',
+  'uth.blind.fixed':
+    'טבלת התשלום של הבליינד קבועה, ויש לכך סיבה אחת אמיתית: כל מספר שהמאמן מציג נפתר מולה, והטבלה שלפני הפלופ לבדה דרשה **שני מיליארד סיומים לכל יד פתיחה**. טבלה שנייה פירושה לפתור את המשחק מחדש, לא להזיז מתג.',
+  'uth.rules.trips': 'טבלת התשלום של Trips',
+  'uth.rules.tripsNote':
+    'Trips נסגר על שבעת הקלפים שלך בלבד ואף פתרון לא קורא אותו, ולכן שינוי כאן לא מזיז שום דבר שנבדק, מדורג או מנוקד. מה שכן מתאפס היא שורת ה-Trips בסטטיסטיקה — עלות שנמדדת מול שתי טבלאות בבת אחת לא מודדת כלום.',
+  'uth.rules.pays': 'שלישייה · רצף · פלאש · פול האוס · רביעייה · רצף פלאש · רויאל',
+  'uth.rules.costs': 'עולה {edge} מכל מה שמונח עליו',
+  'uth.rules.limits': 'מגבלות השולחן: {min} עד {max} ליד',
+  'uth.trips.trips-a': 'טבלה I',
+  'uth.trips.trips-b': 'טבלה II',
+  'uth.trips.trips-c': 'טבלה III',
   'uth.readingFlop':
     'קורא את הפלופ…',
   'uth.h.preflop':

@@ -28,6 +28,18 @@ export interface RiverDecision {
   wins: number;
   ties: number;
   losses: number;
+  /**
+   * Units won across the winning holdings and lost across the losing ones, in
+   * units of the ante, with the 1x Play bet made.
+   *
+   * These are what the card's worked line is built from (round 19): a win here
+   * pays `winUnits / wins` on average — the Play bet, the Ante when the dealer
+   * qualifies, and the Blind — and a loss costs `-lossUnits / losses`. Their
+   * sum over 990 is `evPlay` exactly, so the arithmetic a player is shown comes
+   * out rather than nearly coming out.
+   */
+  winUnits: number;
+  lossUnits: number;
 }
 
 /**
@@ -67,16 +79,25 @@ export function solveRiver(
   let wins = 0;
   let ties = 0;
   let losses = 0;
+  let winUnits = 0;
+  let lossUnits = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     dealerCards[5] = unseen[i]!;
     for (let j = i + 1; j < unseen.length; j++) {
       dealerCards[6] = unseen[j]!;
       const dealerScore = evaluate7(dealerCards);
-      if (playerScore > dealerScore) wins++;
-      else if (playerScore === dealerScore) ties++;
-      else losses++;
-      total += settle(playerScore, dealerScore, RIVER_RAISE, paytable);
+      const net = settle(playerScore, dealerScore, RIVER_RAISE, paytable);
+      if (playerScore > dealerScore) {
+        wins++;
+        winUnits += net;
+      } else if (playerScore === dealerScore) {
+        ties++;
+      } else {
+        losses++;
+        lossUnits += net;
+      }
+      total += net;
       count++;
     }
   }
@@ -92,5 +113,7 @@ export function solveRiver(
     wins,
     ties,
     losses,
+    winUnits,
+    lossUnits,
   };
 }

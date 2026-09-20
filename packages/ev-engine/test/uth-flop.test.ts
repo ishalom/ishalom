@@ -144,3 +144,51 @@ test(
     }
   },
 );
+
+/*
+ * Round 19: the counts the card's worked line is built from.
+ *
+ * They are taken during the solve that was already running, so the standard is
+ * not "close" but "the same number": the units won and lost, averaged over the
+ * outcomes enumerated, must *be* the EV that grades the decision. If they ever
+ * drift, the page would show a player a sum that does not reach the figure
+ * beside it, which is the one thing these lines exist not to do.
+ */
+test('the river’s counts rebuild its EV exactly', () => {
+  for (const [hole, board] of [
+    ['Ah Ks', 'Qh Jh 5d 2c 7h'],
+    ['7c 2d', 'Ah Kd Qs 9c 4h'],
+    ['8h 8d', '8s Kd Qc 4h 2s'],
+  ] as Array<[string, string]>) {
+    const solved = solveRiver(parseCards(hole), parseCards(board), paytable);
+    assert.equal(solved.wins + solved.ties + solved.losses, 990, `${hole} | ${board}: the counts do not add up`);
+    const rebuilt = (solved.winUnits + solved.lossUnits) / 990;
+    assert.ok(
+      Math.abs(rebuilt - solved.evPlay) < 1e-12,
+      `${hole} | ${board}: ${rebuilt} from the counts, ${solved.evPlay} graded`,
+    );
+    // A win pays at least the Play bet; a loss costs at least the Play bet and the Blind.
+    if (solved.wins > 0) assert.ok(solved.winUnits / solved.wins >= 1 - 1e-12);
+    if (solved.losses > 0) assert.ok(-solved.lossUnits / solved.losses >= 2 - 1e-12);
+  }
+});
+
+test('the flop’s counts rebuild both of its EVs exactly', () => {
+  for (const [hole, flop] of [
+    ['Ah Ks', 'Qh Jh 5d'],
+    ['7c 2d', 'Ah Kd Qs'],
+    ['5h 5d', 'Ac Ks Qd'],
+  ] as Array<[string, string]>) {
+    const solved = solveFlop(parseCards(hole), parseCards(flop), paytable);
+    assert.equal(solved.wins + solved.ties + solved.losses, solved.outcomes);
+    assert.equal(solved.outcomes, 1070190);
+    assert.equal(solved.boards, 1081);
+    const play = (solved.winUnits + solved.lossUnits) / solved.outcomes;
+    assert.ok(Math.abs(play - solved.evPlay) < 1e-9, `${hole} | ${flop}: ${play} vs ${solved.evPlay}`);
+    // Checking is the river played properly: bet on most boards, fold for -2 on the rest.
+    const check =
+      (solved.checkPlayTotal + (solved.boards - solved.checkPlayBoards) * -2) / solved.boards;
+    assert.ok(Math.abs(check - solved.evCheck) < 1e-9, `${hole} | ${flop}: ${check} vs ${solved.evCheck}`);
+    assert.equal(solved.boards - solved.checkPlayBoards, Math.round(solved.riverFoldFrequency * solved.boards));
+  }
+});

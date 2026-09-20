@@ -195,6 +195,7 @@ function uthRender() {
   el('uth-board').replaceChildren(...board);
 
   el('uth-hole').replaceChildren(...view.hole.map(uthCard));
+  uthSeatHands(view);
   /*
    * At showdown, ring the five cards that make each hand: gold for yours, blue
    * for the dealer's, with equal weight. A board card in both hands carries
@@ -216,7 +217,43 @@ function uthRender() {
   uthFitCard();
   uthRenderStats(view);
   uthRenderActions();
+  // While the panel is open the radio that was just pressed, and what it costs,
+  // have to say what the session now holds rather than what it held.
+  if (el('uth-rules') && el('uth-rules').open) uthRenderRules(view);
   if (uthMoreBelow) uthMoreBelow.update();
+}
+
+/**
+ * What each seat is holding, under its name (round 19).
+ *
+ * Round 17 put the total in the seat header on the Blackjack table and the two
+ * tables have read differently ever since. This is the same thing in the game
+ * that has hands instead of totals: the category, which is what the hand *is*,
+ * and — at showdown only — the five ranks that make it.
+ *
+ * The list is held back until then on purpose. While a hand is live the gold
+ * ring already says which cards are yours and nothing competes with it; at
+ * showdown both hands are ringed and a shared board card carries both marks at
+ * once, which is the one moment "which five are mine" is worth writing out.
+ *
+ * The dealer's line waits for his cards to be turned over, exactly as his total
+ * does on the other table. Nothing here says anything about the decision.
+ */
+function uthSeatHands(view) {
+  const seats = view.seats || {};
+  const write = (id, hand) => {
+    const node = el(id);
+    if (!node) return;
+    if (!hand) {
+      node.textContent = '';
+      node.hidden = true;
+      return;
+    }
+    node.hidden = false;
+    node.textContent = seats.showFive ? ` · ${hand.phrase} · ${hand.five}` : ` · ${hand.phrase}`;
+  };
+  write('uth-you-hand', seats.you);
+  write('uth-dealer-hand', seats.dealer);
 }
 
 // --- The strip, its tooltips, the hand log and How to play --------------------
@@ -348,6 +385,74 @@ function uthOpenHowTo() {
 }
 
 el('uth-open-howto')?.addEventListener('click', uthOpenHowTo);
+
+/**
+ * The rule panel (round 19).
+ *
+ * One control and two statements. The control is the Trips pay table: Trips is
+ * settled on the player's own seven cards, no solve reads it, and so nothing
+ * graded or rated can move when it changes — which is why this panel, unlike
+ * the Blackjack one, starts no new session. The statements are the Blind pay
+ * table, which cannot be a control because every figure in the game was solved
+ * against it, and the table limits.
+ *
+ * Every figure below is the session's: the payouts, the house edge of each pay
+ * table and the limits all arrive in the view, worked out where the rules are.
+ */
+function uthRenderRules(view) {
+  const rules = view.rules;
+  if (!rules) return;
+  const blind = el('uth-blind-line');
+  if (blind) blind.textContent = rules.blindName;
+  const note = el('uth-blind-note');
+  if (note) uthRich(note, rules.blindNote);
+  const limits = el('uth-limits-line');
+  if (limits) {
+    limits.textContent = T('uth.rules.limits', {
+      min: window.EVChips ? window.EVChips.figure(rules.limits.min) : rules.limits.min,
+      max: window.EVChips ? window.EVChips.figure(rules.limits.max) : rules.limits.max,
+    });
+  }
+  const tripsNote = el('uth-trips-note');
+  if (tripsNote) uthRich(tripsNote, T('uth.rules.tripsNote'));
+
+  const list = el('uth-trips-list');
+  if (!list) return;
+  list.replaceChildren();
+  const legend = document.createElement('p');
+  legend.className = 'muted fine';
+  legend.textContent = T('uth.rules.pays');
+  list.appendChild(legend);
+  for (const option of rules.tripsOptions) {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'uth-trips';
+    input.value = option.id;
+    input.checked = option.id === rules.trips;
+    // Between hands only, like every other change to a table.
+    input.disabled = view.phase !== 'idle' && view.phase !== 'settled';
+    input.addEventListener('change', () => {
+      if (input.checked) void uthSend('/api/uth/rules', { trips: option.id });
+    });
+    const text = document.createElement('span');
+    const name = document.createElement('strong');
+    name.textContent = option.name;
+    const pays = document.createElement('small');
+    // What it pays, then what it costs — both facts, neither an opinion.
+    pays.textContent = `${option.pays} · ${T('uth.rules.costs', { edge: option.edge })}`;
+    text.append(name, pays);
+    label.append(input, text);
+    list.appendChild(label);
+  }
+}
+
+el('uth-open-rules')?.addEventListener('click', () => {
+  if (uthState.view) uthRenderRules(uthState.view);
+  el('uth-rules').showModal();
+  if (window.EVCount) window.EVCount.bump('rules');
+});
 uthPinStrip();
 
 function uthRenderRail(view) {
@@ -511,12 +616,9 @@ function uthRenderCommentary(view) {
     result.className = 'uth-result uth-late';
     result.hidden = true;
     if (view.showdown) {
-      for (const line of [view.showdown.player.words, view.showdown.dealer.words]) {
-        const p = document.createElement('p');
-        p.className = 'uth-hand-name';
-        p.textContent = line;
-        result.appendChild(p);
-      }
+      // The two hands themselves are in the seat headers now (round 19), where
+      // each sits beside the cards it is made of. Repeating them here was the
+      // same sentence twice on one screen.
       // Who won, by the cards: with the two hands, after the grade, quieter than it.
       const winner = document.createElement('p');
       winner.className = 'uth-winner';
@@ -566,15 +668,16 @@ function uthRenderCard(view) {
   verdict.textContent = feedback.verdict;
   box.appendChild(verdict);
 
-  if (feedback.youChose) {
-    const did = document.createElement('p');
-    did.className = 'did';
-    did.textContent = feedback.youChose;
-    box.appendChild(did);
-  }
-
-  // The same block Blackjack draws, on the same fixed scale (round 13). Here a
-  // unit staked is the Ante and the Blind together, so folding reads 0.000.
+  /*
+   * The same block Blackjack draws, on the same fixed scale (round 13) — and
+   * in round 17's order, which Ultimate had not been given (round 19).
+   *
+   * The rows come directly under the grade, and the line that comments on them
+   * — "you chose check; best was raise 2x" — goes below. A clipped row reads as
+   * a broken app; a clipped sentence reads as a sentence with more under it.
+   * Here a unit staked is the Ante and the Blind together, so folding reads
+   * 0.000.
+   */
   box.appendChild(
     window.EVReturns.block(feedback, {
       game: 'uth',
@@ -582,6 +685,13 @@ function uthRenderCard(view) {
       helpId: 'uth-returns-help',
     }),
   );
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    box.appendChild(did);
+  }
 
   // The reasoning, the notes and the result are commentary: they belong below
   // the table, not in the dock with the buttons (round 12). See uthRenderCommentary.

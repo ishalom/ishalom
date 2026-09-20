@@ -29,6 +29,25 @@
   const figure = (value) => window.EVFigure.ret(value);
 
   /**
+   * A count, grouped, and kept in one piece inside right-to-left text.
+   *
+   * Ultimate's worked lines are built on counts — 990 dealer hands, 1,070,190
+   * endings — and an ungrouped seven-digit number is not a number a reader can
+   * take in. The isolate is the same treatment every other figure gets in
+   * Hebrew: without it the bidirectional algorithm can hand a neighbouring
+   * comma or minus to the wrong side.
+   */
+  const count = (value) => {
+    if (typeof value !== 'number') return undefined;
+    const text = String(Math.round(value)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
+  };
+
+  /** A chip figure, by the one figure rule, so the money lines read like the rail. */
+  const chips = (value) =>
+    window.EVChips ? window.EVChips.figure(value) : String(Math.round(value * 100) / 100);
+
+  /**
    * The help copy's own emphasis and figures, marked up the way the reveal's
    * steps are: `**` around the words that carry the point, numbers set in the
    * display face. Engine copy only — nothing a player typed reaches here — and
@@ -222,6 +241,12 @@
       const signed = Number(text) === 0 ? `0.${'0'.repeat(digits)}` : `${value < 0 ? '−' : '+'}${text}`;
       return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${signed}⁩` : signed;
     };
+    /** A magnitude: no sign, because the sentence around it carries the sign. */
+    const amount = (value) => {
+      if (typeof value !== 'number') return undefined;
+      const text = Math.abs(value).toFixed(digits);
+      return document.documentElement.getAttribute('dir') === 'rtl' ? `⁦${text}⁩` : text;
+    };
     const params = {
       action: row.label,
       // The right-hand side is the figure on the bar, written the way the bar
@@ -235,6 +260,22 @@
       oneCard: money(work.oneCard),
       perHand: money(work.perHand),
       ten: pct(work.ten),
+      // Ultimate's terms (round 19): counts of endings, and what one of them
+      // pays. `winPay` and `losePay` are averages over the solve's own sums, so
+      // the line is the arithmetic the grade came from.
+      wins: count(work.wins),
+      ties: count(work.ties),
+      losses: count(work.losses),
+      outcomes: count(work.outcomes),
+      boards: count(work.boards),
+      playBoards: count(work.playBoards),
+      foldBoards: count(work.foldBoards),
+      // What a win pays and what a loss costs are magnitudes: the sum already
+      // adds the first and subtracts the second, and "− 246 × +3.000" asks a
+      // reader to hold two signs for one quantity.
+      winPay: amount(work.winPay),
+      losePay: amount(work.losePay),
+      playValue: money(work.playValue),
     };
 
     const holder = document.createElement('div');
@@ -252,6 +293,60 @@
       holder.appendChild(line);
     }
     return holder;
+  }
+
+  /**
+   * The same decision in chips (round 19).
+   *
+   * Idan's observation, and it is the missing half of the card: in Ultimate the
+   * unclear part is not the odds, it is how much is on the table. Raising 4x is
+   * an Ante, a Blind and four more — six units — and a check is two. So each
+   * action states what it puts out now, what is at risk once it has, and what
+   * comes back on average, in the chips this hand is being played for.
+   *
+   * Nothing here is computed in the page: the session sends all three, because
+   * a figure worked out beside another figure is how two numbers on one screen
+   * come to disagree.
+   */
+  function moneyTable(feedback) {
+    const rows = (feedback.ranked || []).filter((row) => row && row.money);
+    if (rows.length === 0) return null;
+
+    const box = document.createElement('section');
+    box.className = 'money';
+    const title = document.createElement('p');
+    title.className = 'money-title';
+    title.textContent = T('ret.money.title');
+    box.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'money-grid';
+    const cell = (text, className, column, row) => {
+      const node = document.createElement('span');
+      node.className = className;
+      node.textContent = text;
+      node.style.gridColumn = String(column);
+      node.style.gridRow = String(row);
+      grid.appendChild(node);
+    };
+    cell('', 'money-head', 1, 1);
+    [T('ret.money.puts'), T('ret.money.risk'), T('ret.money.back')].forEach((head, index) => {
+      cell(head, 'money-head', index + 2, 1);
+    });
+    rows.forEach((row, index) => {
+      const line = index + 2;
+      cell(row.label, 'money-name' + (row.action === feedback.chosen ? ' chosen' : ''), 1, line);
+      cell(chips(row.money.puts), 'money-fig', 2, line);
+      cell(chips(row.money.risk), 'money-fig', 3, line);
+      cell(chips(row.money.back), 'money-fig money-back', 4, line);
+    });
+    box.appendChild(grid);
+
+    const note = document.createElement('p');
+    note.className = 'money-note';
+    rich(note, T('ret.money.note'));
+    box.appendChild(note);
+    return box;
   }
 
   /**
@@ -332,6 +427,25 @@
     };
     const note = sameNote(returns.equivalent, labelOf);
     if (note) section.appendChild(note);
+
+    const money = moneyTable(feedback);
+    if (money) section.appendChild(money);
+
+    /*
+     * How big the answer is (round 19, Ultimate's pre-flop figure).
+     *
+     * A lookup with nothing behind it on screen reads like an opinion. This is
+     * the number that makes it a computation: two billion endings for one pair
+     * of hole cards, run once because it cannot be run while somebody waits.
+     * Advanced only — it belongs with the breakdown, and a beginner is not
+     * helped by it.
+     */
+    if (returns.scale && window.EVLevel && window.EVLevel.breakdown()) {
+      const scale = document.createElement('p');
+      scale.className = 'ret-scale';
+      rich(scale, T('ret.scale', { outcomes: count(returns.scale) }));
+      section.appendChild(scale);
+    }
 
     const help = helpPanel(feedback, { ...opts, helpId });
     let open = helpOpen();

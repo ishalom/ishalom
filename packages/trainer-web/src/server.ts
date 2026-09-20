@@ -172,6 +172,16 @@ const server = createServer(async (request, response) => {
         case '/api/uth/prepare':
           return json(uth.prepare());
 
+        /*
+         * The Trips paytable (round 19). Not a rule the grading can see: no
+         * solver reads Trips, so nothing rated, ranked or graded moves — which
+         * is why, unlike Blackjack's rules, this one does not start a new
+         * session.
+         */
+        case '/api/uth/rules':
+          if (typeof body.trips === 'string') uth.setTripsPaytable(body.trips);
+          return json(uth.view);
+
         case '/api/player': {
           if (typeof body.name === 'string') session.setPlayerName(body.name);
           if (typeof body.mode === 'string') session.setMode(body.mode as never);

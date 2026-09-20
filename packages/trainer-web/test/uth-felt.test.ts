@@ -122,12 +122,16 @@ test('Ultimate follows Blackjack’s model: commentary below the table, the grad
   }
 });
 
-test('the winner line sits with the hands, after the grade, and quieter than it', () => {
+test('the winner line follows the grade, and is quieter than it', () => {
   const js = source('ultimate.js');
   const commentary = js.slice(js.indexOf('function uthRenderCommentary('), js.indexOf('function uthRenderCard('));
-  const names = commentary.indexOf("p.className = 'uth-hand-name'");
-  const winner = commentary.indexOf("winner.className = 'uth-winner'");
-  assert.ok(names > 0 && winner > names, 'the winner line is not after the hands');
+  assert.ok(commentary.indexOf("winner.className = 'uth-winner'") > 0, 'the winner line is gone');
+  /*
+   * Round 19 moved the two hands themselves into the seat headers, where each
+   * sits beside the cards it is made of, so the commentary no longer prints
+   * them: the same sentence twice on one screen was what it was.
+   */
+  assert.ok(!commentary.includes("'uth-hand-name'"), 'the commentary repeats the hands the headers carry');
   // The grade is in the dock, which the page lays out above the buttons and
   // after the commentary; the winner is quieter than it.
   const css = source('styles.css');

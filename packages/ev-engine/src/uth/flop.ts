@@ -46,6 +46,24 @@ export interface FlopDecision {
   /** Boards enumerated (1,081) and total outcomes (1,070,190). */
   boards: number;
   outcomes: number;
+  /**
+   * The raise branch, counted: outcomes the player wins, ties and loses across
+   * every turn, river and dealer holding, and the units won and lost on them
+   * with the 2x Play bet made. Their sum over `outcomes` is `evPlay` exactly.
+   */
+  wins: number;
+  ties: number;
+  losses: number;
+  winUnits: number;
+  lossUnits: number;
+  /**
+   * The check branch, counted: the boards on which the river is then bet, and
+   * the total value of those boards. The rest are folds worth -2 each, so
+   * `(checkPlayTotal + (boards - checkPlayBoards) * -2) / boards` is `evCheck`
+   * exactly — which is what lets the card show a sum that closes (round 19).
+   */
+  checkPlayBoards: number;
+  checkPlayTotal: number;
 }
 
 /**
@@ -78,6 +96,12 @@ export function solveFlop(
   let riverFolds = 0;
   let boards = 0;
   let outcomes = 0;
+  let wins = 0;
+  let ties = 0;
+  let losses = 0;
+  let winUnits = 0;
+  let lossUnits = 0;
+  let checkPlayTotal = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     const turn = unseen[i]!;
@@ -111,11 +135,19 @@ export function solveFlop(
           dealerCards[6] = remaining[b]!;
           const dealerScore = evaluate7(dealerCards);
           if (playerScore > dealerScore) {
-            anteAndBlind += (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+            const side = (dealerQualifies(dealerScore) ? 1 : 0) + blind;
+            anteAndBlind += side;
             net += 1;
+            wins++;
+            winUnits += side + FLOP_RAISE;
           } else if (playerScore < dealerScore) {
-            anteAndBlind += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+            const side = (dealerQualifies(dealerScore) ? -1 : 0) - 1;
+            anteAndBlind += side;
             net -= 1;
+            losses++;
+            lossUnits += side - FLOP_RAISE;
+          } else {
+            ties++;
           }
           outcomes++;
         }
@@ -129,6 +161,7 @@ export function solveFlop(
       // At the river the player takes the better of betting and folding.
       if (evRiverPlay >= FOLD_RESULT) {
         checkTotal += evRiverPlay;
+        checkPlayTotal += evRiverPlay;
       } else {
         checkTotal += FOLD_RESULT;
         riverFolds++;
@@ -148,5 +181,12 @@ export function solveFlop(
     riverFoldFrequency: riverFolds / boards,
     boards,
     outcomes,
+    wins,
+    ties,
+    losses,
+    winUnits,
+    lossUnits,
+    checkPlayBoards: boards - riverFolds,
+    checkPlayTotal,
   };
 }

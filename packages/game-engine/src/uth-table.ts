@@ -176,6 +176,29 @@ export interface UthEvaluation {
   wins?: number;
   ties?: number;
   losses?: number;
+  /**
+   * What the card's worked line is built from (round 19). Absent pre-flop,
+   * where the EVs are a table lookup and nothing was counted to produce them.
+   *
+   * Every field is a count or a sum of units taken during the solve that was
+   * already running, so the arithmetic the player is shown is the arithmetic
+   * the grade came from rather than a second, similar calculation.
+   */
+  counts?: {
+    /** Outcomes the player wins, ties and loses. */
+    wins: number;
+    ties: number;
+    losses: number;
+    /** Units won across the winning outcomes and lost across the losing ones. */
+    winUnits: number;
+    lossUnits: number;
+    /** How many outcomes are behind them: 990 on the river, 1,070,190 on the flop. */
+    outcomes: number;
+    /** Flop only: turn-and-river boards, those the river is then bet on, and their total value. */
+    boards?: number;
+    checkPlayBoards?: number;
+    checkPlayTotal?: number;
+  };
   /** How long the solve took, in milliseconds. Zero for a table lookup. */
   solveMs: number;
 }
@@ -401,6 +424,17 @@ export class UthTable {
         phase: 'flop',
         evByAction: { raise2x: solved.evPlay, check: solved.evCheck },
         riverFoldFrequency: solved.riverFoldFrequency,
+        counts: {
+          wins: solved.wins,
+          ties: solved.ties,
+          losses: solved.losses,
+          winUnits: solved.winUnits,
+          lossUnits: solved.lossUnits,
+          outcomes: solved.outcomes,
+          boards: solved.boards,
+          checkPlayBoards: solved.checkPlayBoards,
+          checkPlayTotal: solved.checkPlayTotal,
+        },
       };
     } else {
       const solved = solveRiver(this.hole, this.board, this.paytable);
@@ -410,6 +444,14 @@ export class UthTable {
         wins: solved.wins,
         ties: solved.ties,
         losses: solved.losses,
+        counts: {
+          wins: solved.wins,
+          ties: solved.ties,
+          losses: solved.losses,
+          winUnits: solved.winUnits,
+          lossUnits: solved.lossUnits,
+          outcomes: solved.wins + solved.ties + solved.losses,
+        },
       };
     }
     const solveMs = this.phase === 'preflop' ? 0 : now() - started;

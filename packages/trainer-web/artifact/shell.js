@@ -708,6 +708,14 @@ async function api(path, body) {
     case '/api/uth/prepare':
       return uthSession.prepare();
 
+    /*
+     * The Trips paytable (round 19). Saved with the record, because it is the
+     * table this player sat down at; graded nothing, so nothing restarts.
+     */
+    case '/api/uth/rules':
+      if (typeof b.trips === 'string' && uthSession.setTripsPaytable(b.trips)) saveProgressLocally();
+      return uthSession.view;
+
     case '/api/deal':
       session.deal();
       return afterPlay();

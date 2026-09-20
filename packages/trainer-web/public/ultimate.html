@@ -44,15 +44,19 @@
       </div>
       </section>
 
-            <!-- The rules are a statement, as on the Blackjack table. There is one
-           paytable and it is the one the pre-flop table was solved against, so
-           nothing here offers to change it. -->
+      <!--
+        The rules are a statement (§10.1), and since round 19 there is a door
+        beside them: the Trips pay table can be chosen, and the language and the
+        level live behind it, where a player looks for them on the other table.
+        The Blind pay table is stated inside and is not a control — every figure
+        the trainer shows was solved against it.
+      -->
       <header class="rules" id="rules-bar">
         <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
         <div class="rules-main">
           <span class="rules-name" data-i18n="ui.ultimateTitle">Ultimate Texas Hold’em</span>
-          <span class="rules-badge" data-i18n="uth.rulesLine">Blind pays a straight or better · dealer qualifies with a pair</span>
         </div>
+        <button class="link" id="uth-open-rules" data-i18n-attr="aria-label:ui.changeRuleSet" data-i18n="ui.rules">Rules</button>
       </header>
 
       <!-- The same strip as the Blackjack table, reading this game's figures. -->
@@ -93,7 +97,9 @@
 
       <main class="table felt uth-felt" id="uth-table">
         <section class="seat" data-i18n-attr="aria-label:ui.dealer">
-          <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span></h2>
+          <!-- What he is holding, in words, once his cards are turned over —
+               round 17's treatment of his total on the Blackjack table. -->
+          <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span><span class="seat-hand" id="uth-dealer-hand"></span></h2>
           <div class="cards" id="uth-dealer"></div>
         </section>
 
@@ -104,7 +110,7 @@
 
         <section class="seat" data-i18n-attr="aria-label:ui.yourHand">
           <h2 class="seat-title">
-            <span data-i18n="ui.you">You</span>
+            <span data-i18n="ui.you">You</span><span class="seat-hand" id="uth-you-hand"></span>
           </h2>
           <div class="cards" id="uth-hole"></div>
           <!-- Ante, Blind and Play, and the stack behind them. -->
@@ -134,10 +140,30 @@
           <p class="howto-lead" id="uth-howto-lead"></p>
           <ol class="howto" id="uth-howto-list"></ol>
 
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <dialog id="uth-rules">
+        <form method="dialog">
+          <h2 data-i18n="ui.ruleSet">Rule set</h2>
+
+          <!-- Stated, not offered. The note says why, in one sentence. -->
+          <p class="rules-sub"><span class="rules-badge" id="uth-blind-line"></span></p>
+          <p class="muted fine" id="uth-blind-note"></p>
+
+          <h3 class="sub-title" data-i18n="uth.rules.trips">Trips pay table</h3>
+          <div id="uth-trips-list"></div>
+          <p class="muted fine" id="uth-trips-note"></p>
+
+          <p class="muted fine" id="uth-limits-line"></p>
+
           <!--
-            How much the app explains (round 14). This table has no rule panel
-            of its own — one paytable, nothing to change — so the one control
-            that is not a rule lives here, where a player looks for it.
+            Not rules: the language and how much the app explains. They were
+            behind "How to play" while this table had no panel; they belong
+            here, in the same place as on the Blackjack table.
           -->
           <h3 class="sub-title" data-i18n="ui.language">Language</h3>
           <div class="lang-slot" id="lang-slot"></div>

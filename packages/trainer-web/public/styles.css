@@ -504,6 +504,21 @@ td.R { background: #4a3d21; }
 
 .shell {
   max-width: 540px;
+  /*
+   * The width of what holds it, and never of what is inside it (round 19).
+   *
+   * Ultimate's worked sums are one long unbreakable line — `(809,564 × +2.860
+   * − 250,716 × 3.410) ÷ 1,070,190 ÷ 2 = 1.234`. The shell was sized by its
+   * contents, so on a 360px phone that one line made the shell 520px and took
+   * the felt, the seats and the dock off the side of the screen with it.
+   * Measured, bisected, and fixed here rather than by shortening the sum: a
+   * page whose width depends on its longest line is a page waiting for the
+   * next long line. The sum scrolls inside `.worked-sum`, which is what that
+   * rule was written for.
+   */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
   min-height: 100dvh;
   border-inline: 1px solid rgba(255, 255, 255, 0.04);
@@ -1322,6 +1337,24 @@ body { font-family: var(--body); }
 }
 .seat-total { font-size: 24px; letter-spacing: 0; }
 
+/*
+ * Ultimate's seat header (round 19): what the seat is holding, in words.
+ *
+ * The same place as the Blackjack total and deliberately not the same size —
+ * a total is two characters and a hand is a phrase, so 24px would take the
+ * felt. Words, not a figure: no tabular numerals, and it may wrap at showdown,
+ * where the five ranks join it.
+ */
+.seat-hand {
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .seat-hand { font-size: 13px; }
+}
+
 /* ===========================================================================
  * The rail.
  *
@@ -2042,6 +2075,56 @@ button,
 }
 .ret-fig.best { color: var(--ink); }
 
+/* ===========================================================================
+ * The same choices in chips (round 19).
+ *
+ * Idan: "you could simply add how many chips he expects to get back on each
+ * choice." In Ultimate the unclear part is not the odds but how much is on the
+ * table — 4x is six units at risk and a check is two — and no return figure
+ * says that. Four columns, one row an action, under the bars rather than
+ * between them: the bars are the grade, this is the money, and round 17's
+ * ordering rule keeps the grade's rows whole by putting everything that
+ * follows them below.
+ * ======================================================================== */
+
+.money { margin: 9px 0 0; }
+.money-title {
+  margin: 0 0 5px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.money-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.money-head {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: end;
+  line-height: 1.2;
+}
+.money-name { font-size: 12.5px; color: var(--muted); }
+.money-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.money-fig {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--muted);
+}
+/* What comes back is the one a player is reading for. */
+.money-back { color: var(--ink); font-weight: 600; }
+.money-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.money-note b { color: var(--ink); font-weight: 600; }
+
+/* The size of the pre-flop answer, at the level that asked for the numbers. */
+.ret-scale { margin: 7px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ret-scale b { color: var(--ink); font-weight: 600; }
+
 /* Two actions can come to the same figure — on 16 against a ten, hitting and
    standing differ in the fourth decimal. They are equivalent, and the screen
    says so rather than printing a decimal nobody can act on. */
@@ -2220,6 +2303,26 @@ button,
 .returns-help .num { font-weight: 700; color: var(--ink); }
 /* The control that closes it, at a size a thumb can find. */
 .returns-why { width: 34px; height: 34px; font-size: 17px; }
+
+/* ===========================================================================
+ * Fourteen pixels, found on the smallest screen (round 19).
+ *
+ * Measured, at 360x800 in Hebrew, on Ultimate's pre-flop card: the anchor runs
+ * to two lines there, and with three actions the third row ended 14px below
+ * what the card can show. Round 17's rule is that a graded row is never the
+ * thing that falls past the fold, so the chrome around the rows gives the
+ * fourteen back — four from the gap above the block, four from the card's own
+ * padding, four from the heading, and two from the control that opens the
+ * explanation, which stays a 30px target.
+ *
+ * Only below 380px, because 390 and 412 already fit with room to spare.
+ * ======================================================================== */
+@media (max-width: 380px) {
+  .quickcard { padding-top: 6px; padding-bottom: 7px; }
+  .returns { margin-top: 5px; }
+  .returns-head { margin-bottom: 2px; }
+  .returns-why { width: 30px; height: 30px; font-size: 16px; }
+}
 
 /* --- The game itself, for whoever asked to be taught it (round 15) ------------
  * Idan played at the beginner setting and found nothing explaining how

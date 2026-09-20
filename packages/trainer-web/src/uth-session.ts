@@ -28,6 +28,7 @@ import {
   tripsResult,
   bestFive,
   categoryOf,
+  evaluateCards,
   formatCard,
   preflopRow,
   rankOf,
@@ -48,6 +49,13 @@ import {
 } from '@evtrainer/game-engine';
 
 import { newRating, type Rating } from './difficulty.ts';
+import {
+  PREFLOP_OUTCOMES,
+  UTH_STAKE,
+  uthMoneyFor,
+  uthWorkedFor,
+  type UthCounts,
+} from './uth-worked.ts';
 import { displayFigure } from './figure.ts';
 import { equivalentGroups, RETURN_SCALE_MAX, returned, returnFigure } from './returns.ts';
 import { t, type Locale } from './i18n.ts';
@@ -114,13 +122,13 @@ const ACTIONS: Record<UthAction, { label: string; key: string; code: string }> =
 const UTH_ACTIONS = Object.keys(ACTIONS) as UthAction[];
 const TIERS: SeverityTier[] = ['optimal', 'negligible', 'minor', 'significant', 'blunder'];
 
-/**
- * What is already at risk at every Ultimate decision: the Ante and the Blind,
- * which are equal, mandatory and both forfeited by folding. The engine quotes
- * its EVs in units of the ante and folding is exactly −2, so this is the stake
- * round 13's figures are per unit of.
+/*
+ * What is already at risk at every Ultimate decision — the Ante and the Blind,
+ * which are equal, mandatory and both forfeited by folding — now lives in
+ * `uth-worked.ts` beside the arithmetic that divides by it. The engine quotes
+ * its EVs in units of the ante and folding is exactly −2, so `UTH_STAKE` is the
+ * stake round 13's figures are per unit of.
  */
-const UTH_STAKE = 2;
 
 /** Dealer holdings the river solve enumerates: 45 unseen cards, taken two at a time. */
 const UTH_DEALER_HANDS = 990;
@@ -181,8 +189,21 @@ export function wholePercents(counts: readonly number[]): number[] {
   return floors;
 }
 
-/** The one Trips paytable offered (round 11): paytable I, 3-4-7-8-30-40-50, California's UTH-03. */
-const UTH_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0]!;
+/**
+ * The Trips paytable this table is dealing (round 11, made changeable in round 19).
+ *
+ * Paytable I — 3-4-7-8-30-40-50, California's UTH-03 — is the default and was
+ * the only one offered while there was no panel to change it in.
+ *
+ * WHY THIS ONE MAY BE A SETTING AND THE BLIND PAYTABLE MAY NOT. Trips is settled
+ * on the player's own seven cards and the dealer is irrelevant to it: no solver
+ * reads it, no graded decision depends on it, and so no difficulty and no rating
+ * can move when it changes. The Blind paytable is the opposite — `solveRiver`,
+ * `solveFlop` and the offline pre-flop job all take it, so changing it would
+ * change every EV in the game, and the pre-flop table was solved against the
+ * standard one and no other. `preflop-table.ts` says so in its own header.
+ */
+const DEFAULT_TRIPS_PAYTABLE = TRIPS_PAYTABLES[0]!;
 
 /** Below this gap between the top two actions a decision is a coin-flip — Blackjack's figure. */
 const UTH_CLOSE_CALL = 0.01;
@@ -254,14 +275,30 @@ export interface UthFeedback {
   chosen: UthAction;
   optimal: UthAction;
   evCost: number;
-  /** Every legal action, best first. `ev` is net; `value` is what comes back. */
-  ranked: Array<{ action: UthAction; label: string; ev: number; value: number }>;
+  /**
+   * Every legal action, best first. `ev` is net; `value` is what comes back per
+   * unit of the Ante and the Blind; `money` is the same action in chips — what
+   * it puts out now, what is then at risk, and what comes back on average.
+   */
+  ranked: Array<{
+    action: UthAction;
+    label: string;
+    ev: number;
+    value: number;
+    money: { puts: number; risk: number; back: number };
+  }>;
   /** What the card draws: the same scale Blackjack uses (round 13). */
   returns: {
     stake: number;
     scaleMax: number;
     best: number;
     equivalent: string[][];
+    /** One line per action rebuilding its own figure, or null where nothing was counted. */
+    worked: Array<Record<string, unknown> | null>;
+    /** The Ante this hand is being played for, so the money lines can be in chips. */
+    bet: number;
+    /** Outcomes behind the pre-flop figure, and null at every other decision point. */
+    scale: number | null;
     example: { kind: string; win: number; tie: number; value: number } | null;
   };
   /** One plain sentence, from the same solve as the grade. */
@@ -336,6 +373,8 @@ export interface UthProgressV2 extends Omit<UthProgressV1, 'version'> {
    * is not shown as rated.
    */
   rating?: Rating;
+  /** Which Trips paytable was being dealt (round 19). Absent on parts saved before. */
+  tripsTable?: string;
   /**
    * Trips (round 11): the bet being built, the last one dealt, and what it has
    * done. Absent on parts saved before, which open with nothing on Trips.
@@ -415,6 +454,11 @@ export class UthSession {
    * and it stays for the next hand like the Ante.
    */
   private trips: ChipBook = { stack: 0, bet: 0, lastBet: 0, placed: [] };
+  /**
+   * Which Trips paytable this table is dealing (round 19). A setting rather
+   * than a constant, and safe to be one: see `DEFAULT_TRIPS_PAYTABLE`.
+   */
+  private tripsPaytable = DEFAULT_TRIPS_PAYTABLE;
   /** The Trips bet on the felt for the hand being played; 0 for none. */
   private handTrips = 0;
   /** The last settled hand's Trips, for its settlement line. */
@@ -540,7 +584,7 @@ export class UthSession {
        */
       let trips: { bet: number; multiple: number } | undefined;
       if (this.handTrips > 0) {
-        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, UTH_TRIPS_PAYTABLE);
+        const multiple = tripsResult(bestFive([...hand.hole, ...hand.board]).value, this.tripsPaytable);
         trips = { bet: this.handTrips, multiple };
         this.chips = { ...this.chips, stack: roundChips(this.chips.stack + this.handTrips * (1 + multiple)) };
         this.tripsHands++;
@@ -705,6 +749,7 @@ export class UthSession {
       bySeverity,
       lifetimeDecisions: unwound(this.lifetimeDecisions, this.pending.length),
       rating: inHand ? { ...this.ratingAtDeal } : { ...this.rating },
+      tripsTable: this.tripsPaytable.id,
       trips: {
         bet: this.trips.bet,
         lastBet: this.trips.lastBet,
@@ -769,6 +814,8 @@ export class UthSession {
       };
     }
     this.ratingAtDeal = { ...this.rating };
+    const savedTable = TRIPS_PAYTABLES.find((table) => table.id === s.tripsTable);
+    if (savedTable) this.tripsPaytable = savedTable;
     const trips = s.trips as Partial<NonNullable<UthProgressV2['trips']>> | undefined;
     if (trips && typeof trips === 'object') {
       const bet = typeof trips.bet === 'number' && (trips.bet === 0 || validBet(trips.bet)) ? trips.bet : 0;
@@ -791,6 +838,31 @@ export class UthSession {
       .slice(0, UTH_HISTORY_KEPT);
   }
 
+  /**
+   * Change the Trips paytable (round 19).
+   *
+   * Nothing graded moves: Trips is settled on the player's own seven cards and
+   * no solver reads it, so the rating, the accuracy and every EV on the card
+   * are the same figures before and after. What does not survive is the Trips
+   * row of the Stats: what the bet has cost this player is measured against one
+   * paytable's house edge, and a figure averaged over two of them would measure
+   * nothing. So those three counters start again, and nothing else does.
+   *
+   * Between hands only, like every other change to the table.
+   */
+  setTripsPaytable(id: string): boolean {
+    const phase = this.table.view.phase;
+    if (phase !== 'idle' && phase !== 'settled') return false;
+    const table = TRIPS_PAYTABLES.find((entry) => entry.id === id);
+    if (!table || table.id === this.tripsPaytable.id) return false;
+    this.tripsPaytable = table;
+    this.tripsHands = 0;
+    this.tripsWagered = 0;
+    this.tripsNet = 0;
+    this.tripsNoteHand = null;
+    return true;
+  }
+
   private reset(): void {
     this.chips = newChipBook();
     this.handBet = 1;
@@ -810,6 +882,8 @@ export class UthSession {
     this.rating = newRating('basic');
     this.ratingAtDeal = newRating('basic');
     this.lastRatingDelta = null;
+    // The paytable is the table's, not the session's, so a reset leaves it alone
+    // and `restore` sets it from the saved record when there is one.
     this.trips = { stack: 0, bet: 0, lastBet: 0, placed: [] };
     this.handTrips = 0;
     this.lastTrips = null;
@@ -834,6 +908,28 @@ export class UthSession {
       dealerRevealed: table.dealerRevealed,
       board: table.board.map(pokerCardView),
       boardHidden: inHand ? 5 - table.board.length : 0,
+      /*
+       * What each seat is holding, in words, under its name (round 19; round
+       * 17's treatment on the Blackjack table, same principle).
+       *
+       * The player's from the flop on, because before it there are two cards
+       * and no five-card hand to name. The dealer's only once his cards are
+       * turned over, exactly as his total is withheld on the other table. The
+       * five ranks ride along for the showdown, where both hands are ringed and
+       * a shared board card carries both marks, so "which five are mine" is the
+       * one moment the list earns its space.
+       */
+      seats: {
+        you:
+          inHand && table.board.length >= 3
+            ? this.handWords([...table.hole, ...table.board])
+            : null,
+        dealer:
+          table.dealerRevealed && table.board.length >= 3
+            ? this.handWords([...table.dealerHole, ...table.board])
+            : null,
+        showFive: settled,
+      },
       // Notation for the tooltip; words for the player.
       holeClass: inHand ? this.table.holeClass : null,
       holeWords: inHand ? this.classWords(this.table.holeClass) : null,
@@ -855,6 +951,35 @@ export class UthSession {
       stats: this.stats,
       // The floor under the effective edge, as the tooltip quotes it.
       rulesEdge: iso(`${uthPerfectPlayEdgePercent().toFixed(2)}%`),
+      /*
+       * What the panel behind "Rules" states and what it lets a player change
+       * (round 19).
+       *
+       * One control, and it is the Trips paytable. The Blind paytable is stated
+       * and not offered: every EV in the game is solved against it, and the
+       * pre-flop table was computed against the standard one over two billion
+       * outcomes a class. The table limits are stated for the same reason they
+       * are on the other table — they are the rules, and §10.1 says the rules
+       * are visible.
+       */
+      rules: {
+        blindName: t(this.locale, 'uth.blind.standard'),
+        blindNote: t(this.locale, 'uth.blind.fixed'),
+        limits: { ...TABLE_LIMITS },
+        trips: this.tripsPaytable.id,
+        tripsOptions: TRIPS_PAYTABLES.map((table) => ({
+          id: table.id,
+          name: t(this.locale, `uth.trips.${table.id}`),
+          // Every payout, so the choice is a fact and not a name.
+          pays: iso(
+            [table.threeOfAKind, table.straight, table.flush, table.fullHouse, table.fourOfAKind, table.straightFlush, table.royalFlush]
+              .map((multiple) => `${multiple}`)
+              .join(' · '),
+          ),
+          // And what it costs, worked out for that paytable rather than quoted.
+          edge: iso(`${analyseTrips(table).houseEdgePercent.toFixed(2)}%`),
+        })),
+      },
       legalActions: table.legalActions.map((action) => ({
         action,
         label: t(this.locale, ACTIONS[action].label),
@@ -875,9 +1000,9 @@ export class UthSession {
       tripsStats: {
         hands: this.tripsHands,
         wagered: this.tripsWagered,
-        expectedCost: roundChips((this.tripsWagered * analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent) / 100),
+        expectedCost: roundChips((this.tripsWagered * analyseTrips(this.tripsPaytable).houseEdgePercent) / 100),
         net: this.tripsNet,
-        edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`),
+        edge: iso(`${analyseTrips(this.tripsPaytable).houseEdgePercent.toFixed(2)}%`),
       },
       settlement:
         settled && table.settlement
@@ -914,7 +1039,7 @@ export class UthSession {
    * `analyseTrips` works it out exactly under the default paytable, 3.50%.
    */
   private howTo(): string[] {
-    const trips = analyseTrips(TRIPS_PAYTABLES[0]!);
+    const trips = analyseTrips(this.tripsPaytable);
     return [
       t(this.locale, 'uth.howto.1'),
       t(this.locale, 'uth.howto.2'),
@@ -955,6 +1080,45 @@ export class UthSession {
   }
 
   /**
+   * One hand named, with the five cards that make it and their ranks in
+   * playing order — extracted in round 19 so the seat headers and the
+   * showdown lines cannot drift apart: both call this.
+   *
+   * `bestFive` asks the same evaluator the settlement was paid on, so the cards
+   * ringed on the felt, the ranks in the header and the hand in words are one
+   * answer written three ways.
+   */
+  private handWords(cards: Card[]): { phrase: string; five: string; cards: Card[]; value: number } {
+    /*
+     * Five cards on the flop, seven at the river. `bestFive` answers which five
+     * of seven scored the hand; with five there is nothing to choose, and
+     * `evaluateCards` is the same evaluator asked about the five directly — so
+     * the flop's header and the river's come from one source either way.
+     */
+    const best =
+      cards.length === 7
+        ? bestFive(cards)
+        : { value: evaluateCards(cards), cards: [...cards] };
+    const category = categoryOf(best.value);
+    const counts = new Map<number, number>();
+    for (const card of best.cards) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
+    const ordered = [...best.cards].sort((a, b) => {
+      const byCount = counts.get(rankOf(b))! - counts.get(rankOf(a))!;
+      return byCount !== 0 ? byCount : rankOf(b) - rankOf(a);
+    });
+    // A wheel reads 5-4-3-2-A, the way it is played.
+    const ranks = ordered.map((card) => rankOf(card));
+    const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
+    const shown = wheel ? [...ranks.slice(1), 12] : ranks;
+    return {
+      phrase: this.handPhrase(category, significantRanks(best.value)),
+      five: shown.map(rankSymbol).join('-'),
+      cards: best.cards,
+      value: best.value,
+    };
+  }
+
+  /**
    * Both final hands, named, with the five cards that make each.
    *
    * `bestFive` asks the same evaluator which five of the seven scored the hand,
@@ -965,24 +1129,12 @@ export class UthSession {
     const L = this.locale;
     const iso = isolateFor(L);
     const describe = (cards: Card[], key: string) => {
-      const best = bestFive(cards);
-      const category = categoryOf(best.value);
-      const counts = new Map<number, number>();
-      for (const card of best.cards) counts.set(rankOf(card), (counts.get(rankOf(card)) ?? 0) + 1);
-      const ordered = [...best.cards].sort((a, b) => {
-        const byCount = counts.get(rankOf(b))! - counts.get(rankOf(a))!;
-        return byCount !== 0 ? byCount : rankOf(b) - rankOf(a);
-      });
-      // A wheel reads 5-4-3-2-A, the way it is played.
-      const ranks = ordered.map((card) => rankOf(card));
-      const wheel = (category === 4 || category === 8) && ranks[0] === 12 && ranks[1] === 3;
-      const shown = wheel ? [...ranks.slice(1), 12] : ranks;
-      const phrase = this.handPhrase(category, significantRanks(best.value));
+      const hand = this.handWords(cards);
       return {
-        words: t(L, key, { hand: phrase, five: iso(shown.map(rankSymbol).join('-')) }),
-        cards: best.cards,
-        value: best.value,
-        phrase,
+        words: t(L, key, { hand: hand.phrase, five: iso(hand.five) }),
+        cards: hand.cards,
+        value: hand.value,
+        phrase: hand.phrase,
       };
     };
     const player = describe([...hole, ...board], 'uth.show.you');
@@ -1127,6 +1279,14 @@ export class UthSession {
         label: this.label(action),
         ev: record.evByAction[action] ?? 0,
         value: returned(record.evByAction[action] ?? 0, UTH_STAKE),
+        /*
+         * And the same action in chips (round 19, Idan's ask). What Ultimate
+         * hides is not the odds, it is how much is on the table: 4x is an Ante,
+         * a Blind and four more — six units — while a check is two. `back` is
+         * what is at risk plus what the choice is worth, so folding at the
+         * river reads two chips at risk and nothing coming back.
+         */
+        money: uthMoneyFor(action, record.evByAction[action] ?? 0, this.handBet),
       }))
       .sort((a, b) => b.ev - a.ev);
 
@@ -1162,6 +1322,24 @@ export class UthSession {
         scaleMax: RETURN_SCALE_MAX,
         best: ranked[0]?.value ?? 0,
         equivalent: equivalentGroups(ranked),
+        /*
+         * One worked line per action, each rebuilding its own figure exactly —
+         * Blackjack's round 15 rule, arriving here in round 19. The river and
+         * the flop counted something on the way to the grade, so both can be
+         * said forward; before the flop the EVs are a lookup and there is
+         * nothing counted to show, so those actions carry no line rather than a
+         * line derived backwards from the answer.
+         */
+        worked: ranked.map((row) => uthWorkedFor(row.action, row.value, phase, evaluation.counts as UthCounts | undefined)),
+        /* What the whole decision is worth in chips, for the money lines. */
+        bet: this.handBet,
+        /*
+         * The size of the pre-flop answer (round 19). Every board against every
+         * dealer holding, for one pair of hole cards — the figure is a lookup
+         * because this cannot be run while somebody waits. Advanced only; the
+         * page decides, as it does with every other level.
+         */
+        scale: phase === 'preflop' ? PREFLOP_OUTCOMES : null,
         // The river is the one decision whose odds are exact and countable, so
         // it is the one that can show the player what is behind the figure.
         example:
@@ -1368,7 +1546,7 @@ export class UthSession {
     }
     if (costNote) {
       out.lines.push(
-        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(UTH_TRIPS_PAYTABLE).houseEdgePercent.toFixed(2)}%`) }),
+        t(L, 'uth.line.tripsCost', { edge: iso(`${analyseTrips(this.tripsPaytable).houseEdgePercent.toFixed(2)}%`) }),
       );
     }
     return out;
