@@ -478,3 +478,31 @@ test('a player who does the arithmetic on Ultimate’s screen gets the figure on
     page.stopWatching();
   }
 });
+
+// --- The room the card is given (round 20) -----------------------------------------------------
+
+test('the card’s ceiling is measured in the viewport, not in the document', () => {
+  const js = source('ultimate.js');
+  const from = js.indexOf('function uthFitCard(');
+  const fit = js.slice(from, js.indexOf(String.fromCharCode(10) + '}', from));
+  const code = fit.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  /*
+   * `getBoundingClientRect()` is already measured from the top of the viewport.
+   * Adding `window.scrollY` to it mixed two coordinate systems and made the
+   * card shrink as the player scrolled — sixty pixels of card lost for sixty
+   * pixels of scroll, which is how the pre-flop block came to lose a row.
+   */
+  assert.ok(!code.includes('scrollY'), 'the card’s room is measured against the scroll position again');
+  assert.ok(code.includes('window.innerHeight'), 'the card’s room is not measured against the viewport');
+});
+
+test('at 360px the seat header keeps to one line, and the board loses its label', () => {
+  const js = source('ultimate.js');
+  const fn = js.slice(js.indexOf('function uthSeatHands('), js.indexOf('// --- The strip'));
+  assert.match(fn, /window\.innerWidth > 380/, 'the five ranks are shown at every width again');
+  const css = source('styles.css');
+  const narrow = css.slice(css.indexOf('@media (max-width: 380px)'), css.indexOf('}', css.indexOf('.uth-board .seat-title')));
+  assert.ok(narrow.includes('.uth-board .seat-title'), 'the board keeps its label on the narrowest screen');
+  // And the section keeps its name for anything that is not looking at pixels.
+  assert.ok(source('ultimate.html').includes('aria-label:uth.board'), 'the board lost its accessible name');
+});

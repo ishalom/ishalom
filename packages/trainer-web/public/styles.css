@@ -2388,6 +2388,17 @@ button,
  * Only below 380px, because 390 and 412 already fit with room to spare.
  * ======================================================================== */
 @media (max-width: 380px) {
+  /*
+   * And the board's label, which the smallest screen can do without.
+   *
+   * Ultimate's felt carries three headings on a phone, and the card below gets
+   * whatever the felt leaves. "Board" is the one that says nothing the cards do
+   * not: five community cards in the middle of a table are the board. The
+   * dealer's and the player's stay, because those say *whose* cards these are,
+   * which is not obvious. The section keeps its label for a screen reader.
+   * Measured: 22px, and it goes straight to the block that was losing a row.
+   */
+  .uth-board .seat-title { display: none; }
   .quickcard { padding-top: 6px; padding-bottom: 7px; }
   .returns { margin-top: 5px; }
   .returns-head { margin-bottom: 2px; }

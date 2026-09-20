@@ -163,7 +163,17 @@ function uthFitCard() {
     style.boxSizing === 'border-box'
       ? 0
       : parseFloat(style.paddingTop) + parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
-  const holeBottom = hole.getBoundingClientRect().bottom + window.scrollY;
+  /*
+   * The room between the player's cards and the buttons, in the viewport.
+   *
+   * This used to add `window.scrollY` to a rectangle that is already measured
+   * from the top of the viewport, which mixed two coordinate systems: the
+   * further down the page a player had scrolled, the smaller the card was
+   * allowed to be. On a 360px screen scrolled sixty pixels it cost the card
+   * sixty pixels, and the third row of the pre-flop block went below the fold
+   * for no reason anybody could see. Measured and fixed in round 20.
+   */
+  const holeBottom = hole.getBoundingClientRect().bottom;
   const room = window.innerHeight - holeBottom - actions.getBoundingClientRect().height - chrome - 8;
   card.style.maxHeight = `${Math.floor(Math.min(Math.max(150, room), window.innerHeight * 0.42))}px`;
 }
@@ -250,7 +260,17 @@ function uthSeatHands(view) {
       return;
     }
     node.hidden = false;
-    node.textContent = seats.showFive ? ` · ${hand.phrase} · ${hand.five}` : ` · ${hand.phrase}`;
+    /*
+     * The five ranks join the category at showdown — except on the narrowest
+     * screens, where they take the header to two lines, push the felt down and
+     * cost the card the room its last graded row needs. Measured at 360px:
+     * "Dealer · a full house, three eights and two fours · 8-8-8-4-4" wraps,
+     * and the block below loses a row to it. The rings say which five are his
+     * either way; the list is the supporting answer, so it is the one that goes.
+     */
+    const roomForFive = window.innerWidth > 380;
+    node.textContent =
+      seats.showFive && roomForFive ? ` · ${hand.phrase} · ${hand.five}` : ` · ${hand.phrase}`;
   };
   write('uth-you-hand', seats.you);
   write('uth-dealer-hand', seats.dealer);
