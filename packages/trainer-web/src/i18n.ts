@@ -61,10 +61,15 @@ type Catalogue = Record<string, string>;
 const EN: Catalogue = {
   /* --- The shared table (round 22, spec A2) -------------------------------- */
   'shared.title': 'EV Trainer — Shared table',
-  'shared.doorTitle': 'Play one shoe together',
+  'shared.doorTitle': 'Play at the same table',
   'shared.doorBody':
-    'One shoe, your own cards, and nobody waits for anybody. Your decisions are graded exactly as they are when you play alone.',
+    'The same table, your own cards, and nobody waits for anybody. Your decisions are graded exactly as they are when you play alone.',
   'shared.doorSub': 'With a friend, on two phones',
+  'waiting.meanwhile': 'Play meanwhile',
+  'waiting.forFriend': 'Waiting for your friend at your table.',
+  'waiting.arrived': '{name} sat down. You will join at the end of this hand.',
+  'waiting.go': 'Go to the table',
+  'shared.howMany': 'How many of you?',
   'shared.make': 'Make a table',
   'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
   'shared.inviteTitle': 'Send this to your friend',
@@ -99,6 +104,10 @@ const EN: Catalogue = {
   'shared.clockYouOver': 'Everybody is waiting for you. They can vote to play on without you.',
   'shared.clockThem': 'Waiting for {name} — {n}s.',
   'shared.clockThemOver': 'Waiting for {name}. You can vote to play on without them.',
+  'shared.clockYouAuto': 'Your friend is waiting — {n}s, then the hand ends.',
+  'shared.clockYouAutoOver': 'The hand ended without you.',
+  'shared.clockThemAuto': 'Waiting for {name} — {n}s, then the hand ends.',
+  'shared.clockThemAutoOver': 'The hand ended without {name}.',
   'shared.vote': 'Play on without {name} ({votes}/{needs})',
 
   // --- Actions ---
@@ -1044,10 +1053,15 @@ const EN: Catalogue = {
 const HE: Catalogue = {
   /* --- השולחן המשותף (סבב 22) --------------------------------------------- */
   'shared.title': 'EV Trainer — שולחן משותף',
-  'shared.doorTitle': 'לשחק נעל אחת ביחד',
+  'shared.doorTitle': 'לשחק באותו שולחן',
   'shared.doorBody':
-    'נעל אחת, לכל אחד הקלפים שלו, ואף אחד לא מחכה לאף אחד. ההחלטות שלך נבדקות בדיוק כמו במשחק לבד.',
+    'אותו שולחן, לכל אחד הקלפים שלו, ואף אחד לא מחכה לאף אחד. ההחלטות שלך נבדקות בדיוק כמו במשחק לבד.',
   'shared.doorSub': 'עם חבר, בשני טלפונים',
+  'waiting.meanwhile': 'לשחק בינתיים',
+  'waiting.forFriend': 'מחכים לחבר שלך בשולחן שלך.',
+  'waiting.arrived': '{name} התיישב. תצטרף בסוף היד הזאת.',
+  'waiting.go': 'לשולחן',
+  'shared.howMany': 'כמה אתם?',
   'shared.make': 'לפתוח שולחן',
   'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
   'shared.inviteTitle': 'שלח את זה לחבר',
@@ -1081,6 +1095,10 @@ const HE: Catalogue = {
   'shared.clockYouOver': 'כולם מחכים לך. הם יכולים להצביע להמשיך בלעדיך.',
   'shared.clockThem': 'מחכים ל־{name} — {n} שניות.',
   'shared.clockThemOver': 'מחכים ל־{name}. אפשר להצביע להמשיך בלעדיו.',
+  'shared.clockYouAuto': 'החבר שלך מחכה — {n} שניות, ואז היד נגמרת.',
+  'shared.clockYouAutoOver': 'היד נגמרה בלעדיך.',
+  'shared.clockThemAuto': 'מחכים ל־{name} — {n} שניות, ואז היד נגמרת.',
+  'shared.clockThemAutoOver': 'היד נגמרה בלי {name}.',
   'shared.vote': 'להמשיך בלי {name} ({votes}/{needs})',
 
   // --- Actions ---

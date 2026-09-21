@@ -39,7 +39,13 @@ const shared = {
   busy: false,
   /** Set when the page has no store to talk to: the artifact copy says so (§3.11). */
   unavailable: false,
+  /** How many seats a new table gets. Two unless somebody says otherwise. */
+  seats: 2,
 };
+
+/** The smallest and largest table (§3.1). */
+const SHARED_MIN_SEATS = 2;
+const SHARED_MAX_SEATS = 6;
 
 /** The table this link points at, or null for the door. */
 function tableFromLocation() {
@@ -208,16 +214,23 @@ function renderClock(clock) {
 
   const line = document.createElement('p');
   line.className = 'shared-clock-line';
+  /*
+   * At two seats the countdown ends the hand by itself, so it says so rather
+   * than promising a vote nobody will be offered.
+   */
   if (clock.mine) {
     line.textContent =
       clock.secondsLeft > 0
-        ? T('shared.clockYou', { n: clock.secondsLeft })
-        : T('shared.clockYouOver');
+        ? T(clock.automatic ? 'shared.clockYouAuto' : 'shared.clockYou', { n: clock.secondsLeft })
+        : T(clock.automatic ? 'shared.clockYouAutoOver' : 'shared.clockYouOver');
   } else {
     line.textContent =
       clock.secondsLeft > 0
-        ? T('shared.clockThem', { name: clock.name, n: clock.secondsLeft })
-        : T('shared.clockThemOver', { name: clock.name });
+        ? T(clock.automatic ? 'shared.clockThemAuto' : 'shared.clockThem', {
+            name: clock.name,
+            n: clock.secondsLeft,
+          })
+        : T(clock.automatic ? 'shared.clockThemAutoOver' : 'shared.clockThemOver', { name: clock.name });
   }
   box.appendChild(line);
 
@@ -290,6 +303,31 @@ function renderActions(screen) {
   }
 }
 
+/**
+ * How many seats, chosen before the table exists.
+ *
+ * Buttons rather than a number field: this is a choice between five things on a
+ * phone, and the answer is almost always the first one.
+ */
+function renderSeatPicker() {
+  const row = el('shared-seats-row');
+  if (!row) return;
+  row.replaceChildren();
+  for (let seats = SHARED_MIN_SEATS; seats <= SHARED_MAX_SEATS; seats++) {
+    const pick = document.createElement('button');
+    pick.className = 'action seat-pick' + (seats === shared.seats ? ' primary' : '');
+    pick.type = 'button';
+    pick.dataset.seats = String(seats);
+    pick.textContent = String(seats);
+    pick.setAttribute('aria-pressed', seats === shared.seats ? 'true' : 'false');
+    pick.addEventListener('click', () => {
+      shared.seats = seats;
+      renderSeatPicker();
+    });
+    row.appendChild(pick);
+  }
+}
+
 function renderTalk(screen) {
   const box = el('shared-talk');
   if (!screen || screen.hand === null) {
@@ -337,9 +375,17 @@ function render() {
    * the only growth this app has (§3.11) — so it is the whole screen until
    * somebody sits down, rather than a line beside a felt nobody can play.
    */
-  const alone = Boolean(screen) && screen.seats.filter((seat) => seat.playerId !== null).length < 2;
-  el('shared-invite').hidden = !(shared.id && alone && !(screen && screen.refused));
-  if (shared.id && alone) el('shared-link').textContent = inviteLink();
+  const seated = Boolean(screen) ? screen.seats.filter((seat) => seat.playerId !== null).length : 0;
+  const alone = Boolean(screen) && seated < 2;
+  const free = Boolean(screen) && screen.seats.some((seat) => seat.playerId === null);
+  /*
+   * The link stays reachable while any seat is empty — at six seats people
+   * arrive one at a time — but it is only the *whole* screen while nobody else
+   * has come, which is the moment there is nothing else to show.
+   */
+  el('shared-invite').hidden = !(shared.id && free && !(screen && screen.refused));
+  el('shared-invite').classList.toggle('waiting', alone);
+  if (shared.id && free) el('shared-link').textContent = inviteLink();
 
   const playable = Boolean(screen) && !screen.refused && !alone;
   el('shared-table').hidden = !playable;
@@ -358,7 +404,14 @@ function render() {
 
   /* Mine first, always: it is the hand being played (§3.1). */
   const order = [...screen.seats].sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
-  el('shared-seats').replaceChildren(...order.map(seatNode));
+  const box = el('shared-seats');
+  /*
+   * Beyond four the other seats collapse into a list (§3.1): mine stays full
+   * size because it is the hand being played, and five other people's hands
+   * laid out like it would push my own cards off the phone.
+   */
+  box.className = order.length > 4 ? 'shared-seats many' : 'shared-seats';
+  box.replaceChildren(...order.map(seatNode));
 
   renderClock(shared.clock);
   renderMeasures(screen);
@@ -418,15 +471,24 @@ function initShared() {
   shared.clock = null;
   shared.unavailable = false;
 
+  renderSeatPicker();
+
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', {});
+      const made = await api('/api/shared/create', { seats: shared.seats });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }
       return made;
     }),
   );
+
+  el('shared-meanwhile').addEventListener('click', () => {
+    if (!shared.id) return;
+    void api('/api/shared/wait', { id: shared.id }).then(() => {
+      location.hash = '#table';
+    });
+  });
 
   el('shared-copy').addEventListener('click', () => {
     const link = inviteLink();

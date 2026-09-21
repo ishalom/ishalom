@@ -670,7 +670,7 @@ async function api(path, body) {
           noSurrender: store.get('ev:noSurrender') === '1',
           likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
         },
-        seats: 2,
+        seats: Math.max(2, Math.min(6, Number(b.seats) || 2)),
       });
       return { ...made, screen: sharedScreenNow(), clock: sharedClock() };
     }
@@ -681,9 +681,26 @@ async function api(path, body) {
       return { ...sat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 
+    /*
+     * "I will play meanwhile." Starts the watch that brings him back when his
+     * friend sits down — between hands, never in the middle of one.
+     */
+    case '/api/shared/wait': {
+      if (!sharedAvailable()) return { available: false };
+      watchForFriend(String(b.id || ''));
+      return { available: true };
+    }
+
     case '/api/shared/view': {
       if (!sharedAvailable()) return { available: false };
       await sharedRefresh();
+      /*
+       * The poll is also where the thirty seconds run out. At two seats that
+       * ends the hand on its own — there is nobody to ask — so the check rides
+       * with the read that was happening anyway rather than on a timer of its
+       * own. Everywhere else it does nothing.
+       */
+      await sharedClockExpired();
       return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 

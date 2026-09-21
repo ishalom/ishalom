@@ -127,13 +127,13 @@ function sharedNormalise(record) {
   return {
     ...record,
     restrictions: record.restrictions ?? {},
-    events: Array.isArray(record.events) ? record.events : [],
     seats: (record.seats ?? []).map((row) => ({
       ...row,
       name: row.name ?? '',
       bet: Number(row.bet) || 1,
       moves: Array.isArray(row.moves) ? row.moves : [],
       hands: Number(row.hands) || 0,
+      events: Array.isArray(row.events) ? row.events : [],
     })),
   };
 }
@@ -177,6 +177,7 @@ async function sharedPushMine() {
     moves: row.moves,
     hands: row.hands,
     vote: row.vote ?? null,
+    events: row.events ?? [],
     cardsHash: seatCardsHash(derived, row.seat),
   });
 }
@@ -186,16 +187,23 @@ async function sharedCreate(options) {
   const store = sharedBackend();
   if (!store) return { available: false };
   const id = sharedTableId();
+  /*
+   * The seed is generated, never chosen (§3.11) — a seed you can ask for is a
+   * shoe you can practise against twice. A caller may hand one in, and exactly
+   * one caller does: the test harness, which cannot test a thirty-second clock
+   * against a shoe that deals a different hand every run. No route passes it,
+   * and `test/shared-screen.test.ts` checks that none ever starts to.
+   */
+  const seed = Number.isInteger(options.seed) ? options.seed : sharedSeed();
   await store.createTable({
     id,
-    seed: sharedSeed(),
+    seed,
     presetId: options.presetId || 'vegas-strip-6d-s17',
     restrictions: options.restrictions || {},
     seats: Math.max(2, Math.min(6, Number(options.seats) || 2)),
     createdBy: options.playerId,
     createdByName: options.name,
     bet: Number(options.bet) || 1,
-    events: [{ kind: 'join', seat: 0, hand: 0 }],
   });
   sharedState.id = id;
   sharedState.seat = 0;
@@ -323,18 +331,54 @@ function sharedClock() {
       row.seat !== held,
   ).length;
   const needs = sharedVoteNeeds(waiting, Math.max(0, step));
+  /*
+   * At two seats there is no vote, and Idan is right that there was never one
+   * to have: with a single player waiting, a "vote" is that player pressing a
+   * button to agree with himself. So the thirty seconds simply end the hand.
+   *
+   * It is the same drop with the same consequences, and it is built out of the
+   * same parts — one agreement, recorded in the waiting player's own row — so
+   * there is no second mechanism here, only a button that is not drawn and a
+   * write that happens on its own. From three seats up the ladder is unchanged.
+   */
+  const automatic = waiting === 1;
   return {
     seat: held,
     name: screen.seats.find((seat) => seat.seat === held)?.name ?? '',
     mine: held === sharedState.seat,
-    /** Seconds left before a vote may be called at all. */
+    /** Seconds left before the hand ends, or before a vote may be called. */
     secondsLeft: Math.max(0, Math.ceil((SHARED_CLOCK_MS - heldMs) / 1000)),
-    canVote: step >= 0 && sharedState.seat !== null && sharedState.seat !== held,
+    automatic,
+    canVote: !automatic && step >= 0 && sharedState.seat !== null && sharedState.seat !== held,
     step: Math.max(0, step),
     votes,
     needs,
+    waiting,
     passed: step >= 0 && votes >= needs,
   };
+}
+
+/**
+ * The clock running out, at a table where nobody has to be asked.
+ *
+ * Called by the screen's own tick. At two seats this ends the hand the moment
+ * the thirty seconds are up; anywhere else it does nothing, because there the
+ * waiting players are asked instead.
+ */
+async function sharedClockExpired() {
+  const clock = sharedClock();
+  if (!clock || !clock.automatic) return null;
+  if (clock.secondsLeft > 0) return clock;
+  // The player being timed out cannot be the one to write it.
+  if (sharedState.seat === null || sharedState.seat === clock.seat) return clock;
+  const row = sharedMyRow();
+  const screen = sharedScreenNow();
+  if (!row || !screen) return clock;
+  if (row.vote && row.vote.hand === screen.hand && row.vote.against === clock.seat) return clock;
+  row.vote = { hand: screen.hand, against: clock.seat, at: 0, needs: 1 };
+  await sharedPushMine();
+  await sharedRefresh();
+  return sharedClock();
 }
 
 /** Agree that the player holding the table should be dropped from this hand. */
@@ -343,37 +387,43 @@ async function sharedVote() {
   const row = sharedMyRow();
   const screen = sharedScreenNow();
   if (!clock || !clock.canVote || !row || !screen) return clock;
-  row.vote = { hand: screen.hand, against: clock.seat, at: clock.step };
+  row.vote = { hand: screen.hand, against: clock.seat, at: clock.step, needs: clock.needs };
   await sharedPushMine();
   await sharedRefresh();
-  const after = sharedClock();
-  if (after && after.passed) await sharedDrop(clock.seat, 'vote');
+  /*
+   * Nothing writes the drop. Enough votes *are* the drop — the derivation reads
+   * them and says so — which is what keeps this the one thing at the table that
+   * is about a player but not done by him, and still needs no shared row.
+   */
   return sharedClock();
 }
 
-/** Append one event to the table's log, on top of the record just read. */
+/**
+ * Append one event about me, to my own row.
+ *
+ * There is no shared list to append to any more, and that is the point: the
+ * only row this writes is the writer's own, so two players leaving in the same
+ * instant cannot cost one of the events the way they used to.
+ */
 async function sharedAddEvent(event) {
-  const store = sharedBackend();
-  if (!store || !sharedState.record || !sharedState.id) return;
-  const events = [...sharedState.record.events, event];
-  if (typeof store.pushEvents === 'function') await store.pushEvents(sharedState.id, events);
-  sharedState.record = { ...sharedState.record, events };
+  const row = sharedMyRow();
+  if (!row) return;
+  row.events = [...(row.events ?? []), event];
+  await sharedPushMine();
 }
 
 /**
- * Write the drop into the table's log.
+ * Write my own leaving into my own row.
  *
- * As an event carrying the hand, never a timestamp: who is live decides how
- * many cards a round consumes, so a wall clock inside the ban would make the
- * table impossible to reproduce. The clock decided the moment; the log holds
- * what happened.
+ * A seat being *voted* out is not written at all — it is derived from the votes,
+ * which sit in their own writers' rows. So the only drop anybody writes is his
+ * own, and it carries the hand rather than a time, which is what keeps the cards
+ * following the log.
  */
 async function sharedDrop(seat, why) {
-  const store = sharedBackend();
-  if (!store || !sharedState.record || !sharedState.id) return;
   const screen = sharedScreenNow();
   const hand = screen && screen.hand !== null ? screen.hand : 0;
-  await sharedAddEvent({ kind: 'drop', seat, hand, why: why || 'vote' });
+  await sharedAddEvent({ kind: 'drop', seat, hand, why: why || 'left' });
   await sharedRefresh();
 }
 

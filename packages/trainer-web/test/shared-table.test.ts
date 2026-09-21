@@ -53,14 +53,16 @@ function freshTable(seed: number, seats = 2, presetId = 'vegas-strip-6d-s17'): T
     seed,
     presetId,
     restrictions: { noSurrender: false, likeRanksOnly: false },
+    // Each seat's own join, in its own row — round 23 moved the log there so
+    // that no row at this table has two writers.
     seats: Array.from({ length: seats }, (_, seat) => ({
       seat,
       playerId: `p${seat}`,
       name: `Player ${seat}`,
       bet: seat + 1,
       moves: [] as SeatMove[],
+      events: [{ kind: 'join' as const, seat, hand: 0 }],
     })),
-    events: Array.from({ length: seats }, (_, seat) => ({ kind: 'join' as const, seat, hand: 0 })),
   };
 }
 
@@ -98,6 +100,48 @@ test('a table derives to the same cards every time, over hundreds of them', () =
   }
   assert.ok(decisions > 2000, `only ${decisions} decisions were played`);
   assert.ok(splits > 20, `only ${splits} splits came up, so the two-card reservation is untested`);
+});
+
+test('six seats, hundreds of shoes: the same events give the same cards, and every seat agrees', () => {
+  /*
+   * The full table (round 23). Six seats is where the reservation rule has the
+   * most to get wrong — six hands to put a card aside for every round, splits
+   * among them, and a seat's own cards sitting at a position fixed before
+   * anybody acted. Over two hundred shoes it must come out the same twice, and
+   * all six seats must agree about every card that was dealt.
+   */
+  let decisions = 0;
+  let splits = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const played = freshTable(seed, 6);
+    const first = playRandom(played, 3, seed * 13);
+    const again = deriveTable(played);
+    assert.deepEqual(cardsOf(again), cardsOf(first), `seed ${seed} derived differently the second time`);
+
+    /*
+     * And the checksum, which is the thing two phones actually compare. Each
+     * seat hashes what it saw; if six seats ever hashed six different tables,
+     * this is where it would show.
+     */
+    const hashes = played.seats.map((seat) => seatCardsHash(again, seat.seat));
+    const elsewhere = deriveTable(JSON.parse(JSON.stringify(played)) as TableRecord);
+    for (const seat of played.seats) {
+      assert.equal(
+        seatCardsHash(elsewhere, seat.seat),
+        hashes[seat.seat],
+        `seed ${seed}: seat ${seat.seat} hashed a different table on the second device`,
+      );
+      seat.cardsHash = hashes[seat.seat];
+    }
+    assert.ok(seatsAgree(played, elsewhere), `seed ${seed}: six seats did not agree`);
+
+    for (const hand of first.hands) {
+      decisions += hand.decisions.length;
+      splits += hand.decisions.filter((d) => d.action === 'split').length;
+    }
+  }
+  assert.ok(decisions > 3000, `only ${decisions} decisions over six-seat tables`);
+  assert.ok(splits > 30, `only ${splits} splits, so the six-seat reservation is barely tested`);
 });
 
 test('a different seed is a different table, and the same seed with different play is too', () => {
@@ -300,7 +344,7 @@ test('a shared-table decision is graded exactly as the same cards are graded awa
 
 test('a seat is live by its events and by nothing else', () => {
   const record = freshTable(5, 2);
-  record.events.push({ kind: 'drop', seat: 1, hand: 2 }, { kind: 'return', seat: 1, hand: 4 });
+  record.seats[1]!.events!.push({ kind: 'drop', seat: 1, hand: 2 }, { kind: 'return', seat: 1, hand: 4 });
   assert.equal(isLive(record, 1, 0), true);
   assert.equal(isLive(record, 1, 1), true);
   assert.equal(isLive(record, 1, 2), false, 'a dropped seat was still live at the hand it was dropped');
@@ -311,7 +355,7 @@ test('a seat is live by its events and by nothing else', () => {
 
 test('a table with a drop in it replays to the same cards', () => {
   const record = freshTable(909, 3);
-  record.events.push({ kind: 'drop', seat: 1, hand: 1 }, { kind: 'return', seat: 1, hand: 3 });
+  record.seats[1]!.events!.push({ kind: 'drop', seat: 1, hand: 1 }, { kind: 'return', seat: 1, hand: 3 });
   const played = playRandom(record, 4, 909);
   const again = deriveTable(record);
   assert.deepEqual(cardsOf(again), cardsOf(played), 'a table with a drop derived differently the second time');
@@ -432,7 +476,6 @@ interface SharedTableBackend {
     createdBy: string;
     createdByName: string;
     bet: number;
-    events: unknown[];
   }): Promise<string>;
   joinTable(
     tableId: string,
@@ -447,6 +490,7 @@ interface SharedTableBackend {
       bet: number;
       moves: SeatMove[];
       hands?: number;
+      events?: unknown[];
       cardsHash?: string;
     },
   ): Promise<boolean>;
@@ -472,7 +516,6 @@ test('the conditional join gives the seat to the first comer and tells the secon
       createdBy: 'idan',
       createdByName: 'Idan',
       bet: 1,
-      events: [],
     });
     assert.equal(seats.length, 2, 'the table was made without its seats');
     assert.equal(seats[0]!.player_id, 'idan', 'the maker did not take seat 0');
@@ -535,6 +578,13 @@ test('the private table has no clock, no vote and no drop, and never will', () =
     ['src', 'session.ts'],
     ['public', 'app.js'],
     ['public', 'table.html'],
+    /*
+     * And the strip a player sees over the private table while he waits for a
+     * friend (round 23). It is the one new thing that appears on that screen,
+     * and the whole question about it is whether it is a clock. It is not: it
+     * counts nothing down and can eject nobody, and this is where that is held.
+     */
+    ['artifact', 'waiting.js'],
   ];
   for (const parts of files) {
     const code = source(...parts)

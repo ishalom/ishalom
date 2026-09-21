@@ -21,9 +21,10 @@
 
 -- ------------------------------------------------------------------ tables ---
 --
--- One row a table. `seed` fixes the order of the shoe; `events` is the short
--- list of things that changed who is sitting — joins, drops and returns — and
--- each event carries the hand it happened at rather than a time, so the cards
+-- One row a table. `seed` fixes the order of the shoe, and that is very nearly
+-- all it holds: who is sitting, and what each of them did, lives one row per
+-- seat in `table_seats`, so that nothing here is ever written by two people.
+-- Every event carries the hand it happened at rather than a time, so the cards
 -- can never depend on when anybody's phone happened to write.
 
 create table if not exists public.tables (
@@ -37,8 +38,6 @@ create table if not exists public.tables (
   restrictions  jsonb       not null default '{}'::jsonb,
   -- open · playing · complete · closed
   state         text        not null default 'open',
-  -- Joins, drops and returns, in order. Never a timestamp the cards depend on.
-  events        jsonb       not null default '[]'::jsonb,
   seats         integer     not null default 2 check (seats between 2 and 6),
   created_by    text        not null,
   created_at    timestamptz not null default now(),
@@ -73,10 +72,17 @@ create table if not exists public.table_seats (
   -- Reactions this seat sent, by hand. A fixed set; never free text.
   reactions   jsonb   not null default '{}'::jsonb,
   -- This seat's own vote to drop whoever is holding the table: {hand, against,
-  -- at}. A tally is naturally one shared number, and a shared number would be
-  -- the one place two people write the same row — so each player records his
-  -- own vote here and anybody can count them.
+  -- at, needs}. A tally is naturally one shared number, and a shared number
+  -- would be the one place two people write the same row — so each player
+  -- records his own vote here and anybody can count them. `needs` is how many
+  -- agreements that attempt required, read off the same table everybody else
+  -- can see, so a drop can be worked out from the votes alone.
   vote        jsonb,
+  -- What happened to THIS seat: it joined, it left, it came back. One row's
+  -- events are written by one player, which is the whole concurrency design.
+  -- These used to live in a single list on `tables`, where two people leaving
+  -- at the same moment cost one of the events; there is no shared list now.
+  events      jsonb   not null default '[]'::jsonb,
   -- This seat's hash of every card it was dealt. If two seats disagree, the
   -- app refuses to show the table rather than showing two different truths.
   cards_hash  text,

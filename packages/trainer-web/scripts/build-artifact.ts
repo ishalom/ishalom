@@ -118,6 +118,8 @@ const analyseJs = screenScript(read(PUBLIC, 'analyse.js'), 'initAnalyse');
 const sharedJs = screenScript(read(PUBLIC, 'shared.js'), 'initShared');
 // What a seat does to a shared table: read it, write its own row, count votes.
 const sharedDriver = read(ARTIFACT, 'shared.js');
+// Playing the private table while a friend is on his way (round 23).
+const waitingStrip = read(ARTIFACT, 'waiting.js');
 // How every units and chips figure is written, loaded before anything that writes one (round 8).
 const figureJs = read(PUBLIC, 'figure.js');
 // Shared by both tables, and read by home to open the hand a row names.
@@ -256,6 +258,9 @@ ${backends}
 ${sharedDriver}
 
 ${shell}
+
+/* Waiting for a friend without an empty screen (round 23). */
+${waitingStrip}
 
 ${usage}
 

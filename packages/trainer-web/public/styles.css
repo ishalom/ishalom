@@ -2775,3 +2775,100 @@ button,
 /* Leaving is as cheap to reach as playing (§3.3), so it sits with the actions. */
 .shared-leave { margin-inline-start: auto; }
 .shared-debug { opacity: 0.6; }
+
+/* --- Waiting for a friend, and the six-seat door (round 23) ----------------
+ *
+ * The strip is pinned above everything because it has to survive a screen
+ * changing under it: the player made a table on one screen and is playing on
+ * another, and what he is waiting for did not stop being true in between.
+ */
+
+.waiting-strip {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  background: color-mix(in srgb, var(--brass, #c9a227) 16%, var(--panel));
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.waiting-line { flex: 1 1 auto; }
+
+.waiting-copy,
+.waiting-go {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.shared-seats-pick {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
+.shared-seats-pick legend {
+  color: var(--muted);
+  padding: 0 6px;
+}
+
+.shared-seats-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* A choice between five things on a phone: square, thumb-sized, no dropdown. */
+.seat-pick {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Beyond four seats the other players are a list rather than a row (§3.1). */
+@media (max-width: 420px) {
+  .shared-seat.other .cards { gap: 2px; }
+  .shared-seat.other .card { transform: scale(0.88); transform-origin: left center; }
+}
+
+/*
+ * Beyond four seats the others are a list, not a stack of felts (§3.1).
+ *
+ * Each one becomes a single line — who, what they are doing, their total and
+ * their cards small beside it — so that my own hand, which is the one being
+ * played, still starts above the fold on a 360px screen.
+ */
+.shared-seats.many .shared-seat.other {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+
+.shared-seats.many .shared-seat.other .seat-title {
+  margin: 0;
+  flex: 1 1 8rem;
+  font-size: 0.95em;
+}
+
+.shared-seats.many .shared-seat.other .cards { gap: 2px; }
+
+.shared-seats.many .shared-seat.other .card {
+  width: 30px;
+  height: 43px;
+  font-size: 0.7rem;
+}
+
+.shared-seats.many .shared-seat.other .shared-net { margin: 0; }

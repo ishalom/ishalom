@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="55b796432d2dcb5206e44d1e78da894bf85f71e8" />
-<meta name="ev-build-at" content="2026-09-21T11:37:50.256Z" />
+<meta name="ev-build-commit" content="02abf944e507ac78f1d684fdd3576909739127c1-dirty" />
+<meta name="ev-build-at" content="2026-09-21T12:47:41.795Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -2799,6 +2799,103 @@ button,
 /* Leaving is as cheap to reach as playing (§3.3), so it sits with the actions. */
 .shared-leave { margin-inline-start: auto; }
 .shared-debug { opacity: 0.6; }
+
+/* --- Waiting for a friend, and the six-seat door (round 23) ----------------
+ *
+ * The strip is pinned above everything because it has to survive a screen
+ * changing under it: the player made a table on one screen and is playing on
+ * another, and what he is waiting for did not stop being true in between.
+ */
+
+.waiting-strip {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  background: color-mix(in srgb, var(--brass, #c9a227) 16%, var(--panel));
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.waiting-line { flex: 1 1 auto; }
+
+.waiting-copy,
+.waiting-go {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.shared-seats-pick {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
+.shared-seats-pick legend {
+  color: var(--muted);
+  padding: 0 6px;
+}
+
+.shared-seats-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* A choice between five things on a phone: square, thumb-sized, no dropdown. */
+.seat-pick {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Beyond four seats the other players are a list rather than a row (§3.1). */
+@media (max-width: 420px) {
+  .shared-seat.other .cards { gap: 2px; }
+  .shared-seat.other .card { transform: scale(0.88); transform-origin: left center; }
+}
+
+/*
+ * Beyond four seats the others are a list, not a stack of felts (§3.1).
+ *
+ * Each one becomes a single line — who, what they are doing, their total and
+ * their cards small beside it — so that my own hand, which is the one being
+ * played, still starts above the fold on a 360px screen.
+ */
+.shared-seats.many .shared-seat.other {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+
+.shared-seats.many .shared-seat.other .seat-title {
+  margin: 0;
+  flex: 1 1 8rem;
+  font-size: 0.95em;
+}
+
+.shared-seats.many .shared-seat.other .cards { gap: 2px; }
+
+.shared-seats.many .shared-seat.other .card {
+  width: 30px;
+  height: 43px;
+  font-size: 0.7rem;
+}
+
+.shared-seats.many .shared-seat.other .shared-net { margin: 0; }
 
 /* ===========================================================================
  * The shared build only.
@@ -7921,10 +8018,15 @@ function t(locale        , key        , params         = {})         {
 const EN            = {
   /* --- The shared table (round 22, spec A2) -------------------------------- */
   'shared.title': 'EV Trainer — Shared table',
-  'shared.doorTitle': 'Play one shoe together',
+  'shared.doorTitle': 'Play at the same table',
   'shared.doorBody':
-    'One shoe, your own cards, and nobody waits for anybody. Your decisions are graded exactly as they are when you play alone.',
+    'The same table, your own cards, and nobody waits for anybody. Your decisions are graded exactly as they are when you play alone.',
   'shared.doorSub': 'With a friend, on two phones',
+  'waiting.meanwhile': 'Play meanwhile',
+  'waiting.forFriend': 'Waiting for your friend at your table.',
+  'waiting.arrived': '{name} sat down. You will join at the end of this hand.',
+  'waiting.go': 'Go to the table',
+  'shared.howMany': 'How many of you?',
   'shared.make': 'Make a table',
   'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
   'shared.inviteTitle': 'Send this to your friend',
@@ -7959,6 +8061,10 @@ const EN            = {
   'shared.clockYouOver': 'Everybody is waiting for you. They can vote to play on without you.',
   'shared.clockThem': 'Waiting for {name} — {n}s.',
   'shared.clockThemOver': 'Waiting for {name}. You can vote to play on without them.',
+  'shared.clockYouAuto': 'Your friend is waiting — {n}s, then the hand ends.',
+  'shared.clockYouAutoOver': 'The hand ended without you.',
+  'shared.clockThemAuto': 'Waiting for {name} — {n}s, then the hand ends.',
+  'shared.clockThemAutoOver': 'The hand ended without {name}.',
   'shared.vote': 'Play on without {name} ({votes}/{needs})',
 
   // --- Actions ---
@@ -8904,10 +9010,15 @@ const EN            = {
 const HE            = {
   /* --- השולחן המשותף (סבב 22) --------------------------------------------- */
   'shared.title': 'EV Trainer — שולחן משותף',
-  'shared.doorTitle': 'לשחק נעל אחת ביחד',
+  'shared.doorTitle': 'לשחק באותו שולחן',
   'shared.doorBody':
-    'נעל אחת, לכל אחד הקלפים שלו, ואף אחד לא מחכה לאף אחד. ההחלטות שלך נבדקות בדיוק כמו במשחק לבד.',
+    'אותו שולחן, לכל אחד הקלפים שלו, ואף אחד לא מחכה לאף אחד. ההחלטות שלך נבדקות בדיוק כמו במשחק לבד.',
   'shared.doorSub': 'עם חבר, בשני טלפונים',
+  'waiting.meanwhile': 'לשחק בינתיים',
+  'waiting.forFriend': 'מחכים לחבר שלך בשולחן שלך.',
+  'waiting.arrived': '{name} התיישב. תצטרף בסוף היד הזאת.',
+  'waiting.go': 'לשולחן',
+  'shared.howMany': 'כמה אתם?',
   'shared.make': 'לפתוח שולחן',
   'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
   'shared.inviteTitle': 'שלח את זה לחבר',
@@ -8941,6 +9052,10 @@ const HE            = {
   'shared.clockYouOver': 'כולם מחכים לך. הם יכולים להצביע להמשיך בלעדיך.',
   'shared.clockThem': 'מחכים ל־{name} — {n} שניות.',
   'shared.clockThemOver': 'מחכים ל־{name}. אפשר להצביע להמשיך בלעדיו.',
+  'shared.clockYouAuto': 'החבר שלך מחכה — {n} שניות, ואז היד נגמרת.',
+  'shared.clockYouAutoOver': 'היד נגמרה בלעדיך.',
+  'shared.clockThemAuto': 'מחכים ל־{name} — {n} שניות, ואז היד נגמרת.',
+  'shared.clockThemAutoOver': 'היד נגמרה בלי {name}.',
   'shared.vote': 'להמשיך בלי {name} ({votes}/{needs})',
 
   // --- Actions ---
@@ -11629,6 +11744,17 @@ function readChipBook(
  *     resolves, so feedback can never be coloured by an outcome the player has
  *     already seen.
  */
+
+
+
+
+
+
+
+
+
+
+
 const RANKS = '23456789TJQKA';
 const SUITS = 'cdhs';
 const SUIT_SYMBOLS = ['♣', '♦', '♥', '♠'];
@@ -15432,7 +15558,21 @@ const MAX_SEATS = 6;
                                                                               
                                       
      
-                                                                     
+                                                                                    
+     
+                                                                    
+    
+                                                                                 
+                                                                                
+                                                                               
+                                                                               
+    
+                                                                             
+                                                                               
+                                                                                
+                                          
+     
+                        
                                                            
                      
  
@@ -15448,7 +15588,7 @@ const MAX_SEATS = 6;
  */
                         
                                                 
-                                                
+                                                              
                                                    
 
                               
@@ -15457,7 +15597,6 @@ const MAX_SEATS = 6;
                    
                              
                       
-                       
  
 
 /** One graded decision, exactly as the solo game grades one. */
@@ -16080,12 +16219,72 @@ function run(
  */
 function isLive(record             , seat        , hand        )          {
   let live = false;
-  for (const event of record.events) {
+  for (const event of tableEvents(record)) {
     if (event.seat !== seat || event.hand > hand) continue;
     if (event.kind === 'join' || event.kind === 'return') live = true;
     if (event.kind === 'drop') live = false;
   }
   return live;
+}
+
+/**
+ * Every event at the table, merged from the seats' own rows in canonical order.
+ *
+ * Two kinds go in. The ones a seat wrote about itself — it joined, it left, it
+ * came back — are read straight out of its row. The ones nobody wrote are the
+ * drops a vote decided: those are *derived* from the votes, so that the one
+ * thing at this table that is about a player but not done by him still needs no
+ * row with two writers.
+ *
+ * Canonical order is `(hand, seat)`, so the merge is the same on every device
+ * whatever order the rows came back in.
+ */
+function tableEvents(record             )               {
+  const events               = [];
+  for (const seat of record.seats) {
+    for (const event of seat.events ?? []) events.push(event);
+  }
+  for (const dropped of votedOut(record)) events.push(dropped);
+  return events.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
+}
+
+/**
+ * The drops a vote decided, worked out from the votes themselves.
+ *
+ * Each waiting player records, in his own row, who he wants dropped, at which
+ * hand, and **how many agreements that attempt needed** — a number he read off
+ * the same record everybody else has. A drop follows when the votes for one
+ * player reach the most permissive threshold any of them was cast under, which
+ * is what the escalating ladder means: the first attempt needs every waiting
+ * player, and each later one needs one fewer.
+ *
+ * Nothing here asks what time it is. The clock decided *when* a vote was written
+ * and which rung it was written on; both are recorded, so two phones reading the
+ * same rows reach the same answer for ever after.
+ */
+function votedOut(record             )               {
+  const byTarget = new Map                                                                              ();
+  for (const seat of record.seats) {
+    const vote = seat.vote;
+    if (!vote || vote.hand === null || vote.against === seat.seat) continue;
+    const key = `${vote.hand}:${vote.against}`;
+    const found = byTarget.get(key) ?? {
+      hand: vote.hand,
+      against: vote.against,
+      seats: new Set        (),
+      needs: Number.POSITIVE_INFINITY,
+    };
+    found.seats.add(seat.seat);
+    found.needs = Math.min(found.needs, Math.max(1, vote.needs));
+    byTarget.set(key, found);
+  }
+  const out               = [];
+  for (const tally of byTarget.values()) {
+    if (tally.seats.size >= tally.needs) {
+      out.push({ kind: 'drop', seat: tally.against, hand: tally.hand, why: 'vote' });
+    }
+  }
+  return out;
 }
 
 /** Every card a seat saw, hashed — what each seat writes into its own row. */
@@ -16330,6 +16529,8 @@ function legalFor(
  * decisions the bar prints no percentage at all — it reads as settling, the way
  * a provisional rating does.
  */
+
+
 /** Below this many decisions the bar prints no percentage. Spec §3.5. */
 const BAR_SETTLES_AT = 10;
 
@@ -16466,11 +16667,11 @@ function sharedScreen(record             , seat               )               {
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\r\n      <!--\r\n        The front of the app is a greeting and two doors. Everything measured\r\n        lives behind a tab, because a wall of figures is not a welcome — and\r\n        §3.1 would rather you came here to play than to check a scoreboard.\r\n      -->\r\n      <section class=\"hero\">\r\n        <!-- What the app is for, at the door (round 14). The claim is factual:\r\n             the comparison is this player's own play against the maths, not\r\n             optimal play against some theoretical alternative. -->\r\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\r\n        <div class=\"hero-top\">\r\n          <div class=\"initial\" id=\"initial\">P</div>\r\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\r\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\r\n        </div>\r\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\r\n      </section>\r\n\r\n      <!--\r\n        How the sitting went, when there was one (round 20). One sentence, on\r\n        the way out of the table rather than on top of it: a reward and a\r\n        lesson, and the lesson is the half that lasts.\r\n      -->\r\n      <p class=\"sitting\" id=\"sitting\" hidden></p>\r\n\r\n      <!--\r\n        The records line (round 20). Idan asked for the app to give something\r\n        \"like chips\" when a player improves; chips are the currency of the\r\n        outcome and would break three figures that tell the truth, so this is\r\n        the chip-shaped thing without a chip's meaning. It touches no figure:\r\n        every number in it is a count of something the player did.\r\n      -->\r\n      <section class=\"records\" id=\"records\" hidden>\r\n        <span class=\"records-title\" data-i18n=\"records.title\">Your records</span>\r\n        <span class=\"records-line\" id=\"records-line\"></span>\r\n      </section>\r\n\r\n      <section class=\"doors\">\r\n        <a class=\"door\" href=\"#table\">\r\n          <span class=\"door-pip\">♠</span>\r\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\r\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\r\n        </a>\r\n        <a class=\"door secondary\" href=\"#ultimate\">\r\n          <span class=\"door-pip\">♦</span>\r\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\r\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\r\n        </a>\r\n        <!-- The shared table (round 22). A door, because the link is the only\r\n             growth this app has and a door is where somebody starts one. -->\r\n        <a class=\"door shared\" href=\"#shared\">\r\n          <span class=\"door-pip\">♣</span>\r\n          <span class=\"door-title\" data-i18n=\"shared.doorTitle\">Play one shoe together</span>\r\n          <span class=\"door-sub\" data-i18n=\"shared.doorSub\">With a friend, on two phones</span>\r\n        </a>\r\n        <a class=\"door analyse\" href=\"#analyse\">\r\n          <span class=\"door-pip\">?</span>\r\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\r\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\r\n        </a>\r\n      </section>\r\n\r\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\r\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\r\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\r\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\r\n      </nav>\r\n\r\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\r\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\r\n        <div class=\"standings\">\r\n          <div class=\"standing\">\r\n            <div class=\"standing-value\" id=\"rating\">—</div>\r\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\r\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\r\n            <p class=\"standing-note\" id=\"rating-note\"></p>\r\n          </div>\r\n          <div class=\"standing\">\r\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\r\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\r\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\r\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\r\n          </div>\r\n        </div>\r\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\r\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\r\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\r\n          </button>\r\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\r\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\r\n          </button>\r\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\r\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\r\n          </button>\r\n        </div>\r\n        <div id=\"ladder\" class=\"ladder\"></div>\r\n      </section>\r\n\r\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\r\n        <div id=\"hands\"></div>\r\n      </section>\r\n\r\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\r\n        <div id=\"stats\"></div>\r\n      </section>\r\n\r\n      <p class=\"footer\" id=\"footer\"></p>\r\n    </div>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n      </section>\n\n      <!--\n        How the sitting went, when there was one (round 20). One sentence, on\n        the way out of the table rather than on top of it: a reward and a\n        lesson, and the lesson is the half that lasts.\n      -->\n      <p class=\"sitting\" id=\"sitting\" hidden></p>\n\n      <!--\n        The records line (round 20). Idan asked for the app to give something\n        \"like chips\" when a player improves; chips are the currency of the\n        outcome and would break three figures that tell the truth, so this is\n        the chip-shaped thing without a chip's meaning. It touches no figure:\n        every number in it is a count of something the player did.\n      -->\n      <section class=\"records\" id=\"records\" hidden>\n        <span class=\"records-title\" data-i18n=\"records.title\">Your records</span>\n        <span class=\"records-line\" id=\"records-line\"></span>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <!-- The shared table (round 22). A door, because the link is the only\n             growth this app has and a door is where somebody starts one. -->\n        <a class=\"door shared\" href=\"#shared\">\n          <span class=\"door-pip\">♣</span>\n          <span class=\"door-title\" data-i18n=\"shared.doorTitle\">Play at the same table</span>\n          <span class=\"door-sub\" data-i18n=\"shared.doorSub\">With a friend, on two phones</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <!--\n          The badge states the rules; it is not a control (§10.1). It was a\n          second line on the felt, printed on every hand in both phases, saying\n          what the name above it already half said — so round 17 moved it in\n          here, where the switches that change it are, and left one line on the\n          table. The link beside it opens nothing new: it is the anchor the\n          restrictions below answer to.\n        -->\n        <p class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </p>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n        <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <!--\n          Two readings of the same 311 cells (round 20): what the right play is,\n          and which of them this player has mastered. The second is the mastery\n          grid — a collection that also says what to practise next — and it is a\n          mode here rather than a screen of its own, because the keys are the\n          same keys and two screens would be two places to keep them right.\n        -->\n        <div class=\"chart-modes\" id=\"chart-modes\"></div>\n        <p class=\"muted fine\" id=\"mastery-legend\" hidden></p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n      <!--\n        The rules are a statement (§10.1), and since round 19 there is a door\n        beside them: the Trips pay table can be chosen, and the language and the\n        level live behind it, where a player looks for them on the other table.\n        The Blind pay table is stated inside and is not a control — every figure\n        the trainer shows was solved against it.\n      -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n        </div>\n        <button class=\"link\" id=\"uth-open-rules\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <!-- What he is holding, in words, once his cards are turned over —\n               round 17's treatment of his total on the Blackjack table. -->\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span><span class=\"seat-hand\" id=\"uth-dealer-hand\"></span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span><span class=\"seat-hand\" id=\"uth-you-hand\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"uth-rules\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n\n          <!-- Stated, not offered. The note says why, in one sentence. -->\n          <p class=\"rules-sub\"><span class=\"rules-badge\" id=\"uth-blind-line\"></span></p>\n          <p class=\"muted fine\" id=\"uth-blind-note\"></p>\n\n          <h3 class=\"sub-title\" data-i18n=\"uth.rules.trips\">Trips pay table</h3>\n          <div id=\"uth-trips-list\"></div>\n          <p class=\"muted fine\" id=\"uth-trips-note\"></p>\n\n          <p class=\"muted fine\" id=\"uth-limits-line\"></p>\n\n          <!--\n            Not rules: the language and how much the app explains. They were\n            behind \"How to play\" while this table had no panel; they belong\n            here, in the same place as on the Blackjack table.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
-const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play one shoe together</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          One shoe, your own cards, and nobody waits for anybody.\n        </p>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!-- The two measures, side by side, with the line that names them (§3.5). -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
+const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play at the same table</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          The same table, your own cards, and nobody waits for anybody.\n        </p>\n        <!-- How many seats. Two is the common case and the default; six is the\n             most a shoe this size seats comfortably (§3.1). -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-seats-pick\">\n          <legend data-i18n=\"shared.howMany\">How many of you?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-seats-row\"></div>\n        </fieldset>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n        <!--\n          Waiting is the worst screen in the app, so nobody has to sit in it:\n          the ordinary private table is one tap away and a strip along the top\n          keeps saying what he is waiting for (round 23).\n        -->\n        <button class=\"action primary\" type=\"button\" id=\"shared-meanwhile\" data-i18n=\"waiting.meanwhile\">\n          Play meanwhile\n        </button>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!-- The two measures, side by side, with the line that names them (§3.5). -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
 /*
@@ -21687,7 +21888,13 @@ const shared = {
   busy: false,
   /** Set when the page has no store to talk to: the artifact copy says so (§3.11). */
   unavailable: false,
+  /** How many seats a new table gets. Two unless somebody says otherwise. */
+  seats: 2,
 };
+
+/** The smallest and largest table (§3.1). */
+const SHARED_MIN_SEATS = 2;
+const SHARED_MAX_SEATS = 6;
 
 /** The table this link points at, or null for the door. */
 function tableFromLocation() {
@@ -21856,16 +22063,23 @@ function renderClock(clock) {
 
   const line = document.createElement('p');
   line.className = 'shared-clock-line';
+  /*
+   * At two seats the countdown ends the hand by itself, so it says so rather
+   * than promising a vote nobody will be offered.
+   */
   if (clock.mine) {
     line.textContent =
       clock.secondsLeft > 0
-        ? T('shared.clockYou', { n: clock.secondsLeft })
-        : T('shared.clockYouOver');
+        ? T(clock.automatic ? 'shared.clockYouAuto' : 'shared.clockYou', { n: clock.secondsLeft })
+        : T(clock.automatic ? 'shared.clockYouAutoOver' : 'shared.clockYouOver');
   } else {
     line.textContent =
       clock.secondsLeft > 0
-        ? T('shared.clockThem', { name: clock.name, n: clock.secondsLeft })
-        : T('shared.clockThemOver', { name: clock.name });
+        ? T(clock.automatic ? 'shared.clockThemAuto' : 'shared.clockThem', {
+            name: clock.name,
+            n: clock.secondsLeft,
+          })
+        : T(clock.automatic ? 'shared.clockThemAutoOver' : 'shared.clockThemOver', { name: clock.name });
   }
   box.appendChild(line);
 
@@ -21938,6 +22152,31 @@ function renderActions(screen) {
   }
 }
 
+/**
+ * How many seats, chosen before the table exists.
+ *
+ * Buttons rather than a number field: this is a choice between five things on a
+ * phone, and the answer is almost always the first one.
+ */
+function renderSeatPicker() {
+  const row = el('shared-seats-row');
+  if (!row) return;
+  row.replaceChildren();
+  for (let seats = SHARED_MIN_SEATS; seats <= SHARED_MAX_SEATS; seats++) {
+    const pick = document.createElement('button');
+    pick.className = 'action seat-pick' + (seats === shared.seats ? ' primary' : '');
+    pick.type = 'button';
+    pick.dataset.seats = String(seats);
+    pick.textContent = String(seats);
+    pick.setAttribute('aria-pressed', seats === shared.seats ? 'true' : 'false');
+    pick.addEventListener('click', () => {
+      shared.seats = seats;
+      renderSeatPicker();
+    });
+    row.appendChild(pick);
+  }
+}
+
 function renderTalk(screen) {
   const box = el('shared-talk');
   if (!screen || screen.hand === null) {
@@ -21985,9 +22224,17 @@ function render() {
    * the only growth this app has (§3.11) — so it is the whole screen until
    * somebody sits down, rather than a line beside a felt nobody can play.
    */
-  const alone = Boolean(screen) && screen.seats.filter((seat) => seat.playerId !== null).length < 2;
-  el('shared-invite').hidden = !(shared.id && alone && !(screen && screen.refused));
-  if (shared.id && alone) el('shared-link').textContent = inviteLink();
+  const seated = Boolean(screen) ? screen.seats.filter((seat) => seat.playerId !== null).length : 0;
+  const alone = Boolean(screen) && seated < 2;
+  const free = Boolean(screen) && screen.seats.some((seat) => seat.playerId === null);
+  /*
+   * The link stays reachable while any seat is empty — at six seats people
+   * arrive one at a time — but it is only the *whole* screen while nobody else
+   * has come, which is the moment there is nothing else to show.
+   */
+  el('shared-invite').hidden = !(shared.id && free && !(screen && screen.refused));
+  el('shared-invite').classList.toggle('waiting', alone);
+  if (shared.id && free) el('shared-link').textContent = inviteLink();
 
   const playable = Boolean(screen) && !screen.refused && !alone;
   el('shared-table').hidden = !playable;
@@ -22006,7 +22253,14 @@ function render() {
 
   /* Mine first, always: it is the hand being played (§3.1). */
   const order = [...screen.seats].sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
-  el('shared-seats').replaceChildren(...order.map(seatNode));
+  const box = el('shared-seats');
+  /*
+   * Beyond four the other seats collapse into a list (§3.1): mine stays full
+   * size because it is the hand being played, and five other people's hands
+   * laid out like it would push my own cards off the phone.
+   */
+  box.className = order.length > 4 ? 'shared-seats many' : 'shared-seats';
+  box.replaceChildren(...order.map(seatNode));
 
   renderClock(shared.clock);
   renderMeasures(screen);
@@ -22066,15 +22320,24 @@ function initShared() {
   shared.clock = null;
   shared.unavailable = false;
 
+  renderSeatPicker();
+
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', {});
+      const made = await api('/api/shared/create', { seats: shared.seats });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }
       return made;
     }),
   );
+
+  el('shared-meanwhile').addEventListener('click', () => {
+    if (!shared.id) return;
+    void api('/api/shared/wait', { id: shared.id }).then(() => {
+      location.hash = '#table';
+    });
+  });
 
   el('shared-copy').addEventListener('click', () => {
     const link = inviteLink();
@@ -22432,7 +22695,6 @@ function httpBackend({ url, key, table = 'players' }) {
           restrictions: table.restrictions,
           seats: table.seats,
           created_by: table.createdBy,
-          events: table.events ?? [],
         }),
       });
       if (!made.ok) throw new Error(`createTable failed: ${made.status}`);
@@ -22444,6 +22706,8 @@ function httpBackend({ url, key, table = 'players' }) {
           player_id: seat === 0 ? table.createdBy : null,
           name: seat === 0 ? table.createdByName : null,
           bet: seat === 0 ? (table.bet ?? 1) : 1,
+          /* The maker's own join, in the maker's own row (round 23). */
+          events: seat === 0 ? [{ kind: 'join', seat: 0, hand: 0 }] : [],
         });
       }
       const seated = await fetch(seatsEndpoint, {
@@ -22495,31 +22759,14 @@ function httpBackend({ url, key, table = 'players' }) {
             hands: seatRecord.hands ?? 0,
             /* This seat's own vote, so a tally needs no shared row (round 22). */
             vote: seatRecord.vote ?? null,
+            /* What happened to this seat, written only by this seat (round 23). */
+            events: seatRecord.events ?? [],
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
         },
       );
       if (!response.ok) throw new Error(`pushSeat failed: ${response.status}`);
-      return true;
-    },
-
-    /**
-     * Append to the table's log: a join, a drop, a return.
-     *
-     * The one write in this feature that is not to the writer's own row, and it
-     * is deliberately the rarest: somebody leaving or being dropped. Two of them
-     * landing in the same instant would cost one event, which is why the whole
-     * list is sent rather than an append — the loser of that race rewrites from
-     * a record it has just read, and the next refresh shows it.
-     */
-    async pushEvents(tableId, events) {
-      const response = await fetch(`${tablesEndpoint}?id=eq.${encodeURIComponent(tableId)}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ events, updated_at: new Date().toISOString() }),
-      });
-      if (!response.ok) throw new Error(`pushEvents failed: ${response.status}`);
       return true;
     },
 
@@ -22542,7 +22789,6 @@ function httpBackend({ url, key, table = 'players' }) {
         presetId: row.preset_id,
         restrictions: row.restrictions ?? {},
         state: row.state,
-        events: row.events ?? [],
         seats: (await seats.json()).map((seat) => ({
           seat: seat.seat,
           playerId: seat.player_id,
@@ -22551,6 +22797,7 @@ function httpBackend({ url, key, table = 'players' }) {
           moves: seat.moves ?? [],
           hands: seat.hands ?? 0,
           vote: seat.vote ?? null,
+          events: seat.events ?? [],
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),
@@ -22905,13 +23152,13 @@ function sharedNormalise(record) {
   return {
     ...record,
     restrictions: record.restrictions ?? {},
-    events: Array.isArray(record.events) ? record.events : [],
     seats: (record.seats ?? []).map((row) => ({
       ...row,
       name: row.name ?? '',
       bet: Number(row.bet) || 1,
       moves: Array.isArray(row.moves) ? row.moves : [],
       hands: Number(row.hands) || 0,
+      events: Array.isArray(row.events) ? row.events : [],
     })),
   };
 }
@@ -22955,6 +23202,7 @@ async function sharedPushMine() {
     moves: row.moves,
     hands: row.hands,
     vote: row.vote ?? null,
+    events: row.events ?? [],
     cardsHash: seatCardsHash(derived, row.seat),
   });
 }
@@ -22964,16 +23212,23 @@ async function sharedCreate(options) {
   const store = sharedBackend();
   if (!store) return { available: false };
   const id = sharedTableId();
+  /*
+   * The seed is generated, never chosen (§3.11) — a seed you can ask for is a
+   * shoe you can practise against twice. A caller may hand one in, and exactly
+   * one caller does: the test harness, which cannot test a thirty-second clock
+   * against a shoe that deals a different hand every run. No route passes it,
+   * and `test/shared-screen.test.ts` checks that none ever starts to.
+   */
+  const seed = Number.isInteger(options.seed) ? options.seed : sharedSeed();
   await store.createTable({
     id,
-    seed: sharedSeed(),
+    seed,
     presetId: options.presetId || 'vegas-strip-6d-s17',
     restrictions: options.restrictions || {},
     seats: Math.max(2, Math.min(6, Number(options.seats) || 2)),
     createdBy: options.playerId,
     createdByName: options.name,
     bet: Number(options.bet) || 1,
-    events: [{ kind: 'join', seat: 0, hand: 0 }],
   });
   sharedState.id = id;
   sharedState.seat = 0;
@@ -23101,18 +23356,54 @@ function sharedClock() {
       row.seat !== held,
   ).length;
   const needs = sharedVoteNeeds(waiting, Math.max(0, step));
+  /*
+   * At two seats there is no vote, and Idan is right that there was never one
+   * to have: with a single player waiting, a "vote" is that player pressing a
+   * button to agree with himself. So the thirty seconds simply end the hand.
+   *
+   * It is the same drop with the same consequences, and it is built out of the
+   * same parts — one agreement, recorded in the waiting player's own row — so
+   * there is no second mechanism here, only a button that is not drawn and a
+   * write that happens on its own. From three seats up the ladder is unchanged.
+   */
+  const automatic = waiting === 1;
   return {
     seat: held,
     name: screen.seats.find((seat) => seat.seat === held)?.name ?? '',
     mine: held === sharedState.seat,
-    /** Seconds left before a vote may be called at all. */
+    /** Seconds left before the hand ends, or before a vote may be called. */
     secondsLeft: Math.max(0, Math.ceil((SHARED_CLOCK_MS - heldMs) / 1000)),
-    canVote: step >= 0 && sharedState.seat !== null && sharedState.seat !== held,
+    automatic,
+    canVote: !automatic && step >= 0 && sharedState.seat !== null && sharedState.seat !== held,
     step: Math.max(0, step),
     votes,
     needs,
+    waiting,
     passed: step >= 0 && votes >= needs,
   };
+}
+
+/**
+ * The clock running out, at a table where nobody has to be asked.
+ *
+ * Called by the screen's own tick. At two seats this ends the hand the moment
+ * the thirty seconds are up; anywhere else it does nothing, because there the
+ * waiting players are asked instead.
+ */
+async function sharedClockExpired() {
+  const clock = sharedClock();
+  if (!clock || !clock.automatic) return null;
+  if (clock.secondsLeft > 0) return clock;
+  // The player being timed out cannot be the one to write it.
+  if (sharedState.seat === null || sharedState.seat === clock.seat) return clock;
+  const row = sharedMyRow();
+  const screen = sharedScreenNow();
+  if (!row || !screen) return clock;
+  if (row.vote && row.vote.hand === screen.hand && row.vote.against === clock.seat) return clock;
+  row.vote = { hand: screen.hand, against: clock.seat, at: 0, needs: 1 };
+  await sharedPushMine();
+  await sharedRefresh();
+  return sharedClock();
 }
 
 /** Agree that the player holding the table should be dropped from this hand. */
@@ -23121,37 +23412,43 @@ async function sharedVote() {
   const row = sharedMyRow();
   const screen = sharedScreenNow();
   if (!clock || !clock.canVote || !row || !screen) return clock;
-  row.vote = { hand: screen.hand, against: clock.seat, at: clock.step };
+  row.vote = { hand: screen.hand, against: clock.seat, at: clock.step, needs: clock.needs };
   await sharedPushMine();
   await sharedRefresh();
-  const after = sharedClock();
-  if (after && after.passed) await sharedDrop(clock.seat, 'vote');
+  /*
+   * Nothing writes the drop. Enough votes *are* the drop — the derivation reads
+   * them and says so — which is what keeps this the one thing at the table that
+   * is about a player but not done by him, and still needs no shared row.
+   */
   return sharedClock();
 }
 
-/** Append one event to the table's log, on top of the record just read. */
+/**
+ * Append one event about me, to my own row.
+ *
+ * There is no shared list to append to any more, and that is the point: the
+ * only row this writes is the writer's own, so two players leaving in the same
+ * instant cannot cost one of the events the way they used to.
+ */
 async function sharedAddEvent(event) {
-  const store = sharedBackend();
-  if (!store || !sharedState.record || !sharedState.id) return;
-  const events = [...sharedState.record.events, event];
-  if (typeof store.pushEvents === 'function') await store.pushEvents(sharedState.id, events);
-  sharedState.record = { ...sharedState.record, events };
+  const row = sharedMyRow();
+  if (!row) return;
+  row.events = [...(row.events ?? []), event];
+  await sharedPushMine();
 }
 
 /**
- * Write the drop into the table's log.
+ * Write my own leaving into my own row.
  *
- * As an event carrying the hand, never a timestamp: who is live decides how
- * many cards a round consumes, so a wall clock inside the ban would make the
- * table impossible to reproduce. The clock decided the moment; the log holds
- * what happened.
+ * A seat being *voted* out is not written at all — it is derived from the votes,
+ * which sit in their own writers' rows. So the only drop anybody writes is his
+ * own, and it carries the hand rather than a time, which is what keeps the cards
+ * following the log.
  */
 async function sharedDrop(seat, why) {
-  const store = sharedBackend();
-  if (!store || !sharedState.record || !sharedState.id) return;
   const screen = sharedScreenNow();
   const hand = screen && screen.hand !== null ? screen.hand : 0;
-  await sharedAddEvent({ kind: 'drop', seat, hand, why: why || 'vote' });
+  await sharedAddEvent({ kind: 'drop', seat, hand, why: why || 'left' });
   await sharedRefresh();
 }
 
@@ -23866,7 +24163,7 @@ async function api(path, body) {
           noSurrender: store.get('ev:noSurrender') === '1',
           likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
         },
-        seats: 2,
+        seats: Math.max(2, Math.min(6, Number(b.seats) || 2)),
       });
       return { ...made, screen: sharedScreenNow(), clock: sharedClock() };
     }
@@ -23877,9 +24174,26 @@ async function api(path, body) {
       return { ...sat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 
+    /*
+     * "I will play meanwhile." Starts the watch that brings him back when his
+     * friend sits down — between hands, never in the middle of one.
+     */
+    case '/api/shared/wait': {
+      if (!sharedAvailable()) return { available: false };
+      watchForFriend(String(b.id || ''));
+      return { available: true };
+    }
+
     case '/api/shared/view': {
       if (!sharedAvailable()) return { available: false };
       await sharedRefresh();
+      /*
+       * The poll is also where the thirty seconds run out. At two seats that
+       * ends the hand on its own — there is nobody to ask — so the check rides
+       * with the read that was happening anyway rather than on a timer of its
+       * own. Everywhere else it does nothing.
+       */
+      await sharedClockExpired();
       return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 
@@ -24042,6 +24356,154 @@ function afterPlay() {
   return view;
 }
 
+
+
+/* Waiting for a friend without an empty screen (round 23). */
+/*
+ * Waiting for a friend, without an empty screen (round 23, item 5).
+ *
+ * Idan: *"גם אם קובעים אז מבאס לחכות... פשוט לא מסך ירוק ריק."* Making a table
+ * and staring at a link until somebody arrives is the worst screen in the app,
+ * so the player does not have to: he plays the ordinary private table while he
+ * waits, and a strip along the top says what he is waiting for.
+ *
+ * TWO THINGS THIS DELIBERATELY IS NOT.
+ *
+ * It is **not a second mode**. The game he plays while waiting is the private
+ * table, dealt by the same session and graded by the same code path as any hand
+ * he plays alone — there is nothing here that touches a decision.
+ *
+ * And the strip is **not a clock**. It counts nothing down and it can eject
+ * nobody; the thirty seconds, the vote and the drop belong to the shared table
+ * alone, and `test/shared-table.test.ts` scans the private game's files to
+ * prove they are not there. A line saying "somebody may arrive" is not one of
+ * them.
+ *
+ * WHEN HE MOVES. Between hands, never in the middle of one — being pulled off a
+ * live hand would cost him the hand and the decision, which is exactly what the
+ * shared table's own rules are careful never to do to anybody.
+ */
+
+/** How often to look for the second player, in ms. Slower than the table's own poll. */
+const WAITING_POLL_MS = 2500;
+
+const waiting = {
+  /** The table being waited on, or null. */
+  id: null,
+  /** Set once somebody has sat down, so the strip can say so before moving him. */
+  arrived: null,
+  timer: null,
+};
+
+/** Start watching a table this player has made and is waiting at. */
+function watchForFriend(id) {
+  waiting.id = id;
+  waiting.arrived = null;
+  if (waiting.timer) clearInterval(waiting.timer);
+  waiting.timer = setInterval(() => void pollForFriend(), WAITING_POLL_MS);
+  drawWaitingStrip();
+}
+
+/** Stop watching — he arrived, or the player left the table. */
+function stopWaitingForFriend() {
+  waiting.id = null;
+  waiting.arrived = null;
+  if (waiting.timer) clearInterval(waiting.timer);
+  waiting.timer = null;
+  drawWaitingStrip();
+}
+
+/**
+ * Whether the private table is mid-hand.
+ *
+ * The one question that decides when he moves. `idle` and `settled` are both
+ * between hands; `player` and `insurance` are a hand he is in the middle of.
+ */
+function midHand() {
+  try {
+    const phase = session.view.phase;
+    return phase === 'player' || phase === 'insurance';
+  } catch {
+    return false;
+  }
+}
+
+async function pollForFriend() {
+  if (!waiting.id || !sharedAvailable()) return;
+  const store = sharedBackend();
+  let record = null;
+  try {
+    record = await store.readTable(waiting.id);
+  } catch {
+    return; // A failed poll changes nothing; he is still waiting.
+  }
+  if (!record) return;
+  const others = record.seats.filter((row) => row.playerId && row.playerId !== me.id);
+  if (others.length === 0) {
+    drawWaitingStrip();
+    return;
+  }
+  waiting.arrived = others[0].name || '';
+  drawWaitingStrip();
+  // Between hands, never in the middle of one.
+  if (!midHand()) {
+    const id = waiting.id;
+    stopWaitingForFriend();
+    location.hash = `#shared=${encodeURIComponent(id)}`;
+  }
+}
+
+/**
+ * The strip itself, drawn outside the mounted screen.
+ *
+ * Outside because it has to survive a screen changing under it: he made the
+ * table on one screen and is playing on another, and what he is waiting for did
+ * not stop being true in between.
+ */
+function drawWaitingStrip() {
+  let strip = document.getElementById('waiting-strip');
+  if (!waiting.id) {
+    if (strip) strip.remove();
+    return;
+  }
+  if (!strip) {
+    strip = document.createElement('div');
+    strip.id = 'waiting-strip';
+    strip.className = 'waiting-strip';
+    strip.setAttribute('role', 'status');
+    document.body.insertBefore(strip, document.body.firstChild);
+  }
+  strip.replaceChildren();
+
+  const line = document.createElement('span');
+  line.className = 'waiting-line';
+  line.textContent = waiting.arrived
+    ? tr('waiting.arrived', { name: waiting.arrived })
+    : tr('waiting.forFriend');
+  strip.appendChild(line);
+
+  if (!waiting.arrived) {
+    const copy = document.createElement('button');
+    copy.className = 'waiting-copy';
+    copy.type = 'button';
+    copy.textContent = tr('shared.copy');
+    copy.addEventListener('click', () => {
+      const link = `${location.origin}${location.pathname}#shared=${encodeURIComponent(waiting.id)}`;
+      if (navigator.clipboard) void navigator.clipboard.writeText(link);
+      copy.textContent = tr('shared.copied');
+    });
+    strip.appendChild(copy);
+  }
+
+  const go = document.createElement('button');
+  go.className = 'waiting-go';
+  go.type = 'button';
+  go.textContent = tr('waiting.go');
+  go.addEventListener('click', () => {
+    location.hash = `#shared=${encodeURIComponent(waiting.id)}`;
+  });
+  strip.appendChild(go);
+}
 
 
 /*
@@ -24452,6 +24914,8 @@ function mount(name) {
   app().innerHTML = SCREEN_HTML[name]();
   sweep(app());
   applyLanguage();
+  // The strip lives outside the mounted screen, so a screen change redraws it.
+  drawWaitingStrip();
 
   if (name === 'home') {
     addSocialTabs();
@@ -24467,6 +24931,11 @@ function mount(name) {
   } else if (name === 'analyse') {
     initAnalyse();
   } else if (name === 'shared') {
+    /*
+     * Arriving at the shared table is the end of waiting for it, whether he
+     * came because his friend sat down or because he pressed the strip.
+     */
+    stopWaitingForFriend();
     initShared();
   } else {
     initTable();

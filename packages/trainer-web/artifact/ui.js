@@ -149,6 +149,8 @@ function mount(name) {
   app().innerHTML = SCREEN_HTML[name]();
   sweep(app());
   applyLanguage();
+  // The strip lives outside the mounted screen, so a screen change redraws it.
+  drawWaitingStrip();
 
   if (name === 'home') {
     addSocialTabs();
@@ -164,6 +166,11 @@ function mount(name) {
   } else if (name === 'analyse') {
     initAnalyse();
   } else if (name === 'shared') {
+    /*
+     * Arriving at the shared table is the end of waiting for it, whether he
+     * came because his friend sat down or because he pressed the strip.
+     */
+    stopWaitingForFriend();
     initShared();
   } else {
     initTable();

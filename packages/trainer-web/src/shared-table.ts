@@ -112,7 +112,21 @@ export interface SeatRecord {
    * derivation never reads it: a vote that passes becomes a `drop` event, and
    * only the event reaches the cards.
    */
-  vote?: { hand: number | null; against: number; at: number } | null;
+  vote?: { hand: number | null; against: number; at: number; needs: number } | null;
+  /**
+   * What happened to *this* seat: it joined, it left, it came back.
+   *
+   * In the seat's own row, like everything else, because the alternative was the
+   * one row in this design with two writers — and round 22 shipped exactly that
+   * before it was closed here. Two players leaving in the same instant used to
+   * cost one of the events, because each sent the whole list it had last read.
+   *
+   * A seat is only ever the subject of its own events. The one thing that is
+   * *about* a seat but not written *by* it is being voted out, and that is not
+   * written at all: it is derived from the votes, which are themselves in their
+   * own writers' rows. See `tableEvents`.
+   */
+  events?: TableEvent[];
   /** What this seat saw dealt, hashed. See `cardsHash`. */
   cardsHash?: string;
 }
@@ -128,7 +142,7 @@ export interface SeatRecord {
  */
 export type TableEvent =
   | { kind: 'join'; seat: number; hand: number }
-  | { kind: 'drop'; seat: number; hand: number }
+  | { kind: 'drop'; seat: number; hand: number; why?: string }
   | { kind: 'return'; seat: number; hand: number };
 
 export interface TableRecord {
@@ -137,7 +151,6 @@ export interface TableRecord {
   presetId: string;
   restrictions: Restrictions;
   seats: SeatRecord[];
-  events: TableEvent[];
 }
 
 /** One graded decision, exactly as the solo game grades one. */
@@ -760,12 +773,72 @@ function run(
  */
 export function isLive(record: TableRecord, seat: number, hand: number): boolean {
   let live = false;
-  for (const event of record.events) {
+  for (const event of tableEvents(record)) {
     if (event.seat !== seat || event.hand > hand) continue;
     if (event.kind === 'join' || event.kind === 'return') live = true;
     if (event.kind === 'drop') live = false;
   }
   return live;
+}
+
+/**
+ * Every event at the table, merged from the seats' own rows in canonical order.
+ *
+ * Two kinds go in. The ones a seat wrote about itself — it joined, it left, it
+ * came back — are read straight out of its row. The ones nobody wrote are the
+ * drops a vote decided: those are *derived* from the votes, so that the one
+ * thing at this table that is about a player but not done by him still needs no
+ * row with two writers.
+ *
+ * Canonical order is `(hand, seat)`, so the merge is the same on every device
+ * whatever order the rows came back in.
+ */
+export function tableEvents(record: TableRecord): TableEvent[] {
+  const events: TableEvent[] = [];
+  for (const seat of record.seats) {
+    for (const event of seat.events ?? []) events.push(event);
+  }
+  for (const dropped of votedOut(record)) events.push(dropped);
+  return events.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
+}
+
+/**
+ * The drops a vote decided, worked out from the votes themselves.
+ *
+ * Each waiting player records, in his own row, who he wants dropped, at which
+ * hand, and **how many agreements that attempt needed** — a number he read off
+ * the same record everybody else has. A drop follows when the votes for one
+ * player reach the most permissive threshold any of them was cast under, which
+ * is what the escalating ladder means: the first attempt needs every waiting
+ * player, and each later one needs one fewer.
+ *
+ * Nothing here asks what time it is. The clock decided *when* a vote was written
+ * and which rung it was written on; both are recorded, so two phones reading the
+ * same rows reach the same answer for ever after.
+ */
+function votedOut(record: TableRecord): TableEvent[] {
+  const byTarget = new Map<string, { hand: number; against: number; seats: Set<number>; needs: number }>();
+  for (const seat of record.seats) {
+    const vote = seat.vote;
+    if (!vote || vote.hand === null || vote.against === seat.seat) continue;
+    const key = `${vote.hand}:${vote.against}`;
+    const found = byTarget.get(key) ?? {
+      hand: vote.hand,
+      against: vote.against,
+      seats: new Set<number>(),
+      needs: Number.POSITIVE_INFINITY,
+    };
+    found.seats.add(seat.seat);
+    found.needs = Math.min(found.needs, Math.max(1, vote.needs));
+    byTarget.set(key, found);
+  }
+  const out: TableEvent[] = [];
+  for (const tally of byTarget.values()) {
+    if (tally.seats.size >= tally.needs) {
+      out.push({ kind: 'drop', seat: tally.against, hand: tally.hand, why: 'vote' });
+    }
+  }
+  return out;
 }
 
 /** Every card a seat saw, hashed — what each seat writes into its own row. */

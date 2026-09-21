@@ -223,7 +223,6 @@ function httpBackend({ url, key, table = 'players' }) {
           restrictions: table.restrictions,
           seats: table.seats,
           created_by: table.createdBy,
-          events: table.events ?? [],
         }),
       });
       if (!made.ok) throw new Error(`createTable failed: ${made.status}`);
@@ -235,6 +234,8 @@ function httpBackend({ url, key, table = 'players' }) {
           player_id: seat === 0 ? table.createdBy : null,
           name: seat === 0 ? table.createdByName : null,
           bet: seat === 0 ? (table.bet ?? 1) : 1,
+          /* The maker's own join, in the maker's own row (round 23). */
+          events: seat === 0 ? [{ kind: 'join', seat: 0, hand: 0 }] : [],
         });
       }
       const seated = await fetch(seatsEndpoint, {
@@ -286,31 +287,14 @@ function httpBackend({ url, key, table = 'players' }) {
             hands: seatRecord.hands ?? 0,
             /* This seat's own vote, so a tally needs no shared row (round 22). */
             vote: seatRecord.vote ?? null,
+            /* What happened to this seat, written only by this seat (round 23). */
+            events: seatRecord.events ?? [],
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
         },
       );
       if (!response.ok) throw new Error(`pushSeat failed: ${response.status}`);
-      return true;
-    },
-
-    /**
-     * Append to the table's log: a join, a drop, a return.
-     *
-     * The one write in this feature that is not to the writer's own row, and it
-     * is deliberately the rarest: somebody leaving or being dropped. Two of them
-     * landing in the same instant would cost one event, which is why the whole
-     * list is sent rather than an append — the loser of that race rewrites from
-     * a record it has just read, and the next refresh shows it.
-     */
-    async pushEvents(tableId, events) {
-      const response = await fetch(`${tablesEndpoint}?id=eq.${encodeURIComponent(tableId)}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ events, updated_at: new Date().toISOString() }),
-      });
-      if (!response.ok) throw new Error(`pushEvents failed: ${response.status}`);
       return true;
     },
 
@@ -333,7 +317,6 @@ function httpBackend({ url, key, table = 'players' }) {
         presetId: row.preset_id,
         restrictions: row.restrictions ?? {},
         state: row.state,
-        events: row.events ?? [],
         seats: (await seats.json()).map((seat) => ({
           seat: seat.seat,
           playerId: seat.player_id,
@@ -342,6 +325,7 @@ function httpBackend({ url, key, table = 'players' }) {
           moves: seat.moves ?? [],
           hands: seat.hands ?? 0,
           vote: seat.vote ?? null,
+          events: seat.events ?? [],
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),

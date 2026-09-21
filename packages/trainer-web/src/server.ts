@@ -99,6 +99,7 @@ const server = createServer(async (request, response) => {
          */
         case '/api/shared/create':
         case '/api/shared/join':
+        case '/api/shared/wait':
         case '/api/shared/view':
         case '/api/shared/act':
         case '/api/shared/deal':

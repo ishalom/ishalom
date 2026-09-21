@@ -26,10 +26,16 @@
         seat taken has to be able to make his own without going anywhere.
       -->
       <section class="shared-door" id="shared-door" hidden>
-        <h1 data-i18n="shared.doorTitle">Play one shoe together</h1>
+        <h1 data-i18n="shared.doorTitle">Play at the same table</h1>
         <p class="shared-door-body" data-i18n="shared.doorBody">
-          One shoe, your own cards, and nobody waits for anybody.
+          The same table, your own cards, and nobody waits for anybody.
         </p>
+        <!-- How many seats. Two is the common case and the default; six is the
+             most a shoe this size seats comfortably (§3.1). -->
+        <fieldset class="shared-seats-pick" id="shared-seats-pick">
+          <legend data-i18n="shared.howMany">How many of you?</legend>
+          <div class="shared-seats-row" id="shared-seats-row"></div>
+        </fieldset>
         <button class="action primary" type="button" id="shared-make" data-i18n="shared.make">
           Make a table
         </button>
@@ -44,6 +50,14 @@
         <p class="shared-note" id="shared-waiting" data-i18n="shared.waiting">
           Waiting for somebody to sit down.
         </p>
+        <!--
+          Waiting is the worst screen in the app, so nobody has to sit in it:
+          the ordinary private table is one tap away and a strip along the top
+          keeps saying what he is waiting for (round 23).
+        -->
+        <button class="action primary" type="button" id="shared-meanwhile" data-i18n="waiting.meanwhile">
+          Play meanwhile
+        </button>
       </section>
 
       <!--

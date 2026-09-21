@@ -126,6 +126,16 @@ test('the cards keep the size Idan asked for; only the space around them moved',
   for (const rule of tightened.matchAll(/([^{}]*)\{[^}]*width: \d+px[^}]*\}/g)) {
     const selector = rule[1]!.trim().split(String.fromCharCode(10)).pop()!.trim();
     if (!selector.includes('.card')) continue;
+    /*
+     * Round 23: a *neighbour's* hand at a shared table is not the hand this
+     * rule is about. Spec A §3.1 asks for exactly the opposite there — "your
+     * own cards full size, the other seats compact, collapsing into a list
+     * beyond four" — and six other players' hands at the size Idan asked for
+     * would push his own off the phone, which is the thing this test exists to
+     * prevent. So `.shared-seat.other` is allowed to shrink, and the cards of
+     * the hand being played still are not.
+     */
+    if (selector.includes('.shared-seat.other')) continue;
     assert.match(selector, /\.long|\.split/, `${selector} changes the size of every card`);
   }
 });
