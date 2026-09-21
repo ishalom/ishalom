@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="f7fd46464537d70911899bec100baff08c3a12d6-dirty" />
-<meta name="ev-build-at" content="2026-09-21T11:26:48.868Z" />
+<meta name="ev-build-commit" content="55b796432d2dcb5206e44d1e78da894bf85f71e8" />
+<meta name="ev-build-at" content="2026-09-21T11:37:50.256Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -23010,6 +23010,22 @@ async function sharedJoin(id, player) {
     });
     if (!answer.taken) {
       sharedState.seat = row.seat;
+      /*
+       * And into the log, which is the part that matters.
+       *
+       * Taking the row makes the seat *yours*; the join event makes it *live*,
+       * and only the log decides who is live — because who is live decides how
+       * many cards a round consumes. A seat written without its event is a
+       * player sitting at a table that never deals him in, which is exactly
+       * what happened before the two-phone test caught it.
+       *
+       * At the hand after the one in progress: a player who sits down halfway
+       * through a hand joins the next one, rather than appearing in the middle
+       * of a deal he was not dealt into.
+       */
+      const seen = sharedScreenNow();
+      const from = seen && seen.hand !== null ? seen.hand + 1 : 0;
+      await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from });
       await sharedRefresh();
       return { available: true, seat: row.seat, taken: false };
     }
@@ -23113,6 +23129,15 @@ async function sharedVote() {
   return sharedClock();
 }
 
+/** Append one event to the table's log, on top of the record just read. */
+async function sharedAddEvent(event) {
+  const store = sharedBackend();
+  if (!store || !sharedState.record || !sharedState.id) return;
+  const events = [...sharedState.record.events, event];
+  if (typeof store.pushEvents === 'function') await store.pushEvents(sharedState.id, events);
+  sharedState.record = { ...sharedState.record, events };
+}
+
 /**
  * Write the drop into the table's log.
  *
@@ -23126,8 +23151,7 @@ async function sharedDrop(seat, why) {
   if (!store || !sharedState.record || !sharedState.id) return;
   const screen = sharedScreenNow();
   const hand = screen && screen.hand !== null ? screen.hand : 0;
-  const events = [...sharedState.record.events, { kind: 'drop', seat, hand, why: why || 'vote' }];
-  if (typeof store.pushEvents === 'function') await store.pushEvents(sharedState.id, events);
+  await sharedAddEvent({ kind: 'drop', seat, hand, why: why || 'vote' });
   await sharedRefresh();
 }
 
