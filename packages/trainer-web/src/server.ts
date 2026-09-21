@@ -90,6 +90,23 @@ const server = createServer(async (request, response) => {
             }),
           );
 
+        /*
+         * The shared table needs a store two phones can both reach, and the
+         * local app is one process serving one browser. So it answers honestly
+         * rather than pretending: §3.11 settled that the shared table is the
+         * hosted app's at first, and the screen says so where a player can read
+         * it instead of failing somewhere further in.
+         */
+        case '/api/shared/create':
+        case '/api/shared/join':
+        case '/api/shared/view':
+        case '/api/shared/act':
+        case '/api/shared/deal':
+        case '/api/shared/vote':
+        case '/api/shared/leave':
+        case '/api/shared/force-mismatch':
+          return json({ available: false });
+
         case '/api/presets':
           return json(
             RULE_PRESETS.map((preset) => ({

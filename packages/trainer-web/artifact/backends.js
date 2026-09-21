@@ -284,12 +284,33 @@ function httpBackend({ url, key, table = 'players' }) {
             /* How far this seat has been dealt. The moves cannot say: a hand the
                dealer wins with a natural is decided by nobody and leaves none. */
             hands: seatRecord.hands ?? 0,
+            /* This seat's own vote, so a tally needs no shared row (round 22). */
+            vote: seatRecord.vote ?? null,
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
         },
       );
       if (!response.ok) throw new Error(`pushSeat failed: ${response.status}`);
+      return true;
+    },
+
+    /**
+     * Append to the table's log: a join, a drop, a return.
+     *
+     * The one write in this feature that is not to the writer's own row, and it
+     * is deliberately the rarest: somebody leaving or being dropped. Two of them
+     * landing in the same instant would cost one event, which is why the whole
+     * list is sent rather than an append — the loser of that race rewrites from
+     * a record it has just read, and the next refresh shows it.
+     */
+    async pushEvents(tableId, events) {
+      const response = await fetch(`${tablesEndpoint}?id=eq.${encodeURIComponent(tableId)}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ events, updated_at: new Date().toISOString() }),
+      });
+      if (!response.ok) throw new Error(`pushEvents failed: ${response.status}`);
       return true;
     },
 
@@ -320,6 +341,7 @@ function httpBackend({ url, key, table = 'players' }) {
           bet: Number(seat.bet) || 1,
           moves: seat.moves ?? [],
           hands: seat.hands ?? 0,
+          vote: seat.vote ?? null,
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),

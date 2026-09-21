@@ -107,21 +107,45 @@ const app = () => document.getElementById('app');
  * `#ultimate` joined them in round 4a, when the door stopped being a preview.
  */
 // `#usage` (round 9) is the one screen nothing links to: see usage.js.
-const SCREENS = { '#home': 'home', '#table': 'table', '#ultimate': 'ultimate', '#usage': 'usage', '#analyse': 'analyse' };
+const SCREENS = {
+  '#home': 'home',
+  '#table': 'table',
+  '#ultimate': 'ultimate',
+  '#usage': 'usage',
+  '#analyse': 'analyse',
+  '#shared': 'shared',
+};
 const SCREEN_HTML = {
   home: () => HOME_HTML,
   table: () => TABLE_HTML,
   ultimate: () => ULTIMATE_HTML,
   usage: () => usageHtml(),
   analyse: () => ANALYSE_HTML,
+  shared: () => SHARED_HTML,
 };
-const screenFromHash = () => SCREENS[location.hash] ?? null;
+
+/*
+ * The shared table is the one screen whose hash carries something.
+ *
+ * `#shared=hx3k…` is the invitation, and it is the only growth this app has
+ * (§3.11), so it has to survive being pasted into a message, opened on a phone
+ * that has never seen the app, and followed twice. Everything after the `=` is
+ * the table's name and belongs to the screen, not to the router — which is why
+ * this is matched on the part before it.
+ */
+const screenFromHash = () => {
+  const hash = String(location.hash || '');
+  const at = hash.indexOf('=');
+  return SCREENS[at > 0 ? hash.slice(0, at) : hash] ?? null;
+};
 
 function mount(name) {
   screen = name;
   // Set before the markup, and only when it differs: `hashchange` fires after
   // this returns, sees the screen it names is already mounted, and does nothing.
-  if (location.hash !== `#${name}`) location.hash = `#${name}`;
+  // The shared table keeps whatever table its hash already names.
+  const keepsHash = name === 'shared' && String(location.hash || '').startsWith('#shared=');
+  if (!keepsHash && location.hash !== `#${name}`) location.hash = `#${name}`;
   app().innerHTML = SCREEN_HTML[name]();
   sweep(app());
   applyLanguage();
@@ -139,6 +163,8 @@ function mount(name) {
     void initUsage();
   } else if (name === 'analyse') {
     initAnalyse();
+  } else if (name === 'shared') {
+    initShared();
   } else {
     initTable();
   }

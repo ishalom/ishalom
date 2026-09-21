@@ -104,6 +104,15 @@ export interface SeatRecord {
    * cards still follow the log; this only says how far the log runs.
    */
   hands?: number;
+  /**
+   * This seat's own vote to drop whoever is holding the table (§3.3).
+   *
+   * Here, in the voter's own row, because a tally is naturally one shared
+   * number and a shared number is the one thing this design does not have. The
+   * derivation never reads it: a vote that passes becomes a `drop` event, and
+   * only the event reaches the cards.
+   */
+  vote?: { hand: number | null; against: number; at: number } | null;
   /** What this seat saw dealt, hashed. See `cardsHash`. */
   cardsHash?: string;
 }
@@ -184,6 +193,14 @@ export interface DerivedHand {
   hand: number;
   /** True while a seat still owes the table an action: nothing settles until it comes. */
   incomplete: boolean;
+  /**
+   * Which seats the table is waiting on, in seat order.
+   *
+   * This is the per-seat indicator and the thirty-second rule's trigger in one
+   * value: a seat in here has not answered the round, everybody else has, and
+   * when it is the only name on the list every other player is waiting for it.
+   */
+  waitingFor: number[];
   dealer: Card[];
   seats: DerivedSeatHand[];
   decisions: DerivedDecision[];
@@ -236,7 +253,7 @@ export function cardsHash(cards: readonly Card[]): string {
  */
 const CHARTS = new Map<string, StrategyChart>();
 
-function chartFor(rules: BlackjackRules): StrategyChart {
+function sharedChartFor(rules: BlackjackRules): StrategyChart {
   const key = JSON.stringify(rules);
   let chart = CHARTS.get(key);
   if (!chart) {
@@ -259,7 +276,7 @@ class SeatPlay {
   readonly dealt: Card[] = [];
 
   constructor(rules: BlackjackRules, opening: Card[], bet: number) {
-    this.table = new BlackjackTable({ rules, seed: 1, grading: 'chart', chart: chartFor(rules) });
+    this.table = new BlackjackTable({ rules, seed: 1, grading: 'chart', chart: sharedChartFor(rules) });
     this.table.shoe.stack(opening);
     this.table.startHand(bet);
     this.dealt.push(opening[0]!, opening[2]!);
@@ -410,6 +427,8 @@ function playHand(
   let incomplete = false;
   /** Seats that recorded a split last round, whose two hands are live from this one. */
   const splitting = new Set<number>();
+  /** Seats the table is still waiting on, by seat number. Empty means nobody is owed. */
+  const owing = new Set<number>();
 
   for (let round = 0; round < 60 && !incomplete; round++) {
     const acting = plays.map((play, index) => ({ play, index })).filter(({ play }) => play.acting);
@@ -452,12 +471,25 @@ function playHand(
       if (action === null) {
         /*
          * Nothing logged for this seat: the table is waiting for it, which is
-         * the ordinary state of a hand somebody is halfway through. The hand is
-         * *incomplete* — the dealer does not draw, nothing settles, and the
-         * derivation stops here rather than inventing the rest of it.
+         * the ordinary state of a hand somebody is halfway through.
+         *
+         * **The seat is skipped, not the round.** Its neighbours have already
+         * been reserved this round's cards and may well have logged their
+         * moves, and whoever is looking at this table is entitled to see his own
+         * card the moment he takes it rather than when the slowest player at the
+         * table gets round to acting — which is the whole promise of dealing
+         * this way. So every other seat is played out, and only the seats that
+         * still owe an action are held back.
+         *
+         * What does *not* happen is the next round. A round's cards are reserved
+         * for everybody live in it, before any of them acts, and who is live in
+         * round N + 1 is not known until round N is answered. So the table takes
+         * the round lock-step even though the players inside it do not — and the
+         * thirty-second rule exists precisely because one player can hold it
+         * there.
          */
-        incomplete = true;
-        break;
+        owing.add(seat.seat);
+        continue;
       }
       const evaluation = play.table.currentEvaluation();
       const cards = [...play.activeCards];
@@ -503,6 +535,9 @@ function playHand(
       burned.push(...queue);
       queue.length = 0;
     }
+
+    // Lock-step: the next round cannot be reserved until this one is answered.
+    if (owing.size > 0) incomplete = true;
   }
 
   /**
@@ -549,6 +584,7 @@ function playHand(
       reserved,
       decisions: [],
       incomplete: true,
+      waitingFor: [...owing].sort((a, b) => a - b),
       seats: live.map((seat, index) => ({
         seat: seat.seat,
         cards: [first[index]!, second[index]!, ...(draws.get(seat.seat) ?? [])],
@@ -602,6 +638,7 @@ function playHand(
     reserved,
     decisions: [],
     incomplete: false,
+    waitingFor: [],
     seats: live.map((seat, index) => {
       const play = settled[index]!;
       const view = play.table.view;
@@ -747,4 +784,204 @@ export function seatsAgree(record: TableRecord, table: DerivedTable): boolean {
   return record.seats.every(
     (seat) => seat.cardsHash === undefined || seat.cardsHash === seatCardsHash(table, seat.seat),
   );
+}
+
+/* ---------------------------------------------------------------------------
+ * The live view — what one seat's screen needs, and nothing it must not have
+ * ------------------------------------------------------------------------- */
+
+/** What a seat is doing, as the other players are allowed to see it. */
+export type SeatStatus =
+  | 'betting'
+  | 'deciding'
+  | 'decided'
+  | 'waitingForDealer'
+  | 'done'
+  | 'away';
+
+export interface SeatGlance {
+  seat: number;
+  name: string;
+  playerId: string | null;
+  bet: number;
+  status: SeatStatus;
+  /**
+   * The seat's cards, as a neighbour may see them.
+   *
+   * Face up at a real table, so face up here. What is *not* here is what he did
+   * with them: see `decisions`, which stays empty until you have played.
+   */
+  cards: Card[];
+  hands: Card[][];
+  net: number | null;
+  /** This table only: chips, decisions, and how many of them were right. */
+  stack: number;
+  decisions: number;
+  right: number;
+}
+
+export interface SeatView {
+  /** Null while the table is not yet showing a hand. */
+  hand: number | null;
+  dealer: Card[];
+  dealerRevealed: boolean;
+  /** My own seat, or null if I am only watching. */
+  me: SeatGlance | null;
+  seats: SeatGlance[];
+  /** What I may do right now. Empty when it is not my move. */
+  legal: string[];
+  /** The round my next decision would be recorded at. */
+  round: number;
+  /** True when the table is waiting on me and on nobody else. */
+  onlyMe: boolean;
+  /** Everyone the table is waiting on. */
+  waitingFor: number[];
+  /**
+   * The graded decisions I am allowed to see.
+   *
+   * Mine always; everybody else's only once mine for this hand is recorded —
+   * §3.7, enforced by not putting them in the view rather than by hiding them
+   * in the markup, because markup can be read.
+   */
+  decisions: DerivedDecision[];
+  /** True when two seats disagree about what was dealt. The table is refused. */
+  disagrees: boolean;
+}
+
+/** Whether a seat has recorded anything at all for a hand. */
+function hasActed(record: TableRecord, seat: number, hand: number): boolean {
+  return record.seats.some(
+    (entry) => entry.seat === seat && entry.moves.some((move) => move.hand === hand),
+  );
+}
+
+/**
+ * Everything one seat's screen may know, derived from the record alone.
+ *
+ * The important word is *may*. This is where §3.7 is enforced: another seat's
+ * decisions and their grades are not in the returned object until my own action
+ * for the hand is recorded, so a curious player reading the page's state finds
+ * nothing to read. Hiding them in the markup would be a different promise.
+ */
+export function seatView(record: TableRecord, seat: number | null): SeatView {
+  const table = deriveTable(record);
+  const disagrees = !seatsAgree(record, table);
+  const current = table.hands[table.hands.length - 1] ?? null;
+  const mine = seat === null ? null : (record.seats.find((entry) => entry.seat === seat) ?? null);
+
+  /* This table's running numbers, per seat, summed over every settled hand. */
+  const stacks = new Map<number, number>();
+  const counts = new Map<number, { decisions: number; right: number }>();
+  for (const entry of record.seats) {
+    stacks.set(entry.seat, 0);
+    counts.set(entry.seat, { decisions: 0, right: 0 });
+  }
+  for (const hand of table.hands) {
+    for (const seatHand of hand.seats) {
+      if (seatHand.net !== null) stacks.set(seatHand.seat, (stacks.get(seatHand.seat) ?? 0) + seatHand.net);
+    }
+    for (const decision of hand.decisions) {
+      const tally = counts.get(decision.seat);
+      if (!tally) continue;
+      tally.decisions++;
+      if (decision.evCost <= 0) tally.right++;
+    }
+  }
+
+  const handIndex = current ? current.hand : null;
+  const iActed = seat !== null && handIndex !== null && hasActed(record, seat, handIndex);
+
+  const glance = (entry: SeatRecord): SeatGlance => {
+    const seatHand = current?.seats.find((row) => row.seat === entry.seat) ?? null;
+    const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0 };
+    let status: SeatStatus = 'betting';
+    if (handIndex !== null && !isLive(record, entry.seat, handIndex)) status = 'away';
+    else if (!current) status = 'betting';
+    else if (current.waitingFor.includes(entry.seat)) status = 'deciding';
+    else if (current.incomplete) status = 'decided';
+    else status = seatHand && seatHand.net !== null ? 'done' : 'waitingForDealer';
+    return {
+      seat: entry.seat,
+      name: entry.name,
+      playerId: entry.playerId,
+      bet: entry.bet,
+      status,
+      cards: seatHand ? [...seatHand.cards] : [],
+      hands: seatHand ? seatHand.hands.map((cards) => [...cards]) : [],
+      net: seatHand ? seatHand.net : null,
+      stack: stacks.get(entry.seat) ?? 0,
+      decisions: tally.decisions,
+      right: tally.right,
+    };
+  };
+
+  const seats = record.seats.map(glance);
+  const waitingFor = current ? current.waitingFor : [];
+
+  /*
+   * What I may do, asked of the engine rather than worked out here — the same
+   * `legalActions()` the solo game asks, on a table stacked with my own cards.
+   */
+  let legal: string[] = [];
+  let round = 0;
+  if (seat !== null && handIndex !== null && waitingFor.includes(seat)) {
+    const live = record.seats.filter((entry) => isLive(record, entry.seat, handIndex));
+    const at = live.findIndex((entry) => entry.seat === seat);
+    if (at >= 0) {
+      const asked = legalFor(record, handIndex, seat);
+      legal = asked.legal;
+      round = asked.round;
+    }
+  }
+
+  return {
+    hand: handIndex,
+    dealer: current ? [...current.dealer] : [],
+    dealerRevealed: Boolean(current && !current.incomplete),
+    me: mine ? glance(mine) : null,
+    seats,
+    legal,
+    round,
+    onlyMe: seat !== null && waitingFor.length === 1 && waitingFor[0] === seat,
+    waitingFor: [...waitingFor],
+    decisions: current ? current.decisions.filter((d) => d.seat === seat || iActed) : [],
+    disagrees,
+  };
+}
+
+/**
+ * What one seat may legally do right now, and at which round it would be recorded.
+ *
+ * Derived by replaying the hand with that seat's own moves and asking the engine
+ * the moment it runs out of them. It costs one derivation of one hand, which is
+ * nothing beside being certain that the buttons on the screen and the rules the
+ * grade is computed under are the same rules.
+ */
+function legalFor(
+  record: TableRecord,
+  hand: number,
+  seat: number,
+): { legal: string[]; round: number } {
+  let legal: string[] = [];
+  let round = 0;
+  const asked = { ...record, seats: record.seats.map((entry) => ({ ...entry })) };
+  run(asked, hand + 1, (who, atHand, atRound, options) => {
+    if (who === seat && atHand === hand) {
+      const move = record.seats
+        .find((entry) => entry.seat === seat)
+        ?.moves.find((entry) => entry.hand === atHand && entry.round === atRound);
+      if (!move) {
+        legal = [...options];
+        round = atRound;
+        return null;
+      }
+      return move.action;
+    }
+    return (
+      record.seats
+        .find((entry) => entry.seat === who)
+        ?.moves.find((entry) => entry.hand === atHand && entry.round === atRound)?.action ?? null
+    );
+  });
+  return { legal, round };
 }

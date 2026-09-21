@@ -59,6 +59,48 @@ type Catalogue = Record<string, string>;
  * stricter coinages nobody uses at a table.
  */
 const EN: Catalogue = {
+  /* --- The shared table (round 22, spec A2) -------------------------------- */
+  'shared.title': 'EV Trainer — Shared table',
+  'shared.doorTitle': 'Play one shoe together',
+  'shared.doorBody':
+    'One shoe, your own cards, and nobody waits for anybody. Your decisions are graded exactly as they are when you play alone.',
+  'shared.doorSub': 'With a friend, on two phones',
+  'shared.make': 'Make a table',
+  'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
+  'shared.inviteTitle': 'Send this to your friend',
+  'shared.copy': 'Copy link',
+  'shared.copied': 'Copied',
+  'shared.waiting': 'Waiting for somebody to sit down.',
+  'shared.refusedTitle': 'This table cannot be shown',
+  'shared.refusedBody':
+    'Two seats disagree about what was dealt. Rather than show you one version of this hand and your friend another, the app is showing neither.',
+  'shared.you': 'You',
+  'shared.seatN': 'Seat {n}',
+  'shared.notDealt': 'Not dealt in yet.',
+  'shared.status.betting': 'betting',
+  'shared.status.deciding': 'deciding',
+  'shared.status.decided': 'decided',
+  'shared.status.waitingForDealer': 'waiting for the dealer',
+  'shared.status.done': 'done',
+  'shared.status.away': 'away',
+  'shared.settling': 'settling',
+  'shared.barValue': '{pct}% right',
+  'shared.legend':
+    'The bar is the comparison: it does not care what anybody bet. The stack is the fun number.',
+  'shared.comparison':
+    "{stackLeader}'s stack is ahead and {barLeader}'s decisions were right more often. That is the half of this you both control.",
+  'shared.deal': 'Deal',
+  'shared.leave': 'Leave the table',
+  'shared.forceMismatch': 'Break my checksum (debug)',
+  'shared.handOver': 'The hand is over. Deal when you are ready.',
+  'shared.yourMove': 'Your move.',
+  'shared.waitingFor': 'Waiting for {names}.',
+  'shared.clockYou': 'Everybody is waiting for you — {n}s.',
+  'shared.clockYouOver': 'Everybody is waiting for you. They can vote to play on without you.',
+  'shared.clockThem': 'Waiting for {name} — {n}s.',
+  'shared.clockThemOver': 'Waiting for {name}. You can vote to play on without them.',
+  'shared.vote': 'Play on without {name} ({votes}/{needs})',
+
   // --- Actions ---
   'action.hit': 'Hit',
   'action.stand': 'Stand',
@@ -1000,6 +1042,47 @@ const EN: Catalogue = {
 };
 
 const HE: Catalogue = {
+  /* --- השולחן המשותף (סבב 22) --------------------------------------------- */
+  'shared.title': 'EV Trainer — שולחן משותף',
+  'shared.doorTitle': 'לשחק נעל אחת ביחד',
+  'shared.doorBody':
+    'נעל אחת, לכל אחד הקלפים שלו, ואף אחד לא מחכה לאף אחד. ההחלטות שלך נבדקות בדיוק כמו במשחק לבד.',
+  'shared.doorSub': 'עם חבר, בשני טלפונים',
+  'shared.make': 'לפתוח שולחן',
+  'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
+  'shared.inviteTitle': 'שלח את זה לחבר',
+  'shared.copy': 'העתק קישור',
+  'shared.copied': 'הועתק',
+  'shared.waiting': 'מחכים שמישהו יתיישב.',
+  'shared.refusedTitle': 'אי אפשר להציג את השולחן הזה',
+  'shared.refusedBody':
+    'שני מושבים לא מסכימים על מה שחולק. במקום להראות לך גרסה אחת של היד ולחבר שלך גרסה אחרת, האפליקציה לא מראה אף אחת מהן.',
+  'shared.you': 'אתה',
+  'shared.seatN': 'מושב {n}',
+  'shared.notDealt': 'עוד לא חולקו קלפים.',
+  'shared.status.betting': 'מהמר',
+  'shared.status.deciding': 'מחליט',
+  'shared.status.decided': 'החליט',
+  'shared.status.waitingForDealer': 'מחכה לדילר',
+  'shared.status.done': 'סיים',
+  'shared.status.away': 'לא בשולחן',
+  'shared.settling': 'מתייצב',
+  'shared.barValue': '{pct}% נכון',
+  'shared.legend': 'העמודה היא ההשוואה: לא משנה לה כמה מי הימר. הערימה היא המספר המשעשע.',
+  'shared.comparison':
+    'הערימה של {stackLeader} מובילה, וההחלטות של {barLeader} היו נכונות יותר. זה החצי שתלוי בשניכם.',
+  'shared.deal': 'חלק',
+  'shared.leave': 'לעזוב את השולחן',
+  'shared.forceMismatch': 'לשבור את הסיכום שלי (דיבאג)',
+  'shared.handOver': 'היד נגמרה. חלקו כשאתם מוכנים.',
+  'shared.yourMove': 'תורך.',
+  'shared.waitingFor': 'מחכים ל־{names}.',
+  'shared.clockYou': 'כולם מחכים לך — {n} שניות.',
+  'shared.clockYouOver': 'כולם מחכים לך. הם יכולים להצביע להמשיך בלעדיך.',
+  'shared.clockThem': 'מחכים ל־{name} — {n} שניות.',
+  'shared.clockThemOver': 'מחכים ל־{name}. אפשר להצביע להמשיך בלעדיו.',
+  'shared.vote': 'להמשיך בלי {name} ({votes}/{needs})',
+
   // --- Actions ---
   'action.hit': 'קלף',
   'action.stand': 'עצירה',

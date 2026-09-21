@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="i18n-title" content="shared.title" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Shared table</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+    <script src="/figure.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="rules" id="shared-bar">
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
+        <div class="rules-main">
+          <span class="rules-name" id="shared-rules">—</span>
+        </div>
+      </header>
+
+      <!--
+        The door. A table is either made here or arrived at by link, and the two
+        are the same screen because a player who follows a link and finds the
+        seat taken has to be able to make his own without going anywhere.
+      -->
+      <section class="shared-door" id="shared-door" hidden>
+        <h1 data-i18n="shared.doorTitle">Play one shoe together</h1>
+        <p class="shared-door-body" data-i18n="shared.doorBody">
+          One shoe, your own cards, and nobody waits for anybody.
+        </p>
+        <button class="action primary" type="button" id="shared-make" data-i18n="shared.make">
+          Make a table
+        </button>
+        <p class="shared-note" id="shared-door-note" hidden></p>
+      </section>
+
+      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->
+      <section class="shared-invite" id="shared-invite" hidden>
+        <h2 data-i18n="shared.inviteTitle">Send this to your friend</h2>
+        <p class="shared-link" id="shared-link"></p>
+        <button class="action" type="button" id="shared-copy" data-i18n="shared.copy">Copy link</button>
+        <p class="shared-note" id="shared-waiting" data-i18n="shared.waiting">
+          Waiting for somebody to sit down.
+        </p>
+      </section>
+
+      <!--
+        The refusal (§A1). Two seats disagreeing about what was dealt is the one
+        thing this app will not paper over: it shows neither of them a table
+        rather than showing two people two different truths about one hand.
+      -->
+      <section class="shared-refused" id="shared-refused" hidden role="alert">
+        <h2 data-i18n="shared.refusedTitle">This table cannot be shown</h2>
+        <p data-i18n="shared.refusedBody">
+          Two seats disagree about what was dealt. Rather than show you one
+          version and your friend another, the app is showing neither.
+        </p>
+      </section>
+
+      <main class="table felt" id="shared-table" hidden>
+        <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+          <h2 class="seat-title">
+            <span data-i18n="ui.dealer">Dealer</span>
+            <span class="seat-total" id="shared-dealer-total"></span>
+          </h2>
+          <div class="cards" id="shared-dealer-cards"></div>
+        </section>
+
+        <div id="shared-seats"></div>
+      </main>
+
+      <!--
+        The clock, and the vote. Visible to the player it is about and to
+        everybody waiting — §3.4: thirty seconds is only fair if a player can
+        see the table is waiting for him.
+      -->
+      <section class="shared-clock" id="shared-clock" hidden aria-live="polite"></section>
+
+      <!-- The two measures, side by side, with the line that names them (§3.5). -->
+      <section class="shared-measures" id="shared-measures" hidden></section>
+
+      <p class="table-talk" id="shared-talk" hidden aria-live="polite"></p>
+
+      <div class="dock">
+        <nav class="actions" id="shared-actions" data-i18n-attr="aria-label:ui.actions"></nav>
+      </div>
+    </div>
+    <script src="/shared.js"></script>
+  </body>
+</html>

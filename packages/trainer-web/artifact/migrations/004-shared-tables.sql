@@ -72,6 +72,11 @@ create table if not exists public.table_seats (
   hands       integer not null default 0,
   -- Reactions this seat sent, by hand. A fixed set; never free text.
   reactions   jsonb   not null default '{}'::jsonb,
+  -- This seat's own vote to drop whoever is holding the table: {hand, against,
+  -- at}. A tally is naturally one shared number, and a shared number would be
+  -- the one place two people write the same row — so each player records his
+  -- own vote here and anybody can count them.
+  vote        jsonb,
   -- This seat's hash of every card it was dealt. If two seats disagree, the
   -- app refuses to show the table rather than showing two different truths.
   cards_hash  text,

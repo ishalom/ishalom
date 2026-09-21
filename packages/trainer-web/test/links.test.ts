@@ -52,7 +52,10 @@ test('every door in a built page is an in-page target that the router knows', ()
   const known = [...routed[1]!.matchAll(/'(#[a-z]+)'/g)].map((m) => m[1]!);
   // `#usage` (round 9) is routed but is no door: nothing links to it, which
   // test/usage.test.ts holds. The loop below still checks every door there is.
-  assert.deepEqual(known.sort(), ['#analyse', '#home', '#table', '#ultimate', '#usage']);
+  // `#shared` joined them in round 22. It is the one screen whose hash carries
+  // a value — `#shared=hx3k…` names the table — so the router matches on the
+  // part before the `=`, and the door itself is the bare `#shared`.
+  assert.deepEqual(known.sort(), ['#analyse', '#home', '#shared', '#table', '#ultimate', '#usage']);
   for (const target of targets) {
     assert.ok(known.includes(target), `${target} is a door onto nothing`);
   }

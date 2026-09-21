@@ -93,7 +93,14 @@ export interface CardView {
   label: string;
 }
 
-function cardView(card: number): CardView {
+/**
+ * A card number as a face: rank, suit symbol, colour and a spoken label.
+ *
+ * Exported because the shared table draws the same cards (round 22). Two
+ * copies of this would be two ways for a seven of hearts to look, and the one
+ * thing a shared table cannot afford is two players seeing different cards.
+ */
+export function cardView(card: number): CardView {
   const rank = RANKS[rankOf(card)]!;
   const suit = suitOf(card);
   const suitName = ['clubs', 'diamonds', 'hearts', 'spades'][suit]!;
@@ -1591,7 +1598,14 @@ function prettyAction(action: string, locale: Locale = 'en'): string {
 }
 
 /** Best total of a hand, for display. */
-function totalOf(cards: readonly number[]): number {
+/**
+ * The best total a hand can make, aces counted high while they fit.
+ *
+ * Exported for the shared table (round 22), which shows the same totals beside
+ * the same cards. A second copy of this would be a second opinion about what a
+ * soft seventeen is worth, on a screen two people are reading at once.
+ */
+export function totalOf(cards: readonly number[]): number {
   let total = 0;
   let aces = 0;
   for (const card of cards) {

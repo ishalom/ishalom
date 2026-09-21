@@ -651,6 +651,73 @@ async function api(path, body) {
         locale,
       });
 
+    /* ------------------------------------------------------------------
+     * The shared table (round 22, spec A2).
+     *
+     * Every one of these answers with the same object: the seat's whole screen
+     * and the state of the clock. The screen script draws it and decides
+     * nothing, which is what keeps the rules in one place — a card on a phone
+     * here came out of the derivation, never out of a route.
+     * ---------------------------------------------------------------- */
+    case '/api/shared/create': {
+      if (!sharedAvailable()) return { available: false };
+      const made = await sharedCreate({
+        playerId: me.id,
+        name: me.name,
+        bet: 1,
+        presetId: store.get('ev:preset') || 'vegas-strip-6d-s17',
+        restrictions: {
+          noSurrender: store.get('ev:noSurrender') === '1',
+          likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
+        },
+        seats: 2,
+      });
+      return { ...made, screen: sharedScreenNow(), clock: sharedClock() };
+    }
+
+    case '/api/shared/join': {
+      if (!sharedAvailable()) return { available: false };
+      const sat = await sharedJoin(String(b.id || ''), { id: me.id, name: me.name, bet: 1 });
+      return { ...sat, screen: sharedScreenNow(), clock: sharedClock() };
+    }
+
+    case '/api/shared/view': {
+      if (!sharedAvailable()) return { available: false };
+      await sharedRefresh();
+      return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
+    }
+
+    case '/api/shared/act': {
+      if (!sharedAvailable()) return { available: false };
+      const screen = await sharedAct(String(b.action || ''));
+      return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
+    }
+
+    case '/api/shared/deal': {
+      if (!sharedAvailable()) return { available: false };
+      const screen = await sharedDeal();
+      return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
+    }
+
+    case '/api/shared/vote': {
+      if (!sharedAvailable()) return { available: false };
+      const clock = await sharedVote();
+      return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock };
+    }
+
+    case '/api/shared/leave': {
+      if (!sharedAvailable()) return { available: false };
+      await sharedLeave();
+      return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
+    }
+
+    /* Only reachable with the debug flag; it changes no card. See shared.js. */
+    case '/api/shared/force-mismatch': {
+      if (!sharedAvailable()) return { available: false };
+      await sharedForceMismatch();
+      return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
+    }
+
     case '/api/presets':
       // In the language on screen, as the rules bar is (round 11).
       return RULE_PRESETS.map((p) => ({

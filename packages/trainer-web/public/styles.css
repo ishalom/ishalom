@@ -2653,3 +2653,125 @@ button,
   gap: 8px;
   align-items: start;
 }
+
+/* --- The shared table (round 22, spec A2) ---------------------------------
+ *
+ * Phone first, two seats. Mine full size and the others compact (§3.1), the
+ * status beside each name (§3.4), and the two measures in one block where the
+ * line that names them can sit directly under both (§3.5).
+ */
+
+.shared-door,
+.shared-invite,
+.shared-refused {
+  padding: 16px;
+  text-align: center;
+}
+
+.shared-door-body,
+.shared-note {
+  color: var(--muted);
+  margin: 8px 0 16px;
+}
+
+.shared-link {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  /* A link is read aloud and typed in as often as it is tapped, so it wraps
+     rather than being cut off at the edge of a phone. */
+  word-break: break-all;
+  font-size: 0.95rem;
+}
+
+.shared-refused {
+  border: 1px solid var(--blunder);
+  border-radius: 10px;
+  margin: 12px;
+  background: color-mix(in srgb, var(--blunder) 12%, var(--panel));
+}
+
+.shared-seat {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+/* Mine is the hand being played; the others are there to be glanced at. */
+.shared-seat.other {
+  opacity: 0.85;
+  font-size: 0.92em;
+}
+
+.shared-seat .seat-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shared-name { font-weight: 600; }
+
+.shared-status {
+  color: var(--muted);
+  font-size: 0.8em;
+  text-transform: lowercase;
+}
+
+/* The one state that is about the table waiting, so it is the one that shows. */
+.shared-seat.is-deciding .shared-status { color: var(--minor); }
+.shared-seat.is-away .shared-status { color: var(--blunder); }
+
+.shared-empty,
+.shared-net {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.shared-clock {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--minor);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--minor) 10%, var(--panel));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shared-clock-line { margin: 0; flex: 1 1 auto; }
+
+.shared-measures {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.shared-measure {
+  display: grid;
+  /* Name, bar, stack — and the bar before the stack on purpose: it is the
+     comparison, and the one people will read first should be the honest one. */
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.shared-measure.mine { font-weight: 600; }
+.shared-measure-bar { color: var(--optimal); }
+.shared-measure-stack { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.shared-legend,
+.shared-comparison {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 8px 0 0;
+}
+
+.shared-comparison { color: var(--ink); }
+
+/* Leaving is as cheap to reach as playing (§3.3), so it sits with the actions. */
+.shared-leave { margin-inline-start: auto; }
+.shared-debug { opacity: 0.6; }
