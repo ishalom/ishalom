@@ -50,7 +50,7 @@ import {
   difficultyTable,
   type ScenarioDifficulty,
   newRating,
-  updateRatingWithReach,
+  rateOneDecision,
   type DifficultyMode,
   type Rating,
 } from './difficulty.ts';
@@ -711,9 +711,21 @@ export class TrainerSession {
 
     // Last, because it moves the rating every comparison above had to read.
     this.lifetimeDecisions++;
-    this.lastRatingDelta = cell
-      ? updateRatingWithReach(this.ratings[this.mode], cell[this.mode], record.severityTier)
-      : null;
+    /*
+     * Through the one path (round 25). It was three lines here until the shared
+     * table needed the same three, and two copies of them is how two tables
+     * quietly start grading differently. `rateOneDecision` finds the same cell
+     * this line found, turns the same cost into the same severity, and calls the
+     * same update — which `test/grading-unchanged.test.ts` holds to the digit
+     * against sixty hands recorded before the change.
+     */
+    this.lastRatingDelta = rateOneDecision(
+      this.ratings[this.mode],
+      this.rules,
+      chart,
+      record.scenarioKey,
+      record.evCost,
+    );
 
     this.pending.push({
       scenarioKey: record.scenarioKey,
@@ -1234,6 +1246,48 @@ export class TrainerSession {
           : t(this.locale, 'label.hard', { total: scenario.total ?? 0 });
     if (scenario.kind === 'pair') return t(this.locale, 'coach.prompt.pair');
     return t(this.locale, choices <= 2 ? 'coach.prompt.few' : 'coach.prompt.open', { label });
+  }
+
+  /**
+   * Decisions this session did not deal, taken into the rating (round 25).
+   *
+   * The shared table plays its own shoe, in its own module, with no
+   * `TrainerSession` anywhere near it — but the rating it moves is this
+   * player's one rating, and §3.11 says a shared-table decision counts. So the
+   * table hands its graded decisions here and this takes them through
+   * `rateOneDecision`, the same function `absorb` uses one screen away.
+   *
+   * **The table's rules, not this session's.** §3.11 settles that the table's
+   * rules win over the joiner's, and how hard a spot is depends on the game it
+   * was dealt in — so the grid comes from the rules the decision was actually
+   * made under. What does *not* come from the table is the ladder: a player is
+   * measured on his own mode wherever he plays, which is `rateOneDecision`'s
+   * doing rather than this function's.
+   *
+   * **Only the rating and the lifetime count move.** Not this sitting's hands,
+   * accuracy, streak, chips or mastery grid — those describe the table in front
+   * of the player, and a hand dealt somewhere else did not happen at it. §3.11
+   * asks for the rating; taking more than it asks for would quietly make the
+   * private table's own figures wrong.
+   *
+   * Returns how many of them actually moved the rating: a decision off the
+   * 311-cell grid scores nothing, here exactly as it scores nothing there.
+   */
+  absorbRated(rules: BlackjackRules, decisions: ReadonlyArray<{ scenarioKey: string; evCost: number }>): number {
+    const chart = chartFor(rules);
+    let rated = 0;
+    for (const decision of decisions) {
+      this.lifetimeDecisions++;
+      const delta = rateOneDecision(
+        this.ratings[this.mode],
+        rules,
+        chart,
+        decision.scenarioKey,
+        decision.evCost,
+      );
+      if (delta !== null) rated++;
+    }
+    return rated;
   }
 
   /** Everything the home screen needs. */

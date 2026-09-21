@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="087dfc4f2b5b022ae6cd896361ea6ff6de0f5bf0" />
-<meta name="ev-build-at" content="2026-09-21T15:45:03.453Z" />
+<meta name="ev-build-commit" content="1365978a9b0f7eb43d2749d1f88e78d50b2aaba4-dirty" />
+<meta name="ev-build-at" content="2026-09-21T21:46:03.304Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -8216,6 +8216,11 @@ const EN            = {
   'shared.ticker.reaction': '{name}: {said}',
   'shared.ticker.gesture': '{name} played all {n} decisions right and still lost the hand.',
   'shared.ticker.record': '{name} — {n} right in a row, the best at this table so far.',
+  // Arrivals and departures (round 25). A drop is a departure and is worded as
+  // one: the ticker says the player left, never why, because the line is there
+  // to tell the table what happened and not to pass the app's judgement on him.
+  'shared.ticker.arrived': '{name} sat down.',
+  'shared.ticker.left': '{name} left.',
 
   // --- He took my card (§3.8) ---
   'shared.cfAsk': 'Did he take your card?',
@@ -9249,6 +9254,8 @@ const HE            = {
   'shared.ticker.reaction': '{name}: {said}',
   'shared.ticker.gesture': '{name} שיחק את כל {n} ההחלטות נכון והפסיד את היד בכל זאת.',
   'shared.ticker.record': '{name} — {n} נכונות ברצף, הכי הרבה בשולחן הזה עד עכשיו.',
+  'shared.ticker.arrived': '{name} התיישב.',
+  'shared.ticker.left': '{name} עזב.',
 
   // --- הוא לקח לי את הקלף (§3.8) ---
   'shared.cfAsk': 'הוא לקח לך את הקלף?',
@@ -11436,6 +11443,39 @@ function updateRatingWithReach(
   return delta;
 }
 
+/**
+ * One decision's whole journey into a rating — **the only path there is.**
+ *
+ * A decision reaches a rating by exactly three steps: find its cell of the
+ * difficulty grid, turn what it cost into a severity tier, and move the rating.
+ * Before round 25 those three steps were written out at the one place that
+ * needed them, inside the private table's `absorb`. Then the shared table needed
+ * them too, and a second copy of three lines is how two tables quietly start
+ * grading differently — so they live here, and both callers call this.
+ *
+ * **Off-grid decisions never score**, and that rule is enforced here rather than
+ * by each caller remembering it. Hard 18 through 21 have no cell and turn up
+ * constantly; rating them would hand every player a stream of free points. The
+ * null return is that rule.
+ *
+ * The rating's own **mode** picks the column, so a player is always measured on
+ * the ladder he is playing, wherever the decision was made. The table's rules
+ * pick the grid, because how hard a spot is depends on the game it was dealt in
+ * — and at a shared table the table's rules are the ones in play, not the
+ * joiner's.
+ */
+function rateOneDecision(
+  rating        ,
+  rules                ,
+  chart               ,
+  scenarioKey        ,
+  evCost        ,
+)                {
+  const cell = difficultyTable(rules, chart).get(scenarioKey);
+  if (cell === undefined) return null;
+  return updateRatingWithReach(rating, cell[rating.mode], severityForCost(evCost));
+}
+
 /* ===== packages/trainer-web/src/sensitivity.ts ===== */
 /**
  * Rule-sensitivity flags for the feedback card (spec §7.1 item 6, §3.3).
@@ -12593,9 +12633,21 @@ class TrainerSession {
 
     // Last, because it moves the rating every comparison above had to read.
     this.lifetimeDecisions++;
-    this.lastRatingDelta = cell
-      ? updateRatingWithReach(this.ratings[this.mode], cell[this.mode], record.severityTier)
-      : null;
+    /*
+     * Through the one path (round 25). It was three lines here until the shared
+     * table needed the same three, and two copies of them is how two tables
+     * quietly start grading differently. `rateOneDecision` finds the same cell
+     * this line found, turns the same cost into the same severity, and calls the
+     * same update — which `test/grading-unchanged.test.ts` holds to the digit
+     * against sixty hands recorded before the change.
+     */
+    this.lastRatingDelta = rateOneDecision(
+      this.ratings[this.mode],
+      this.rules,
+      chart,
+      record.scenarioKey,
+      record.evCost,
+    );
 
     this.pending.push({
       scenarioKey: record.scenarioKey,
@@ -13116,6 +13168,48 @@ class TrainerSession {
           : t(this.locale, 'label.hard', { total: scenario.total ?? 0 });
     if (scenario.kind === 'pair') return t(this.locale, 'coach.prompt.pair');
     return t(this.locale, choices <= 2 ? 'coach.prompt.few' : 'coach.prompt.open', { label });
+  }
+
+  /**
+   * Decisions this session did not deal, taken into the rating (round 25).
+   *
+   * The shared table plays its own shoe, in its own module, with no
+   * `TrainerSession` anywhere near it — but the rating it moves is this
+   * player's one rating, and §3.11 says a shared-table decision counts. So the
+   * table hands its graded decisions here and this takes them through
+   * `rateOneDecision`, the same function `absorb` uses one screen away.
+   *
+   * **The table's rules, not this session's.** §3.11 settles that the table's
+   * rules win over the joiner's, and how hard a spot is depends on the game it
+   * was dealt in — so the grid comes from the rules the decision was actually
+   * made under. What does *not* come from the table is the ladder: a player is
+   * measured on his own mode wherever he plays, which is `rateOneDecision`'s
+   * doing rather than this function's.
+   *
+   * **Only the rating and the lifetime count move.** Not this sitting's hands,
+   * accuracy, streak, chips or mastery grid — those describe the table in front
+   * of the player, and a hand dealt somewhere else did not happen at it. §3.11
+   * asks for the rating; taking more than it asks for would quietly make the
+   * private table's own figures wrong.
+   *
+   * Returns how many of them actually moved the rating: a decision off the
+   * 311-cell grid scores nothing, here exactly as it scores nothing there.
+   */
+  absorbRated(rules                , decisions                                                        )         {
+    const chart = chartFor(rules);
+    let rated = 0;
+    for (const decision of decisions) {
+      this.lifetimeDecisions++;
+      const delta = rateOneDecision(
+        this.ratings[this.mode],
+        rules,
+        chart,
+        decision.scenarioKey,
+        decision.evCost,
+      );
+      if (delta !== null) rated++;
+    }
+    return rated;
   }
 
   /** Everything the home screen needs. */
@@ -15797,6 +15891,22 @@ const MAX_SEATS = 6;
              
      
                             
+     
+                                                                               
+                                                                          
+    
+                                                                               
+                                                                          
+                                                                                
+                                                                                
+                                                                               
+                                                                                
+                                                                       
+    
+                                                                               
+                              
+     
+                          
  
 
 /**
@@ -17155,13 +17265,66 @@ function sharedSpots(record             , seat        )               {
  *
  * Insurance is the null: it is a side bet on the dealer's hole card rather than
  * a way to play a hand, so it has no cell, and two players "disagreeing" about
- * it would be comparing nothing.
+ * it would be comparing nothing. For the *rating*, insurance does have a key —
+ * see `ratingKeyOf`, which is the one the private table uses.
  */
 function scenarioKeyOf(decision                 )                {
   if (decision.action === 'takeInsurance' || decision.action === 'declineInsurance') return null;
   const ranks = decision.cards.map((card) => bjRankOfCard(card));
   const upcard = bjRankOfCard(decision.upcard);
   return scenarioKeyForHand(ranks, upcard, decision.evByAction.split !== undefined);
+}
+
+/**
+ * The key the rating looks a decision up by — exactly the private table's.
+ *
+ * It differs from `scenarioKeyOf` in one place and the difference matters:
+ * **insurance is `bj:insurance`**, which is a real cell of the difficulty grid
+ * and is rated when it is taken alone. Comparing two players on it is
+ * meaningless, which is why the spots version returns null; rating one player on
+ * it is what the private table has always done, and a shared table that skipped
+ * it would be a second, laxer game.
+ */
+function ratingKeyOf(decision                 )         {
+  if (decision.action === 'takeInsurance' || decision.action === 'declineInsurance') {
+    return 'bj:insurance';
+  }
+  const ranks = decision.cards.map((card) => bjRankOfCard(card));
+  const upcard = bjRankOfCard(decision.upcard);
+  return scenarioKeyForHand(ranks, upcard, decision.evByAction.split !== undefined);
+}
+
+/** One decision, reduced to the two things a rating needs from it. */
+                                  
+               
+                
+                      
+                 
+ 
+
+/**
+ * Everything one seat has decided at this table, in the table's own order.
+ *
+ * The order is `(hand, round)` — the order the shoe dealt them — and it is a
+ * property of the record rather than of when anybody's phone read it, which is
+ * what lets "the first N of these have been rated" mean the same thing on two
+ * devices and on the same device tomorrow.
+ */
+function seatRatable(record             , seat        )                    {
+  const table = deriveTable(record);
+  const out                    = [];
+  for (const hand of table.hands) {
+    for (const decision of hand.decisions) {
+      if (decision.seat !== seat) continue;
+      out.push({
+        hand: hand.hand,
+        round: decision.round,
+        scenarioKey: ratingKeyOf(decision),
+        evCost: decision.evCost,
+      });
+    }
+  }
+  return out.sort((a, b) => a.hand - b.hand || a.round - b.round);
 }
 
 /* ===== packages/trainer-web/src/shared-screen.ts ===== */
@@ -17267,16 +17430,23 @@ const BAR_SETTLES_AT = 10;
 /**
  * One line of what has just happened at the table (§3.10).
  *
- * Three kinds and no more: something a player said, a gesture the app has
- * earned the right to make, and a record broken. **None of them carries
- * money** — §3.10 is explicit, and it is the rule that keeps the ticker from
- * turning a trainer into a scoreboard. The kinds are here rather than as
- * sentences because the wording is the catalogue's job, in both languages.
+ * Five kinds and no more: something a player said, a gesture the app has earned
+ * the right to make, a record broken, somebody arriving and somebody leaving.
+ * The last two are Idan's, added in round 25 — at a real table who just sat
+ * down is the first thing anybody notices.
+ *
+ * **None of them carries money** — §3.10 is explicit, and it is the rule that
+ * keeps the ticker from turning a trainer into a scoreboard. Nor does any of
+ * them carry a judgement: a player dropped by the thirty-second rule *left*,
+ * and the ticker does not say why. The kinds are here rather than as sentences
+ * because the wording is the catalogue's job, in both languages.
  */
                         
                                                                                     
                                                                                     
-                                                                                 
+                                                                                
+                                                                 
+                                                               
 
 /**
  * My own decision, with the working behind it — what **תסביר לי** opens (§3.9).
@@ -17448,6 +17618,27 @@ function tickerFor(record             )               {
 
   for (const post of tableReactions(record)) {
     items.push({ kind: 'reaction', seat: post.seat, name: post.name, hand: post.hand, key: post.key });
+  }
+
+  /*
+   * Who arrived and who left (round 25, Idan's answer to round 24's question).
+   * At a real table it is the first thing anybody notices, and the derivation
+   * already has it: the events are merged from the seats' own rows, so this
+   * needs no new writer and no new column.
+   *
+   * A drop is a departure and is worded as one. The thirty-second rule and a
+   * vote both end in the same event, and the ticker says the player left rather
+   * than why — it is not the place the app passes judgement on him, and §3.10's
+   * rule that the line never announces money is not the only thing it should
+   * never announce.
+   */
+  for (const event of tableEvents(record)) {
+    const name = nameOf(event.seat);
+    if (event.kind === 'join' || event.kind === 'return') {
+      items.push({ kind: 'arrived', seat: event.seat, name, hand: event.hand });
+    } else {
+      items.push({ kind: 'left', seat: event.seat, name, hand: event.hand });
+    }
   }
 
   return items.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
@@ -23147,6 +23338,8 @@ function tickerText(item) {
     return T('shared.ticker.reaction', { name, said: T(`reaction.${item.key}`) });
   }
   if (item.kind === 'record') return T('shared.ticker.record', { name, n: item.streak });
+  if (item.kind === 'arrived') return T('shared.ticker.arrived', { name });
+  if (item.kind === 'left') return T('shared.ticker.left', { name });
   return T('shared.ticker.gesture', { name, n: item.decisions });
 }
 
@@ -24009,6 +24202,8 @@ function httpBackend({ url, key, table = 'players' }) {
             events: seatRecord.events ?? [],
             /* And what this seat said, by hand — also only by this seat (round 24). */
             reactions: seatRecord.reactions ?? {},
+            /* How far this seat's decisions have reached its owner's rating (round 25). */
+            rated_decisions: seatRecord.ratedDecisions ?? 0,
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
@@ -24047,6 +24242,7 @@ function httpBackend({ url, key, table = 'players' }) {
           vote: seat.vote ?? null,
           events: seat.events ?? [],
           reactions: seat.reactions ?? {},
+          ratedDecisions: seat.rated_decisions ?? 0,
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),
@@ -24428,6 +24624,8 @@ function sharedNormalise(record) {
       reactions: row.reactions && typeof row.reactions === 'object' && !Array.isArray(row.reactions)
         ? row.reactions
         : {},
+      /* How many of this seat's decisions have reached its owner's rating. */
+      ratedDecisions: Number(row.ratedDecisions) || 0,
     })),
   };
 }
@@ -24474,6 +24672,8 @@ async function sharedPushMine() {
     events: row.events ?? [],
     /* What I said, in my own row, like everything else I write (§3.9). */
     reactions: row.reactions ?? {},
+    /* And how far my rating has read down my own list of decisions (§3.11). */
+    ratedDecisions: row.ratedDecisions ?? 0,
     cardsHash: seatCardsHash(derived, row.seat),
   });
 }
@@ -24531,6 +24731,35 @@ function sharedCounterfactual() {
 /** Mark it said, so the once-a-session rule is kept by the driver and not by a screen. */
 function sharedCounterfactualShown() {
   sharedState.toldCounterfactual = true;
+}
+
+/**
+ * My own decisions that have not yet reached my rating (§3.11).
+ *
+ * The mark lives in my own row and only ever moves forward, so a decision is
+ * handed over exactly once: *one seed, one score*. The list itself is in the
+ * order the shoe dealt it, which is a property of the record rather than of
+ * when a phone happened to read it — that is what makes "the first N" mean the
+ * same thing here, on my other device, and tomorrow.
+ *
+ * This file does not rate anything. It says which decisions are owed and takes
+ * the mark forward when it is told they have been paid, because the rating
+ * lives in the player's session and a shared table has no business reaching
+ * into it.
+ */
+function sharedUnrated() {
+  const row = sharedMyRow();
+  if (!row || !sharedState.record) return [];
+  const all = seatRatable(sharedState.record, row.seat);
+  return all.slice(row.ratedDecisions ?? 0);
+}
+
+/** Take the mark forward by `count`, and write it into my own row. */
+async function sharedMarkRated(count) {
+  const row = sharedMyRow();
+  if (!row || count <= 0) return;
+  row.ratedDecisions = (row.ratedDecisions ?? 0) + count;
+  await sharedPushMine();
 }
 
 /** The chart cells this seat and another both met and answered differently (§3.8). */
@@ -25183,6 +25412,32 @@ function playerOnly(progress) {
   };
 }
 
+/**
+ * A shared table's decisions, taken into this player's rating (round 25, §3.11).
+ *
+ * The join between two things that are deliberately kept apart. The shared
+ * table derives and grades without ever meeting a `TrainerSession`; the session
+ * owns the rating and has never heard of a shared table. This is the only place
+ * they touch, and it is three lines long on purpose.
+ *
+ * **The table's rules, not the session's.** §3.11: the table's rules win over
+ * the joiner's, and how hard a spot is depends on the game it was dealt in.
+ *
+ * **The mark moves only after the rating has.** If the write of the mark fails,
+ * the same decisions are offered again next time and the mark never advanced —
+ * so the failure costs a retry rather than a decision. The reverse order would
+ * lose a decision on every dropped request.
+ */
+async function absorbSharedRating() {
+  if (!sharedState.record || sharedState.seat === null) return;
+  const owed = sharedUnrated();
+  if (owed.length === 0) return;
+  session.absorbRated(rulesFor(sharedState.record), owed);
+  await sharedMarkRated(owed.length);
+  saveProgressLocally();
+  void publish();
+}
+
 function saveProgressLocally() {
   try {
     store.set(PROGRESS_KEY, JSON.stringify(fullProgress()));
@@ -25528,18 +25783,21 @@ async function api(path, body) {
        * own. Everywhere else it does nothing.
        */
       await sharedClockExpired();
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 
     case '/api/shared/act': {
       if (!sharedAvailable()) return { available: false };
       const screen = await sharedAct(String(b.action || ''));
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
     }
 
     case '/api/shared/deal': {
       if (!sharedAvailable()) return { available: false };
       const screen = await sharedDeal();
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
     }
 

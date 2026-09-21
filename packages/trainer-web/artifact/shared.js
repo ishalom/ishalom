@@ -154,6 +154,8 @@ function sharedNormalise(record) {
       reactions: row.reactions && typeof row.reactions === 'object' && !Array.isArray(row.reactions)
         ? row.reactions
         : {},
+      /* How many of this seat's decisions have reached its owner's rating. */
+      ratedDecisions: Number(row.ratedDecisions) || 0,
     })),
   };
 }
@@ -200,6 +202,8 @@ async function sharedPushMine() {
     events: row.events ?? [],
     /* What I said, in my own row, like everything else I write (§3.9). */
     reactions: row.reactions ?? {},
+    /* And how far my rating has read down my own list of decisions (§3.11). */
+    ratedDecisions: row.ratedDecisions ?? 0,
     cardsHash: seatCardsHash(derived, row.seat),
   });
 }
@@ -257,6 +261,35 @@ function sharedCounterfactual() {
 /** Mark it said, so the once-a-session rule is kept by the driver and not by a screen. */
 function sharedCounterfactualShown() {
   sharedState.toldCounterfactual = true;
+}
+
+/**
+ * My own decisions that have not yet reached my rating (§3.11).
+ *
+ * The mark lives in my own row and only ever moves forward, so a decision is
+ * handed over exactly once: *one seed, one score*. The list itself is in the
+ * order the shoe dealt it, which is a property of the record rather than of
+ * when a phone happened to read it — that is what makes "the first N" mean the
+ * same thing here, on my other device, and tomorrow.
+ *
+ * This file does not rate anything. It says which decisions are owed and takes
+ * the mark forward when it is told they have been paid, because the rating
+ * lives in the player's session and a shared table has no business reaching
+ * into it.
+ */
+function sharedUnrated() {
+  const row = sharedMyRow();
+  if (!row || !sharedState.record) return [];
+  const all = seatRatable(sharedState.record, row.seat);
+  return all.slice(row.ratedDecisions ?? 0);
+}
+
+/** Take the mark forward by `count`, and write it into my own row. */
+async function sharedMarkRated(count) {
+  const row = sharedMyRow();
+  if (!row || count <= 0) return;
+  row.ratedDecisions = (row.ratedDecisions ?? 0) + count;
+  await sharedPushMine();
 }
 
 /** The chart cells this seat and another both met and answered differently (§3.8). */

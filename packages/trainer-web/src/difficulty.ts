@@ -23,6 +23,7 @@ import {
   Shoe,
   scenarioForHand,
   scenarioKey,
+  severityForCost,
   type BlackjackRules,
   type SeverityTier,
   type StrategyChart,
@@ -232,4 +233,37 @@ export function updateRatingWithReach(
     }
   }
   return delta;
+}
+
+/**
+ * One decision's whole journey into a rating — **the only path there is.**
+ *
+ * A decision reaches a rating by exactly three steps: find its cell of the
+ * difficulty grid, turn what it cost into a severity tier, and move the rating.
+ * Before round 25 those three steps were written out at the one place that
+ * needed them, inside the private table's `absorb`. Then the shared table needed
+ * them too, and a second copy of three lines is how two tables quietly start
+ * grading differently — so they live here, and both callers call this.
+ *
+ * **Off-grid decisions never score**, and that rule is enforced here rather than
+ * by each caller remembering it. Hard 18 through 21 have no cell and turn up
+ * constantly; rating them would hand every player a stream of free points. The
+ * null return is that rule.
+ *
+ * The rating's own **mode** picks the column, so a player is always measured on
+ * the ladder he is playing, wherever the decision was made. The table's rules
+ * pick the grid, because how hard a spot is depends on the game it was dealt in
+ * — and at a shared table the table's rules are the ones in play, not the
+ * joiner's.
+ */
+export function rateOneDecision(
+  rating: Rating,
+  rules: BlackjackRules,
+  chart: StrategyChart,
+  scenarioKey: string,
+  evCost: number,
+): number | null {
+  const cell = difficultyTable(rules, chart).get(scenarioKey);
+  if (cell === undefined) return null;
+  return updateRatingWithReach(rating, cell[rating.mode], severityForCost(evCost));
 }

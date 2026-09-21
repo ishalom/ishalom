@@ -291,6 +291,8 @@ function httpBackend({ url, key, table = 'players' }) {
             events: seatRecord.events ?? [],
             /* And what this seat said, by hand — also only by this seat (round 24). */
             reactions: seatRecord.reactions ?? {},
+            /* How far this seat's decisions have reached its owner's rating (round 25). */
+            rated_decisions: seatRecord.ratedDecisions ?? 0,
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
@@ -329,6 +331,7 @@ function httpBackend({ url, key, table = 'players' }) {
           vote: seat.vote ?? null,
           events: seat.events ?? [],
           reactions: seat.reactions ?? {},
+          ratedDecisions: seat.rated_decisions ?? 0,
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),

@@ -163,6 +163,53 @@ The publishable key is in the page **by design**. It names the project, not a
 person, and the table's policies decide what it may do. The `service_role` key
 must never appear there.
 
+## A shared-table decision is rated by the same function as a private one
+
+There is exactly one place in this app where a decision becomes a rating
+movement: `rateOneDecision` in `src/difficulty.ts`. It finds the decision's cell
+of the difficulty grid, turns what the decision cost into a severity tier, and
+moves the rating.
+
+Until round 25 those three steps were written out inline at the one place that
+needed them, inside the private session's `absorb`. Then the shared table needed
+the same three, and three lines is exactly the amount of code somebody copies
+without thinking. Two copies is how two tables quietly start grading
+differently — and a rating that means one thing at the private table and
+another at the shared one is worth nothing at all.
+
+Two consequences worth stating, because both look like details:
+
+- **The grid comes from the table's rules, the ladder from the player's mode.**
+  How hard a spot is depends on the game it was dealt in, and at a shared table
+  the table's rules win over the joiner's (spec A §3.11). Which ladder measures
+  him is his own, wherever he plays.
+- **Off-grid decisions score nothing, and the rule lives in that one function
+  rather than in each caller.** Hard 18 through 21 have no cell and turn up
+  constantly; rating them would hand every player a stream of free points.
+
+`test/grading-unchanged.test.ts` is what makes changing this safe: sixty
+recorded hands, replayed decision by decision, holding the rating to the digit.
+
+## A shared table is absorbed by a mark, not a flag
+
+Spec A §3.11 says a table is absorbed into a record once — *one seed, one
+score*. The obvious reading is a boolean: this table has been scored, or it has
+not.
+
+It is a count instead: `table_seats.rated_decisions`, how far down this seat's
+own list of decisions its owner's rating has read. A table is played for an
+evening, and a rating that arrived only when somebody finally closed the tab
+would usually never arrive at all.
+
+It is still once. The decisions sit in a fixed order — the order the shoe dealt
+them, which is a property of the record rather than of when a phone read it — so
+"the first N have been rated" means the same thing on both of a player's devices
+and tomorrow as it does now, and the mark only ever moves forward.
+
+The mark is written *after* the rating has moved. If that write fails the same
+decisions are offered again, which costs a retry; the other order would lose a
+decision on every dropped request.
+
 ## Merging is marking, never deleting
 
 Duplicate player rows are merged by pointing them at a surviving row, never by

@@ -32,6 +32,7 @@ import {
   rulesFor,
   scenarioKeyOf,
   seatView,
+  tableEvents,
   tableReactions,
   type DerivedDecision,
   type ReactionKey,
@@ -116,16 +117,23 @@ export interface TableMeasures {
 /**
  * One line of what has just happened at the table (§3.10).
  *
- * Three kinds and no more: something a player said, a gesture the app has
- * earned the right to make, and a record broken. **None of them carries
- * money** — §3.10 is explicit, and it is the rule that keeps the ticker from
- * turning a trainer into a scoreboard. The kinds are here rather than as
- * sentences because the wording is the catalogue's job, in both languages.
+ * Five kinds and no more: something a player said, a gesture the app has earned
+ * the right to make, a record broken, somebody arriving and somebody leaving.
+ * The last two are Idan's, added in round 25 — at a real table who just sat
+ * down is the first thing anybody notices.
+ *
+ * **None of them carries money** — §3.10 is explicit, and it is the rule that
+ * keeps the ticker from turning a trainer into a scoreboard. Nor does any of
+ * them carry a judgement: a player dropped by the thirty-second rule *left*,
+ * and the ticker does not say why. The kinds are here rather than as sentences
+ * because the wording is the catalogue's job, in both languages.
  */
 export type TickerItem =
   | { kind: 'reaction'; seat: number; name: string; hand: number; key: ReactionKey }
   | { kind: 'gesture'; seat: number; name: string; hand: number; decisions: number }
-  | { kind: 'record'; seat: number; name: string; hand: number; streak: number };
+  | { kind: 'record'; seat: number; name: string; hand: number; streak: number }
+  | { kind: 'arrived'; seat: number; name: string; hand: number }
+  | { kind: 'left'; seat: number; name: string; hand: number };
 
 /**
  * My own decision, with the working behind it — what **תסביר לי** opens (§3.9).
@@ -297,6 +305,27 @@ function tickerFor(record: TableRecord): TickerItem[] {
 
   for (const post of tableReactions(record)) {
     items.push({ kind: 'reaction', seat: post.seat, name: post.name, hand: post.hand, key: post.key });
+  }
+
+  /*
+   * Who arrived and who left (round 25, Idan's answer to round 24's question).
+   * At a real table it is the first thing anybody notices, and the derivation
+   * already has it: the events are merged from the seats' own rows, so this
+   * needs no new writer and no new column.
+   *
+   * A drop is a departure and is worded as one. The thirty-second rule and a
+   * vote both end in the same event, and the ticker says the player left rather
+   * than why — it is not the place the app passes judgement on him, and §3.10's
+   * rule that the line never announces money is not the only thing it should
+   * never announce.
+   */
+  for (const event of tableEvents(record)) {
+    const name = nameOf(event.seat);
+    if (event.kind === 'join' || event.kind === 'return') {
+      items.push({ kind: 'arrived', seat: event.seat, name, hand: event.hand });
+    } else {
+      items.push({ kind: 'left', seat: event.seat, name, hand: event.hand });
+    }
   }
 
   return items.sort((a, b) => a.hand - b.hand || a.seat - b.seat);

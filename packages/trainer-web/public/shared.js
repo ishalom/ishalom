@@ -402,6 +402,8 @@ function tickerText(item) {
     return T('shared.ticker.reaction', { name, said: T(`reaction.${item.key}`) });
   }
   if (item.kind === 'record') return T('shared.ticker.record', { name, n: item.streak });
+  if (item.kind === 'arrived') return T('shared.ticker.arrived', { name });
+  if (item.kind === 'left') return T('shared.ticker.left', { name });
   return T('shared.ticker.gesture', { name, n: item.decisions });
 }
 

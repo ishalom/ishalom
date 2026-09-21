@@ -146,6 +146,22 @@ export interface SeatRecord {
    * unmoved.
    */
   reactions?: SeatReactions;
+  /**
+   * How many of this seat's decisions have already been taken into its owner's
+   * rating — §3.11's *one seed, one score*, as a mark rather than a flag.
+   *
+   * A count rather than a boolean because a table is played for an evening and
+   * a rating that only arrived when somebody finally closed the tab would
+   * usually never arrive at all. The decisions are in a fixed order — the order
+   * the shoe dealt them — so "the first N have been rated" means the same thing
+   * on both of this player's devices and tomorrow as it does now, and the mark
+   * only ever moves forward. Each decision therefore reaches the record exactly
+   * once, which is the property the spec's phrase is there to protect.
+   *
+   * In the seat's own row, like everything else, and written by the one player
+   * whose rating it is about.
+   */
+  ratedDecisions?: number;
 }
 
 /**
@@ -1504,11 +1520,64 @@ export function sharedSpots(record: TableRecord, seat: number): SharedSpot[] {
  *
  * Insurance is the null: it is a side bet on the dealer's hole card rather than
  * a way to play a hand, so it has no cell, and two players "disagreeing" about
- * it would be comparing nothing.
+ * it would be comparing nothing. For the *rating*, insurance does have a key —
+ * see `ratingKeyOf`, which is the one the private table uses.
  */
 export function scenarioKeyOf(decision: DerivedDecision): string | null {
   if (decision.action === 'takeInsurance' || decision.action === 'declineInsurance') return null;
   const ranks = decision.cards.map((card) => bjRankOfCard(card));
   const upcard = bjRankOfCard(decision.upcard);
   return scenarioKeyForHand(ranks, upcard, decision.evByAction.split !== undefined);
+}
+
+/**
+ * The key the rating looks a decision up by — exactly the private table's.
+ *
+ * It differs from `scenarioKeyOf` in one place and the difference matters:
+ * **insurance is `bj:insurance`**, which is a real cell of the difficulty grid
+ * and is rated when it is taken alone. Comparing two players on it is
+ * meaningless, which is why the spots version returns null; rating one player on
+ * it is what the private table has always done, and a shared table that skipped
+ * it would be a second, laxer game.
+ */
+export function ratingKeyOf(decision: DerivedDecision): string {
+  if (decision.action === 'takeInsurance' || decision.action === 'declineInsurance') {
+    return 'bj:insurance';
+  }
+  const ranks = decision.cards.map((card) => bjRankOfCard(card));
+  const upcard = bjRankOfCard(decision.upcard);
+  return scenarioKeyForHand(ranks, upcard, decision.evByAction.split !== undefined);
+}
+
+/** One decision, reduced to the two things a rating needs from it. */
+export interface RatableDecision {
+  hand: number;
+  round: number;
+  scenarioKey: string;
+  evCost: number;
+}
+
+/**
+ * Everything one seat has decided at this table, in the table's own order.
+ *
+ * The order is `(hand, round)` — the order the shoe dealt them — and it is a
+ * property of the record rather than of when anybody's phone read it, which is
+ * what lets "the first N of these have been rated" mean the same thing on two
+ * devices and on the same device tomorrow.
+ */
+export function seatRatable(record: TableRecord, seat: number): RatableDecision[] {
+  const table = deriveTable(record);
+  const out: RatableDecision[] = [];
+  for (const hand of table.hands) {
+    for (const decision of hand.decisions) {
+      if (decision.seat !== seat) continue;
+      out.push({
+        hand: hand.hand,
+        round: decision.round,
+        scenarioKey: ratingKeyOf(decision),
+        evCost: decision.evCost,
+      });
+    }
+  }
+  return out.sort((a, b) => a.hand - b.hand || a.round - b.round);
 }

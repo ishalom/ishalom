@@ -356,6 +356,32 @@ function playerOnly(progress) {
   };
 }
 
+/**
+ * A shared table's decisions, taken into this player's rating (round 25, §3.11).
+ *
+ * The join between two things that are deliberately kept apart. The shared
+ * table derives and grades without ever meeting a `TrainerSession`; the session
+ * owns the rating and has never heard of a shared table. This is the only place
+ * they touch, and it is three lines long on purpose.
+ *
+ * **The table's rules, not the session's.** §3.11: the table's rules win over
+ * the joiner's, and how hard a spot is depends on the game it was dealt in.
+ *
+ * **The mark moves only after the rating has.** If the write of the mark fails,
+ * the same decisions are offered again next time and the mark never advanced —
+ * so the failure costs a retry rather than a decision. The reverse order would
+ * lose a decision on every dropped request.
+ */
+async function absorbSharedRating() {
+  if (!sharedState.record || sharedState.seat === null) return;
+  const owed = sharedUnrated();
+  if (owed.length === 0) return;
+  session.absorbRated(rulesFor(sharedState.record), owed);
+  await sharedMarkRated(owed.length);
+  saveProgressLocally();
+  void publish();
+}
+
 function saveProgressLocally() {
   try {
     store.set(PROGRESS_KEY, JSON.stringify(fullProgress()));
@@ -701,18 +727,21 @@ async function api(path, body) {
        * own. Everywhere else it does nothing.
        */
       await sharedClockExpired();
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock: sharedClock() };
     }
 
     case '/api/shared/act': {
       if (!sharedAvailable()) return { available: false };
       const screen = await sharedAct(String(b.action || ''));
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
     }
 
     case '/api/shared/deal': {
       if (!sharedAvailable()) return { available: false };
       const screen = await sharedDeal();
+      await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
     }
 

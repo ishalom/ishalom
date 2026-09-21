@@ -126,6 +126,56 @@ measure of luck in tie-breaks. The definition is surfaced in the app rather than
 hidden: the accuracy panel says how many were set aside and what the figure
 would be counting them.
 
+### Spec A §3.8 — a neighbour cannot take your card in the same hand
+
+This one is a correction rather than a trade: spec A contradicted itself, and
+§3.8 is the half that was wrong. **The wording below replaces its example.**
+
+**Spec A §3.8 said**, as the line the app would show:
+
+> *If Dani had stood on his 12, your **second card** would have been the 4♦ and
+> you would have had 13 instead of 20.*
+
+**That cannot happen, and §3.2 is the reason.** The reservation rule — adopted
+so that two people can tap in the same millisecond — puts each seat's card for a
+round at a position fixed *before the round begins*. A neighbour cannot reach
+into a round you are both in and take your card out of it; that is the entire
+point of the rule, and an opening card is the least reachable card there is.
+
+**Measured before it was changed** (round 25 — 600 hands at each table size,
+seeds 1 to 60, ten hands a table). How often a neighbour's decision moved a card
+of yours **in the hand he made it**:
+
+| seats | hands | ten-hand tables with at least one |
+| --- | ---: | ---: |
+| 2 | 4 / 600 — 0.7% | 4 / 60 |
+| 3 | 7 / 600 — 1.2% | 6 / 60 |
+| 6 | 10 / 600 — 1.7% | 8 / 60 |
+
+**What survives the reservation rule is the coupling across hands.** How long he
+stays live decides how many cards the hand consumes, so the shoe reaches the
+*next* hand somewhere else — same shoe, same seed, still his doing. On the same
+600 hands: 55 of 60 two-seat tables had one, 60 of 60 at three seats, 59 of 60 at
+six.
+
+**So §3.8 now reads:** the app looks for the same-hand shape first, everywhere,
+before it looks for the next-hand shape anywhere — and the two get **different
+sentences**, because wording the weaker claim in the stronger one's words would
+assert something the rule the whole table rests on makes impossible.
+
+> **Same hand:** *If Dani had stood on his 12, you would have been dealt the 4♦
+> instead of the 7♣ — 13 instead of 20.*
+>
+> **The hand after:** *If Dani had stood on his 12 last hand, the shoe would have
+> reached this one somewhere else: you would have been dealt the 4♦ instead of
+> the 7♣ — 13 instead of 20.*
+
+Both are dealt rather than modelled: one decision of his is changed and the shoe
+is run again from the same seed. And the half of §3.8 that matters more is
+unchanged by any of this — **the replay moves the cards and cannot touch the
+grade**, because a decision is graded on the player's own cards, the dealer's
+upcard and the table's rules, and a neighbour reaches none of the three.
+
 ---
 
 ## Built, but not in the spec at all

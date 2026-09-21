@@ -307,7 +307,13 @@ test('no line the ticker can draw mentions money, in either language', () => {
   }
 });
 
-test('the ticker only ever holds gestures, reactions and records', () => {
+test('the ticker only ever holds the five kinds, and nothing else gets in', () => {
+  /*
+   * Round 24 held it to three. Idan asked for arrivals and departures, so it is
+   * five now — and the test is still the same shape, because its job is not to
+   * count the kinds but to fail the day a sixth appears without anybody having
+   * decided it should.
+   */
   const record = freshTable(51, 3);
   playRandom(record, 10, 510);
   record.seats[0]!.reactions = { 2: ['brave'] };
@@ -315,7 +321,7 @@ test('the ticker only ever holds gestures, reactions and records', () => {
   assert.ok(screen.ticker.length > 0, 'nothing reached the ticker at all');
   for (const item of screen.ticker) {
     assert.ok(
-      ['reaction', 'gesture', 'record'].includes(item.kind),
+      ['reaction', 'gesture', 'record', 'arrived', 'left'].includes(item.kind),
       `the ticker carries a ${item.kind}`,
     );
     assert.ok(!Object.keys(item).includes('stack'), 'a ticker item carries a stack');
@@ -324,6 +330,54 @@ test('the ticker only ever holds gestures, reactions and records', () => {
   /* And it is in the table's own order, so two phones rotate through one list. */
   const hands = screen.ticker.map((item) => item.hand);
   assert.deepEqual(hands, [...hands].sort((a, b) => a - b), 'the ticker is not in hand order');
+});
+
+test('who sat down and who left reach the ticker, and a drop reads as leaving', () => {
+  /*
+   * Idan's answer to round 24's question: at a real table, who just sat down is
+   * the first thing anybody notices. The events were already in the record —
+   * merged from the seats' own rows — so this needed no new writer.
+   *
+   * The half worth testing is the wording rather than the plumbing: a player
+   * dropped by the thirty-second rule *left*. The ticker is where the table
+   * finds out what happened, not where the app tells everybody what it thought
+   * of him.
+   */
+  const record = freshTable(91, 3);
+  playRandom(record, 6, 910);
+  record.seats[2]!.events = [
+    { kind: 'join', seat: 2, hand: 0 },
+    { kind: 'drop', seat: 2, hand: 4, why: 'vote' },
+    { kind: 'return', seat: 2, hand: 5 },
+  ];
+
+  const ticker = sharedScreen(record, 0).ticker;
+  const arrived = ticker.filter((item) => item.kind === 'arrived');
+  const left = ticker.filter((item) => item.kind === 'left');
+
+  assert.equal(arrived.length, 4, 'three joins and one return should be four arrivals');
+  assert.equal(left.length, 1, 'the drop did not reach the ticker');
+  assert.equal(left[0]!.seat, 2);
+  assert.equal(left[0]!.hand, 4);
+
+  /* And neither line says why, in either language. */
+  for (const locale of ['en', 'he'] as const) {
+    const line = t(locale, 'shared.ticker.left', { name: 'Player 2' });
+    for (const word of ['vote', 'drop', 'slow', 'הצבע', 'הודח', 'איטי']) {
+      assert.ok(!line.includes(word), `${locale}: the departure line says ${word}`);
+    }
+  }
+});
+
+test('the two new lines carry no money either', () => {
+  for (const locale of ['en', 'he'] as const) {
+    for (const key of ['shared.ticker.arrived', 'shared.ticker.left']) {
+      const line = catalogue(locale)[key]!;
+      for (const money of ['{stack}', '{units}', '{chips}', '{net}', '{bet}']) {
+        assert.ok(!line.includes(money), `${locale} ${key} carries ${money}`);
+      }
+    }
+  }
 });
 
 test('a reaction reaches the ticker attributed to the player who said it', () => {

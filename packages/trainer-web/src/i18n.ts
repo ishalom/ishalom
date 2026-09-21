@@ -136,6 +136,11 @@ const EN: Catalogue = {
   'shared.ticker.reaction': '{name}: {said}',
   'shared.ticker.gesture': '{name} played all {n} decisions right and still lost the hand.',
   'shared.ticker.record': '{name} — {n} right in a row, the best at this table so far.',
+  // Arrivals and departures (round 25). A drop is a departure and is worded as
+  // one: the ticker says the player left, never why, because the line is there
+  // to tell the table what happened and not to pass the app's judgement on him.
+  'shared.ticker.arrived': '{name} sat down.',
+  'shared.ticker.left': '{name} left.',
 
   // --- He took my card (§3.8) ---
   'shared.cfAsk': 'Did he take your card?',
@@ -1169,6 +1174,8 @@ const HE: Catalogue = {
   'shared.ticker.reaction': '{name}: {said}',
   'shared.ticker.gesture': '{name} שיחק את כל {n} ההחלטות נכון והפסיד את היד בכל זאת.',
   'shared.ticker.record': '{name} — {n} נכונות ברצף, הכי הרבה בשולחן הזה עד עכשיו.',
+  'shared.ticker.arrived': '{name} התיישב.',
+  'shared.ticker.left': '{name} עזב.',
 
   // --- הוא לקח לי את הקלף (§3.8) ---
   'shared.cfAsk': 'הוא לקח לך את הקלף?',
