@@ -743,26 +743,7 @@ export class TrainerSession {
       ranked: ranked.map((r) => ({ action: r.action, ev: r.ev })),
     });
 
-    const stat = this.scenarioStats.get(record.scenarioKey) ?? {
-      scenarioKey: record.scenarioKey,
-      attempts: 0,
-      correct: 0,
-      consecutiveCorrect: 0,
-      evCostTotal: 0,
-      confusion: {},
-      lastAttemptAt: 0,
-    };
-    stat.attempts++;
-    stat.evCostTotal += record.evCost;
-    stat.lastAttemptAt = this.clock++;
-    if (record.evCost === 0) {
-      stat.correct++;
-      stat.consecutiveCorrect++;
-    } else {
-      stat.consecutiveCorrect = 0;
-      stat.confusion[record.chosenAction] = (stat.confusion[record.chosenAction] ?? 0) + 1;
-    }
-    this.scenarioStats.set(record.scenarioKey, stat);
+    const stat = this.noteSpot(record.scenarioKey, record.evCost, record.chosenAction);
 
     /*
      * The gesture, chosen from what has just been written and never writing any
@@ -1273,7 +1254,15 @@ export class TrainerSession {
    * Returns how many of them actually moved the rating: a decision off the
    * 311-cell grid scores nothing, here exactly as it scores nothing there.
    */
-  absorbRated(rules: BlackjackRules, decisions: ReadonlyArray<{ scenarioKey: string; evCost: number }>): number {
+  absorbRated(
+    rules: BlackjackRules,
+    decisions: ReadonlyArray<{
+      scenarioKey: string;
+      evCost: number;
+      action?: string;
+      forfeit?: true;
+    }>,
+  ): number {
     const chart = chartFor(rules);
     let rated = 0;
     for (const decision of decisions) {
@@ -1286,8 +1275,55 @@ export class TrainerSession {
         decision.evCost,
       );
       if (delta !== null) rated++;
+      /*
+       * Into the mastery grid, through the same method the private table uses
+       * (Idan, round 26: *"כן ברור"*) — **unless it is a forfeit.**
+       *
+       * A forfeit is rated and is not a decision. Letting one into the grid is
+       * exactly the thing §3.3 forbids: the app would count an attempt at a
+       * spot he never played, and then tell him he is weak on 16 against a ten
+       * on the strength of it. The rating above has already taken its hit; the
+       * data that teaches him stays clean.
+       */
+      if (!decision.forfeit) {
+        this.noteSpot(decision.scenarioKey, decision.evCost, decision.action ?? 'unknown');
+      }
     }
     return rated;
+  }
+
+  /**
+   * One attempt at one spot, written into the record that feeds the mastery
+   * grid — the only place that record is written.
+   *
+   * Extracted in round 26 for the same reason the rating was in round 25: the
+   * shared table needed it, and a second copy is how two tables start
+   * disagreeing about what a player has mastered. The mastery rule itself is
+   * untouched — five attempts, four correct, last two right — and lives in
+   * `gestures.ts`, which reads this and writes nothing.
+   */
+  private noteSpot(scenarioKey: string, evCost: number, chosenAction: string): ScenarioStat {
+    const stat = this.scenarioStats.get(scenarioKey) ?? {
+      scenarioKey,
+      attempts: 0,
+      correct: 0,
+      consecutiveCorrect: 0,
+      evCostTotal: 0,
+      confusion: {},
+      lastAttemptAt: 0,
+    };
+    stat.attempts++;
+    stat.evCostTotal += evCost;
+    stat.lastAttemptAt = this.clock++;
+    if (evCost === 0) {
+      stat.correct++;
+      stat.consecutiveCorrect++;
+    } else {
+      stat.consecutiveCorrect = 0;
+      stat.confusion[chosenAction] = (stat.confusion[chosenAction] ?? 0) + 1;
+    }
+    this.scenarioStats.set(scenarioKey, stat);
+    return stat;
   }
 
   /** Everything the home screen needs. */

@@ -467,6 +467,23 @@ function playHand(
       evCost: number;
     },
   ) => void,
+  /**
+   * What the seat the table is waiting on was looking at — asked for, never
+   * computed unasked.
+   *
+   * The forfeit needs the spot a dropped player was sitting at, and that spot
+   * exists only at the moment he is skipped for owing an action. Evaluating it
+   * for every waiting seat on every derivation would put a solver call in the
+   * hot path of a screen that redraws every second and a half, so it happens
+   * only when somebody has passed this in — which is `forfeitSpot`, and nothing
+   * else.
+   */
+  inspect?: (
+    seat: number,
+    round: number,
+    legal: string[],
+    evaluation: { evByAction: Partial<Record<string, number>>; optimalAction: string },
+  ) => void,
 ): DerivedHand {
   /*
    * The deal, in the order a table deals: one card to every seat, the dealer's
@@ -593,6 +610,13 @@ function playHand(
          * there.
          */
         owing.add(seat.seat);
+        if (inspect) {
+          const waiting = play.table.currentEvaluation();
+          inspect(seat.seat, round, legal as string[], {
+            evByAction: waiting.evByAction as Partial<Record<string, number>>,
+            optimalAction: waiting.optimalAction as string,
+          });
+        }
         continue;
       }
       const evaluation = play.table.currentEvaluation();
@@ -823,6 +847,13 @@ function run(
   record: TableRecord,
   handCount: number,
   moveFor: (seat: number, hand: number, round: number, legal: string[]) => SeatMove['action'] | null,
+  /** Passed straight through to `playHand`. See the note on its own parameter. */
+  inspect?: (
+    seat: number,
+    round: number,
+    legal: string[],
+    evaluation: { evByAction: Partial<Record<string, number>>; optimalAction: string },
+  ) => void,
 ): DerivedTable {
   const rules = rulesFor(record);
   const rng = makeRng(record.seed);
@@ -843,6 +874,7 @@ function run(
       live,
       (seat, round, legal) => moveFor(seat, hand, round, legal),
       (decision) => decisions.push(decision),
+      inspect,
     );
     derived.decisions = decisions;
     for (const seatHand of derived.seats) {
@@ -1555,6 +1587,189 @@ export interface RatableDecision {
   round: number;
   scenarioKey: string;
   evCost: number;
+  /**
+   * What he actually did — the mastery grid's `confusion` needs it, to be able
+   * to say "you used to hit this" rather than only "you used to get it wrong".
+   * Absent on a forfeit, which is not an action anybody took.
+   */
+  action?: string;
+  /**
+   * True when this is not a decision at all but a forfeit (§3.3, round 26).
+   *
+   * It is rated — that is the whole point of it — and it is rated through the
+   * same function every real decision goes through. What it must never do is
+   * behave like a decision anywhere else: not in the hand log, not in the
+   * accuracy figure, not in the mastery grid, and not in the "you used to get
+   * this wrong" gesture. The app would otherwise tell a player he is weak on 16
+   * against a ten on a hand he never played.
+   *
+   * Carrying the flag on the decision is what lets one list serve both: the
+   * rating reads every row, and everything that teaches skips the ones marked
+   * here.
+   */
+  forfeit?: true;
+}
+
+/**
+ * What a forfeited turn costs the rating — Idan's rule, round 26.
+ *
+ * > *"הדירוג שהיה יורד אילו היה בוחר בטעות החמורה ביותר בתור שבו הופעל
+ * > הוויתור."*
+ *
+ * The rating drops by what it would have dropped had he chosen **the worst
+ * action available at the spot he was sitting at** when the clock ran out. No
+ * second formula and no invented constant: the cost is a real EV cost, read off
+ * a real spot, and it goes through `rateOneDecision` like everything else.
+ *
+ * **The spot exists, but not in the table you can see.** A drop at hand *h*
+ * takes the seat out of hand *h* — that is what "it costs him the hand" means —
+ * so the derivation of the record as it stands has no such seat in that hand at
+ * all. The spot is therefore read from the same table with that one drop event
+ * removed: the hand he was actually in, at the round he never answered. It is a
+ * replay, exactly like the counterfactual, and it asks no clock.
+ */
+export interface ForfeitSpot {
+  seat: number;
+  hand: number;
+  round: number;
+  scenarioKey: string;
+  /** The largest EV cost available to him there — the worst thing he could do. */
+  evCost: number;
+  /** What he could have done, for a report or a screen that wants to say it. */
+  legal: string[];
+  worstAction: string;
+}
+
+/**
+ * The spot a dropped seat was sitting at, or null when there is not one.
+ *
+ * Null is a real answer and the round asked for each case to be reported rather
+ * than invented:
+ *
+ *   - **he was not waiting on anything.** A drop can land on a hand he had
+ *     already answered, or before he was ever dealt in. There is no turn, so
+ *     there is no forfeited turn.
+ *   - **one legal action, or none.** "The worst available action" is then the
+ *     only one, and choosing it is not a mistake — its EV cost is zero, so the
+ *     rating moves by what a correct decision on that spot moves it by. That
+ *     follows from Idan's sentence rather than departing from it, and it is
+ *     returned rather than nulled.
+ *   - **the spot is off the grid** (hard 18 through 21). The cost is real but
+ *     there is no cell to rate it against, and `rateOneDecision` declines it —
+ *     the same way it declines the same spot played properly. Returned here and
+ *     refused one layer up, so the two behave alike.
+ *   - **insurance.** It is a cell (`bj:insurance`) and it is rated, exactly as
+ *     it is when a player answers it himself.
+ */
+export function forfeitSpot(record: TableRecord, seat: number, hand: number): ForfeitSpot | null {
+  /*
+   * The same table, minus the drop that is being priced. Without this the seat
+   * is not live at the hand and there is nothing to look at — the drop having
+   * already taken the hand away from him is precisely what makes the spot
+   * invisible in the record as it stands.
+   */
+  const before: TableRecord = {
+    ...record,
+    seats: record.seats.map((entry) =>
+      entry.seat === seat
+        ? {
+            ...entry,
+            moves: [...entry.moves],
+            events: (entry.events ?? []).filter(
+              (event) => !(event.kind === 'drop' && event.hand === hand),
+            ),
+          }
+        : { ...entry, moves: [...entry.moves] },
+    ),
+    // A vote is what a derived drop is made of, so it goes too.
+    ...{},
+  };
+  for (const entry of before.seats) {
+    if (entry.vote && entry.vote.against === seat && entry.vote.hand === hand) entry.vote = null;
+  }
+
+  /*
+   * What the seat was looking at, caught as it is skipped. The chart cell is
+   * worked out afterwards, from the table this same run produces, so the whole
+   * of this costs one derivation rather than two.
+   */
+  let waiting: {
+    round: number;
+    legal: string[];
+    evaluation: { evByAction: Partial<Record<string, number>>; optimalAction: string };
+  } | null = null;
+  let derived: DerivedTable;
+  try {
+    derived = run(
+      before,
+      hand + 1,
+      (who, atHand, atRound) =>
+        before.seats
+          .find((entry) => entry.seat === who)
+          ?.moves.find((entry) => entry.hand === atHand && entry.round === atRound)?.action ?? null,
+      (who, round, legal, evaluation) => {
+        if (waiting || who !== seat) return;
+        waiting = { round, legal: [...legal], evaluation };
+      },
+    );
+  } catch {
+    // A log the engine refuses is not a forfeit anybody can price.
+    return null;
+  }
+  if (!waiting) return null;
+
+  const { round, legal, evaluation } = waiting as {
+    round: number;
+    legal: string[];
+    evaluation: { evByAction: Partial<Record<string, number>>; optimalAction: string };
+  };
+  const best = evaluation.evByAction[evaluation.optimalAction] ?? 0;
+  let worstAction = evaluation.optimalAction;
+  let worst = best;
+  for (const action of legal) {
+    const ev = (evaluation.evByAction as Record<string, number>)[action];
+    if (ev === undefined) continue;
+    if (ev < worst) {
+      worst = ev;
+      worstAction = action;
+    }
+  }
+  return {
+    seat,
+    hand,
+    round,
+    scenarioKey: spotKeyFor(derived, seat, hand, evaluation, legal),
+    evCost: Math.max(0, best - worst),
+    legal,
+    worstAction,
+  };
+}
+
+/**
+ * The chart cell a waiting seat is sitting on.
+ *
+ * Read from the hand it is holding, the same way `ratingKeyOf` reads it from a
+ * decision that was made — so a forfeited turn is rated against the same cell
+ * the turn would have been rated against had he answered it.
+ */
+function spotKeyFor(
+  table: DerivedTable,
+  seat: number,
+  hand: number,
+  evaluation: { evByAction: Partial<Record<string, number>>; optimalAction: string },
+  legal: string[],
+): string {
+  if (legal.includes('takeInsurance') || legal.includes('declineInsurance')) return 'bj:insurance';
+  const found = table.hands.find((entry) => entry.hand === hand);
+  const seatHand = found?.seats.find((entry) => entry.seat === seat);
+  const cards = seatHand ? (seatHand.hands[0] ?? seatHand.cards) : [];
+  const dealer = found?.dealer ?? [];
+  if (cards.length === 0 || dealer.length === 0) return 'bj:insurance';
+  return scenarioKeyForHand(
+    cards.map((card) => bjRankOfCard(card)),
+    bjRankOfCard(dealer[0]!),
+    evaluation.evByAction.split !== undefined,
+  );
 }
 
 /**
@@ -1576,8 +1791,35 @@ export function seatRatable(record: TableRecord, seat: number): RatableDecision[
         round: decision.round,
         scenarioKey: ratingKeyOf(decision),
         evCost: decision.evCost,
+        action: String(decision.action),
       });
     }
   }
+
+  /*
+   * And what he forfeited (§3.3, round 26).
+   *
+   * A drop is priced at the worst action available where he was sitting, and it
+   * takes its place in the same ordered list as everything else — so the mark
+   * that makes a table score once covers it too, and a replay of the record
+   * reproduces it rather than re-charging it.
+   *
+   * **Leaving deliberately costs nothing**, which is what makes the penalty
+   * fair: the offence is not slowness, it is letting the table rot rather than
+   * playing or leaving. That is the whole of the `why` test below.
+   */
+  for (const event of tableEvents(record)) {
+    if (event.seat !== seat || event.kind !== 'drop' || event.why === 'left') continue;
+    const spot = forfeitSpot(record, seat, event.hand);
+    if (!spot) continue;
+    out.push({
+      hand: spot.hand,
+      round: spot.round,
+      scenarioKey: spot.scenarioKey,
+      evCost: spot.evCost,
+      forfeit: true,
+    });
+  }
+
   return out.sort((a, b) => a.hand - b.hand || a.round - b.round);
 }
