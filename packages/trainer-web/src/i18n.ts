@@ -1269,7 +1269,7 @@ const HE: Catalogue = {
   'gest.rightAndLost': '**שיחקת את היד הזאת מושלם והפסדת.** זה בדיוק מה שאמור לקרות לפעמים, ובגלל זה האפליקציה מודדת החלטות ולא תוצאות.',
   'records.title': 'השיאים שלך',
   'records.streak': '{n} ברצף',
-  'records.mastered': '{n} מצבים מתוך {total}',
+  'records.mastered': '{n} מצבים מתוך {total} בשליטה',
   'records.decisions': '{n} החלטות בסך הכול',
   'records.none': 'עוד אין כאן כלום — שחק כמה ידיים.',
   'sitting.line': 'בישיבה הזאת: **{decisions} החלטות**, {mistakes} מהן שגויות.',

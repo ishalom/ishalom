@@ -326,7 +326,13 @@ test('the gesture is the last line on the card, after everything the hand had to
   const at = (needle: string) => card.indexOf(needle);
   assert.ok(at('window.EVReturns.block(') > 0, 'the card lost its block');
   assert.ok(at('gestureLine(') > at('window.EVReturns.block('), 'the gesture is above the rows');
-  assert.ok(at('gestureLine(') > at("className = 'milestone'"), 'the gesture is above the milestone');
+  /*
+   * Round 21: above the two lines that comment on the rows, and still below the
+   * rows themselves. Round 17's ordering rule decides what may be cut; within
+   * what follows it, the rarest and the most wanted line goes first.
+   */
+  assert.ok(at('gestureLine(') < at("className = 'did'"), 'the gesture is below the line about the choice');
+  assert.ok(at('gestureLine(') < at("className = 'milestone'"), 'the gesture is below the milestone');
   // It is drawn from the graded decision or the settlement, and from nothing else.
   assert.match(card, /gestureLine\(feedback\.gesture \|\| view\.settlementGesture\)/);
 });

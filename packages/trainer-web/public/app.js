@@ -777,6 +777,23 @@ function renderQuickCard(view) {
     window.EVReturns.block(feedback, { game: 'bj', decisions: view.stats.decisions, helpId: 'bj-returns-help' }),
   );
 
+  /*
+   * The gesture, directly under the rows and above the lines that comment on
+   * them (round 21; round 20 had it last).
+   *
+   * Round 17's rule is untouched: the graded rows still sit directly under the
+   * grade and are still the last thing that may ever be cut. What moved is only
+   * the order of what follows them — and of those, the gesture is the one that
+   * fires twice a sitting and is the reason Idan asked for any of this, while
+   * "you chose stand; best was hit" says what the bars beside it already say.
+   *
+   * Measured before moving it: on the tallest card at 360px in both languages
+   * the rows still end inside the ceiling, because nothing was inserted above
+   * them.
+   */
+  const gesture = gestureLine(feedback.gesture || view.settlementGesture);
+  if (gesture) box.appendChild(gesture);
+
   if (!feedback.correct) {
     const did = document.createElement('p');
     did.className = 'did';
@@ -806,17 +823,6 @@ function renderQuickCard(view) {
     );
     box.appendChild(note);
   }
-
-  /*
-   * And the gesture, last and quietest (round 20).
-   *
-   * It is the only line on this card that is about the player rather than the
-   * hand, so it goes after everything the hand has to say. Two rules it keeps
-   * by being here: it never interrupts a decision — the card is drawn after the
-   * decision was graded — and it looks the same the fiftieth time as the first.
-   */
-  const gesture = gestureLine(feedback.gesture || view.settlementGesture);
-  if (gesture) box.appendChild(gesture);
 }
 
 /**
