@@ -110,6 +110,52 @@ const EN: Catalogue = {
   'shared.clockThemAutoOver': 'The hand ended without {name}.',
   'shared.vote': 'Play on without {name} ({votes}/{needs})',
 
+  // --- What a player says (§3.9) ---
+  //
+  // Idan's six, and they are his words: the Hebrew below is exactly as he wrote
+  // it, down to the spelling of the long "אייייי". The English is the same
+  // register rather than a translation — what somebody would actually say at a
+  // table, not an elegant rendering of what he said in Hebrew.
+  'shared.say': 'Say something',
+  'reaction.brave': 'Brave!',
+  'reaction.where': 'Where were you going with that?',
+  'reaction.withYou': 'Mate, I feel you.',
+  'reaction.shame': 'Ahhh, should have bet more.',
+  'reaction.mum': "Who loves you, mummy's boy?",
+  'reaction.explain': 'Explain that to me.',
+
+  // --- The table against the dealer (§3.6) ---
+  'shared.tableName': 'The table',
+  'shared.tableLegend':
+    'The table together: chips and hands added up, the bar and the cost weighted by how many decisions each of you made, the best run whoever had it.',
+  'shared.handsPlayed': '{n} hands',
+  'shared.evLost': '{n} lost per 100',
+  'shared.bestRun': 'best run {n}',
+
+  // --- The ticker (§3.10) ---
+  'shared.ticker.reaction': '{name}: {said}',
+  'shared.ticker.gesture': '{name} played all {n} decisions right and still lost the hand.',
+  'shared.ticker.record': '{name} — {n} right in a row, the best at this table so far.',
+
+  // --- He took my card (§3.8) ---
+  'shared.cfAsk': 'Did he take your card?',
+  'shared.cfNone': 'Not this hand — nothing your neighbour did changed a card of yours.',
+  'shared.cfLine':
+    'If {name} had {instead} on {theirTotal}, you would have been dealt {otherCard} instead of {actualCard} — {otherTotal} instead of {actualTotal}.',
+  // The commoner one, and worded apart from it on purpose: he cannot reach into
+  // a round you are both in, so a line that implied he had would be false about
+  // the rule the table is built on. What he changed is how many cards the last
+  // hand ate, and the shoe reached this one somewhere else.
+  'shared.cfLineNext':
+    'If {name} had {instead} on {theirTotal} last hand, the shoe would have reached this one somewhere else: you would have been dealt {otherCard} instead of {actualCard} — {otherTotal} instead of {actualTotal}.',
+  'shared.cfRule': 'Different cards. The same rule decided both.',
+  'shared.cfStood': 'stood',
+  'shared.cfHit': 'taken a card',
+
+  // --- A spot you both met (§3.8) ---
+  'shared.spotsTitle': 'You both met this one',
+  'shared.spotLine': 'You both had {spot}. You {mine}, {name} {theirs}. The chart says {best}.',
+
   // --- Actions ---
   'action.hit': 'Hit',
   'action.stand': 'Stand',
@@ -1100,6 +1146,44 @@ const HE: Catalogue = {
   'shared.clockThemAuto': 'מחכים ל־{name} — {n} שניות, ואז היד נגמרת.',
   'shared.clockThemAutoOver': 'היד נגמרה בלי {name}.',
   'shared.vote': 'להמשיך בלי {name} ({votes}/{needs})',
+
+  // --- What a player says (§3.9) ---
+  // Idan's own words, exactly as he wrote them. Nothing here is translated.
+  'shared.say': 'להגיד משהו',
+  'reaction.brave': 'אמיץ!',
+  'reaction.where': 'יא אהבל לאן הלכת',
+  'reaction.withYou': 'אחי, מבין אותך',
+  'reaction.shame': 'אייייי חבל לא שמת יותר',
+  'reaction.mum': 'מי אוהב אותך נסיך של אמא',
+  'reaction.explain': 'תסביר לי',
+
+  // --- The table against the dealer (§3.6) ---
+  'shared.tableName': 'השולחן',
+  'shared.tableLegend':
+    'השולחן ביחד: הצ׳יפים והידיים מתחברים, העמודה והעלות משוקללות לפי כמה החלטות כל אחד קיבל, והרצף הכי ארוך הוא של מי שעשה אותו.',
+  'shared.handsPlayed': '{n} ידיים',
+  'shared.evLost': '{n} אבודים לכל 100',
+  'shared.bestRun': 'רצף הכי ארוך {n}',
+
+  // --- The ticker (§3.10) ---
+  'shared.ticker.reaction': '{name}: {said}',
+  'shared.ticker.gesture': '{name} שיחק את כל {n} ההחלטות נכון והפסיד את היד בכל זאת.',
+  'shared.ticker.record': '{name} — {n} נכונות ברצף, הכי הרבה בשולחן הזה עד עכשיו.',
+
+  // --- הוא לקח לי את הקלף (§3.8) ---
+  'shared.cfAsk': 'הוא לקח לך את הקלף?',
+  'shared.cfNone': 'לא ביד הזאת — שום דבר שהשכן שלך עשה לא שינה לך קלף.',
+  'shared.cfLine':
+    'אם {name} היה {instead} על {theirTotal}, היית מקבל {otherCard} במקום {actualCard} — {otherTotal} במקום {actualTotal}.',
+  'shared.cfLineNext':
+    'אם {name} היה {instead} על {theirTotal} ביד הקודמת, החפיסה הייתה מגיעה ליד הזאת במקום אחר: היית מקבל {otherCard} במקום {actualCard} — {otherTotal} במקום {actualTotal}.',
+  'shared.cfRule': 'קלפים אחרים. אותו כלל הכריע את שניהם.',
+  'shared.cfStood': 'עוצר',
+  'shared.cfHit': 'לוקח קלף',
+
+  // --- נקודה ששניכם פגשתם (§3.8) ---
+  'shared.spotsTitle': 'שניכם פגשתם את זה',
+  'shared.spotLine': 'לשניכם הייתה {spot}. אתה {mine}, {name} {theirs}. הטבלה אומרת {best}.',
 
   // --- Actions ---
   'action.hit': 'קלף',

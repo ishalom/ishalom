@@ -10,6 +10,9 @@
     <script src="/i18n-client.js"></script>
     <script src="/fontswitch.js"></script>
     <script src="/figure.js"></script>
+    <!-- The returns block, shared by both tables: "תסביר לי" opens the same one
+         the private table draws, rather than a second copy of it (§3.9). -->
+    <script src="/returns.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -73,6 +76,14 @@
         </p>
       </section>
 
+      <!--
+        The ticker (§3.10). One line, rotating every eight seconds, and it
+        holds still while a hand is live: a line that changed under a player
+        deciding would be the app talking over him. It fades and does not move,
+        and it never announces money.
+      -->
+      <p class="shared-ticker" id="shared-ticker" hidden aria-live="polite"></p>
+
       <main class="table felt" id="shared-table" hidden>
         <section class="seat" data-i18n-attr="aria-label:ui.dealer">
           <h2 class="seat-title">
@@ -92,10 +103,44 @@
       -->
       <section class="shared-clock" id="shared-clock" hidden aria-live="polite"></section>
 
-      <!-- The two measures, side by side, with the line that names them (§3.5). -->
+      <!--
+        What has just been said, attributed (§3.9).
+
+        Its own block, apart from everything the app says about a decision, and
+        never on a card or in a verdict line. That separation is the condition
+        Cowork set when it withdrew the decisions-never-outcomes rule for player
+        speech: two of Idan's six are about luck, and they are fine between
+        friends precisely because it is a friend saying them and the screen
+        makes that unmistakable.
+      -->
+      <section class="shared-said" id="shared-said" hidden aria-live="polite"></section>
+
+      <!-- The two measures, side by side, with the line that names them (§3.5),
+           and the table's own row beneath them (§3.6). -->
       <section class="shared-measures" id="shared-measures" hidden></section>
 
+      <!--
+        He took my card (§3.8) — offered, not shown, and once a session. The
+        answer is a real replay of this shoe with one decision of his changed,
+        which is why the app can say it at all.
+      -->
+      <section class="shared-folklore" id="shared-folklore" hidden></section>
+
+      <!--
+        What "תסביר לי" opens, on my own screen and nobody else's (§3.9): my
+        last decision's returns block, drawn by the private table's own file
+        from the private table's own figures.
+      -->
+      <section class="shared-explain" id="shared-explain" hidden></section>
+
       <p class="table-talk" id="shared-talk" hidden aria-live="polite"></p>
+
+      <!--
+        The six things a player can say (§3.9). One tap, above the dock and
+        below the felt, so sending one never covers the cards.
+      -->
+      <nav class="shared-reactions" id="shared-reactions" hidden
+           data-i18n-attr="aria-label:shared.say"></nav>
 
       <div class="dock">
         <nav class="actions" id="shared-actions" data-i18n-attr="aria-label:ui.actions"></nav>

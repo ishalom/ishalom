@@ -2776,6 +2776,129 @@ button,
 .shared-leave { margin-inline-start: auto; }
 .shared-debug { opacity: 0.6; }
 
+/* --- The social layer (round 24; §3.6, §3.8, §3.9, §3.10) ------------------ */
+
+/* The table's own row reads as one more player, with a line above it to say it
+   is not one: the figures are combined, and combined differently each. */
+.shared-measure-table {
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+.shared-table-extras {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The ticker (§3.10). It fades and it does not move: `opacity` alone, with no
+ * transform and no height change, so nothing on the page shifts under a thumb
+ * that is reaching for a button.
+ */
+.shared-ticker {
+  margin: 8px 12px 0;
+  min-height: 1.4em;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/*
+ * The fade lives inside the guard, the way everything that moves in this
+ * stylesheet does: written this way round, forgetting produces a still page
+ * rather than an unguarded one. And it is short — a ticker a player has to
+ * wait for is a ticker that has stopped being peripheral.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .shared-ticker.fading {
+    animation: shared-fade 300ms ease-out;
+  }
+}
+
+@keyframes shared-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*
+ * What a player said (§3.9), and the visual separation is the rule rather than
+ * the decoration: a speech chip is indented, carries a name, and shares no
+ * border, colour or typeface with anything the app says about a decision.
+ */
+.shared-said {
+  margin: 8px 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shared-speech {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border-start-start-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 8%, var(--panel));
+  align-self: flex-start;
+  max-width: 85%;
+  font-size: 0.95rem;
+}
+
+.shared-speech.mine {
+  align-self: flex-end;
+  border-start-start-radius: 12px;
+  border-start-end-radius: 4px;
+  background: color-mix(in srgb, var(--optimal) 14%, var(--panel));
+}
+
+.shared-speech-who {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/*
+ * The six, one tap each (§3.9). One scrolling row above the dock, so sending
+ * one never covers the cards, and every button is a real target on a phone.
+ */
+.shared-reactions {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shared-reactions::-webkit-scrollbar { display: none; }
+
+.shared-react {
+  flex: 0 0 auto;
+  min-height: 44px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* He took my card (§3.8): a button until it is pressed, then the replay. */
+.shared-folklore {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.shared-ask { width: 100%; min-height: 44px; }
+.shared-cf-line { margin: 0; }
+.shared-cf-rule { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.shared-cf-none { margin: 0; color: var(--muted); }
+.shared-spots-title { margin: 12px 0 4px; font-size: 0.95rem; }
+.shared-spot-line { margin: 0; }
+
+.shared-explain { margin: 10px 12px; }
+
 /* --- Waiting for a friend, and the six-seat door (round 23) ----------------
  *
  * The strip is pinned above everything because it has to survive a screen

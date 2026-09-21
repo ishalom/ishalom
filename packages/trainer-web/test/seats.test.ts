@@ -133,8 +133,25 @@ test('a bust says so in the header, the way the dealer’s already did', async (
 test('every header the page draws is the total the engine graded — soft, hard, drawn and bust', async () => {
   const page = table();
   await page.booted;
+  /*
+   * Play until there are enough headers, not for a fixed number of hands.
+   *
+   * The shoe here is unseeded — this test is about what the page draws, so it
+   * deals a real one — and how many hands hold a decision is therefore luck. A
+   * natural, or a dealer's, is dealt and settled with nobody deciding anything
+   * and leaves no header behind. Twenty-five hands were enough on almost every
+   * shoe and not on all of them: on 2026-09-21 this test failed on a clean tree
+   * at `4c24f3c` with nineteen, having passed on the same tree twice running.
+   *
+   * So the loop asks for the headers it needs and stops the moment it has them,
+   * with a cap far enough out that the shoe would have to be extraordinary to
+   * reach it. The assertion below is unchanged: what it is worth depends on
+   * having checked enough of them, and that is now a fact about the loop rather
+   * than about the shuffle.
+   */
+  const WANTED = 22;
   let checked = 0;
-  for (let hand = 0; hand < 25; hand++) {
+  for (let hand = 0; hand < 45 && checked < WANTED; hand++) {
     await press(page, 'deal');
     let view = page.session().view as any;
     if (view.phase === 'insurance') {

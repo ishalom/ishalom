@@ -105,6 +105,8 @@ const server = createServer(async (request, response) => {
         case '/api/shared/deal':
         case '/api/shared/vote':
         case '/api/shared/leave':
+        case '/api/shared/react':
+        case '/api/shared/counterfactual':
         case '/api/shared/force-mismatch':
           return json({ available: false });
 

@@ -55,8 +55,10 @@
  */
 
 import {
+  bjRankOfCard,
   deriveChart,
   getPreset,
+  scenarioKeyForHand,
   type BlackjackAction,
   type BlackjackRules,
   type Card,
@@ -65,6 +67,7 @@ import {
 import { BlackjackTable, DealingShoe, makeRng } from '@evtrainer/game-engine';
 
 import { applyRestrictions, type Restrictions } from './restrictions.ts';
+import { totalOf } from './session.ts';
 
 /** How many seats a table can hold. Spec A 3.1: your own full size, the rest compact. */
 export const MAX_SEATS = 6;
@@ -129,6 +132,78 @@ export interface SeatRecord {
   events?: TableEvent[];
   /** What this seat saw dealt, hashed. See `cardsHash`. */
   cardsHash?: string;
+  /**
+   * What this seat said, by hand — the six fixed reactions of §3.9.
+   *
+   * In the sender's own row, like his moves and his vote, so the one-writer
+   * rule holds for speech as well as for play. Keyed by hand rather than by a
+   * timestamp: the table's own clock is the hand number, and a reaction that
+   * carried a wall clock would be the first thing at this table that did.
+   *
+   * **The derivation never reads this.** Nothing about a card can be reached
+   * from what anybody said, which `test/shared-reactions.test.ts` holds by
+   * changing every reaction at a table and checking every checksum is
+   * unmoved.
+   */
+  reactions?: SeatReactions;
+}
+
+/**
+ * The six things a player can say, in Idan's words and his order (§3.9).
+ *
+ * A fixed set and no free text — not a moderation decision, but the same one
+ * that makes every other message in this app a key: a table between friends on
+ * two phones is not a chat room, and six taps say the things that actually get
+ * said at a table.
+ *
+ * Two of them are about luck, which breaks the decisions-never-outcomes rule
+ * the app holds itself to. Cowork withdrew that rule for this case and was
+ * right to: the rule is about what the *app* says when it is teaching, and
+ * ribbing a friend about a lucky hand is the texture that brings people back.
+ * The condition is the one §3.9 sets — they are the player's speech, attributed
+ * and visually apart, never mixed into anything the app says about a decision.
+ */
+export const REACTIONS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'] as const;
+
+export type ReactionKey = (typeof REACTIONS)[number];
+
+/** What one seat said, by hand: `{ '3': ['brave', 'mum'] }`. Only that seat writes it. */
+export type SeatReactions = Record<string, ReactionKey[]>;
+
+/** One thing one player said, with everything the ticker needs to attribute it. */
+export interface ReactionPost {
+  seat: number;
+  name: string;
+  hand: number;
+  key: ReactionKey;
+  /** Its place within the hand, so two reactions in one hand keep their order. */
+  index: number;
+}
+
+/** Whether a string is one of the six. Anything else is dropped rather than shown. */
+export function isReaction(key: unknown): key is ReactionKey {
+  return typeof key === 'string' && (REACTIONS as readonly string[]).includes(key);
+}
+
+/**
+ * Everything said at the table, merged from the seats' own rows in one order.
+ *
+ * Canonical order is `(hand, seat, index)` — the same merge `tableEvents` does
+ * and for the same reason: two phones that read the rows back in different
+ * orders must still show the same line of talk.
+ */
+export function tableReactions(record: TableRecord): ReactionPost[] {
+  const posts: ReactionPost[] = [];
+  for (const seat of record.seats) {
+    for (const [hand, keys] of Object.entries(seat.reactions ?? {})) {
+      const at = Number(hand);
+      if (!Number.isInteger(at) || !Array.isArray(keys)) continue;
+      keys.forEach((key, index) => {
+        if (isReaction(key)) posts.push({ seat: seat.seat, name: seat.name, hand: at, key, index });
+      });
+    }
+  }
+  return posts.sort((a, b) => a.hand - b.hand || a.seat - b.seat || a.index - b.index);
 }
 
 /**
@@ -891,6 +966,20 @@ export interface SeatGlance {
   stack: number;
   decisions: number;
   right: number;
+  /**
+   * What this seat's mistakes cost, in units, across the whole table.
+   *
+   * Kept as a total rather than as a rate so that §3.6 can weight it: a table's
+   * EV lost per 100 is the sum of the costs over the sum of the decisions, and
+   * averaging the seats' rates would let a player with three decisions swing
+   * the table's number — the same small-sample lie the bar already guards
+   * against.
+   */
+  evLost: number;
+  /** The longest run of decisions this seat played right at this table. */
+  streak: number;
+  /** How many hands this seat has been dealt into here. Summed by §3.6. */
+  handsPlayed: number;
 }
 
 export interface SeatView {
@@ -921,6 +1010,41 @@ export interface SeatView {
   disagrees: boolean;
 }
 
+/**
+ * One seat's running numbers at this table, as the seats are counted through.
+ *
+ * `run` is the live streak and `streak` the best it has reached: the record is
+ * what §3.6 combines across the table, taking the maximum, because a best run
+ * is the one measure where adding two people's together would mean nothing.
+ */
+interface SeatTally {
+  decisions: number;
+  right: number;
+  evLost: number;
+  streak: number;
+  run: number;
+}
+
+/**
+ * One graded decision, folded into a seat's tally.
+ *
+ * A decision is *right* when it cost nothing, which is the same test the solo
+ * game applies — an action tied with the best is not a mistake, and grading it
+ * as one would make the shared table stricter than the private one about
+ * exactly the hands where the chart is indifferent.
+ */
+function countDecision(tally: SeatTally, decision: DerivedDecision): void {
+  tally.decisions++;
+  if (decision.evCost <= 0) {
+    tally.right++;
+    tally.run++;
+    tally.streak = Math.max(tally.streak, tally.run);
+  } else {
+    tally.evLost += decision.evCost;
+    tally.run = 0;
+  }
+}
+
 /** Whether a seat has recorded anything at all for a hand. */
 function hasActed(record: TableRecord, seat: number, hand: number): boolean {
   return record.seats.some(
@@ -944,20 +1068,21 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
 
   /* This table's running numbers, per seat, summed over every settled hand. */
   const stacks = new Map<number, number>();
-  const counts = new Map<number, { decisions: number; right: number }>();
+  const counts = new Map<number, SeatTally>();
   for (const entry of record.seats) {
     stacks.set(entry.seat, 0);
-    counts.set(entry.seat, { decisions: 0, right: 0 });
+    counts.set(entry.seat, { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 });
   }
+  const dealtIn = new Map<number, number>();
   for (const hand of table.hands) {
     for (const seatHand of hand.seats) {
+      dealtIn.set(seatHand.seat, (dealtIn.get(seatHand.seat) ?? 0) + 1);
       if (seatHand.net !== null) stacks.set(seatHand.seat, (stacks.get(seatHand.seat) ?? 0) + seatHand.net);
     }
     for (const decision of hand.decisions) {
       const tally = counts.get(decision.seat);
       if (!tally) continue;
-      tally.decisions++;
-      if (decision.evCost <= 0) tally.right++;
+      countDecision(tally, decision);
     }
   }
 
@@ -966,7 +1091,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
 
   const glance = (entry: SeatRecord): SeatGlance => {
     const seatHand = current?.seats.find((row) => row.seat === entry.seat) ?? null;
-    const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0 };
+    const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 };
     let status: SeatStatus = 'betting';
     if (handIndex !== null && !isLive(record, entry.seat, handIndex)) status = 'away';
     else if (!current) status = 'betting';
@@ -985,6 +1110,9 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       stack: stacks.get(entry.seat) ?? 0,
       decisions: tally.decisions,
       right: tally.right,
+      evLost: tally.evLost,
+      streak: tally.streak,
+      handsPlayed: dealtIn.get(entry.seat) ?? 0,
     };
   };
 
@@ -1057,4 +1185,330 @@ function legalFor(
     );
   });
   return { legal, round };
+}
+
+/* ---------------------------------------------------------------------------
+ * The folklore, shown (§3.8) — the two things a shared shoe can prove
+ * ------------------------------------------------------------------------- */
+
+/**
+ * What the table would have dealt you if your neighbour had chosen otherwise.
+ *
+ * This is the one claim about a shared shoe that everybody at a real table
+ * makes and nobody has ever been able to check: *he took my card*. Here it can
+ * be checked, because the whole table is a function of the seed and the log —
+ * so the alternative is not modelled or estimated, it is **dealt**. One
+ * decision of his is changed, the shoe is run again from the same seed, and the
+ * cards that come out are the cards that would have come out.
+ *
+ * And the half that matters more is the half it disproves: the replay moves the
+ * cards and cannot touch the grade. What the chart said about the hand you then
+ * held was decided by your cards, his upcard and the table's rules, and none of
+ * those three is a thing he can reach. **He can move your stack and he cannot
+ * move your bar** — §3.8 asks for that folklore shown rather than asserted, and
+ * this is the showing.
+ */
+export interface Counterfactual {
+  /** The neighbour whose decision was changed. */
+  seat: number;
+  name: string;
+  /** The hand his decision was made on. */
+  hand: number;
+  /**
+   * The hand of mine whose cards moved, which is not always the same one.
+   *
+   * §3.2's reservation rule is why. Within a hand, the card a seat can be dealt
+   * in a round sits at a position fixed before the round begins — that is the
+   * whole reason two people can tap at once — so a neighbour cannot reach into
+   * a round you are both in and take your card out of it. What he can still do
+   * is decide how many rounds he stays live, and therefore how many cards the
+   * hand eats before the shoe reaches the next one. So the commoner true
+   * statement is about the hand *after* his decision, and it is no less true.
+   */
+  showing: number;
+  /** What he was holding when he decided, and what it came to. */
+  theirCards: Card[];
+  theirTotal: number;
+  /** What he did, and the alternative that was replayed instead. */
+  was: SeatMove['action'];
+  instead: SeatMove['action'];
+  /** Which of your cards changed, counting from one, as a player would say it. */
+  position: number;
+  /** That card as it was dealt, and as it would have been. */
+  actualCard: Card;
+  otherCard: Card;
+  /** Your hand's total, as it was and as it would have been. */
+  actualTotal: number;
+  otherTotal: number;
+}
+
+/**
+ * How far a replayed hand may run before the line is given up on.
+ *
+ * The alternative is filled with standing, so a hand ends within a round or
+ * two. The cap is here only so that a corrupt log cannot spin.
+ */
+const REPLAY_ROUNDS = 12;
+
+/**
+ * The counterfactual for one hand, or null when there is not an honest one.
+ *
+ * Null is the common answer and is meant to be: on most hands the neighbour's
+ * choice changes nothing you can see, and §3.8 asks for this *once a session,
+ * on a hand where the counterfactual actually differs*. A line that fired every
+ * hand would be a party trick; one that fires when the cards really did move is
+ * the app's own evidence.
+ */
+export function counterfactual(
+  record: TableRecord,
+  seat: number,
+  hand: number,
+  showing = hand,
+): Counterfactual | null {
+  const actual = deriveTable(record);
+  const mineNow = handFor(actual, showing, seat);
+  if (!mineNow || mineNow.length === 0) return null;
+
+  for (const other of record.seats) {
+    if (other.seat === seat) continue;
+    const moves = other.moves.filter((move) => move.hand === hand).sort((a, b) => a.round - b.round);
+    for (const move of moves) {
+      if (move.action === 'takeInsurance' || move.action === 'declineInsurance') continue;
+      /*
+       * Standing is the alternative to everything else, and hitting is the
+       * alternative to standing. Both are legal wherever the one they replace
+       * was — a hand you may stand on is a hand you may hit — which keeps the
+       * replay a real deal rather than a line the engine refuses.
+       */
+      const instead: SeatMove['action'] = move.action === 'stand' ? 'hit' : 'stand';
+      const replayed = replayWith(record, other.seat, hand, move.round, instead);
+      if (!replayed) continue;
+      const mineThen = handFor(replayed, showing, seat);
+      if (!mineThen) continue;
+      const at = firstDifference(mineNow, mineThen);
+      if (at === null) continue;
+      const theirs = actual.hands
+        .find((entry) => entry.hand === hand)
+        ?.decisions.find((decision) => decision.seat === other.seat && decision.round === move.round);
+      return {
+        seat: other.seat,
+        name: other.name,
+        hand,
+        showing,
+        theirCards: theirs ? [...theirs.cards] : [],
+        theirTotal: theirs ? totalOf(theirs.cards) : 0,
+        was: move.action,
+        instead,
+        position: at + 1,
+        actualCard: mineNow[at]!,
+        otherCard: mineThen[at]!,
+        actualTotal: totalOf(mineNow),
+        otherTotal: totalOf(mineThen),
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * The best counterfactual the table has to offer, searching back from a hand.
+ *
+ * Two shapes, and the stronger one is tried first everywhere before the weaker
+ * one is tried anywhere.
+ *
+ * **In the same hand** is §3.8's own example, and it is the one a player means
+ * when he says *he took my card*. It is also **rare**, and rare for a reason
+ * that is not a bug: §3.2's reservation rule was adopted precisely to stop a
+ * neighbour reaching into a round you are both in. Measured over 600 hands a
+ * size, it happens on 0.7% of hands at two seats and 1.7% at six — so on most
+ * ten-hand tables it never happens at all.
+ *
+ * **In the hand after** is what is left of the coupling, and it is still the
+ * same shoe and still his doing: how long he stayed live decided how many cards
+ * the hand ate, so the shoe reached the next hand in a different place. Over
+ * the same 600 hands, 55 of 60 two-seat tables had one and every three-seat
+ * table did.
+ *
+ * Both are dealt rather than modelled. Neither is worded as the other: the
+ * screen says which hand moved, because a line that implied he reached into
+ * this round would be false about the rule the whole table is built on.
+ */
+export function counterfactualBack(record: TableRecord, seat: number, upTo: number): Counterfactual | null {
+  /*
+   * Only the last few hands are searched, and that is about cost rather than
+   * taste: every candidate replays the whole table from the seed, so the price
+   * of one question grows with how long the table has been running. Six hands
+   * back was enough for 55 of 60 two-seat tables and for every three-seat one,
+   * and it keeps the tap instant on a phone at hand ninety.
+   */
+  const from = Math.max(0, upTo - COUNTERFACTUAL_REACH + 1);
+  for (let hand = upTo; hand >= from; hand--) {
+    const here = counterfactual(record, seat, hand);
+    if (here) return here;
+  }
+  for (let hand = upTo - 1; hand >= from; hand--) {
+    const next = counterfactual(record, seat, hand, hand + 1);
+    if (next) return next;
+  }
+  return null;
+}
+
+/** How many hands back the search looks. See `counterfactualBack`. */
+const COUNTERFACTUAL_REACH = 6;
+
+/** Every card one seat was dealt in one hand, or null when it was not dealt in. */
+function handFor(table: DerivedTable, hand: number, seat: number): Card[] | null {
+  const found = table.hands.find((entry) => entry.hand === hand);
+  const seatHand = found?.seats.find((entry) => entry.seat === seat);
+  return seatHand ? [...seatHand.cards] : null;
+}
+
+/**
+ * The first place two lists of cards part company, or null when they never do.
+ *
+ * Two hands of different lengths that agree as far as the shorter one runs have
+ * still parted: one of you drew a card the other did not, and the position that
+ * card sits at is the answer.
+ */
+function firstDifference(a: readonly Card[], b: readonly Card[]): number | null {
+  const shared = Math.min(a.length, b.length);
+  for (let at = 0; at < shared; at++) if (a[at] !== b[at]) return at;
+  return null;
+}
+
+/**
+ * The same table with one seat's one decision changed, dealt again from the seed.
+ *
+ * The rounds after the changed one are filled with standing rather than left
+ * empty, because a hand nobody finishes never settles and the cards after it
+ * are never dealt — and those cards are precisely the question being asked.
+ * Standing is the one action always open to a live hand, so the filled rounds
+ * are a hand somebody could really have played.
+ */
+function replayWith(
+  record: TableRecord,
+  seat: number,
+  hand: number,
+  round: number,
+  instead: SeatMove['action'],
+): DerivedTable | null {
+  const changed: TableRecord = {
+    ...record,
+    seats: record.seats.map((entry) => {
+      if (entry.seat !== seat) return { ...entry, moves: [...entry.moves] };
+      const kept = entry.moves.filter((move) => move.hand !== hand || move.round < round);
+      const filled: SeatMove[] = [{ hand, round, action: instead }];
+      for (let next = round + 1; next < round + REPLAY_ROUNDS; next++) {
+        filled.push({ hand, round: next, action: 'stand' });
+      }
+      return { ...entry, moves: [...kept, ...filled] };
+    }),
+  };
+  try {
+    return deriveTable(changed);
+  } catch {
+    // A line the engine refuses is not a counterfactual; the caller tries the next.
+    return null;
+  }
+}
+
+/**
+ * A spot you both met, and played differently.
+ *
+ * The different-cards design was supposed to have cost the table its
+ * comparison: you are not holding the same hand, so there is nothing to argue
+ * about. §3.8 recovers it — you are playing one shoe, so sooner or later you
+ * both meet the same **cell of the chart**, and that is decision against
+ * decision on identical terms. The keys already exist for every graded
+ * decision, so this costs nothing but the looking.
+ */
+export interface SharedSpot {
+  scenarioKey: string;
+  /** Which hand each of you met it on, for a screen that wants to say when. */
+  myHand: number;
+  theirHand: number;
+  seat: number;
+  name: string;
+  myAction: string;
+  theirAction: string;
+  /** What the chart says, which is the point of putting the two side by side. */
+  optimalAction: string;
+  /** Whether each of you played it the way the chart does. */
+  mineRight: boolean;
+  theirsRight: boolean;
+}
+
+/**
+ * The chart cells two seats have both met and answered differently.
+ *
+ * Only the disagreements: a spot you both played the same way has nothing to
+ * say about it, and the screen has one line to spend.
+ */
+export function sharedSpots(record: TableRecord, seat: number): SharedSpot[] {
+  const table = deriveTable(record);
+  const mine = new Map<string, { hand: number; action: string; right: boolean }>();
+  const theirs = new Map<
+    number,
+    Map<string, { hand: number; action: string; right: boolean; optimal: string }>
+  >();
+
+  for (const hand of table.hands) {
+    for (const decision of hand.decisions) {
+      const key = scenarioKeyOf(decision);
+      if (key === null) continue;
+      const entry = {
+        hand: hand.hand,
+        action: String(decision.action),
+        right: decision.evCost <= 0,
+        optimal: decision.optimalAction,
+      };
+      if (decision.seat === seat) {
+        /*
+         * The first time you met a spot is the one that counts — what you did
+         * before the table had any chance to teach you the answer.
+         */
+        if (!mine.has(key)) mine.set(key, entry);
+      } else {
+        const forSeat = theirs.get(decision.seat) ?? new Map();
+        if (!forSeat.has(key)) forSeat.set(key, entry);
+        theirs.set(decision.seat, forSeat);
+      }
+    }
+  }
+
+  const out: SharedSpot[] = [];
+  for (const [who, spots] of theirs) {
+    const name = record.seats.find((entry) => entry.seat === who)?.name ?? '';
+    for (const [key, entry] of spots) {
+      const ours = mine.get(key);
+      if (!ours || ours.action === entry.action) continue;
+      out.push({
+        scenarioKey: key,
+        myHand: ours.hand,
+        theirHand: entry.hand,
+        seat: who,
+        name,
+        myAction: ours.action,
+        theirAction: entry.action,
+        optimalAction: entry.optimal,
+        mineRight: ours.right,
+        theirsRight: entry.right,
+      });
+    }
+  }
+  return out.sort((a, b) => Math.max(a.myHand, a.theirHand) - Math.max(b.myHand, b.theirHand));
+}
+
+/**
+ * A decision's cell of the chart, or null when it does not have one.
+ *
+ * Insurance is the null: it is a side bet on the dealer's hole card rather than
+ * a way to play a hand, so it has no cell, and two players "disagreeing" about
+ * it would be comparing nothing.
+ */
+export function scenarioKeyOf(decision: DerivedDecision): string | null {
+  if (decision.action === 'takeInsurance' || decision.action === 'declineInsurance') return null;
+  const ranks = decision.cards.map((card) => bjRankOfCard(card));
+  const upcard = bjRankOfCard(decision.upcard);
+  return scenarioKeyForHand(ranks, upcard, decision.evByAction.split !== undefined);
 }

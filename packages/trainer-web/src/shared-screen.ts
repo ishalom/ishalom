@@ -22,9 +22,20 @@
  * a provisional rating does.
  */
 
+import { parseScenarioKey } from '@evtrainer/ev-engine';
+
+import { RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
+import { returnsBlock, stakeFor } from './returns-block.ts';
 import { cardView, totalOf, type CardView } from './session.ts';
 import {
+  deriveTable,
+  rulesFor,
+  scenarioKeyOf,
   seatView,
+  tableReactions,
+  type DerivedDecision,
+  type ReactionKey,
+  type ReactionPost,
   type SeatGlance,
   type SeatStatus,
   type TableRecord,
@@ -55,6 +66,91 @@ export interface SeatPanel {
    * lying in the direction that flatters.
    */
   bar: number | null;
+  /** How many of this seat's decisions were right, and how many it has made. */
+  right: number;
+  /** Hands dealt to this seat here — summed into the table's figure by §3.6. */
+  handsPlayed: number;
+  /**
+   * What its mistakes cost in total, in units.
+   *
+   * On the panel because §3.6 weights by decisions, and weighting means summing
+   * the costs and the counts separately before dividing. The screen shows the
+   * rate below; this is what the rate is built from.
+   */
+  evLost: number;
+  /** What its mistakes cost, per 100 decisions, or null while the bar is settling. */
+  evLostPer100: number | null;
+  /** Its longest run of right decisions at this table. */
+  streak: number;
+}
+
+/**
+ * The table as one player, against the dealer (§3.6).
+ *
+ * Each measure is combined the way that measure can honestly be combined, and
+ * the differences are the whole point. Chips and hands are **sums**, because
+ * that is what they are. The bar and the EV lost are **weighted by decisions**,
+ * never averaged, because a plain average lets a player with three decisions
+ * swing the table's number — the same small-sample lie the bar already guards
+ * against for one player. The best streak is the **maximum**, because two
+ * people's runs added together would be a run nobody had.
+ *
+ * And the combined chips figure carries the same warning its personal version
+ * does: everybody bets what he likes, so it measures the shoe, not the table's
+ * play. The bar is the one that measures the play.
+ */
+export interface TableMeasures {
+  /** How many seats are in these figures — the ones that have been dealt in. */
+  seats: number;
+  /** Summed. */
+  stack: number;
+  handsPlayed: number;
+  decisions: number;
+  /** Weighted by decisions, or null while the table as a whole is settling. */
+  bar: number | null;
+  evLostPer100: number | null;
+  /** The best any one seat has managed. */
+  streak: number;
+}
+
+/**
+ * One line of what has just happened at the table (§3.10).
+ *
+ * Three kinds and no more: something a player said, a gesture the app has
+ * earned the right to make, and a record broken. **None of them carries
+ * money** — §3.10 is explicit, and it is the rule that keeps the ticker from
+ * turning a trainer into a scoreboard. The kinds are here rather than as
+ * sentences because the wording is the catalogue's job, in both languages.
+ */
+export type TickerItem =
+  | { kind: 'reaction'; seat: number; name: string; hand: number; key: ReactionKey }
+  | { kind: 'gesture'; seat: number; name: string; hand: number; decisions: number }
+  | { kind: 'record'; seat: number; name: string; hand: number; streak: number };
+
+/**
+ * My own decision, with the working behind it — what **תסביר לי** opens (§3.9).
+ *
+ * Mine only. `seatView` will not put another seat's decisions in the object
+ * until I have played my own hand, and this never reaches past what it is
+ * given, so the promise §3.7 makes is kept in one place rather than two.
+ */
+export interface DecisionView {
+  hand: number;
+  round: number;
+  action: string;
+  optimalAction: string;
+  evCost: number;
+  /** Every action's return, best first — the returns block's own input. */
+  ranked: Array<{ action: string; ev: number; value: number }>;
+  /**
+   * The block itself, built by the same function the private table builds it
+   * with, from the same scenario and the same rules.
+   *
+   * Reused rather than rewritten, which matters more here than anywhere: a
+   * second copy of the worked lines would be a second answer to "what does
+   * this hand come back", and the whole app rests on there being one.
+   */
+  returns: unknown;
 }
 
 export interface SharedScreen {
@@ -76,6 +172,14 @@ export interface SharedScreen {
   refused: boolean;
   /** Which of the two measures disagree, for the line that names them (§3.5). */
   comparison: Comparison | null;
+  /** The table as one player, against the dealer (§3.6). */
+  table: TableMeasures;
+  /** Everything said at this table, oldest first (§3.9). */
+  reactions: ReactionPost[];
+  /** What the one rotating line has to choose from, oldest first (§3.10). */
+  ticker: TickerItem[];
+  /** My own graded decisions for the hand on screen, and nobody else's (§3.9). */
+  mine: DecisionView[];
 }
 
 /**
@@ -92,6 +196,139 @@ export interface Comparison {
   bars: Array<{ name: string; bar: number | null }>;
 }
 
+/** A rate per hundred decisions, or null when there are too few to state one. */
+function per100(cost: number, decisions: number): number | null {
+  return decisions >= BAR_SETTLES_AT ? (cost / decisions) * 100 : null;
+}
+
+/**
+ * The seats, combined into the table (§3.6).
+ *
+ * Seats nobody is sitting in are left out rather than counted as a player with
+ * nothing: an empty chair has no decisions and no chips, and including it would
+ * only make the table look like it has more people than it does.
+ */
+function tableMeasures(seats: SeatPanel[]): TableMeasures {
+  const playing = seats.filter((seat) => seat.handsPlayed > 0 || seat.decisions > 0);
+  const decisions = playing.reduce((sum, seat) => sum + seat.decisions, 0);
+  const right = playing.reduce((sum, seat) => sum + seat.right, 0);
+  /*
+   * Weighted by decisions, which here means simply summing the parts before
+   * dividing — the sum of what was lost over the sum of what was decided. That
+   * is what "weighted, never a plain average" means when the weights are the
+   * decision counts themselves.
+   */
+  const lost = playing.reduce((sum, seat) => sum + seat.evLost, 0);
+  return {
+    seats: playing.length,
+    stack: playing.reduce((sum, seat) => sum + seat.stack, 0),
+    handsPlayed: playing.reduce((sum, seat) => sum + seat.handsPlayed, 0),
+    decisions,
+    bar: decisions >= BAR_SETTLES_AT ? right / decisions : null,
+    evLostPer100: per100(lost, decisions),
+    streak: playing.reduce((best, seat) => Math.max(best, seat.streak), 0),
+  };
+}
+
+/**
+ * What the ticker has to say, oldest first (§3.10).
+ *
+ * Everything here is derived from the record, which is what lets two phones
+ * show the same line: there is no list of announcements anybody writes, and no
+ * announcement that exists on one device and not the other.
+ *
+ * The gesture is the solo game's own — `gestureForSettlement`, asked the same
+ * question with the same rule — rather than a second definition of what
+ * "played it right and lost" means. One rule, two screens.
+ */
+function tickerFor(record: TableRecord): TickerItem[] {
+  const table = deriveTable(record);
+  const items: TickerItem[] = [];
+  const nameOf = (seat: number) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
+
+  /* A record broken: a seat's best run at this table passing its own high. */
+  const best = new Map<number, number>();
+  const run = new Map<number, number>();
+  for (const hand of table.hands) {
+    for (const decision of hand.decisions) {
+      const seat = decision.seat;
+      if (decision.evCost > 0) {
+        run.set(seat, 0);
+        continue;
+      }
+      const now = (run.get(seat) ?? 0) + 1;
+      run.set(seat, now);
+      const high = best.get(seat) ?? 0;
+      if (now > high) {
+        best.set(seat, now);
+        /*
+         * Only once a run is long enough to be worth saying out loud, and only
+         * at the moment it passes the last one — the same floor the solo
+         * game's record gesture uses, so a run that is a record here is a
+         * record there.
+         */
+        if (now >= RECORD_FLOOR) {
+          items.push({ kind: 'record', seat, name: nameOf(seat), hand: hand.hand, streak: now });
+        }
+      }
+    }
+
+    /* A hand played right and lost, which a hand that won can never produce. */
+    for (const seatHand of hand.seats) {
+      if (seatHand.net === null || seatHand.net >= 0) continue;
+      const mine = hand.decisions.filter((decision) => decision.seat === seatHand.seat);
+      const gesture = gestureForSettlement({
+        net: seatHand.net,
+        decisions: mine.length,
+        allOptimal: mine.every((decision) => decision.evCost <= 0),
+        shown: { sitting: 0, thisHand: false, rightAndLostThisSitting: false },
+      });
+      if (gesture && gesture.kind === 'rightAndLost') {
+        items.push({
+          kind: 'gesture',
+          seat: seatHand.seat,
+          name: nameOf(seatHand.seat),
+          hand: hand.hand,
+          decisions: gesture.decisions,
+        });
+      }
+    }
+  }
+
+  for (const post of tableReactions(record)) {
+    items.push({ kind: 'reaction', seat: post.seat, name: post.name, hand: post.hand, key: post.key });
+  }
+
+  return items.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
+}
+
+/** My own decisions for the hand on screen, with the working behind each. */
+function mineFor(
+  record: TableRecord,
+  decisions: DerivedDecision[],
+  seat: number | null,
+): DecisionView[] {
+  if (seat === null) return [];
+  const rules = rulesFor(record);
+  return decisions
+    .filter((decision) => decision.seat === seat)
+    .map((decision) => {
+      const ranked = Object.entries(decision.evByAction)
+        .map(([action, ev]) => ({ action, ev: ev ?? 0, value: 1 + (ev ?? 0) }))
+        .sort((a, b) => b.ev - a.ev);
+      const key = scenarioKeyOf(decision);
+      return {
+        hand: decision.hand,
+        round: decision.round,
+        action: String(decision.action),
+        optimalAction: decision.optimalAction,
+        evCost: decision.evCost,
+        ranked,
+        returns: key === null ? null : returnsBlock(parseScenarioKey(key), ranked, stakeFor(key), rules),
+      };
+    });
+}
+
 function panel(glance: SeatGlance, mine: boolean): SeatPanel {
   const hands = glance.hands.length > 0 ? glance.hands : glance.cards.length > 0 ? [glance.cards] : [];
   return {
@@ -106,6 +343,11 @@ function panel(glance: SeatGlance, mine: boolean): SeatPanel {
     stack: glance.stack,
     decisions: glance.decisions,
     bar: glance.decisions >= BAR_SETTLES_AT ? glance.right / glance.decisions : null,
+    right: glance.right,
+    handsPlayed: glance.handsPlayed,
+    evLost: glance.evLost,
+    evLostPer100: per100(glance.evLost, glance.decisions),
+    streak: glance.streak,
   };
 }
 
@@ -159,5 +401,9 @@ export function sharedScreen(record: TableRecord, seat: number | null): SharedSc
     handOver: view.hand !== null && view.dealerRevealed,
     refused: view.disagrees,
     comparison: comparisonOf(seats),
+    table: tableMeasures(seats),
+    reactions: tableReactions(record),
+    ticker: tickerFor(record),
+    mine: mineFor(record, view.decisions, seat),
   };
 }

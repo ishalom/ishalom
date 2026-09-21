@@ -722,6 +722,48 @@ async function api(path, body) {
       return { available: true, seat: sharedState.seat, screen: sharedScreenNow(), clock };
     }
 
+    /*
+     * One of the six, said (§3.9). It answers with the whole screen like every
+     * other shared route, so a reaction reaches the ticker by the same path a
+     * card reaches the felt — there is no second channel for talk.
+     */
+    case '/api/shared/react': {
+      if (!sharedAvailable()) return { available: false };
+      const screen = await sharedReact(String(b.key || ''));
+      return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
+    }
+
+    /*
+     * The counterfactual, asked for rather than shown (§3.8), and marked told
+     * in the driver so the once-a-session rule survives a screen being redrawn.
+     */
+    case '/api/shared/counterfactual': {
+      if (!sharedAvailable()) return { available: false };
+      const line = sharedCounterfactual();
+      if (line) sharedCounterfactualShown();
+      /*
+       * The cards become faces and the spots become words here, where the
+       * language is known. The derivation deals in card numbers and scenario
+       * keys and has no idea what language anybody reads — which is what lets
+       * two phones in two languages derive one identical table.
+       */
+      return {
+        available: true,
+        counterfactual: line
+          ? {
+              ...line,
+              actualCard: cardView(line.actualCard),
+              otherCard: cardView(line.otherCard),
+              theirCards: line.theirCards.map((card) => cardView(card)),
+            }
+          : null,
+        spots: sharedSpotsNow().map((spot) => ({
+          ...spot,
+          label: describeScenarioKey(spot.scenarioKey, session.localeCode),
+        })),
+      };
+    }
+
     case '/api/shared/leave': {
       if (!sharedAvailable()) return { available: false };
       await sharedLeave();

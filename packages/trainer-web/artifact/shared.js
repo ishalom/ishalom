@@ -20,6 +20,16 @@
  * comes next can be reached from it, which is what keeps two phones agreeing.
  */
 
+/**
+ * The six things a player can say, in Idan's words and his order (§3.9).
+ *
+ * Repeated here as keys rather than imported as text, because this file writes
+ * the record and the record is language-neutral: what is stored is which of the
+ * six was said, and the catalogue turns that into Hebrew or English on the
+ * screen that draws it.
+ */
+const SHARED_REACTIONS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
+
 /** Thirty seconds, from the moment every other player is waiting for you (§3.3). */
 const SHARED_CLOCK_MS = 30000;
 /** And another vote every fifteen, each needing one agreement fewer (§3.3). */
@@ -76,6 +86,8 @@ const sharedState = {
   heldSeat: null,
   /** Set when the backend cannot be reached, so the screen can say so. */
   error: null,
+  /** Whether the counterfactual has already been offered. Once a session (§3.8). */
+  toldCounterfactual: false,
 };
 
 /** The store the page was built with, or none — in which case say so plainly. */
@@ -134,6 +146,14 @@ function sharedNormalise(record) {
       moves: Array.isArray(row.moves) ? row.moves : [],
       hands: Number(row.hands) || 0,
       events: Array.isArray(row.events) ? row.events : [],
+      /*
+       * A row written before round 24 has no reactions, and the column's own
+       * default is an empty object — so both shapes arrive here and both mean
+       * the same thing: this seat has not said anything.
+       */
+      reactions: row.reactions && typeof row.reactions === 'object' && !Array.isArray(row.reactions)
+        ? row.reactions
+        : {},
     })),
   };
 }
@@ -178,8 +198,71 @@ async function sharedPushMine() {
     hands: row.hands,
     vote: row.vote ?? null,
     events: row.events ?? [],
+    /* What I said, in my own row, like everything else I write (§3.9). */
+    reactions: row.reactions ?? {},
     cardsHash: seatCardsHash(derived, row.seat),
   });
+}
+
+/**
+ * Say one of the six (§3.9).
+ *
+ * Into my own row and nowhere else, keyed by the hand it was said at — so the
+ * one-writer rule covers speech as well as play, and two people reacting in the
+ * same instant cannot cost one of the reactions the way the shared event list
+ * used to cost an event.
+ *
+ * Nothing about a card can be reached from here. The derivation never reads
+ * reactions, which is why this needs no thought about ordering beyond keeping
+ * each seat's own list in the order he said things.
+ */
+async function sharedReact(key) {
+  const row = sharedMyRow();
+  const screen = sharedScreenNow();
+  if (!row || !screen || !SHARED_REACTIONS.includes(key)) return screen;
+  /* Before the first deal there is no hand to hang it on, so it waits. */
+  const hand = screen.hand === null ? 0 : screen.hand;
+  const said = { ...(row.reactions ?? {}) };
+  const forHand = Array.isArray(said[hand]) ? said[hand] : [];
+  /*
+   * The same thing twice in one hand is a slip of the thumb rather than
+   * emphasis, and a ticker repeating it would read as a stutter.
+   */
+  if (forHand.includes(key)) return screen;
+  said[hand] = [...forHand, key];
+  row.reactions = said;
+  const optimistic = sharedScreenNow();
+  await sharedPushMine();
+  await sharedRefresh();
+  return sharedScreenNow() ?? optimistic;
+}
+
+/**
+ * The counterfactual, worked out on demand and offered once (§3.8).
+ *
+ * Behind a tap rather than on the screen, and once a session rather than every
+ * hand, because it is evidence rather than decoration: a line that fired
+ * whenever a neighbour breathed would stop being the answer to *he took my
+ * card* and start being wallpaper.
+ */
+function sharedCounterfactual() {
+  if (sharedState.toldCounterfactual) return null;
+  const screen = sharedScreenNow();
+  if (!screen || screen.hand === null || sharedState.seat === null) return null;
+  /* Only on a hand that is over: mid-hand it would say what is coming. */
+  if (!screen.handOver) return null;
+  return counterfactualBack(sharedState.record, sharedState.seat, screen.hand);
+}
+
+/** Mark it said, so the once-a-session rule is kept by the driver and not by a screen. */
+function sharedCounterfactualShown() {
+  sharedState.toldCounterfactual = true;
+}
+
+/** The chart cells this seat and another both met and answered differently (§3.8). */
+function sharedSpotsNow() {
+  if (!sharedState.record || sharedState.seat === null) return [];
+  return sharedSpots(sharedState.record, sharedState.seat);
 }
 
 /** Make a table, take seat 0, and hand back the link to send. */
@@ -460,6 +543,8 @@ async function sharedForceMismatch() {
     moves: row.moves,
     hands: row.hands,
     vote: row.vote ?? null,
+    events: row.events ?? [],
+    reactions: row.reactions ?? {},
     cardsHash: 'deadbeef',
   });
   await sharedRefresh();

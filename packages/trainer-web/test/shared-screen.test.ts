@@ -19,7 +19,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { sharedScreen, BAR_SETTLES_AT } from '../src/shared-screen.ts';
-import { deriveTable, seatCardsHash, type SeatMove, type TableRecord } from '../src/shared-table.ts';
+import {
+  counterfactualBack,
+  deriveTable,
+  seatCardsHash,
+  sharedSpots,
+  type SeatMove,
+  type TableRecord,
+} from '../src/shared-table.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const source = (...parts: string[]) => readFileSync(join(HERE, '..', ...parts), 'utf8');
@@ -35,6 +42,8 @@ interface StoredSeat {
   hands: number;
   vote: unknown;
   events: unknown[];
+  /** The column's own default is an empty object, and so is this. */
+  reactions: Record<string, string[]>;
   cards_hash: string | null;
 }
 
@@ -68,6 +77,7 @@ function fakeStore() {
           hands: 0,
           vote: null,
           events: seat === 0 ? [{ kind: 'join', seat: 0, hand: 0 }] : [],
+          reactions: {},
           cards_hash: null,
         })),
       );
@@ -94,6 +104,7 @@ function fakeStore() {
       row.hands = record.hands ?? 0;
       row.vote = record.vote ?? null;
       row.events = record.events ?? [];
+      row.reactions = record.reactions ?? {};
       row.cards_hash = record.cardsHash ?? null;
       return true;
     },
@@ -113,6 +124,7 @@ function fakeStore() {
           hands: row.hands,
           vote: row.vote,
           events: (row.events ?? []).map((event) => ({ ...(event as object) })),
+          reactions: JSON.parse(JSON.stringify(row.reactions ?? {})),
           cardsHash: row.cards_hash ?? undefined,
         })),
       };
@@ -131,6 +143,9 @@ interface Phone {
   act(action: string): Promise<any>;
   deal(): Promise<any>;
   vote(): Promise<any>;
+  react(key: string): Promise<any>;
+  counterfactual(): any;
+  spots(): any[];
   expire(): Promise<any>;
   leave(): Promise<void>;
   breakChecksum(): Promise<void>;
@@ -153,13 +168,16 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     'sharedScreen',
     'deriveTable',
     'seatCardsHash',
+    'counterfactualBack',
+    'sharedSpots',
     `${code}
      return {
        sharedCreate, sharedJoin, sharedRefresh, sharedAct, sharedDeal,
        sharedVote, sharedClockExpired, sharedLeave, sharedForceMismatch,
+       sharedReact, sharedCounterfactual, sharedCounterfactualShown, sharedSpotsNow,
        sharedScreenNow, sharedClock, sharedState,
      };`,
-  )(store, sharedScreen, deriveTable, seatCardsHash) as any;
+  )(store, sharedScreen, deriveTable, seatCardsHash, counterfactualBack, sharedSpots) as any;
 
   return {
     create: (options = {}) =>
@@ -169,6 +187,9 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     act: (action: string) => made.sharedAct(action),
     deal: () => made.sharedDeal(),
     vote: () => made.sharedVote(),
+    react: (key: string) => made.sharedReact(key),
+    counterfactual: () => made.sharedCounterfactual(),
+    spots: () => made.sharedSpotsNow(),
     expire: () => made.sharedClockExpired(),
     leave: () => made.sharedLeave(),
     breakChecksum: () => made.sharedForceMismatch(),

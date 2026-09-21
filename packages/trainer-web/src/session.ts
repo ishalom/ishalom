@@ -1622,7 +1622,7 @@ export function totalOf(cards: readonly number[]): number {
 }
 
 /** A scenario key as it reads on the difficulty ladder: "8,8 vs 6". */
-function describeScenarioKey(key: string, locale: Locale = 'en'): string {
+export function describeScenarioKey(key: string, locale: Locale = 'en'): string {
   if (key === 'bj:insurance') return t(locale, 'label.insurance');
   const scenario = parseScenarioKey(key);
   const up = key.slice(key.indexOf(':vs') + 3);

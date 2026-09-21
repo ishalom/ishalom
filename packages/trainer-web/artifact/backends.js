@@ -289,6 +289,8 @@ function httpBackend({ url, key, table = 'players' }) {
             vote: seatRecord.vote ?? null,
             /* What happened to this seat, written only by this seat (round 23). */
             events: seatRecord.events ?? [],
+            /* And what this seat said, by hand — also only by this seat (round 24). */
+            reactions: seatRecord.reactions ?? {},
             cards_hash: seatRecord.cardsHash ?? null,
             seen_at: new Date().toISOString(),
           }),
@@ -326,6 +328,7 @@ function httpBackend({ url, key, table = 'players' }) {
           hands: seat.hands ?? 0,
           vote: seat.vote ?? null,
           events: seat.events ?? [],
+          reactions: seat.reactions ?? {},
           cardsHash: seat.cards_hash ?? undefined,
           seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
         })),

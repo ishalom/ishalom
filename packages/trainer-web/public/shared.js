@@ -41,7 +41,21 @@ const shared = {
   unavailable: false,
   /** How many seats a new table gets. Two unless somebody says otherwise. */
   seats: 2,
+  /** Which ticker item is showing, and when it last changed (§3.10). */
+  tickerAt: 0,
+  tickerShownAt: 0,
+  /** The counterfactual, once asked for, and whether it has been asked (§3.8). */
+  folklore: null,
+  folkloreAsked: false,
+  /** My own last decision's working, opened by "תסביר לי" (§3.9). */
+  explaining: false,
 };
+
+/** The six, in Idan's order. The page draws them; the record stores the key. */
+const REACTION_KEYS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
+
+/** One line of the ticker every eight seconds (§3.10). */
+const TICKER_MS = 8000;
 
 /** The smallest and largest table (§3.1). */
 const SHARED_MIN_SEATS = 2;
@@ -178,12 +192,27 @@ function renderMeasures(screen) {
     row.append(name, bar, stack);
     table.appendChild(row);
   }
+  /*
+   * And the table itself, as one more row (§3.6) — but only once more than one
+   * seat has played, because the table's figures and a single player's would
+   * be the same numbers written twice.
+   */
+  if (screen.table.seats > 1) table.appendChild(tableRow(screen.table));
   box.appendChild(table);
+
+  if (screen.table.seats > 1) box.appendChild(tableExtras(screen.table));
 
   const legend = document.createElement('p');
   legend.className = 'shared-legend';
   legend.textContent = T('shared.legend');
   box.appendChild(legend);
+
+  if (screen.table.seats > 1) {
+    const how = document.createElement('p');
+    how.className = 'shared-legend shared-table-legend';
+    how.textContent = T('shared.tableLegend');
+    box.appendChild(how);
+  }
 
   /*
    * And when the two disagree, the line that names which is which. It is the
@@ -199,6 +228,283 @@ function renderMeasures(screen) {
     });
     box.appendChild(line);
   }
+}
+
+/**
+ * The table's own row, under the players' (§3.6).
+ *
+ * The same two figures in the same two places as a player's row, so the eye
+ * reads it as one more player — which is what it is: the table, against the
+ * dealer. The line under it says how each figure was combined, because "the
+ * table's bar" is only honest if a reader can tell it is weighted rather than
+ * averaged.
+ */
+function tableRow(measures) {
+  const row = document.createElement('div');
+  row.className = 'shared-measure shared-measure-table';
+  row.id = 'shared-table-row';
+
+  const name = document.createElement('span');
+  name.className = 'shared-measure-name';
+  name.textContent = T('shared.tableName');
+
+  const bar = document.createElement('span');
+  bar.className = 'shared-measure-bar';
+  bar.textContent =
+    measures.bar === null
+      ? T('shared.settling')
+      : T('shared.barValue', { pct: Math.round(measures.bar * 100) });
+
+  const stack = document.createElement('span');
+  stack.className = 'shared-measure-stack';
+  stack.textContent = window.EVFigure
+    ? window.EVFigure.units(measures.stack)
+    : (measures.stack > 0 ? '+' : '') + measures.stack;
+
+  row.append(name, bar, stack);
+  return row;
+}
+
+/** The three figures that only the table has: hands, what it cost, the best run. */
+function tableExtras(measures) {
+  const line = document.createElement('p');
+  line.className = 'shared-table-extras';
+  const parts = [T('shared.handsPlayed', { n: measures.handsPlayed })];
+  if (measures.evLostPer100 !== null) {
+    parts.push(T('shared.evLost', { n: measures.evLostPer100.toFixed(1) }));
+  }
+  if (measures.streak > 0) parts.push(T('shared.bestRun', { n: measures.streak }));
+  line.textContent = parts.join(' · ');
+  return line;
+}
+
+/**
+ * What has just been said, attributed to whoever said it (§3.9).
+ *
+ * Only this hand's, because a table's talk is about the hand in front of it —
+ * everything older is the ticker's job. Each chip carries a name, which is the
+ * condition the whole feature rides on: these are a player's words, and the
+ * screen must never let them be read as the app's.
+ */
+function renderSaid(screen) {
+  const box = el('shared-said');
+  if (!screen || screen.hand === null) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  const said = screen.reactions.filter((post) => post.hand === screen.hand);
+  if (said.length === 0) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren(
+    ...said.map((post) => {
+      const chip = document.createElement('p');
+      chip.className = 'shared-speech' + (post.seat === shared.seat ? ' mine' : '');
+      const who = document.createElement('span');
+      who.className = 'shared-speech-who';
+      who.textContent = post.seat === shared.seat ? T('shared.you') : post.name;
+      const what = document.createElement('span');
+      what.className = 'shared-speech-what';
+      what.textContent = T(`reaction.${post.key}`);
+      chip.append(who, what);
+      return chip;
+    }),
+  );
+}
+
+/**
+ * The six buttons (§3.9).
+ *
+ * One row, one tap, below the felt — sending one never covers the cards. They
+ * are drawn only once somebody else is at the table, because talking to an
+ * empty room is not a feature.
+ */
+function renderReactions(screen) {
+  const box = el('shared-reactions');
+  if (!screen || shared.seat === null || screen.seats.length < 2) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren();
+  for (const key of REACTION_KEYS) {
+    const button = document.createElement('button');
+    button.className = 'action shared-react';
+    button.type = 'button';
+    button.dataset.reaction = key;
+    button.textContent = T(`reaction.${key}`);
+    button.addEventListener('click', () => {
+      /*
+       * "תסביר לי" keeps the job it was given: as well as being said out loud
+       * like the other five, it opens my own decision's working on my own
+       * screen. Nobody else's screen changes — it is a question I am asking
+       * the table and an answer I am giving myself.
+       */
+      if (key === 'explain') shared.explaining = true;
+      void act(() => api('/api/shared/react', { id: shared.id, key }));
+    });
+    box.appendChild(button);
+  }
+}
+
+/**
+ * The ticker (§3.10).
+ *
+ * One line, holding still while a hand is live and rotating every eight
+ * seconds once it is not. It fades rather than moves, which is the difference
+ * between a line you can ignore and a line that drags your eye off the cards.
+ */
+function renderTicker(screen) {
+  const box = el('shared-ticker');
+  const items = screen ? screen.ticker : [];
+  if (!screen || items.length === 0) {
+    box.hidden = true;
+    box.textContent = '';
+    return;
+  }
+  /* Newest first: what just happened is what a table is talking about. */
+  const shown = [...items].reverse();
+  const live = screen.hand !== null && !screen.handOver;
+  const now = Date.now();
+  /*
+   * The first line gets its full eight seconds like every other one. Without
+   * this the clock would have been running since the epoch and the ticker would
+   * open on its second item.
+   */
+  if (shared.tickerShownAt === 0) shared.tickerShownAt = now;
+  if (!live && now - shared.tickerShownAt > TICKER_MS) {
+    shared.tickerAt = (shared.tickerAt + 1) % shown.length;
+    shared.tickerShownAt = now;
+  }
+  if (shared.tickerAt >= shown.length) shared.tickerAt = 0;
+  const item = shown[shared.tickerAt];
+  const text = tickerText(item);
+  box.hidden = false;
+  if (box.textContent !== text) {
+    box.textContent = text;
+    /* The fade is the whole animation. Nothing here moves. */
+    box.classList.remove('fading');
+    void box.offsetWidth;
+    box.classList.add('fading');
+  }
+}
+
+/** One ticker item as a sentence. None of the three ever mentions money (§3.10). */
+function tickerText(item) {
+  if (!item) return '';
+  const name = item.seat === shared.seat ? T('shared.you') : item.name;
+  if (item.kind === 'reaction') {
+    return T('shared.ticker.reaction', { name, said: T(`reaction.${item.key}`) });
+  }
+  if (item.kind === 'record') return T('shared.ticker.record', { name, n: item.streak });
+  return T('shared.ticker.gesture', { name, n: item.decisions });
+}
+
+/**
+ * He took my card — offered once, answered by a replay (§3.8).
+ *
+ * The button is the whole of it until somebody presses: this is evidence for a
+ * thing people already believe, and evidence nobody asked for is a lecture.
+ */
+function renderFolklore(screen) {
+  const box = el('shared-folklore');
+  const canAsk = Boolean(screen) && screen.handOver && screen.seats.length > 1 && shared.seat !== null;
+  if (!canAsk && !shared.folkloreAsked) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  box.replaceChildren();
+
+  if (!shared.folkloreAsked) {
+    const ask = document.createElement('button');
+    ask.className = 'action shared-ask';
+    ask.type = 'button';
+    ask.id = 'shared-cf-ask';
+    ask.textContent = T('shared.cfAsk');
+    ask.addEventListener('click', () => void askFolklore());
+    box.appendChild(ask);
+    return;
+  }
+
+  const answer = shared.folklore;
+  if (!answer || !answer.counterfactual) {
+    const none = document.createElement('p');
+    none.className = 'shared-cf-none';
+    none.textContent = T('shared.cfNone');
+    box.appendChild(none);
+  } else {
+    const cf = answer.counterfactual;
+    const line = document.createElement('p');
+    line.className = 'shared-cf-line';
+    /*
+     * Which of the two it is decides which sentence it gets. The same-hand one
+     * is §3.8's own and the stronger claim; the next-hand one is the commoner,
+     * and saying it in the same words would claim something the reservation
+     * rule makes impossible.
+     */
+    line.textContent = T(cf.showing === cf.hand ? 'shared.cfLine' : 'shared.cfLineNext', {
+      name: cf.seat === shared.seat ? T('shared.you') : cf.name,
+      instead: T(cf.instead === 'stand' ? 'shared.cfStood' : 'shared.cfHit'),
+      theirTotal: cf.theirTotal,
+      otherCard: faceOf(cf.otherCard),
+      actualCard: faceOf(cf.actualCard),
+      otherTotal: cf.otherTotal,
+      actualTotal: cf.actualTotal,
+    });
+    box.appendChild(line);
+
+    /*
+     * And the half that matters more, said in the same breath: the cards moved
+     * and the grading did not. He can move your stack and he cannot move your
+     * bar — which is a property of how a decision is graded, not a slogan.
+     */
+    const rule = document.createElement('p');
+    rule.className = 'shared-cf-rule';
+    rule.textContent = T('shared.cfRule');
+    box.appendChild(rule);
+  }
+
+  const spots = (answer && answer.spots) || [];
+  if (spots.length > 0) {
+    const spot = spots[spots.length - 1];
+    const title = document.createElement('h3');
+    title.className = 'shared-spots-title';
+    title.textContent = T('shared.spotsTitle');
+    const line = document.createElement('p');
+    line.className = 'shared-spot-line';
+    line.textContent = T('shared.spotLine', {
+      spot: spot.label,
+      mine: T(`action.${spot.myAction}`),
+      name: spot.name,
+      theirs: T(`action.${spot.theirAction}`),
+      best: T(`action.${spot.optimalAction}`),
+    });
+    box.append(title, line);
+  }
+}
+
+/** A card as a player would say it: the rank and the suit, together. */
+function faceOf(card) {
+  if (!card) return '';
+  return `${card.rank}${card.suit}`;
+}
+
+/** Ask for the replay, once. The driver keeps the once-a-session rule, not this. */
+async function askFolklore() {
+  shared.folkloreAsked = true;
+  try {
+    shared.folklore = await api('/api/shared/counterfactual', { id: shared.id });
+  } catch {
+    shared.folklore = null;
+  }
+  render();
 }
 
 /** The countdown and the vote, drawn for everybody who can see either (§3.4). */
@@ -394,6 +700,11 @@ function render() {
     el('shared-measures').hidden = true;
     el('shared-actions').replaceChildren();
     el('shared-talk').hidden = true;
+    el('shared-ticker').hidden = true;
+    el('shared-said').hidden = true;
+    el('shared-reactions').hidden = true;
+    el('shared-folklore').hidden = true;
+    el('shared-explain').hidden = true;
     return;
   }
 
@@ -417,6 +728,45 @@ function render() {
   renderMeasures(screen);
   renderActions(screen);
   renderTalk(screen);
+  renderTicker(screen);
+  renderSaid(screen);
+  renderReactions(screen);
+  renderFolklore(screen);
+  renderExplain(screen);
+}
+
+/**
+ * My own decision's working, opened by **תסביר לי** (§3.9).
+ *
+ * Mine only, and this is where that promise is cheap to keep: the screen
+ * object carries my decisions and nobody else's, because `seatView` will not
+ * put another seat's in it until I have played my own hand. There is nothing
+ * here to leak.
+ */
+function renderExplain(screen) {
+  const box = el('shared-explain');
+  const last = screen && screen.mine.length > 0 ? screen.mine[screen.mine.length - 1] : null;
+  if (!shared.explaining || !last || !last.returns || !window.EVReturns) {
+    box.hidden = true;
+    box.replaceChildren();
+    return;
+  }
+  box.hidden = false;
+  /*
+   * The private table's own block, drawn by the private table's own file, from
+   * a `returns` object the private table's own function built. Nothing about
+   * what a hand comes back is worked out twice in this app, and this is the
+   * place it would have been easiest to do it.
+   */
+  box.replaceChildren(
+    window.EVReturns.block(
+      {
+        returns: last.returns,
+        ranked: last.ranked.map((row) => ({ ...row, label: T(`action.${row.action}`) })),
+      },
+      { helpId: 'shared-returns-help' },
+    ),
+  );
 }
 
 /* --- Talking to the table ------------------------------------------------ */
