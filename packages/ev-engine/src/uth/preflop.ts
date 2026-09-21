@@ -143,6 +143,42 @@ export interface PreflopResult {
   flopRaises: number;
   flopRaiseValue: number;
   flopCheckValue: number;
+  /**
+   * The check branch's own endings, counted (round 28).
+   *
+   * Round 20 counted the raise branch, which is what lets 4x and 3x state their
+   * arithmetic. Checking had values and no outcomes, so it was the one action
+   * in the block that could show no percentages — the gap round 27 named rather
+   * than estimated.
+   *
+   * These close it. A board the check line goes on to raise settles at 2x, one
+   * it bets at the river settles at 1x, and one it folds away costs the two
+   * units already in, on every dealer holding, with no showdown at all. The
+   * counting costs one more walk of the flop loop, which is nothing beside the
+   * 2,097,572,400 endings the class has already enumerated.
+   */
+  checkWins?: number;
+  checkTies?: number;
+  checkLosses?: number;
+  checkWinUnits?: number;
+  checkLossUnits?: number;
+  /**
+   * How many endings those counts are out of — and it is **not** the raise
+   * branch's 2,097,572,400.
+   *
+   * It is ten times that: 19,600 flops × 1,081 completions × 990 dealer
+   * holdings = 20,975,724,000. A five-card board is reached by C(5,3) = 10
+   * different flops, and the check line is not the same line on each of them —
+   * the same five cards may be raised on one flop and checked on another,
+   * because the decision is made from three of them. So the ten visits are ten
+   * genuinely different ways the hand can go, and counting them once each would
+   * be counting nine of them as if they had not happened.
+   *
+   * Stored rather than left to be worked out, because a reader who assumed the
+   * raise branch's figure would be out by a factor of ten and the shares would
+   * still look plausible.
+   */
+  checkOutcomes?: number;
 }
 
 /**
@@ -248,6 +284,15 @@ export function solvePreflop(
   //   value(bet) = anteAndBlind + bet * net
   const anteAndBlind = new Float64Array(PREFLOP_BOARDS);
   const net = new Float64Array(PREFLOP_BOARDS);
+  /*
+   * And the same two facts per board kept whole rather than averaged, so the
+   * check branch can be counted afterwards (round 28): how many of the 990
+   * holdings this board beats, and what the Ante and the Blind came to across
+   * those wins. Twenty-five megabytes, against a job that runs for minutes a
+   * class.
+   */
+  const boardWins = new Int32Array(PREFLOP_BOARDS);
+  const boardWinSide = new Float64Array(PREFLOP_BOARDS);
 
   // Board suit masks after 0..5 cards, reused rather than reallocated.
   const masks = [
@@ -306,8 +351,8 @@ export function solvePreflop(
 
             let ab = 0;
             let sign = 0;
-            let boardWins = 0;
-            let boardWinSide = 0;
+            let thisBoardWins = 0;
+            let thisBoardWinSide = 0;
             for (let a = 0; a < 45; a++) {
               const cardA = dealerPool[a]!;
               for (let b = a + 1; b < 45; b++) {
@@ -316,8 +361,8 @@ export function solvePreflop(
                   const won = (dealerQualifies(dealerScore) ? 1 : 0) + blind;
                   ab += won;
                   sign++;
-                  boardWins++;
-                  boardWinSide += won;
+                  thisBoardWins++;
+                  thisBoardWinSide += won;
                 } else if (playerScore < dealerScore) {
                   ab += (dealerQualifies(dealerScore) ? -1 : 0) - 1;
                   sign--;
@@ -326,9 +371,11 @@ export function solvePreflop(
             }
             anteAndBlind[index] = ab / HOLDINGS;
             net[index] = sign / HOLDINGS;
-            wins += boardWins;
-            losses += boardWins - sign; // sign is wins - losses, so this is losses
-            winSide += boardWinSide;
+            boardWins[index] = thisBoardWins;
+            boardWinSide[index] = thisBoardWinSide;
+            wins += thisBoardWins;
+            losses += thisBoardWins - sign; // sign is wins - losses, so this is losses
+            winSide += thisBoardWinSide;
             side += ab;
           }
         }
@@ -337,7 +384,7 @@ export function solvePreflop(
     options.onProgress?.((i0 + 1) / 46);
   }
 
-  return summarise(holeClass.label, anteAndBlind, net, { wins, losses, winSide, side });
+  return summarise(holeClass.label, anteAndBlind, net, boardWins, boardWinSide, { wins, losses, winSide, side });
 }
 
 /**
@@ -353,6 +400,8 @@ function summarise(
   label: string,
   anteAndBlind: Float64Array,
   net: Float64Array,
+  boardWins: Int32Array,
+  boardWinSide: Float64Array,
   counted: { wins: number; losses: number; winSide: number; side: number },
 ): PreflopResult {
   let sum4 = 0;
@@ -375,6 +424,12 @@ function summarise(
   // the flops it checks again and plays the river from.
   let flopRaiseValue = 0;
   let flopCheckValue = 0;
+  /* The check branch's own endings and what they are worth (round 28). */
+  let checkWins = 0;
+  let checkTies = 0;
+  let checkLosses = 0;
+  let checkWinUnits = 0;
+  let checkLossUnits = 0;
 
   for (let f0 = 0; f0 < 48; f0++) {
     for (let f1 = f0 + 1; f1 < 49; f1++) {
@@ -403,7 +458,8 @@ function summarise(
 
         const evFlopBet = betTotal / completions;
         const evFlopCheck = checkTotal / completions;
-        if (evFlopBet >= evFlopCheck) {
+        const raisesThisFlop = evFlopBet >= evFlopCheck;
+        if (raisesThisFlop) {
           checkSum += evFlopBet;
           flopRaiseValue += evFlopBet;
           flopRaises++;
@@ -412,6 +468,44 @@ function summarise(
           flopCheckValue += evFlopCheck;
         }
         flops++;
+
+        /*
+         * And the check branch's endings, now that this flop's decision is
+         * known (round 28). A second walk of the same completions rather than
+         * one pass, because the bet size depends on a decision made from all of
+         * them: 2x where the flop is raised, 1x where the river is bet, and no
+         * Play bet at all where it is folded.
+         *
+         * Nothing here touches the EVs above. They are already summed.
+         */
+        for (let t = 0; t < 47; t++) {
+          const turn = remaining[t]!;
+          for (let r = t + 1; r < 47; r++) {
+            const index = rankFive(f0, f1, f2, turn, remaining[r]!, merged);
+            const ab = anteAndBlind[index]! * HOLDINGS;
+            const sign = Math.round(net[index]! * HOLDINGS);
+            const wonHere = boardWins[index]!;
+            const lostHere = wonHere - sign;
+            const sideHere = boardWinSide[index]!;
+
+            let bet: number;
+            if (raisesThisFlop) {
+              bet = FLOP_RAISE;
+            } else if (ab / HOLDINGS + (RIVER_RAISE * sign) / HOLDINGS >= FOLD_RESULT) {
+              bet = RIVER_RAISE;
+            } else {
+              /* Folded away: no showdown, and every holding costs the two in. */
+              checkLosses += HOLDINGS;
+              checkLossUnits += HOLDINGS * FOLD_RESULT;
+              continue;
+            }
+            checkWins += wonHere;
+            checkLosses += lostHere;
+            checkTies += HOLDINGS - wonHere - lostHere;
+            checkWinUnits += sideHere + bet * wonHere;
+            checkLossUnits += ab - sideHere - bet * lostHere;
+          }
+        }
       }
     }
   }
@@ -435,6 +529,12 @@ function summarise(
     side: counted.side,
     flops,
     flopRaises,
+    checkWins,
+    checkTies,
+    checkLosses,
+    checkWinUnits,
+    checkLossUnits,
+    checkOutcomes: checkWins + checkTies + checkLosses,
     flopRaiseValue,
     flopCheckValue,
   };
