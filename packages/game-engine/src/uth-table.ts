@@ -198,6 +198,10 @@ export interface UthEvaluation {
     boards?: number;
     checkPlayBoards?: number;
     checkPlayTotal?: number;
+    /** Flop only: the check branch's own showdowns, counted like the raise branch's. */
+    checkWins?: number;
+    checkTies?: number;
+    checkLosses?: number;
     /*
      * Pre-flop only (round 20), from the offline table. The Ante and the Blind
      * across the winning endings and across all of them, which is what lets one
@@ -472,6 +476,9 @@ export class UthTable {
           boards: solved.boards,
           checkPlayBoards: solved.checkPlayBoards,
           checkPlayTotal: solved.checkPlayTotal,
+          checkWins: solved.checkWins,
+          checkTies: solved.checkTies,
+          checkLosses: solved.checkLosses,
         },
       };
     } else {

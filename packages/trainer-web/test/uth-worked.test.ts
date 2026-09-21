@@ -92,6 +92,106 @@ const lines = (seed: number, hands = 40) => {
   return out;
 };
 
+// --- Win, tie and lose (round 27) ------------------------------------------------------------
+
+test('every action that can be counted carries win, tie and lose, and they add to 100', () => {
+  /*
+   * Idan asked for the percentages in the block, and the rule every worked line
+   * already obeys applies here: what is printed must be checkable. A player who
+   * adds three percentages — and some will — must not catch the page out by one.
+   */
+  let seen = 0;
+  const byPhase = new Map<string, number>();
+  for (const seed of [7, 19, 33]) {
+    for (const { work, phase } of lines(seed, 30)) {
+      if (work.oddsWin === undefined) continue;
+      seen++;
+      byPhase.set(`${phase}:${work.action}`, (byPhase.get(`${phase}:${work.action}`) ?? 0) + 1);
+      assert.equal(
+        work.oddsWin + work.oddsTie + work.oddsLose,
+        100,
+        `${phase} ${work.action}: ${work.oddsWin} + ${work.oddsTie} + ${work.oddsLose}`,
+      );
+      for (const share of [work.oddsWin, work.oddsTie, work.oddsLose]) {
+        assert.ok(Number.isInteger(share) && share >= 0 && share <= 100, `${share} is not a percentage`);
+      }
+    }
+  }
+  assert.ok(seen > 40, `only ${seen} actions carried percentages`);
+
+  /* And they reach every street, not only the one that was easiest. */
+  const streets = new Set([...byPhase.keys()].map((key) => key.split(':')[0]));
+  for (const street of ['preflop', 'flop', 'river']) {
+    assert.ok(streets.has(street), `no action at the ${street} carries percentages`);
+  }
+});
+
+test('folding ends every hand the same way, and says so', () => {
+  for (const { work } of lines(11, 20)) {
+    if (work.kind !== 'uthFold') continue;
+    assert.equal(work.oddsWin, 0, 'folding won something');
+    assert.equal(work.oddsTie, 0, 'folding tied something');
+    assert.equal(work.oddsLose, 100, 'folding did not lose everything');
+  }
+});
+
+test('checking the flop counts the boards it folds away as losses, not as nothing', () => {
+  /*
+   * The check branch reaches a showdown on most boards and folds the river on
+   * the rest. Those folds are losses — the money is gone — so the lose share of
+   * checking must be at least the share of boards that are folded away, and the
+   * three must still add to 100.
+   */
+  let checked = 0;
+  for (const seed of [7, 19]) {
+    for (const { work, phase } of lines(seed, 30)) {
+      if (phase !== 'flop' || work.kind !== 'uthFlopCheck' || work.oddsWin === undefined) continue;
+      checked++;
+      const foldShare = (work.foldBoards / work.boards) * 100;
+      assert.ok(
+        work.oddsLose >= Math.floor(foldShare),
+        `checking loses ${work.oddsLose}% but folds ${foldShare.toFixed(1)}% of boards away`,
+      );
+      assert.equal(work.oddsWin + work.oddsTie + work.oddsLose, 100);
+    }
+  }
+  assert.ok(checked > 0, 'no flop check was seen at all');
+});
+
+test('the percentages a player reads on the page are the ones that add to 100', async () => {
+  /*
+   * Off the screen, not off the object: the object could be right and the copy
+   * could still print something else, and what a player checks is the copy.
+   */
+  const page = loadHosted('#ultimate', [
+    ['ev:playerName', 'Dana'],
+    ['ev:introSeen', '1'],
+    ['ev:level', 'advanced'],
+  ]);
+  await page.booted;
+  const en = catalogue('en');
+  const template = en['work.odds']!;
+  assert.ok(
+    template.includes('{oddsWin}') && template.includes('{oddsTie}') && template.includes('{oddsLose}'),
+    'the odds line stopped naming its three shares',
+  );
+
+  let read = 0;
+  for (const { work } of lines(5, 25)) {
+    if (work.oddsWin === undefined) continue;
+    const printed = template
+      .replace('{oddsWin}', `${work.oddsWin}%`)
+      .replace('{oddsTie}', `${work.oddsTie}%`)
+      .replace('{oddsLose}', `${work.oddsLose}%`);
+    const shares = [...printed.matchAll(/(\d+)%/g)].map((match) => Number(match[1]));
+    assert.equal(shares.length, 3, `the printed line does not carry three shares: ${printed}`);
+    assert.equal(shares[0]! + shares[1]! + shares[2]!, 100, `as printed: ${printed}`);
+    read++;
+  }
+  assert.ok(read > 20, `only ${read} lines were read off the copy`);
+  page.stopWatching();
+});
+
 // --- The sums come out ----------------------------------------------------------------------
 
 test('every Ultimate worked line rebuilds the figure it explains, exactly', () => {

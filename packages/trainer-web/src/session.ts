@@ -241,6 +241,20 @@ export interface SessionProgressV4 extends Omit<SessionProgressV3, 'version'> {
 export interface SessionProgressV5 extends Omit<SessionProgressV4, 'version'> {
   version: 5;
   records?: { streakBest: number };
+  /**
+   * Gestures earned at a shared table and not yet shown (round 27).
+   *
+   * Saved rather than held in memory, for the obvious reason: a player finishes
+   * an evening at a shared table, closes the tab, and opens the private one
+   * tomorrow. Round 20's rule is that the improvement gesture fires on the
+   * fifth correct answer exactly, so if the moment is not kept it is gone.
+   *
+   * It lives here beside the mastery grid rather than in a column of its own
+   * because it is the same kind of fact: something true about this player that
+   * outlives the sitting, and `progress` is one JSON blob. A version 4 or 5
+   * record read without it simply owes nothing, which is right.
+   */
+  owed?: Array<{ scenarioKey: string; gesture: Gesture }>;
 }
 
 export type SessionProgress =
@@ -404,6 +418,14 @@ export class TrainerSession {
   private rightAndLostShown = false;
   /** The gesture the settlement earned, if any. */
   private settlementGesture: Gesture | null = null;
+  /**
+   * Earned at a shared table, waiting for a private hand to be shown at.
+   *
+   * Saved with the record, paid one a hand, oldest first. See `oweGestureFor`.
+   */
+  private owed: Array<{ scenarioKey: string; gesture: Gesture }> = [];
+  /** An owed gesture paid at this settlement, already worded. */
+  private paidGesture: unknown = null;
   /** This sitting, for the line that ends it. Not saved: a sitting is a sitting. */
   private sittingDecisions = 0;
   private sittingMistakes = 0;
@@ -558,6 +580,7 @@ export class TrainerSession {
     // And a gesture belongs to the hand that earned it: one a hand, at most.
     this.gestureThisHand = false;
     this.settlementGesture = null;
+    this.paidGesture = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -865,6 +888,36 @@ export class TrainerSession {
       this.rightAndLostShown = true;
     }
 
+    /*
+     * And the one that was earned somewhere it could not be shown (round 27).
+     *
+     * A run of five completed at a shared table earns "you used to get this
+     * wrong" and has nowhere to say it: the shared table shows no gestures, and
+     * by the player's next private decision the run is past five, so round 20's
+     * `=== IMPROVED_RUN` rule will never fire for it again. Idan's answer was
+     * that the gesture is **owed**, so it is queued when it is earned and paid
+     * here, at the first settlement that has no gesture of its own.
+     *
+     * **One a hand, oldest first**, which is the same discipline every other
+     * gesture keeps: this thing fires rarely on purpose, and a queue that
+     * emptied itself in one hand would turn a rare remark into a list. It
+     * yields to a gesture this hand actually earned, because a remark about the
+     * hand in front of the player beats a remark about one he played elsewhere.
+     */
+    if (!this.settlementGesture && this.owed.length > 0 && !this.gestureThisHand) {
+      const paid = this.owed.shift()!;
+      /*
+       * Worded here, with the spot it was earned on. The improvement gesture
+       * names its spot and what the player used to do there — "five right in a
+       * row on 16 vs 10; the three times you got this wrong, you hit" — and
+       * that spot came from a table this session never dealt, so it travels
+       * with the gesture rather than being looked up from the hand in front of
+       * the player.
+       */
+      this.paidGesture = this.wordGesture(paid.gesture, paid.scenarioKey);
+      this.gesturesShown++;
+    }
+
     this.history.unshift({
       id: record.id,
       dealtCards: [...record.dealtCards],
@@ -1006,7 +1059,12 @@ export class TrainerSession {
        * can move one.
        */
       // The hand that was played perfectly and lost, said once a sitting.
-      settlementGesture: settled ? this.settlementGesture : null,
+      /*
+       * The hand's own gesture if it earned one, otherwise an owed one being
+       * paid. A hand never shows two: a remark about the hand in front of the
+       * player takes precedence over one about a hand played elsewhere.
+       */
+      settlementGesture: settled ? (this.settlementGesture ?? this.paidGesture) : null,
       // The records line on home: chip-shaped, and it touches no figure.
       records: {
         streak: this.streakRecord,
@@ -1286,7 +1344,8 @@ export class TrainerSession {
        * data that teaches him stays clean.
        */
       if (!decision.forfeit) {
-        this.noteSpot(decision.scenarioKey, decision.evCost, decision.action ?? 'unknown');
+        const stat = this.noteSpot(decision.scenarioKey, decision.evCost, decision.action ?? 'unknown');
+        this.oweGestureFor(decision.scenarioKey, stat);
       }
     }
     return rated;
@@ -1302,6 +1361,37 @@ export class TrainerSession {
    * untouched — five attempts, four correct, last two right — and lives in
    * `gestures.ts`, which reads this and writes nothing.
    */
+  /**
+   * A gesture earned at a shared table, put by until it can be shown.
+   *
+   * Asked of `gestures.ts` with the same snapshot a private decision would
+   * have handed it, so the rule that decides whether it was earned is the
+   * rule — round 20's `=== IMPROVED_RUN` is untouched, and this does not
+   * loosen it to `>=`. What changes is only *when* the answer may be shown.
+   *
+   * Only the improvement gesture is ever owed. A record gesture is about a
+   * streak, and §16 plus round 27's second answer keep the personal best a
+   * private-table matter; "played it right and lost" belongs to a settlement,
+   * and the shared table settles its own hands.
+   */
+  private oweGestureFor(scenarioKey: string, stat: ScenarioStat): void {
+    const gesture = gestureForDecision({
+      correct: stat.consecutiveCorrect > 0,
+      stat: {
+        attempts: stat.attempts,
+        correct: stat.correct,
+        consecutiveCorrect: stat.consecutiveCorrect,
+        confusion: { ...stat.confusion },
+      },
+      // No streak claim from a shared table: see `records` and round 27 item 2.
+      streak: { current: 0, record: Number.POSITIVE_INFINITY, announcedThisRun: true },
+      shown: { sitting: 0, thisHand: false },
+    });
+    if (!gesture || gesture.kind !== 'improved') return;
+    if (this.owed.some((entry) => entry.scenarioKey === scenarioKey)) return;
+    this.owed.push({ scenarioKey, gesture });
+  }
+
   private noteSpot(scenarioKey: string, evCost: number, chosenAction: string): ScenarioStat {
     const stat = this.scenarioStats.get(scenarioKey) ?? {
       scenarioKey,
@@ -1393,6 +1483,8 @@ export class TrainerSession {
     return {
       version: 5,
       records: { streakBest: this.streakRecord },
+      /* Earned at a shared table, not yet shown. See `oweGestureFor`. */
+      owed: this.owed.map((entry) => ({ ...entry })),
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -1509,11 +1601,29 @@ export class TrainerSession {
      * of, and the record is the part that was actually earned.
      */
     this.streakRecord = saved.version === 5 ? Math.max(0, Math.floor(n(saved.records?.streakBest))) : 0;
+    /*
+     * A record saved before round 27 owes nothing, which is exactly right, and
+     * anything that is not a list of improvement gestures is read as nothing
+     * rather than trusted — this blob travels through a shared table.
+     */
+    this.owed =
+      saved.version === 5 && Array.isArray(saved.owed)
+        ? saved.owed
+            .filter(
+              (entry): entry is { scenarioKey: string; gesture: Gesture } =>
+                Boolean(entry) &&
+                typeof entry.scenarioKey === 'string' &&
+                Boolean(entry.gesture) &&
+                entry.gesture.kind === 'improved',
+            )
+            .map((entry) => ({ scenarioKey: entry.scenarioKey, gesture: entry.gesture }))
+        : [];
     this.recordAnnounced = false;
     this.gesturesShown = 0;
     this.gestureThisHand = false;
     this.rightAndLostShown = false;
     this.settlementGesture = null;
+    this.paidGesture = null;
     this.sittingDecisions = 0;
     this.sittingMistakes = 0;
     this.sittingSpots = new Map();

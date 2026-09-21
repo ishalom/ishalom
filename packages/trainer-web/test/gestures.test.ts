@@ -212,9 +212,25 @@ test('a gesture cannot touch a grade, an EV or a rating — by what the file can
     assert.ok(!stripped.includes(forbidden), `gestures.ts mentions ${forbidden}`);
   }
   assert.ok(!/evCost/.test(stripped), 'gestures.ts reads a decision’s cost, not a spot’s total');
-  // And the session calls it in exactly one place for each of the two moments.
+  /*
+   * And the session asks for each of them in a countable number of places.
+   *
+   * A decision is asked about **twice** since round 27, and the second is the
+   * whole of that round's first item: a decision made at a *shared* table can
+   * earn the improvement gesture, and it has to be asked the same question with
+   * the same rule — round 20's `=== IMPROVED_RUN` is not loosened — so the
+   * answer can be owed and paid at a private settlement later. It was one place
+   * until there were two tables; a third would want explaining.
+   *
+   * A settlement is still asked about once. There is only one place a hand
+   * settles in this class.
+   */
   const session = source('src', 'session.ts');
-  assert.equal([...session.matchAll(/gestureForDecision\(/g)].length, 1);
+  assert.equal(
+    [...session.matchAll(/gestureForDecision\(/g)].length,
+    2,
+    'the session asks about a decision somewhere new — one for a private decision, one for an owed shared one',
+  );
   assert.equal([...session.matchAll(/gestureForSettlement\(/g)].length, 1);
 });
 

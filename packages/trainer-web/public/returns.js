@@ -173,6 +173,17 @@
      */
     const fixed = [['what', 'ret.helpWhat'], ['lines', 'ret.helpLines']];
     if (opts.game === 'uth') {
+      /*
+       * What the three percentages mean comes third, which is the last slot New
+       * reaches (round 27). It is ahead of the anchor and the raise lines on
+       * purpose: the percentages are the plainest number in the block and the
+       * one a beginner will read first, and two things about them cannot be
+       * guessed — a hand the dealer does not qualify for is a win, and a fold is
+       * a loss. A percentage a player has to guess the meaning of is worse than
+       * no percentage. The anchor line moves down a place and is still read at
+       * Intermediate and Advanced.
+       */
+      fixed.push(['odds', 'ret.helpOdds']);
       fixed.push(['anchor', 'ret.helpFold']);
       if (returns.example && returns.example.kind === 'river') {
         fixed.push(['river', 'ret.helpRiver']);
@@ -218,6 +229,9 @@
     if (!work) return null;
     const row = (feedback.ranked || []).find((entry) => entry.action === work.action);
     if (!row) return null;
+    // An action whose only content is its percentages still earns a line: how
+    // often a hand wins is worth saying even where no arithmetic can be shown.
+    const oddsOnly = work.kind === 'uthOddsOnly';
 
     /*
      * The terms are printed to as many decimals as the session worked out the
@@ -283,14 +297,27 @@
       flopChecks: count(work.flopChecks),
       raiseValue: money(work.raiseValue),
       checkValue: money(work.checkValue),
+      // How the endings fall (round 27). Whole percentages, already rounded by
+      // the session so the three add to exactly 100 — never rounded here, where
+      // a second rounding is how two numbers on one card come to disagree.
+      oddsWin: typeof work.oddsWin === 'number' ? `${work.oddsWin}%` : undefined,
+      oddsTie: typeof work.oddsTie === 'number' ? `${work.oddsTie}%` : undefined,
+      oddsLose: typeof work.oddsLose === 'number' ? `${work.oddsLose}%` : undefined,
     };
 
     const holder = document.createElement('div');
     holder.className = 'worked';
-    const sentence = document.createElement('p');
-    sentence.className = 'worked-say';
-    rich(sentence, T(`work.${work.kind}`, params));
-    holder.appendChild(sentence);
+    if (!oddsOnly) {
+      const sentence = document.createElement('p');
+      sentence.className = 'worked-say';
+      rich(sentence, T(`work.${work.kind}`, params));
+      holder.appendChild(sentence);
+    } else {
+      const sentence = document.createElement('p');
+      sentence.className = 'worked-say';
+      rich(sentence, T('work.oddsOnly', params));
+      holder.appendChild(sentence);
+    }
     const sum = T(`work.${work.kind}.sum`, params);
     if (sum && sum !== `work.${work.kind}.sum`) {
       const line = document.createElement('p');
@@ -298,6 +325,17 @@
       line.dir = 'ltr';
       rich(line, sum);
       holder.appendChild(line);
+    }
+    /*
+     * And how the endings fall (round 27). One line, the same shape for every
+     * action at every street, under the arithmetic it describes — because it is
+     * about the same endings the arithmetic divides by.
+     */
+    if (params.oddsWin !== undefined) {
+      const odds = document.createElement('p');
+      odds.className = 'worked-odds';
+      rich(odds, T('work.odds', params));
+      holder.appendChild(odds);
     }
     return holder;
   }

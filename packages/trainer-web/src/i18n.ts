@@ -415,6 +415,13 @@ const EN: Catalogue = {
   'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthPreflopCheck': 'Checking keeps both later decisions. Of the **{flops}** flops that can come, **{flopRaises}** are worth raising 2× on — **{raiseValue}** on average — and on the other **{flopChecks}** you check again and play the river, worth **{checkValue}**:',
   'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
+  // How the endings fall (round 27), one line under every action's arithmetic.
+  // A win counts the hands where the dealer does not qualify: his Ante pushes
+  // instead of paying, so it wins less money, but the hand was still won.
+  'work.odds': 'Ends in a win **{oddsWin}** of the time, a tie **{oddsTie}**, a loss **{oddsLose}**.',
+  'work.oddsOnly': 'How this one ends:',
+  'ret.helpOdds':
+    'The three percentages under each action are the same endings the figure above them is averaged over. A hand where the dealer does not qualify counts as a win — his Ante comes back instead of paying, so it wins less, but you still won it. Folding counts as a loss, because the money is gone.',
   'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -1446,6 +1453,10 @@ const HE: Catalogue = {
   'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthPreflopCheck': 'צ׳ק שומר את שתי ההחלטות שאחריו. מתוך **{flops}** הפלופים שיכולים לצאת, ב-**{flopRaises}** שווה להעלות 2× — **{raiseValue}** בממוצע — ובשאר **{flopChecks}** עושים צ׳ק שוב ומשחקים את הריבר, בשווי **{checkValue}**:',
   'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
+  'work.odds': 'נגמרת בניצחון ב-**{oddsWin}** מהמקרים, בתיקו ב-**{oddsTie}**, בהפסד ב-**{oddsLose}**.',
+  'work.oddsOnly': 'איך זה נגמר:',
+  'ret.helpOdds':
+    'שלושת האחוזים מתחת לכל פעולה הם אותם סיומים שהמספר שמעליהם ממוצע עליהם. יד שבה הדילר לא נכנס למשחק נספרת כניצחון — האנטה שלו חוזרת במקום לשלם, אז מנצחים בה פחות, אבל ניצחת אותה. פרישה נספרת כהפסד, כי הכסף הלך.',
   'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---

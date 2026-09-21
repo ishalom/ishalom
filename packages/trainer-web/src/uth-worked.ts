@@ -52,6 +52,10 @@ export interface UthCounts {
   boards?: number;
   checkPlayBoards?: number;
   checkPlayTotal?: number;
+  /** The check branch's own showdowns, counted alongside the raise branch's. */
+  checkWins?: number;
+  checkTies?: number;
+  checkLosses?: number;
   /** Pre-flop only: enough to rebuild any raise size, and the check branch's groups. */
   winSide?: number;
   side?: number;
@@ -245,6 +249,72 @@ export function uthMoneyFor(
     risk,
     back: risk + ev * bet,
   };
+}
+
+/**
+ * How often an action ends in a win, a tie or a loss — in counts, not percents.
+ *
+ * Idan asked for the percentages in the block (round 27), and they are read off
+ * the very endings the "comes back" figure is averaged over rather than
+ * computed a second way. Counts are returned rather than shares so that the
+ * rounding happens in one place: `wholePercents`, which hands out the remainder
+ * so the three always add to exactly 100 — the same function the river headline
+ * has used since round 19.
+ *
+ * **Three things the counting deliberately does.**
+ *
+ * *The dealer failing to qualify is a win.* His ante comes back as a push
+ * rather than paying, so it wins less money than a qualified win — but the hand
+ * was still won, and calling it anything else would be telling a player he did
+ * not win a hand he watched himself win. The screen says this in one line.
+ *
+ * *A fold is a loss.* Folding at the river after checking the flop takes the
+ * two units that were in; there is no showdown, so there is nothing else it
+ * could be, and giving it a figure of its own would be the fourth number nobody
+ * asked for.
+ *
+ * *Null is a real answer.* Before the flop, the check branch's endings were
+ * never counted — the asset that holds the pre-flop figures was solved offline
+ * and stores values for that branch, not outcomes. Returning null says so
+ * rather than printing an estimate.
+ */
+export function uthOddsFor(
+  action: string,
+  phase: 'preflop' | 'flop' | 'river',
+  counts: UthCounts | undefined,
+): { wins: number; ties: number; losses: number } | null {
+  /*
+   * Folding ends every one of them the same way: the Ante and the Blind are
+   * gone. It needs no counts because there is nothing to count.
+   */
+  if (action === 'fold') return { wins: 0, ties: 0, losses: 1 };
+  if (!counts) return null;
+
+  if (phase === 'river' && action === 'raise1x') {
+    return { wins: counts.wins, ties: counts.ties, losses: counts.losses };
+  }
+  if (phase === 'flop' && action === 'raise2x') {
+    return { wins: counts.wins, ties: counts.ties, losses: counts.losses };
+  }
+  if (phase === 'flop' && action === 'check') {
+    if (counts.checkWins === undefined) return null;
+    return {
+      wins: counts.checkWins,
+      ties: counts.checkTies ?? 0,
+      losses: counts.checkLosses ?? 0,
+    };
+  }
+  if (phase === 'preflop' && (action === 'raise4x' || action === 'raise3x')) {
+    /*
+     * The asset stores the wins and the losses; the ties are what is left of
+     * the two billion endings, which is exact rather than inferred — every
+     * ending is one of the three.
+     */
+    const ties = counts.outcomes - counts.wins - counts.losses;
+    return { wins: counts.wins, ties: Math.max(0, ties), losses: counts.losses };
+  }
+  // Pre-flop check: see the note above. Nothing counted it, so nothing is shown.
+  return null;
 }
 
 /** The scale behind the pre-flop figure: every board, every dealer holding. */

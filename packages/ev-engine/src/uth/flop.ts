@@ -64,6 +64,24 @@ export interface FlopDecision {
    */
   checkPlayBoards: number;
   checkPlayTotal: number;
+  /**
+   * The check branch, counted the way the raise branch is (round 27).
+   *
+   * Whether the player wins a showdown does not depend on how much he raised,
+   * so on a board he goes on to bet, the outcomes fall exactly as they do in
+   * the raise branch. The difference is the boards he folds away: there is no
+   * showdown on those at all, and every dealer holding on them is a hand he
+   * lost. They are counted as losses, because from the player's side that is
+   * what happened to his money — and splitting them out would be a fourth
+   * figure nobody asked for.
+   *
+   * Counted inside the same enumeration, so this costs nothing: the loop was
+   * already walking every board and every dealer holding to work out
+   * `checkPlayTotal`.
+   */
+  checkWins: number;
+  checkTies: number;
+  checkLosses: number;
 }
 
 /**
@@ -102,6 +120,9 @@ export function solveFlop(
   let winUnits = 0;
   let lossUnits = 0;
   let checkPlayTotal = 0;
+  let checkWins = 0;
+  let checkTies = 0;
+  let checkLosses = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     const turn = unseen[i]!;
@@ -129,6 +150,10 @@ export function solveFlop(
       // So one pass yields both, and the river's value comes free.
       let anteAndBlind = 0;
       let net = 0; // wins minus losses, i.e. the play bet per unit raised
+      // This board's own tally, so the check branch can be counted too.
+      let boardWins = 0;
+      let boardTies = 0;
+      let boardLosses = 0;
       for (let a = 0; a < n; a++) {
         dealerCards[5] = remaining[a]!;
         for (let b = a + 1; b < n; b++) {
@@ -139,15 +164,18 @@ export function solveFlop(
             anteAndBlind += side;
             net += 1;
             wins++;
+            boardWins++;
             winUnits += side + FLOP_RAISE;
           } else if (playerScore < dealerScore) {
             const side = (dealerQualifies(dealerScore) ? -1 : 0) - 1;
             anteAndBlind += side;
             net -= 1;
             losses++;
+            boardLosses++;
             lossUnits += side - FLOP_RAISE;
           } else {
             ties++;
+            boardTies++;
           }
           outcomes++;
         }
@@ -162,9 +190,15 @@ export function solveFlop(
       if (evRiverPlay >= FOLD_RESULT) {
         checkTotal += evRiverPlay;
         checkPlayTotal += evRiverPlay;
+        // He bets this board, so its showdowns are his.
+        checkWins += boardWins;
+        checkTies += boardTies;
+        checkLosses += boardLosses;
       } else {
         checkTotal += FOLD_RESULT;
         riverFolds++;
+        // He folds it. There is no showdown; every holding is a hand he lost.
+        checkLosses += holdings;
       }
       boards++;
     }
@@ -188,5 +222,8 @@ export function solveFlop(
     lossUnits,
     checkPlayBoards: boards - riverFolds,
     checkPlayTotal,
+    checkWins,
+    checkTies,
+    checkLosses,
   };
 }

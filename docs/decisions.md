@@ -210,6 +210,60 @@ The mark is written *after* the rating has moved. If that write fails the same
 decisions are offered again, which costs a retry; the other order would lose a
 decision on every dropped request.
 
+## A forfeit costs the worst action at the spot, which scales with the player
+
+Idan's rule for a drop (round 27): *"הדירוג שהיה יורד אילו היה בוחר בטעות
+החמורה ביותר בתור שבו הופעל הוויתור."* The rating falls by what it would have
+fallen by had he chosen the worst action available at the turn the clock ran
+out — a real EV cost off a real spot, through `rateOneDecision` like every other
+decision, rather than a constant somebody picked.
+
+**The consequence, which is the point and is easy to be surprised by.** Because
+the movement is Elo's, the sting scales with the player. On hard 16 against a
+ten:
+
+| his rating | what a forfeit there costs him |
+| --- | ---: |
+| 1,200 | about **−0.1** |
+| 2,000 | about **−3.8** |
+
+A weak player forfeiting a hard spot loses almost nothing, because the rating
+never expected him to get it right; a strong player loses real points on the
+same spot. A flat "15 points" would have done the opposite. Measured over 600
+forced drops, 82% price and rate, 7.5% land on a turn that was already answered
+and cost nothing, and 11% sit off the difficulty grid and are declined exactly
+as the same spot played properly would be.
+
+## A gesture earned at a shared table is owed, and paid later
+
+Round 20 made *"you used to get this wrong"* fire on the **fifth** consecutive
+correct answer exactly. Round 26 gave shared-table decisions a place in the
+mastery grid, which created a hole: a run completed at a shared table earns the
+gesture where it cannot be shown — the shared table shows none — and by the
+player's next private decision the run is past five, so the rule will never fire
+for it again.
+
+**Idan's answer (round 27): the gesture is owed.** It is queued when it is
+earned and paid at the first private settlement that has no gesture of its own,
+one a hand, oldest first. Round 20's `=== IMPROVED_RUN` rule is untouched — the
+owed state is an explicit fact in the saved record, not a loosening to `>=`.
+
+It lives in `progress.owed`, beside the mastery grid, because it is the same
+kind of fact: something true about this player that outlives the sitting. A
+record saved before this owes nothing, which is right.
+
+## A run at a shared table is not a personal best
+
+Round 27, Idan: **no.** The personal streak record stays driven by the private
+table alone. The shared table keeps its own best run in its own measures
+(spec A §3.6), which is what it has always had.
+
+The question was real rather than rhetorical — shared decisions count towards
+the rating and the mastery grid, so why not the record — and the answer is that
+a *record* is a different kind of claim from a *count*. A run is a continuous
+thing, and a run interrupted by moving between two tables is not obviously one
+run. Rather than define that, the record simply stays where it was earned.
+
 ## Merging is marking, never deleting
 
 Duplicate player rows are merged by pointing them at a surviving row, never by

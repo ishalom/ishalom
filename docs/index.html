@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="a2d0127a091b90e25b7be5d3b77bac8dc30053ac" />
-<meta name="ev-build-at" content="2026-09-21T22:18:40.819Z" />
+<meta name="ev-build-commit" content="91f98721236429384f3dc9576ecaef4a9cfae928-dirty" />
+<meta name="ev-build-at" content="2026-09-21T22:46:30.048Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -7001,6 +7001,9 @@ function solveFlop(
   let winUnits = 0;
   let lossUnits = 0;
   let checkPlayTotal = 0;
+  let checkWins = 0;
+  let checkTies = 0;
+  let checkLosses = 0;
 
   for (let i = 0; i < unseen.length; i++) {
     const turn = unseen[i] ;
@@ -7028,6 +7031,10 @@ function solveFlop(
       // So one pass yields both, and the river's value comes free.
       let anteAndBlind = 0;
       let net = 0; // wins minus losses, i.e. the play bet per unit raised
+      // This board's own tally, so the check branch can be counted too.
+      let boardWins = 0;
+      let boardTies = 0;
+      let boardLosses = 0;
       for (let a = 0; a < n; a++) {
         dealerCards[5] = remaining[a] ;
         for (let b = a + 1; b < n; b++) {
@@ -7038,15 +7045,18 @@ function solveFlop(
             anteAndBlind += side;
             net += 1;
             wins++;
+            boardWins++;
             winUnits += side + FLOP_RAISE;
           } else if (playerScore < dealerScore) {
             const side = (dealerQualifies(dealerScore) ? -1 : 0) - 1;
             anteAndBlind += side;
             net -= 1;
             losses++;
+            boardLosses++;
             lossUnits += side - FLOP_RAISE;
           } else {
             ties++;
+            boardTies++;
           }
           outcomes++;
         }
@@ -7061,9 +7071,15 @@ function solveFlop(
       if (evRiverPlay >= FOLD_RESULT) {
         checkTotal += evRiverPlay;
         checkPlayTotal += evRiverPlay;
+        // He bets this board, so its showdowns are his.
+        checkWins += boardWins;
+        checkTies += boardTies;
+        checkLosses += boardLosses;
       } else {
         checkTotal += FOLD_RESULT;
         riverFolds++;
+        // He folds it. There is no showdown; every holding is a hand he lost.
+        checkLosses += holdings;
       }
       boards++;
     }
@@ -7087,6 +7103,9 @@ function solveFlop(
     lossUnits,
     checkPlayBoards: boards - riverFolds,
     checkPlayTotal,
+    checkWins,
+    checkTies,
+    checkLosses,
   };
 }
 
@@ -7669,6 +7688,10 @@ const RAISE_SIZE                                     = {
                     
                              
                             
+                                                                                        
+                       
+                       
+                         
       
                                                                                
                                                                                 
@@ -7943,6 +7966,9 @@ class UthTable {
           boards: solved.boards,
           checkPlayBoards: solved.checkPlayBoards,
           checkPlayTotal: solved.checkPlayTotal,
+          checkWins: solved.checkWins,
+          checkTies: solved.checkTies,
+          checkLosses: solved.checkLosses,
         },
       };
     } else {
@@ -8495,6 +8521,13 @@ const EN            = {
   'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthPreflopCheck': 'Checking keeps both later decisions. Of the **{flops}** flops that can come, **{flopRaises}** are worth raising 2× on — **{raiseValue}** on average — and on the other **{flopChecks}** you check again and play the river, worth **{checkValue}**:',
   'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
+  // How the endings fall (round 27), one line under every action's arithmetic.
+  // A win counts the hands where the dealer does not qualify: his Ante pushes
+  // instead of paying, so it wins less money, but the hand was still won.
+  'work.odds': 'Ends in a win **{oddsWin}** of the time, a tie **{oddsTie}**, a loss **{oddsLose}**.',
+  'work.oddsOnly': 'How this one ends:',
+  'ret.helpOdds':
+    'The three percentages under each action are the same endings the figure above them is averaged over. A hand where the dealer does not qualify counts as a win — his Ante comes back instead of paying, so it wins less, but you still won it. Folding counts as a loss, because the money is gone.',
   'work.uthFold': 'Folding gives up the Ante and the Blind and takes back nothing, always. It is the one figure here that needs no arithmetic at all:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -9526,6 +9559,10 @@ const HE            = {
   'work.uthPreflopPlay.sum': '1 + ({wins} × {winPay} − {losses} × {losePay}) ÷ {outcomes} ÷ 2 = {value}',
   'work.uthPreflopCheck': 'צ׳ק שומר את שתי ההחלטות שאחריו. מתוך **{flops}** הפלופים שיכולים לצאת, ב-**{flopRaises}** שווה להעלות 2× — **{raiseValue}** בממוצע — ובשאר **{flopChecks}** עושים צ׳ק שוב ומשחקים את הריבר, בשווי **{checkValue}**:',
   'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
+  'work.odds': 'נגמרת בניצחון ב-**{oddsWin}** מהמקרים, בתיקו ב-**{oddsTie}**, בהפסד ב-**{oddsLose}**.',
+  'work.oddsOnly': 'איך זה נגמר:',
+  'ret.helpOdds':
+    'שלושת האחוזים מתחת לכל פעולה הם אותם סיומים שהמספר שמעליהם ממוצע עליהם. יד שבה הדילר לא נכנס למשחק נספרת כניצחון — האנטה שלו חוזרת במקום לשלם, אז מנצחים בה פחות, אבל ניצחת אותה. פרישה נספרת כהפסד, כי הכסף הלך.',
   'work.uthFold': 'פרישה מוותרת על האנטה ועל הבליינד ולא מחזירה כלום, תמיד. זה המספר היחיד כאן שלא צריך שום חשבון:',
   'work.uthFold.sum': '{value}',
   // --- The same decision in chips, which is what Ultimate hides (round 19) ---
@@ -12163,6 +12200,20 @@ function cardView(card        )           {
                                                                                
              
                                    
+     
+                                                                    
+    
+                                                                                
+                                                                            
+                                                                           
+                                                                           
+    
+                                                                             
+                                                                               
+                                                                            
+                                                                
+     
+                                                          
  
 
                              
@@ -12326,6 +12377,14 @@ class TrainerSession {
           rightAndLostShown = false;
   /** The gesture the settlement earned, if any. */
           settlementGesture                 = null;
+  /**
+   * Earned at a shared table, waiting for a private hand to be shown at.
+   *
+   * Saved with the record, paid one a hand, oldest first. See `oweGestureFor`.
+   */
+          owed                                                   = [];
+  /** An owed gesture paid at this settlement, already worded. */
+          paidGesture          = null;
   /** This sitting, for the line that ends it. Not saved: a sitting is a sitting. */
           sittingDecisions = 0;
           sittingMistakes = 0;
@@ -12480,6 +12539,7 @@ class TrainerSession {
     // And a gesture belongs to the hand that earned it: one a hand, at most.
     this.gestureThisHand = false;
     this.settlementGesture = null;
+    this.paidGesture = null;
     this.pending = [];
     this.settleIfDone();
   }
@@ -12787,6 +12847,36 @@ class TrainerSession {
       this.rightAndLostShown = true;
     }
 
+    /*
+     * And the one that was earned somewhere it could not be shown (round 27).
+     *
+     * A run of five completed at a shared table earns "you used to get this
+     * wrong" and has nowhere to say it: the shared table shows no gestures, and
+     * by the player's next private decision the run is past five, so round 20's
+     * `=== IMPROVED_RUN` rule will never fire for it again. Idan's answer was
+     * that the gesture is **owed**, so it is queued when it is earned and paid
+     * here, at the first settlement that has no gesture of its own.
+     *
+     * **One a hand, oldest first**, which is the same discipline every other
+     * gesture keeps: this thing fires rarely on purpose, and a queue that
+     * emptied itself in one hand would turn a rare remark into a list. It
+     * yields to a gesture this hand actually earned, because a remark about the
+     * hand in front of the player beats a remark about one he played elsewhere.
+     */
+    if (!this.settlementGesture && this.owed.length > 0 && !this.gestureThisHand) {
+      const paid = this.owed.shift() ;
+      /*
+       * Worded here, with the spot it was earned on. The improvement gesture
+       * names its spot and what the player used to do there — "five right in a
+       * row on 16 vs 10; the three times you got this wrong, you hit" — and
+       * that spot came from a table this session never dealt, so it travels
+       * with the gesture rather than being looked up from the hand in front of
+       * the player.
+       */
+      this.paidGesture = this.wordGesture(paid.gesture, paid.scenarioKey);
+      this.gesturesShown++;
+    }
+
     this.history.unshift({
       id: record.id,
       dealtCards: [...record.dealtCards],
@@ -12928,7 +13018,12 @@ class TrainerSession {
        * can move one.
        */
       // The hand that was played perfectly and lost, said once a sitting.
-      settlementGesture: settled ? this.settlementGesture : null,
+      /*
+       * The hand's own gesture if it earned one, otherwise an owed one being
+       * paid. A hand never shows two: a remark about the hand in front of the
+       * player takes precedence over one about a hand played elsewhere.
+       */
+      settlementGesture: settled ? (this.settlementGesture ?? this.paidGesture) : null,
       // The records line on home: chip-shaped, and it touches no figure.
       records: {
         streak: this.streakRecord,
@@ -13208,7 +13303,8 @@ class TrainerSession {
        * data that teaches him stays clean.
        */
       if (!decision.forfeit) {
-        this.noteSpot(decision.scenarioKey, decision.evCost, decision.action ?? 'unknown');
+        const stat = this.noteSpot(decision.scenarioKey, decision.evCost, decision.action ?? 'unknown');
+        this.oweGestureFor(decision.scenarioKey, stat);
       }
     }
     return rated;
@@ -13224,6 +13320,37 @@ class TrainerSession {
    * untouched — five attempts, four correct, last two right — and lives in
    * `gestures.ts`, which reads this and writes nothing.
    */
+  /**
+   * A gesture earned at a shared table, put by until it can be shown.
+   *
+   * Asked of `gestures.ts` with the same snapshot a private decision would
+   * have handed it, so the rule that decides whether it was earned is the
+   * rule — round 20's `=== IMPROVED_RUN` is untouched, and this does not
+   * loosen it to `>=`. What changes is only *when* the answer may be shown.
+   *
+   * Only the improvement gesture is ever owed. A record gesture is about a
+   * streak, and §16 plus round 27's second answer keep the personal best a
+   * private-table matter; "played it right and lost" belongs to a settlement,
+   * and the shared table settles its own hands.
+   */
+          oweGestureFor(scenarioKey        , stat              )       {
+    const gesture = gestureForDecision({
+      correct: stat.consecutiveCorrect > 0,
+      stat: {
+        attempts: stat.attempts,
+        correct: stat.correct,
+        consecutiveCorrect: stat.consecutiveCorrect,
+        confusion: { ...stat.confusion },
+      },
+      // No streak claim from a shared table: see `records` and round 27 item 2.
+      streak: { current: 0, record: Number.POSITIVE_INFINITY, announcedThisRun: true },
+      shown: { sitting: 0, thisHand: false },
+    });
+    if (!gesture || gesture.kind !== 'improved') return;
+    if (this.owed.some((entry) => entry.scenarioKey === scenarioKey)) return;
+    this.owed.push({ scenarioKey, gesture });
+  }
+
           noteSpot(scenarioKey        , evCost        , chosenAction        )               {
     const stat = this.scenarioStats.get(scenarioKey) ?? {
       scenarioKey,
@@ -13315,6 +13442,8 @@ class TrainerSession {
     return {
       version: 5,
       records: { streakBest: this.streakRecord },
+      /* Earned at a shared table, not yet shown. See `oweGestureFor`. */
+      owed: this.owed.map((entry) => ({ ...entry })),
       name: this.playerName,
       hands: this.hands,
       decisions: this.decisions,
@@ -13431,11 +13560,29 @@ class TrainerSession {
      * of, and the record is the part that was actually earned.
      */
     this.streakRecord = saved.version === 5 ? Math.max(0, Math.floor(n(saved.records?.streakBest))) : 0;
+    /*
+     * A record saved before round 27 owes nothing, which is exactly right, and
+     * anything that is not a list of improvement gestures is read as nothing
+     * rather than trusted — this blob travels through a shared table.
+     */
+    this.owed =
+      saved.version === 5 && Array.isArray(saved.owed)
+        ? saved.owed
+            .filter(
+              (entry)                                                     =>
+                Boolean(entry) &&
+                typeof entry.scenarioKey === 'string' &&
+                Boolean(entry.gesture) &&
+                entry.gesture.kind === 'improved',
+            )
+            .map((entry) => ({ scenarioKey: entry.scenarioKey, gesture: entry.gesture }))
+        : [];
     this.recordAnnounced = false;
     this.gesturesShown = 0;
     this.gestureThisHand = false;
     this.rightAndLostShown = false;
     this.settlementGesture = null;
+    this.paidGesture = null;
     this.sittingDecisions = 0;
     this.sittingMistakes = 0;
     this.sittingSpots = new Map();
@@ -13702,6 +13849,10 @@ const PLAY_MULTIPLE                         = {
                   
                            
                           
+                                                                                
+                     
+                     
+                       
                                                                                         
                    
                 
@@ -13895,6 +14046,72 @@ function uthMoneyFor(
     risk,
     back: risk + ev * bet,
   };
+}
+
+/**
+ * How often an action ends in a win, a tie or a loss — in counts, not percents.
+ *
+ * Idan asked for the percentages in the block (round 27), and they are read off
+ * the very endings the "comes back" figure is averaged over rather than
+ * computed a second way. Counts are returned rather than shares so that the
+ * rounding happens in one place: `wholePercents`, which hands out the remainder
+ * so the three always add to exactly 100 — the same function the river headline
+ * has used since round 19.
+ *
+ * **Three things the counting deliberately does.**
+ *
+ * *The dealer failing to qualify is a win.* His ante comes back as a push
+ * rather than paying, so it wins less money than a qualified win — but the hand
+ * was still won, and calling it anything else would be telling a player he did
+ * not win a hand he watched himself win. The screen says this in one line.
+ *
+ * *A fold is a loss.* Folding at the river after checking the flop takes the
+ * two units that were in; there is no showdown, so there is nothing else it
+ * could be, and giving it a figure of its own would be the fourth number nobody
+ * asked for.
+ *
+ * *Null is a real answer.* Before the flop, the check branch's endings were
+ * never counted — the asset that holds the pre-flop figures was solved offline
+ * and stores values for that branch, not outcomes. Returning null says so
+ * rather than printing an estimate.
+ */
+function uthOddsFor(
+  action        ,
+  phase                              ,
+  counts                       ,
+)                                                        {
+  /*
+   * Folding ends every one of them the same way: the Ante and the Blind are
+   * gone. It needs no counts because there is nothing to count.
+   */
+  if (action === 'fold') return { wins: 0, ties: 0, losses: 1 };
+  if (!counts) return null;
+
+  if (phase === 'river' && action === 'raise1x') {
+    return { wins: counts.wins, ties: counts.ties, losses: counts.losses };
+  }
+  if (phase === 'flop' && action === 'raise2x') {
+    return { wins: counts.wins, ties: counts.ties, losses: counts.losses };
+  }
+  if (phase === 'flop' && action === 'check') {
+    if (counts.checkWins === undefined) return null;
+    return {
+      wins: counts.checkWins,
+      ties: counts.checkTies ?? 0,
+      losses: counts.checkLosses ?? 0,
+    };
+  }
+  if (phase === 'preflop' && (action === 'raise4x' || action === 'raise3x')) {
+    /*
+     * The asset stores the wins and the losses; the ties are what is left of
+     * the two billion endings, which is exact rather than inferred — every
+     * ending is one of the three.
+     */
+    const ties = counts.outcomes - counts.wins - counts.losses;
+    return { wins: counts.wins, ties: Math.max(0, ties), losses: counts.losses };
+  }
+  // Pre-flop check: see the note above. Nothing counted it, so nothing is shown.
+  return null;
 }
 
 /** The scale behind the pre-flop figure: every board, every dealer holding. */
@@ -14128,6 +14345,34 @@ const money = (value        )         => displayFigure(value, true);
  * remainder: round everything down, then hand the missing points to the shares
  * that lost the most in rounding.
  */
+/**
+ * A worked line with its win / tie / lose percentages attached (round 27).
+ *
+ * The percentages ride on the worked line rather than beside it because they
+ * describe the very same endings its sum divides by: the line says *"1,842 of
+ * 2,652 endings win, paying 3.14 each"*, and this says what share of endings
+ * that is. Two numbers on one screen that describe the same thing must come
+ * from the same place, or sooner or later they disagree.
+ *
+ * Rounded here, through `wholePercents`, so the three always add to exactly
+ * 100 — a player who adds them up, and some will, must not catch the page out.
+ *
+ * **An action with no worked line still gets its percentages.** Folding has no
+ * arithmetic to show and the pre-flop raises had none before round 20, but how
+ * often a hand wins is worth saying either way, so a line is made for it.
+ */
+function withOdds(
+  work                ,
+  odds                                                       ,
+  action        ,
+  value        ,
+)                 {
+  if (!odds) return work;
+  const [win, tie, lose] = wholePercents([odds.wins, odds.ties, odds.losses]);
+  const base          = work ?? { action, kind: 'uthOddsOnly', value, digits: 3 };
+  return { ...base, oddsWin: win, oddsTie: tie, oddsLose: lose };
+}
+
 function wholePercents(counts                   )           {
   const total = counts.reduce((sum, count) => sum + count, 0);
   if (total === 0) return counts.map(() => 0);
@@ -15282,7 +15527,14 @@ class UthSession {
          * nothing counted to show, so those actions carry no line rather than a
          * line derived backwards from the answer.
          */
-        worked: ranked.map((row) => uthWorkedFor(row.action, row.value, phase, evaluation.counts                         )),
+        worked: ranked.map((row) =>
+          withOdds(
+            uthWorkedFor(row.action, row.value, phase, evaluation.counts                         ),
+            uthOddsFor(row.action, phase, evaluation.counts                         ),
+            row.action,
+            row.value,
+          ),
+        ),
         /* What the whole decision is worth in chips, for the money lines. */
         bet: this.handBet,
         /*
@@ -18732,6 +18984,17 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
      */
     const fixed = [['what', 'ret.helpWhat'], ['lines', 'ret.helpLines']];
     if (opts.game === 'uth') {
+      /*
+       * What the three percentages mean comes third, which is the last slot New
+       * reaches (round 27). It is ahead of the anchor and the raise lines on
+       * purpose: the percentages are the plainest number in the block and the
+       * one a beginner will read first, and two things about them cannot be
+       * guessed — a hand the dealer does not qualify for is a win, and a fold is
+       * a loss. A percentage a player has to guess the meaning of is worse than
+       * no percentage. The anchor line moves down a place and is still read at
+       * Intermediate and Advanced.
+       */
+      fixed.push(['odds', 'ret.helpOdds']);
       fixed.push(['anchor', 'ret.helpFold']);
       if (returns.example && returns.example.kind === 'river') {
         fixed.push(['river', 'ret.helpRiver']);
@@ -18777,6 +19040,9 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
     if (!work) return null;
     const row = (feedback.ranked || []).find((entry) => entry.action === work.action);
     if (!row) return null;
+    // An action whose only content is its percentages still earns a line: how
+    // often a hand wins is worth saying even where no arithmetic can be shown.
+    const oddsOnly = work.kind === 'uthOddsOnly';
 
     /*
      * The terms are printed to as many decimals as the session worked out the
@@ -18842,14 +19108,27 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
       flopChecks: count(work.flopChecks),
       raiseValue: money(work.raiseValue),
       checkValue: money(work.checkValue),
+      // How the endings fall (round 27). Whole percentages, already rounded by
+      // the session so the three add to exactly 100 — never rounded here, where
+      // a second rounding is how two numbers on one card come to disagree.
+      oddsWin: typeof work.oddsWin === 'number' ? `${work.oddsWin}%` : undefined,
+      oddsTie: typeof work.oddsTie === 'number' ? `${work.oddsTie}%` : undefined,
+      oddsLose: typeof work.oddsLose === 'number' ? `${work.oddsLose}%` : undefined,
     };
 
     const holder = document.createElement('div');
     holder.className = 'worked';
-    const sentence = document.createElement('p');
-    sentence.className = 'worked-say';
-    rich(sentence, T(`work.${work.kind}`, params));
-    holder.appendChild(sentence);
+    if (!oddsOnly) {
+      const sentence = document.createElement('p');
+      sentence.className = 'worked-say';
+      rich(sentence, T(`work.${work.kind}`, params));
+      holder.appendChild(sentence);
+    } else {
+      const sentence = document.createElement('p');
+      sentence.className = 'worked-say';
+      rich(sentence, T('work.oddsOnly', params));
+      holder.appendChild(sentence);
+    }
     const sum = T(`work.${work.kind}.sum`, params);
     if (sum && sum !== `work.${work.kind}.sum`) {
       const line = document.createElement('p');
@@ -18857,6 +19136,17 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
       line.dir = 'ltr';
       rich(line, sum);
       holder.appendChild(line);
+    }
+    /*
+     * And how the endings fall (round 27). One line, the same shape for every
+     * action at every street, under the arithmetic it describes — because it is
+     * about the same endings the arithmetic divides by.
+     */
+    if (params.oddsWin !== undefined) {
+      const odds = document.createElement('p');
+      odds.className = 'worked-odds';
+      rich(odds, T('work.odds', params));
+      holder.appendChild(odds);
     }
     return holder;
   }

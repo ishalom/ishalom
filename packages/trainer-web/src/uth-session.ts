@@ -53,7 +53,9 @@ import {
   PREFLOP_OUTCOMES,
   UTH_STAKE,
   uthMoneyFor,
+  uthOddsFor,
   uthWorkedFor,
+  type UthWork,
   type UthCounts,
 } from './uth-worked.ts';
 import { displayFigure } from './figure.ts';
@@ -176,6 +178,34 @@ const money = (value: number): string => displayFigure(value, true);
  * remainder: round everything down, then hand the missing points to the shares
  * that lost the most in rounding.
  */
+/**
+ * A worked line with its win / tie / lose percentages attached (round 27).
+ *
+ * The percentages ride on the worked line rather than beside it because they
+ * describe the very same endings its sum divides by: the line says *"1,842 of
+ * 2,652 endings win, paying 3.14 each"*, and this says what share of endings
+ * that is. Two numbers on one screen that describe the same thing must come
+ * from the same place, or sooner or later they disagree.
+ *
+ * Rounded here, through `wholePercents`, so the three always add to exactly
+ * 100 — a player who adds them up, and some will, must not catch the page out.
+ *
+ * **An action with no worked line still gets its percentages.** Folding has no
+ * arithmetic to show and the pre-flop raises had none before round 20, but how
+ * often a hand wins is worth saying either way, so a line is made for it.
+ */
+function withOdds(
+  work: UthWork | null,
+  odds: { wins: number; ties: number; losses: number } | null,
+  action: string,
+  value: number,
+): UthWork | null {
+  if (!odds) return work;
+  const [win, tie, lose] = wholePercents([odds.wins, odds.ties, odds.losses]);
+  const base: UthWork = work ?? { action, kind: 'uthOddsOnly', value, digits: 3 };
+  return { ...base, oddsWin: win, oddsTie: tie, oddsLose: lose };
+}
+
 export function wholePercents(counts: readonly number[]): number[] {
   const total = counts.reduce((sum, count) => sum + count, 0);
   if (total === 0) return counts.map(() => 0);
@@ -1330,7 +1360,14 @@ export class UthSession {
          * nothing counted to show, so those actions carry no line rather than a
          * line derived backwards from the answer.
          */
-        worked: ranked.map((row) => uthWorkedFor(row.action, row.value, phase, evaluation.counts as UthCounts | undefined)),
+        worked: ranked.map((row) =>
+          withOdds(
+            uthWorkedFor(row.action, row.value, phase, evaluation.counts as UthCounts | undefined),
+            uthOddsFor(row.action, phase, evaluation.counts as UthCounts | undefined),
+            row.action,
+            row.value,
+          ),
+        ),
         /* What the whole decision is worth in chips, for the money lines. */
         bet: this.handBet,
         /*

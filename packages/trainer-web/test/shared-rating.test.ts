@@ -545,3 +545,120 @@ function newSession(mode: 'basic' | 'recall' | 'value'): TrainerSession {
 function readSource(file: string): string {
   return readFileSync(join(HERE, '..', 'src', file), 'utf8');
 }
+
+/* --- 6. The gesture earned where it could not be shown (round 27) -------------------------- */
+
+/**
+ * Drive one spot to a run of five at a shared table, with mistakes behind it.
+ *
+ * The improvement gesture needs both halves — five right in a row, and at least
+ * two times the player got this same spot wrong before — so the list handed over
+ * is built rather than drawn from a shoe, which would take hundreds of hands to
+ * stumble on the same cell six times.
+ */
+function runOfFive(scenarioKey: string) {
+  return [
+    { scenarioKey, evCost: 0.2, action: 'hit' },
+    { scenarioKey, evCost: 0.2, action: 'hit' },
+    { scenarioKey, evCost: 0, action: 'stand' },
+    { scenarioKey, evCost: 0, action: 'stand' },
+    { scenarioKey, evCost: 0, action: 'stand' },
+    { scenarioKey, evCost: 0, action: 'stand' },
+    { scenarioKey, evCost: 0, action: 'stand' },
+  ];
+}
+
+test('a run completed at a shared table is owed, and paid at the next private settlement', () => {
+  const rules = rulesFor({ presetId: PRESET, restrictions: { noSurrender: false, likeRanksOnly: false } });
+  const session = newSession('value');
+  session.absorbRated(rules, runOfFive('bj:hard16:vs10'));
+
+  /* Nothing is shown at the shared table: there is no view of one here at all. */
+  const saved = session.progress as { owed?: Array<{ scenarioKey: string }> };
+  assert.equal(saved.owed?.length, 1, 'the gesture was not owed');
+  assert.equal(saved.owed?.[0]!.scenarioKey, 'bj:hard16:vs10');
+
+  /* And it survives closing the tab, because it is in the saved record. */
+  const reopened = newSession('value');
+  reopened.restore(session.progress as never);
+  assert.equal(
+    (reopened.progress as { owed?: unknown[] }).owed?.length,
+    1,
+    'the owed gesture did not survive being saved and restored',
+  );
+});
+
+test('an owed gesture is paid once, and only once', () => {
+  const rules = rulesFor({ presetId: PRESET, restrictions: { noSurrender: false, likeRanksOnly: false } });
+  const session = newSession('value');
+  session.absorbRated(rules, runOfFive('bj:hard16:vs10'));
+  assert.equal((session.progress as { owed?: unknown[] }).owed?.length, 1);
+
+  const shown = playUntilGesture(session);
+  assert.ok(shown, 'the owed gesture was never shown at the private table');
+  assert.equal((shown as { kind: string }).kind, 'improved');
+  assert.equal(
+    (session.progress as { owed?: unknown[] }).owed?.length,
+    0,
+    'the gesture was still owed after being shown',
+  );
+
+  /* Spent: playing on does not show it again. */
+  const again = playUntilGesture(session);
+  assert.equal(again, null, 'the owed gesture was shown a second time');
+});
+
+test('a session that owes nothing shows nothing, which is the ordinary case', () => {
+  const session = newSession('value');
+  assert.equal(playUntilGesture(session), null, 'a gesture appeared out of nowhere');
+});
+
+/* --- 7. A shared run is not a personal best (round 27, item 2) ------------------------------ */
+
+test('a run at a shared table never becomes the personal record', () => {
+  const rules = rulesFor({ presetId: PRESET, restrictions: { noSurrender: false, likeRanksOnly: false } });
+  const session = newSession('value');
+  const before = (session.progress as { records?: { streakBest: number } }).records?.streakBest ?? 0;
+
+  /* Twenty correct decisions in a row, all of them at a shared table. */
+  const perfect = Array.from({ length: 20 }, () => ({
+    scenarioKey: 'bj:hard16:vs10',
+    evCost: 0,
+    action: 'stand',
+  }));
+  session.absorbRated(rules, perfect);
+
+  assert.equal(
+    (session.progress as { records?: { streakBest: number } }).records?.streakBest ?? 0,
+    before,
+    'a shared-table run moved the personal best',
+  );
+});
+
+/**
+ * Play private hands until a settlement shows an **owed** gesture, or give up.
+ *
+ * Only the improvement gesture is ever owed, so only that kind counts here. The
+ * private table has a settlement gesture of its own — a hand played perfectly
+ * and lost — and standing on everything produces one soon enough; counting that
+ * as the owed one would make this test pass for the wrong reason, which is
+ * exactly what it did on the first run.
+ */
+function playUntilGesture(session: TrainerSession): unknown {
+  for (let hand = 0; hand < 12; hand++) {
+    session.deal();
+    for (let guard = 0; guard < 12; guard++) {
+      const view = session.view as { phase?: string; settlementGesture?: unknown };
+      // Insurance has its own door on the session; `act` refuses while it is open.
+      if (view.phase === 'insurance') {
+        session.insurance(false);
+        continue;
+      }
+      if (view.phase !== 'player') break;
+      session.act('stand' as never);
+    }
+    const settled = (session.view as { settlementGesture?: { kind?: string } | null }).settlementGesture;
+    if (settled && settled.kind === 'improved') return settled;
+  }
+  return null;
+}
