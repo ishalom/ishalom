@@ -32,8 +32,8 @@ import type { UthTable } from '@evtrainer/game-engine';
 import { catalogue } from '../src/i18n.ts';
 import { loadHosted, type HostedPage } from './helpers/hosted-page.ts';
 import { returnFigure } from '../src/returns.ts';
-import { UthSession } from '../src/uth-session.ts';
-import { PREFLOP_OUTCOMES, UTH_STAKE } from '../src/uth-worked.ts';
+import { UthSession, wholePercents } from '../src/uth-session.ts';
+import { PREFLOP_OUTCOMES, UTH_STAKE, uthTieHidden } from '../src/uth-worked.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const source = (file: string) => readFileSync(join(HERE, '..', 'public', file), 'utf8');
@@ -57,6 +57,10 @@ function rebuild(work: any): number | null {
       return 1 + (work.flopRaises * work.raiseValue + work.flopChecks * work.checkValue) / work.flops / UTH_STAKE;
     case 'uthFold':
       return 0;
+    // Idan's, round 28: the chance of winning times what a win pays, less the
+    // chance of losing times what a loss costs. A tie pushes and adds nothing.
+    case 'uthShares':
+      return 1 + (work.shareWin * work.winPay - work.shareLose * work.losePay) / UTH_STAKE;
     default:
       return null;
   }
@@ -93,6 +97,51 @@ const lines = (seed: number, hands = 40) => {
 };
 
 // --- Win, tie and lose (round 27) ------------------------------------------------------------
+
+test('a tie of 5.0% is hidden and 5.1% is shown, decided before rounding', () => {
+  /*
+   * Idan's rule, round 28, and the threshold is read off the **unrounded**
+   * share on purpose: 5.04% would print as "5%" and is below the line, so the
+   * decision cannot be about how a number happens to round.
+   */
+  const shown = withOddsFor(51, 949);
+  const hidden = withOddsFor(50, 950);
+  assert.equal(hidden.oddsTieHidden, true, 'a tie of exactly 5.0% was shown');
+  assert.equal(shown.oddsTieHidden, false, 'a tie of 5.1% was hidden');
+
+  /*
+   * And the pair that makes "unrounded" mean something: 4.96% and 5.04% both
+   * print as "5%", and they fall on opposite sides of the line. Rounding first
+   * would have made the rule depend on the display rather than on the fact.
+   */
+  assert.equal(withOddsFor(496, 9504).oddsTieHidden, true, '4.96% was shown');
+  assert.equal(withOddsFor(504, 9496).oddsTieHidden, false, '5.04% was hidden');
+});
+
+test('when the tie is hidden the two shares still account for it, and the copy says so', () => {
+  const hidden = withOddsFor(30, 970);
+  assert.equal(hidden.oddsTieHidden, true);
+  assert.equal(
+    hidden.oddsWin + hidden.oddsLose + hidden.oddsTie,
+    100,
+    'win + lose + the hidden tie does not come to 100',
+  );
+  assert.ok(hidden.oddsWin + hidden.oddsLose < 100, 'nothing was actually hidden');
+
+  for (const locale of ['en', 'he'] as const) {
+    const line = catalogue(locale)['work.oddsNoTie']!;
+    assert.ok(line.includes('{oddsWin}') && line.includes('{oddsLose}'), `${locale}: the line lost a share`);
+    assert.ok(!line.includes('{oddsTie}'), `${locale}: the hidden-tie line still prints a tie`);
+    // And it explains itself, so two percentages short of 100 do not read as a bug.
+    assert.ok(line.length > 60, `${locale}: the hidden-tie line says nothing about why`);
+  }
+});
+
+test('a tie above the line is shown, and then the three add to 100', () => {
+  const shown = withOddsFor(200, 800);
+  assert.equal(shown.oddsTieHidden, false);
+  assert.equal(shown.oddsWin + shown.oddsTie + shown.oddsLose, 100);
+});
 
 test('every action that can be counted carries win, tie and lose, and they add to 100', () => {
   /*
@@ -218,8 +267,18 @@ test('every Ultimate worked line rebuilds the figure it explains, exactly', () =
   assert.deepEqual(
     [...kinds].sort(),
     preflopRow('AA').wins === undefined
-      ? ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthRiverPlay']
-      : ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthPreflopCheck', 'uthPreflopPlay', 'uthRiverPlay'],
+      ? ['uthFlopCheck', 'uthFlopPlay', 'uthFold', 'uthRiverPlay', 'uthShares']
+      : [
+          'uthFlopCheck',
+          'uthFlopPlay',
+          'uthFold',
+          'uthPreflopCheck',
+          'uthPreflopPlay',
+          'uthRiverPlay',
+          // Idan's calculation, round 28: every action with counts says the
+          // same figure a second way, from the two chances.
+          'uthShares',
+        ],
     'a kind of line went unchecked',
   );
 });
@@ -281,7 +340,13 @@ test('before the flop: a line if the table counted, and no line if it did not', 
     if (phase !== 'preflop') continue;
     preflop++;
     assert.ok(counted, 'a pre-flop action carries a worked line derived from a lookup');
-    assert.ok(['uthPreflopPlay', 'uthPreflopCheck'].includes(work.kind), `pre-flop line of kind ${work.kind}`);
+    assert.ok(
+      ['uthPreflopPlay', 'uthPreflopCheck', 'uthShares'].includes(work.kind),
+      `pre-flop line of kind ${work.kind}`,
+    );
+    // The shares line is the same figure said differently; the two tests below
+    // are about the counted lines, which carry the counts.
+    if (work.kind === 'uthShares') continue;
     if (work.kind === 'uthPreflopPlay') {
       assert.equal(work.outcomes, PREFLOP_OUTCOMES);
       assert.equal(work.wins + work.ties + work.losses, PREFLOP_OUTCOMES, 'the pre-flop counts do not add up');
@@ -606,3 +671,79 @@ test('at 360px the seat header keeps to one line, and the board loses its label'
   // And the section keeps its name for anything that is not looking at pixels.
   assert.ok(source('ultimate.html').includes('aria-label:uth.board'), 'the board lost its accessible name');
 });
+
+
+/* --- Idan's calculation, built from the percentages (round 28) ----------------------------- */
+
+test('every action with counts carries the calculation, and it rebuilds the printed figure', () => {
+  let seen = 0;
+  const streets = new Set<string>();
+  for (const seed of [7, 19, 33]) {
+    for (const { work, phase } of lines(seed, 30)) {
+      if (work.kind !== 'uthShares') continue;
+      seen++;
+      streets.add(phase);
+      assert.notEqual(work.digits, null, `${phase} ${work.action}: no decimals make the sum come out`);
+
+      /*
+       * Rebuilt here rather than by the code under test: the chance of winning
+       * times what a win pays, less the chance of losing times what a loss
+       * costs, on terms rounded to the decimals the copy prints.
+       */
+      const round = (value: number) => Number(value.toFixed(work.digits));
+      const rebuilt =
+        1 + (round(work.shareWin) * round(work.winPay) - round(work.shareLose) * round(work.losePay)) / UTH_STAKE;
+      assert.equal(
+        returnFigure(rebuilt),
+        returnFigure(work.value),
+        `${phase} ${work.action}: the calculation does not reach the figure it explains`,
+      );
+    }
+  }
+  assert.ok(seen > 30, `only ${seen} calculations were seen`);
+  for (const street of ['preflop', 'flop', 'river']) {
+    assert.ok(streets.has(street), `no calculation at the ${street}`);
+  }
+});
+
+test('the calculation says its amounts are averages, and leaves the tie out of the sum', () => {
+  for (const locale of ['en', 'he'] as const) {
+    const say = catalogue(locale)['work.uthShares']!;
+    const sum = catalogue(locale)['work.uthShares.sum']!;
+    // A win's size varies with the paytable and with the dealer qualifying, so
+    // printing one amount as if it were fixed would be false.
+    assert.ok(/average|בממוצע/.test(say), `${locale}: the calculation does not say the amounts are averages`);
+    assert.ok(!sum.includes('{shareTie}'), `${locale}: a tie appears in the sum, where its term is zero`);
+    assert.ok(sum.includes('{shareWin}') && sum.includes('{shareLose}'), `${locale}: the sum lost a share`);
+  }
+});
+
+test('folding and the pre-flop check carry no calculation, because neither has one', () => {
+  for (const { work, phase } of lines(11, 25)) {
+    if (work.kind !== 'uthShares') continue;
+    assert.notEqual(work.action, 'fold', 'folding was given a chance of winning');
+    assert.ok(
+      !(phase === 'preflop' && work.action === 'check'),
+      'checking before the flop was given a calculation it has no counts for',
+    );
+  }
+});
+
+/**
+ * The odds as the block would carry them, for a chosen tie share.
+ *
+ * Built from the same two functions the screen uses — `uthTieHidden` decides,
+ * `wholePercents` rounds — rather than from a copy of their logic here, which
+ * would prove only that the test agrees with itself.
+ */
+function withOddsFor(ties: number, rest: number) {
+  const wins = Math.round(rest / 2);
+  const losses = rest - wins;
+  const [oddsWin, oddsTie, oddsLose] = wholePercents([wins, ties, losses]);
+  return {
+    oddsWin: oddsWin!,
+    oddsTie: oddsTie!,
+    oddsLose: oddsLose!,
+    oddsTieHidden: uthTieHidden(wins, ties, losses),
+  };
+}

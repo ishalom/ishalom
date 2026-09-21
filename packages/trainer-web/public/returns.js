@@ -303,6 +303,11 @@
       oddsWin: typeof work.oddsWin === 'number' ? `${work.oddsWin}%` : undefined,
       oddsTie: typeof work.oddsTie === 'number' ? `${work.oddsTie}%` : undefined,
       oddsLose: typeof work.oddsLose === 'number' ? `${work.oddsLose}%` : undefined,
+      // Idan's calculation (round 28): the two chances as percentages, and what
+      // each is worth. The shares are fractions here and `pct` prints them the
+      // way every other share in this file is printed.
+      shareWin: pct(work.shareWin),
+      shareLose: pct(work.shareLose),
     };
 
     const holder = document.createElement('div');
@@ -334,7 +339,13 @@
     if (params.oddsWin !== undefined) {
       const odds = document.createElement('p');
       odds.className = 'worked-odds';
-      rich(odds, T('work.odds', params));
+      /*
+       * The tie is dropped below 5% (Idan, round 28), and the line that replaces
+       * it says why the two that remain do not reach 100 — a tie gives the bets
+       * back, so it changes nothing. Without that sentence two percentages
+       * adding to 96 read as an arithmetic mistake.
+       */
+      rich(odds, T(work.oddsTieHidden ? 'work.oddsNoTie' : 'work.odds', params));
       holder.appendChild(odds);
     }
     return holder;

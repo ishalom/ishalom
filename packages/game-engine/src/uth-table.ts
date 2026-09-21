@@ -202,6 +202,8 @@ export interface UthEvaluation {
     checkWins?: number;
     checkTies?: number;
     checkLosses?: number;
+    checkWinUnits?: number;
+    checkLossUnits?: number;
     /*
      * Pre-flop only (round 20), from the offline table. The Ante and the Blind
      * across the winning endings and across all of them, which is what lets one
@@ -479,6 +481,8 @@ export class UthTable {
           checkWins: solved.checkWins,
           checkTies: solved.checkTies,
           checkLosses: solved.checkLosses,
+          checkWinUnits: solved.checkWinUnits,
+          checkLossUnits: solved.checkLossUnits,
         },
       };
     } else {

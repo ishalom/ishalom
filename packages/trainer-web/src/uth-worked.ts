@@ -56,6 +56,8 @@ export interface UthCounts {
   checkWins?: number;
   checkTies?: number;
   checkLosses?: number;
+  checkWinUnits?: number;
+  checkLossUnits?: number;
   /** Pre-flop only: enough to rebuild any raise size, and the check branch's groups. */
   winSide?: number;
   side?: number;
@@ -96,7 +98,46 @@ const UTH_REBUILD: Record<string, (t: (name: string) => number) => number> = {
    */
   uthPreflopCheck: (t) =>
     1 + (t('flopRaises') * t('raiseValue') + t('flopChecks') * t('checkValue')) / t('flops') / UTH_STAKE,
+  /*
+   * And the same thing again in Idan's words (round 28): the chance of winning
+   * times what a win pays, less the chance of losing times what a loss costs.
+   *
+   * It is the line above with the counts already divided by the outcomes, which
+   * is why it closes on the same figure — and why a tie can be left out of it
+   * without the arithmetic suffering. **A tie pushes**: the bets come back, it
+   * pays nothing and costs nothing, so it contributes a term of zero. That is
+   * the whole reason a tie small enough not to be worth printing can be dropped
+   * from the sentence and still leave a sum that comes out.
+   */
+  uthShares: (t) => 1 + (t('shareWin') * t('winPay') - t('shareLose') * t('losePay')) / UTH_STAKE,
 };
+
+/**
+ * The tie is shown only above this share — Idan's rule, round 28.
+ *
+ * Measured on the **unrounded** share, so that the decision is about the thing
+ * itself rather than about how it happens to print. Both 4.96% and 5.04% print
+ * as "5%" and they fall on opposite sides of this line: the first is hidden,
+ * the second shown. Rounding first would have made the rule depend on the
+ * display instead of on the fact.
+ *
+ * The reason a small tie may simply go is that it changes nothing it could be
+ * accused of hiding: a tie returns the bets, so it is worth exactly zero to the
+ * player and contributes a term of zero to the arithmetic.
+ */
+export const UTH_TIE_FLOOR = 0.05;
+
+/**
+ * Whether a tie is small enough to leave out of the sentence.
+ *
+ * One function so that the rule is in one place and a test can ask it the same
+ * question the screen asks. Measured on the unrounded share; see the constant.
+ */
+export function uthTieHidden(wins: number, ties: number, losses: number): boolean {
+  const total = wins + ties + losses;
+  if (total <= 0) return true;
+  return ties / total <= UTH_TIE_FLOOR;
+}
 
 export interface UthWork {
   action: string;
@@ -315,6 +356,67 @@ export function uthOddsFor(
   }
   // Pre-flop check: see the note above. Nothing counted it, so nothing is shown.
   return null;
+}
+
+/**
+ * The same figure again, written from the percentages — Idan's words (round 28).
+ *
+ * > *"the probability of winning times the amount you win, less the extra risk,
+ * > and all that."*
+ *
+ * A second line for the same action, not a replacement: the one above it counts
+ * endings, and this one turns those counts into the two shares a player can
+ * read at a glance and multiplies them by what a win pays and what a loss
+ * costs. Both close on the figure on the bar, because they are the same
+ * arithmetic with the division done at a different moment.
+ *
+ * **"On average" is not a hedge, it is the fact.** What a win pays varies with
+ * the Blind paytable and with whether the dealer qualified, so a single win
+ * amount printed as if it were fixed would be false. The copy says so.
+ *
+ * Null where the counts are not there — before the flop, checking — and for
+ * folding, which has no chance in it at all: it ends one way, always, and the
+ * line it already carries says exactly that.
+ */
+export function uthSharesFor(
+  action: string,
+  value: number,
+  phase: 'preflop' | 'flop' | 'river',
+  counts: UthCounts | undefined,
+): UthWork | null {
+  const odds = uthOddsFor(action, phase, counts);
+  if (!odds || action === 'fold' || !counts) return null;
+  const total = odds.wins + odds.ties + odds.losses;
+  if (total <= 0) return null;
+
+  /* What a win pays and what a loss costs, per branch. */
+  let winUnits: number;
+  let lossUnits: number;
+  if (phase === 'flop' && action === 'check') {
+    if (counts.checkWinUnits === undefined || counts.checkLossUnits === undefined) return null;
+    winUnits = counts.checkWinUnits;
+    lossUnits = counts.checkLossUnits;
+  } else if (phase === 'preflop') {
+    if (counts.winSide === undefined || counts.side === undefined) return null;
+    const bet = action === 'raise4x' ? 4 : action === 'raise3x' ? 3 : 0;
+    if (bet === 0) return null;
+    winUnits = counts.winSide + bet * counts.wins;
+    lossUnits = counts.side - counts.winSide - bet * counts.losses;
+  } else {
+    winUnits = counts.winUnits;
+    lossUnits = counts.lossUnits;
+  }
+
+  return uthWithDigits({
+    action,
+    kind: 'uthShares',
+    value,
+    shareWin: odds.wins / total,
+    shareTie: odds.ties / total,
+    shareLose: odds.losses / total,
+    winPay: odds.wins > 0 ? winUnits / odds.wins : 0,
+    losePay: odds.losses > 0 ? -lossUnits / odds.losses : 0,
+  });
 }
 
 /** The scale behind the pre-flop figure: every board, every dealer holding. */

@@ -419,6 +419,17 @@ const EN: Catalogue = {
   // A win counts the hands where the dealer does not qualify: his Ante pushes
   // instead of paying, so it wins less money, but the hand was still won.
   'work.odds': 'Ends in a win **{oddsWin}** of the time, a tie **{oddsTie}**, a loss **{oddsLose}**.',
+  // The same line with the tie left out (round 28, Idan): below 5% it is not
+  // worth a player's attention, and the second sentence is there so that two
+  // percentages which do not reach 100 do not read as a bug.
+  'work.oddsNoTie':
+    'Ends in a win **{oddsWin}** of the time and a loss **{oddsLose}**. The rest are ties, which give the bets back and change nothing.',
+  // Idan's own calculation: the chance of winning times what a win pays, less
+  // the chance of losing times what a loss costs. A tie is missing from it on
+  // purpose — it pushes, so its term is zero.
+  'work.uthShares':
+    'The same figure, from those chances: you win **{shareWin}** of the time and a win pays **{winPay}** on average, you lose **{shareLose}** of the time and a loss costs **{losePay}** on average. A tie gives the bets back, so it adds nothing:',
+  'work.uthShares.sum': '1 + ({shareWin} × {winPay} − {shareLose} × {losePay}) ÷ 2 = {value}',
   'work.oddsOnly': 'How this one ends:',
   'ret.helpOdds':
     'The three percentages under each action are the same endings the figure above them is averaged over. A hand where the dealer does not qualify counts as a win — his Ante comes back instead of paying, so it wins less, but you still won it. Folding counts as a loss, because the money is gone.',
@@ -1454,6 +1465,11 @@ const HE: Catalogue = {
   'work.uthPreflopCheck': 'צ׳ק שומר את שתי ההחלטות שאחריו. מתוך **{flops}** הפלופים שיכולים לצאת, ב-**{flopRaises}** שווה להעלות 2× — **{raiseValue}** בממוצע — ובשאר **{flopChecks}** עושים צ׳ק שוב ומשחקים את הריבר, בשווי **{checkValue}**:',
   'work.uthPreflopCheck.sum': '1 + ({flopRaises} × {raiseValue} + {flopChecks} × {checkValue}) ÷ {flops} ÷ 2 = {value}',
   'work.odds': 'נגמרת בניצחון ב-**{oddsWin}** מהמקרים, בתיקו ב-**{oddsTie}**, בהפסד ב-**{oddsLose}**.',
+  'work.oddsNoTie':
+    'נגמרת בניצחון ב-**{oddsWin}** מהמקרים ובהפסד ב-**{oddsLose}**. השאר תיקו, שמחזיר את ההימורים ולא משנה כלום.',
+  'work.uthShares':
+    'אותו מספר, מתוך הסיכויים האלה: אתה מנצח ב-**{shareWin}** מהמקרים וניצחון מחזיר בממוצע **{winPay}**, ומפסיד ב-**{shareLose}** מהמקרים והפסד עולה בממוצע **{losePay}**. תיקו מחזיר את ההימורים, ולכן לא מוסיף כלום:',
+  'work.uthShares.sum': '1 + ({shareWin} × {winPay} − {shareLose} × {losePay}) ÷ 2 = {value}',
   'work.oddsOnly': 'איך זה נגמר:',
   'ret.helpOdds':
     'שלושת האחוזים מתחת לכל פעולה הם אותם סיומים שהמספר שמעליהם ממוצע עליהם. יד שבה הדילר לא נכנס למשחק נספרת כניצחון — האנטה שלו חוזרת במקום לשלם, אז מנצחים בה פחות, אבל ניצחת אותה. פרישה נספרת כהפסד, כי הכסף הלך.',

@@ -54,6 +54,8 @@ import {
   UTH_STAKE,
   uthMoneyFor,
   uthOddsFor,
+  uthSharesFor,
+  uthTieHidden,
   uthWorkedFor,
   type UthWork,
   type UthCounts,
@@ -203,7 +205,25 @@ function withOdds(
   if (!odds) return work;
   const [win, tie, lose] = wholePercents([odds.wins, odds.ties, odds.losses]);
   const base: UthWork = work ?? { action, kind: 'uthOddsOnly', value, digits: 3 };
-  return { ...base, oddsWin: win, oddsTie: tie, oddsLose: lose };
+  /*
+   * Whether the tie is worth printing, decided on the **unrounded** share
+   * (Idan, round 28). A tie of 5.04% is below the line and goes, even though it
+   * would have printed as "5%" — the decision is about the thing rather than
+   * about how it rounds.
+   *
+   * The three shares are still rounded together and still add to 100. Hiding
+   * one is a fact about the sentence, not about the arithmetic: the hidden tie
+   * is still in the record, so `win + lose + the hidden tie` comes to 100, and
+   * the copy says in one line why the two on screen do not.
+   */
+  const hidden = uthTieHidden(odds.wins, odds.ties, odds.losses);
+  return {
+    ...base,
+    oddsWin: win,
+    oddsTie: tie,
+    oddsLose: lose,
+    oddsTieHidden: hidden,
+  };
 }
 
 export function wholePercents(counts: readonly number[]): number[] {
@@ -1360,14 +1380,22 @@ export class UthSession {
          * nothing counted to show, so those actions carry no line rather than a
          * line derived backwards from the answer.
          */
-        worked: ranked.map((row) =>
+        worked: ranked.flatMap((row) => [
           withOdds(
             uthWorkedFor(row.action, row.value, phase, evaluation.counts as UthCounts | undefined),
             uthOddsFor(row.action, phase, evaluation.counts as UthCounts | undefined),
             row.action,
             row.value,
           ),
-        ),
+          /*
+           * And the same figure written from the percentages (round 28). A
+           * second line rather than a replacement: the first counts endings,
+           * this one multiplies the shares those counts make. It carries no
+           * percentages of its own, so the block draws one odds line per action
+           * rather than two.
+           */
+          uthSharesFor(row.action, row.value, phase, evaluation.counts as UthCounts | undefined),
+        ]),
         /* What the whole decision is worth in chips, for the money lines. */
         bet: this.handBet,
         /*
