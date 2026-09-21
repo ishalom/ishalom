@@ -49,6 +49,7 @@ function artifactBackend(db) {
     },
 
     /* Ranked by the Ultimate rating the summaries carry; players never rated in Ultimate are not on it. */
+
     async uthBoard() {
       const snap = await db.collection('players').get();
       return snap.docs
@@ -154,7 +155,11 @@ function artifactBackend(db) {
  * It is not a place for anything private, and nothing private is put in it.
  */
 function httpBackend({ url, key, table = 'players' }) {
-  const endpoint = `${url.replace(/\/+$/, '')}/rest/v1/${table}`;
+  const base = `${url.replace(/\/+$/, '')}/rest/v1`;
+  const endpoint = `${base}/${table}`;
+  /* The shared table's two rows, added by migration 004 (round 21, spec A1). */
+  const tablesEndpoint = `${base}/tables`;
+  const seatsEndpoint = `${base}/table_seats`;
   /*
    * Whether the table has the Ultimate rating's two columns (migration 003,
    * round 10). Assumed until the table says otherwise. Without them a save that
@@ -196,6 +201,131 @@ function httpBackend({ url, key, table = 'players' }) {
      * why a name is taken. `name_key` is the normalised form and carries the
      * unique index, so this is a single indexed lookup.
      */
+    /* ------------------------------------------------------------------
+     * The shared table (round 21, spec A1)
+     *
+     * Four calls and no more: make one, sit at one, write what I did, read it
+     * back. Each seat writes only its own row, which is what lets several
+     * people play one table with no transactions anywhere — and the join is a
+     * *conditional* write, so two people pressing at the same instant produce
+     * one seat and one clear answer rather than two seats and a corrupt table.
+     * ----------------------------------------------------------------- */
+
+    /** Make a table and its empty seats; the maker takes seat 0. */
+    async createTable(table) {
+      const made = await fetch(tablesEndpoint, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify({
+          id: table.id,
+          seed: table.seed,
+          preset_id: table.presetId,
+          restrictions: table.restrictions,
+          seats: table.seats,
+          created_by: table.createdBy,
+          events: table.events ?? [],
+        }),
+      });
+      if (!made.ok) throw new Error(`createTable failed: ${made.status}`);
+      const rows = [];
+      for (let seat = 0; seat < table.seats; seat++) {
+        rows.push({
+          table_id: table.id,
+          seat,
+          player_id: seat === 0 ? table.createdBy : null,
+          name: seat === 0 ? table.createdByName : null,
+          bet: seat === 0 ? (table.bet ?? 1) : 1,
+        });
+      }
+      const seated = await fetch(seatsEndpoint, {
+        method: 'POST',
+        headers: { ...headers, Prefer: 'return=representation' },
+        body: JSON.stringify(rows),
+      });
+      if (!seated.ok) throw new Error(`createTable seats failed: ${seated.status}`);
+      return table.id;
+    },
+
+    /**
+     * Sit at the first free seat — and only if it is still free.
+     *
+     * The filter is the whole mechanism: `player_id=is.null` makes the update
+     * a no-op against a seat somebody else has taken, and PostgREST answers
+     * with the rows it changed. No rows changed means the seat went to
+     * somebody else between reading and writing, which is exactly the race
+     * this is here to lose safely.
+     */
+    async joinTable(tableId, seat, player) {
+      const response = await fetch(
+        `${seatsEndpoint}?table_id=eq.${encodeURIComponent(tableId)}` +
+          `&seat=eq.${seat}&player_id=is.null`,
+        {
+          method: 'PATCH',
+          headers: { ...headers, Prefer: 'return=representation' },
+          body: JSON.stringify({ player_id: player.id, name: player.name, bet: player.bet ?? 1 }),
+        },
+      );
+      if (!response.ok) throw new Error(`joinTable failed: ${response.status}`);
+      const rows = await response.json();
+      return rows.length > 0 ? { seat, taken: false } : { seat, taken: true };
+    },
+
+    /** Write my own row, and never anybody else's. */
+    async pushSeat(tableId, seat, seatRecord) {
+      const response = await fetch(
+        `${seatsEndpoint}?table_id=eq.${encodeURIComponent(tableId)}&seat=eq.${seat}` +
+          `&player_id=eq.${encodeURIComponent(seatRecord.playerId)}`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({
+            moves: seatRecord.moves,
+            bet: seatRecord.bet,
+            /* How far this seat has been dealt. The moves cannot say: a hand the
+               dealer wins with a natural is decided by nobody and leaves none. */
+            hands: seatRecord.hands ?? 0,
+            cards_hash: seatRecord.cardsHash ?? null,
+            seen_at: new Date().toISOString(),
+          }),
+        },
+      );
+      if (!response.ok) throw new Error(`pushSeat failed: ${response.status}`);
+      return true;
+    },
+
+    /** The whole table, as the derivation wants it. */
+    async readTable(tableId) {
+      const [table, seats] = await Promise.all([
+        fetch(`${tablesEndpoint}?id=eq.${encodeURIComponent(tableId)}&select=*`, { headers }),
+        fetch(
+          `${seatsEndpoint}?table_id=eq.${encodeURIComponent(tableId)}&select=*&order=seat.asc`,
+          { headers },
+        ),
+      ]);
+      if (!table.ok || !seats.ok) throw new Error(`readTable failed: ${table.status}/${seats.status}`);
+      const rows = await table.json();
+      if (rows.length === 0) return null;
+      const row = rows[0];
+      return {
+        id: row.id,
+        seed: row.seed,
+        presetId: row.preset_id,
+        restrictions: row.restrictions ?? {},
+        state: row.state,
+        events: row.events ?? [],
+        seats: (await seats.json()).map((seat) => ({
+          seat: seat.seat,
+          playerId: seat.player_id,
+          name: seat.name,
+          bet: Number(seat.bet) || 1,
+          moves: seat.moves ?? [],
+          hands: seat.hands ?? 0,
+          cardsHash: seat.cards_hash ?? undefined,
+          seenAt: seat.seen_at ? Date.parse(seat.seen_at) : null,
+        })),
+      };
+    },
+
     async findByName(key) {
       const response = await fetch(
         `${endpoint}?name_key=eq.${encodeURIComponent(key)}` +

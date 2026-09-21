@@ -61,6 +61,23 @@ export class DealingShoe {
   }
 
   /**
+   * The card `ahead` places from the top, without taking it (round 21).
+   *
+   * A shared table derives the dealer's hand *after* every seat has finished —
+   * he draws last, which is what makes "he took the dealer's bust card" a thing
+   * people say — and the engine decides how many cards he needs. So the
+   * derivation offers the table a slice of what is coming and then advances the
+   * shoe by exactly what was used. Looking is not taking: nothing here moves the
+   * position, and a shoe that would be outrun says so rather than inventing a
+   * card.
+   */
+  peek(ahead = 0): Card {
+    const at = this.position + ahead;
+    if (at >= this.cards.length) throw new Error('The shoe cannot be seen past its end');
+    return this.cards[at]!;
+  }
+
+  /**
    * Composition of everything the player cannot see: the undealt cards, plus any
    * dealt cards still face down — the dealer's hole card, in practice.
    *
