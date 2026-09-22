@@ -3006,3 +3006,91 @@ button,
 }
 
 .shared-seats.many .shared-seat.other .shared-net { margin: 0; }
+
+/* --- The shared table says what happened (round 30) ---------------------------
+ *
+ * The bar beside each name, what each seat played, each hand of a split with
+ * its own result, the table's row on the felt, the dock that keeps its height
+ * between hands, and the hand's analysis where the bars used to be.
+ */
+
+.shared-seat-bar {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--optimal);
+  font-variant-numeric: tabular-nums;
+}
+.shared-seat-bar.settling { color: var(--muted); font-weight: 500; }
+
+.shared-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 6px;
+  justify-content: center;
+}
+.shared-act {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+.shared-act.forfeit { color: var(--blunder); }
+
+.shared-split {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.shared-hand {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+/* The hand being decided now: the same mark the private table gives it. */
+.shared-hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
+.shared-hand.bust .hand-head { color: var(--blunder); }
+/* Two hands side by side need the room of one: on a narrow phone their cards
+   step down, as the private table's split does (round 16). */
+@media (max-width: 420px) {
+  .shared-split.split .card { width: 40px; height: 58px; font-size: 13px; }
+}
+
+/* The table against the dealer, on the felt under the seats. */
+.shared-table-line {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.shared-table-line .shared-measure { font-weight: 600; }
+
+/*
+ * The dock keeps its height whatever it holds, so nothing below or above it
+ * moves when a hand ends and the buttons give way to words.
+ */
+#shared-actions { min-height: 64px; align-items: center; }
+.shared-dock-line {
+  flex: 1;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 15px;
+}
+.shared-dock-line span:first-child { color: var(--ink); font-weight: 600; }
+
+/* The analysis: the private quick card, laid out the same way. */
+.shared-measures .shared-analysis {
+  margin: 0 0 10px;
+  max-height: none;
+  overflow: visible;
+}
+.shared-analysis-earlier { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+.shared-analysis .reveal .step { display: block; padding: 6px 0; }
+.shared-analysis .reveal .step p { margin: 2px 0 0; }

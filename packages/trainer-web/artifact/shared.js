@@ -184,7 +184,9 @@ function sharedTickHold() {
 /** This seat's whole screen, or null when there is no table. */
 function sharedScreenNow() {
   if (!sharedState.record) return null;
-  return sharedScreen(sharedState.record, sharedState.seat);
+  /* In the player's language: the hand's analysis is the solo card's own prose (round 30). */
+  const locale = typeof window !== 'undefined' && window.EV && window.EV.locale === 'he' ? 'he' : 'en';
+  return sharedScreen(sharedState.record, sharedState.seat, locale);
 }
 
 /** Write my own row back: my moves, my bet, my count of hands, my hash, my vote. */
@@ -345,6 +347,19 @@ async function sharedJoin(id, player) {
   const already = record.seats.find((row) => row.playerId === player.id);
   if (already) {
     sharedState.seat = already.seat;
+    /*
+     * Back at a table he left (round 30). Leaving is now done from the home
+     * link, one tap away from the felt, so coming back by the same link has to
+     * put him back in — from the next hand, like any join, and in his own row.
+     * Before this nothing ever wrote a return, and a seat that had left could
+     * sit at its own table for ever without being dealt a card.
+     */
+    const seen = sharedScreenNow();
+    const upTo = seen && seen.hand !== null ? seen.hand : 0;
+    if (!isLive(record, already.seat, upTo) && (already.events ?? []).length > 0) {
+      await sharedAddEvent({ kind: 'return', seat: already.seat, hand: seen && seen.hand !== null ? seen.hand + 1 : 0 });
+      await sharedRefresh();
+    }
     return { available: true, seat: already.seat, taken: false };
   }
   for (const row of record.seats) {

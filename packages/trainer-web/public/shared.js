@@ -56,8 +56,15 @@ const shared = {
   /** The counterfactual, once asked for, and whether it has been asked (§3.8). */
   folklore: null,
   folkloreAsked: false,
-  /** My own last decision's working, opened by "תסביר לי" (§3.9). */
-  explaining: false,
+  /** The next hand deals itself (round 30): which finished hand it is counting past, and when. */
+  dueKey: null,
+  dueAt: 0,
+  dealtKey: null,
+  ticking: null,
+  /** What is in flight, one press that may wait behind it, and a count of writes (round 30). */
+  busyKind: null,
+  waiting: null,
+  seq: 0,
 };
 
 /** The six, in Idan's order. The page draws them; the record stores the key. */
@@ -113,9 +120,20 @@ function faceDownNode() {
 /**
  * One seat, drawn.
  *
- * Mine full size, the others compact — §3.1. What a neighbour's panel does not
- * carry is what he did: his cards are face up at a real table, his decisions
- * are not, and they are not in the object this came from until I have played.
+ * Mine full size, the others compact — §3.1. Three things were added in round
+ * 30, all Idan's, all so that a player can tell what just happened:
+ *
+ *   - **the bar**, beside the name (item 4): how everyone is doing, on the felt
+ *     where it is read while playing, rather than in a box under it;
+ *   - **what he did** (item 2): the actions of this hand in order, as facts —
+ *     never a grade. A neighbour's arrive once I have made my own first move of
+ *     the hand, or once it is over, because until then §3.7 keeps them out of
+ *     the object this is drawn from;
+ *   - **each hand of a split** (item 3), with its own header, its own total and,
+ *     once the dealer has turned, its own result — and the one being decided
+ *     now marked. With one hand the seat's header carries the total and the
+ *     result, exactly as the private table's does (round 17); with two, each
+ *     hand carries its own and the seat header steps back.
  */
 function seatNode(seat) {
   const box = document.createElement('section');
@@ -127,22 +145,58 @@ function seatNode(seat) {
   const who = document.createElement('span');
   who.className = 'shared-name';
   who.textContent = seat.mine ? T('shared.you') : seat.name || T('shared.seatN', { n: seat.seat + 1 });
+  const bar = document.createElement('span');
+  bar.className = 'shared-seat-bar' + (seat.bar === null ? ' settling' : '');
+  bar.textContent = barText(seat.bar);
   const status = document.createElement('span');
   status.className = 'shared-status';
   status.textContent = T(`shared.status.${seat.status}`);
   const total = document.createElement('span');
   total.className = 'seat-total';
-  total.textContent = seat.total === null ? '' : String(seat.total);
-  title.append(who, status, total);
+  const only = seat.split.length === 1 ? seat.split[0] : null;
+  total.textContent = only ? headerFigure(only) : '';
+  title.append(who, bar, status, total);
   box.appendChild(title);
 
-  for (const hand of seat.hands) {
+  if (seat.actions.length > 0) {
+    const acts = document.createElement('p');
+    acts.className = 'shared-acts';
+    acts.setAttribute('aria-label', T('shared.actsLabel'));
+    for (const action of seat.actions) {
+      const chip = document.createElement('span');
+      chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '');
+      chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : T(`action.${action}`);
+      acts.appendChild(chip);
+    }
+    box.appendChild(acts);
+  }
+
+  if (seat.split.length > 1) {
+    const hands = document.createElement('div');
+    hands.className = 'shared-split split';
+    seat.split.forEach((hand, index) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'shared-hand' + (hand.active ? ' active' : '') + (hand.total > 21 ? ' bust' : '');
+      const head = document.createElement('div');
+      head.className = 'hand-head';
+      head.textContent =
+        T('hand.nth', { n: index + 1 }) +
+        ` · ${headerFigure(hand)}` +
+        (hand.doubled ? ` · ${T('hand.doubled')}` : '') +
+        (hand.active ? ` · ${T('shared.hand.now')}` : '');
+      const cards = document.createElement('div');
+      cards.className = 'cards';
+      for (const card of hand.cards) cards.appendChild(cardNode(card));
+      wrap.append(head, cards);
+      hands.appendChild(wrap);
+    });
+    box.appendChild(hands);
+  } else if (only) {
     const cards = document.createElement('div');
     cards.className = 'cards';
-    for (const card of hand) cards.appendChild(cardNode(card));
+    for (const card of only.cards) cards.appendChild(cardNode(card));
     box.appendChild(cards);
-  }
-  if (seat.hands.length === 0) {
+  } else {
     const empty = document.createElement('p');
     empty.className = 'shared-empty';
     empty.textContent = T('shared.notDealt');
@@ -159,55 +213,55 @@ function seatNode(seat) {
   return box;
 }
 
+/** A bar as the seat header shows it: a percentage, or "settling" under ten decisions. */
+function barText(bar) {
+  return bar === null ? T('shared.settling') : T('shared.barValue', { pct: Math.round(bar * 100) });
+}
+
 /**
- * The two measures, side by side.
+ * A hand's total and, once it has one, what became of it — in the hand's own
+ * words (*ניצחה*, *הפסידה*), because at a shared table the hand may be a
+ * neighbour's and "you won" would be wrong about it.
+ */
+function headerFigure(hand) {
+  let outcome = null;
+  if (hand.surrendered) outcome = T('hand.surrendered');
+  else if (hand.total > 21) outcome = T('shared.hand.bust');
+  else if (hand.net !== null) {
+    outcome = T(hand.net > 0 ? 'shared.hand.won' : hand.net < 0 ? 'shared.hand.lost' : 'shared.hand.push');
+  }
+  return outcome ? `${hand.total} · ${outcome}` : String(hand.total);
+}
+
+/**
+ * The space under the felt: this hand's analysis first (round 30, items 5 and 7).
  *
- * The bar first and the stack second, and the screen says which is which: the
- * share of decisions played correctly does not care what anybody wagered, and
- * the stack does. Under ten decisions the bar prints no percentage at all.
+ * The bars moved onto the felt, beside the names, and what was left here is
+ * the commentary the private table gives and the shared one never did — drawn
+ * from the same words (`explain()` wrote them, for the same scenario and the
+ * same rules) and the same returns block, in the same order as the solo quick
+ * card: what was decided, the verdict, the rows, the gesture, what was chosen
+ * instead, and then the working.
+ *
+ * Mine only, as everything graded is until I have played (§3.7): the screen
+ * object carries my decisions and nobody else's. It stays up after the hand
+ * ends and while the next one is dealt, until my next decision replaces it —
+ * so there is always something here to read, and nothing jumps as a hand ends.
+ *
+ * Under it, as text and nothing to press: the table's figures, the line that
+ * names the two measures, and the comparison when they disagree.
  */
 function renderMeasures(screen) {
   const box = el('shared-measures');
-  if (seatedAt(screen).length === 0) {
+  if (!screen) {
     box.hidden = true;
     return;
   }
   box.hidden = false;
   box.replaceChildren();
 
-  const table = document.createElement('div');
-  table.className = 'shared-measure-rows';
-  for (const seat of seatedAt(screen)) {
-    const row = document.createElement('div');
-    row.className = 'shared-measure' + (seat.mine ? ' mine' : '');
-
-    const name = document.createElement('span');
-    name.className = 'shared-measure-name';
-    name.textContent = seat.mine ? T('shared.you') : seat.name;
-
-    const bar = document.createElement('span');
-    bar.className = 'shared-measure-bar';
-    bar.textContent =
-      seat.bar === null
-        ? T('shared.settling')
-        : T('shared.barValue', { pct: Math.round(seat.bar * 100) });
-
-    const stack = document.createElement('span');
-    stack.className = 'shared-measure-stack';
-    stack.textContent = window.EVFigure
-      ? window.EVFigure.units(seat.stack)
-      : (seat.stack > 0 ? '+' : '') + seat.stack;
-
-    row.append(name, bar, stack);
-    table.appendChild(row);
-  }
-  /*
-   * And the table itself, as one more row (§3.6) — but only once more than one
-   * seat has played, because the table's figures and a single player's would
-   * be the same numbers written twice.
-   */
-  if (screen.table.seats > 1) table.appendChild(tableRow(screen.table));
-  box.appendChild(table);
+  const card = analysisCard(screen.analysis);
+  if (card) box.appendChild(card);
 
   if (screen.table.seats > 1) box.appendChild(tableExtras(screen.table));
 
@@ -237,6 +291,129 @@ function renderMeasures(screen) {
     });
     box.appendChild(line);
   }
+}
+
+/** An action's name, as the buttons say it. */
+const actionLabel = (action) => T(`action.${action}`);
+
+/** The verdict line, in the private card's own words. */
+function verdictText(decision) {
+  return decision.correct
+    ? T('fb.correct', { action: actionLabel(decision.optimalAction) })
+    : T('fb.wrong', { severity: T(`fb.${decision.severity}`), cost: decision.evCost.toFixed(3) });
+}
+
+/**
+ * The analysis of my latest hand, as the private quick card lays it out.
+ *
+ * Earlier decisions in the same hand get their headline and verdict on one line
+ * each; the latest gets the whole card.
+ */
+function analysisCard(decisions) {
+  if (!decisions || decisions.length === 0) return null;
+  const last = decisions[decisions.length - 1];
+  const card = document.createElement('section');
+  card.className = `quickcard shared-analysis ${last.severity}`;
+  card.setAttribute('aria-label', T('shared.analysisTitle'));
+
+  for (const earlier of decisions.slice(0, -1)) {
+    const line = document.createElement('p');
+    line.className = 'shared-analysis-earlier';
+    line.textContent = `${earlier.headline} — ${verdictText(earlier)}`;
+    card.appendChild(line);
+  }
+
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  const head = document.createElement('b');
+  head.textContent = last.headline;
+  anchor.appendChild(head);
+  card.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = verdictText(last);
+  card.appendChild(verdict);
+
+  if (last.returns && window.EVReturns) {
+    card.appendChild(
+      window.EVReturns.block(
+        { returns: last.returns, ranked: last.ranked.map((row) => ({ ...row, label: actionLabel(row.action) })) },
+        { helpId: 'shared-returns-help' },
+      ),
+    );
+  }
+
+  /*
+   * The gesture for a mistake (item 7), where the private card puts its
+   * gestures: directly under the rows. On this screen and no other — the app
+   * never remarks on a player's mistake in front of his friends; the ticker
+   * keeps its own rules and the reactions stay the players' own voice. A
+   * negligible cost gets no remark: it is not the kind of mistake worth one.
+   */
+  const oops = mistakeLine(last);
+  if (oops) card.appendChild(oops);
+
+  if (!last.correct) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = T('fb.youChose', {
+      chosen: actionLabel(last.action).toLowerCase(),
+      best: actionLabel(last.optimalAction).toLowerCase(),
+    });
+    card.appendChild(did);
+  }
+
+  /* The working, as much of it as this player's level reads (round 14). */
+  const shown = window.EVLevel ? window.EVLevel.steps() : 3;
+  const titles = [T('ui.readDealer'), T('ui.readHand'), T('ui.combine')];
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal';
+  for (let i = 3 - shown; i < 3; i++) {
+    if (!last.steps[i]) continue;
+    const step = document.createElement('div');
+    step.className = 'step';
+    const title = document.createElement('div');
+    title.className = 'step-head';
+    title.textContent = titles[i];
+    const text = document.createElement('p');
+    boldText(text, last.steps[i]);
+    step.append(title, text);
+    reveal.appendChild(step);
+  }
+  if (reveal.children.length > 0) card.appendChild(reveal);
+  return card;
+}
+
+/**
+ * The copy's own emphasis: words between `**` are bold, as on the private card.
+ * Built from text nodes rather than markup, so nothing in a sentence is ever
+ * read as HTML.
+ */
+function boldText(target, text) {
+  target.replaceChildren();
+  String(text)
+    .split('**')
+    .forEach((part, index) => {
+      if (part === '') return;
+      if (index % 2 === 1) {
+        const bold = document.createElement('b');
+        bold.textContent = part;
+        target.appendChild(bold);
+      } else {
+        target.appendChild(document.createTextNode(part));
+      }
+    });
+}
+
+/** The remark a mistake earns, on the player's own screen. Nothing for a negligible one. */
+function mistakeLine(decision) {
+  if (decision.correct) return null;
+  if (!['minor', 'significant', 'blunder'].includes(decision.severity)) return null;
+  const note = document.createElement('p');
+  note.className = 'gesture shared-oops';
+  note.textContent = T(`shared.oops.${decision.severity}`);
+  return note;
 }
 
 /**
@@ -354,7 +531,6 @@ function renderReactions(screen) {
        * screen. Nobody else's screen changes — it is a question I am asking
        * the table and an answer I am giving myself.
        */
-      if (key === 'explain') shared.explaining = true;
       void act(() => api('/api/shared/react', { id: shared.id, key }));
     });
     box.appendChild(button);
@@ -562,18 +738,36 @@ function renderClock(clock) {
   }
 }
 
+/** How long a finished hand stays on the table before the next is dealt (round 30). */
+const NEXT_HAND_MS = 4000;
+
 /**
- * The buttons.
+ * The dock: the buttons while I have a decision, and words while I do not.
  *
- * The leave control sits with them and looks like them, which §3.3 makes part
- * of the spec rather than a preference: if silence is punished then speaking
- * has to be cheap, and a clean exit buried in a menu means the penalty lands on
- * somebody who did not know there was a door.
+ * Round 30, item 1. Between hands this used to offer **Deal** and **Leave**, in
+ * the place Hit and Stand had just been — so a quick tap meant for the hand
+ * that was ending landed on a button that had appeared under the thumb, and
+ * Idan: *"ולחצת בטעות — ובלאגן."* Now nothing to press ever appears there when
+ * a hand ends:
+ *
+ *   - **the next hand deals itself**, four seconds after the last one ends, so
+ *     there is no Deal to press; whoever's phone gets there first deals for the
+ *     table, because the table runs as far as the furthest seat has been dealt;
+ *   - **leaving is the home link**, at the top, where Idan left from anyway;
+ *   - **the space keeps its height** and shows the commentary instead: my
+ *     verdict on the hand, what the table is waiting for, and the countdown.
+ *
+ * And when buttons do come back for the next hand, the dock's settle-in hold
+ * (round 7, shared by both tables) ignores a press for a moment, so a double
+ * tap cannot play the new hand's first decision by accident.
  */
 function renderActions(screen) {
   const box = el('shared-actions');
   box.replaceChildren();
   if (!screen) return;
+
+  const offer = screen.legal.join(',');
+  if (window.EVDock) window.EVDock.enter(`shared:${screen.hand}:${screen.round}:${offer}`);
 
   for (const action of screen.legal) {
     const button = document.createElement('button');
@@ -581,27 +775,25 @@ function renderActions(screen) {
     button.type = 'button';
     button.dataset.action = action;
     button.textContent = T(`action.${action}`);
-    button.addEventListener('click', () => void act(() => api('/api/shared/act', { id: shared.id, action })));
+    button.addEventListener('click', () => {
+      if (window.EVDock && !window.EVDock.ready()) return;
+      void act(() => api('/api/shared/act', { id: shared.id, action }), 'move');
+    });
     box.appendChild(button);
   }
 
-  if (screen.legal.length === 0 && (screen.hand === null || screen.handOver)) {
-    const deal = document.createElement('button');
-    deal.className = 'action primary';
-    deal.type = 'button';
-    deal.id = 'shared-deal';
-    deal.textContent = T('shared.deal');
-    deal.addEventListener('click', () => void act(() => api('/api/shared/deal', { id: shared.id })));
-    box.appendChild(deal);
+  if (screen.legal.length === 0) {
+    const line = document.createElement('p');
+    line.className = 'shared-dock-line';
+    line.id = 'shared-dock-line';
+    line.setAttribute('aria-live', 'polite');
+    for (const text of dockWords(screen)) {
+      const part = document.createElement('span');
+      part.textContent = text;
+      line.appendChild(part);
+    }
+    box.appendChild(line);
   }
-
-  const leave = document.createElement('button');
-  leave.className = 'action shared-leave';
-  leave.type = 'button';
-  leave.id = 'shared-leave';
-  leave.textContent = T('shared.leave');
-  leave.addEventListener('click', () => void act(() => api('/api/shared/leave', { id: shared.id })));
-  box.appendChild(leave);
 
   /*
    * The refusal, made reachable. Only with the debug flag set — it is a way to
@@ -617,6 +809,85 @@ function renderActions(screen) {
       void act(() => api('/api/shared/force-mismatch', { id: shared.id })),
     );
     box.appendChild(breaker);
+  }
+}
+
+/** What the dock says while there is nothing for me to decide. */
+function dockWords(screen) {
+  const words = [];
+  const waiting = screen.waitingFor.filter((seat) => seat !== shared.seat);
+  if (screen.hand !== null && !screen.handOver && waiting.length > 0) {
+    const names = waiting
+      .map((seat) => screen.seats.find((row) => row.seat === seat)?.name || '')
+      .filter(Boolean)
+      .join(', ');
+    words.push(T('shared.waitingFor', { names }));
+    return words;
+  }
+  if (screen.hand !== null && screen.handOver) {
+    /* The hand's verdict, in one line — the card under the felt has the rest. */
+    const last = screen.analysis.length > 0 ? screen.analysis[screen.analysis.length - 1] : null;
+    if (last && last.hand === screen.hand) words.push(verdictText(last));
+    else words.push(T('shared.handOver'));
+  }
+  const left = secondsToNextHand(screen);
+  if (left !== null) {
+    words.push(T(screen.hand === null ? 'shared.firstHand' : 'shared.nextHand', { n: left }));
+  }
+  return words;
+}
+
+/** Whether this phone should deal the next hand when its time comes. */
+function dealsNext(screen) {
+  return (
+    Boolean(screen) &&
+    !screen.refused &&
+    shared.seat !== null &&
+    seatedAt(screen).length >= 2 &&
+    Boolean(screen.me) &&
+    screen.me.status !== 'away' &&
+    (screen.hand === null || screen.handOver)
+  );
+}
+
+/** Seconds until the next hand deals itself, or null when none is coming. */
+function secondsToNextHand(screen) {
+  if (!dealsNext(screen)) return null;
+  const key = screen.hand === null ? -1 : screen.hand;
+  if (shared.dueKey !== key) {
+    shared.dueKey = key;
+    shared.dueAt = Date.now() + NEXT_HAND_MS;
+  }
+  return Math.max(0, Math.ceil((shared.dueAt - Date.now()) / 1000));
+}
+
+/**
+ * The quarter-second tick: the countdown's words, and the deal when it is due.
+ * Each finished hand is dealt past at most once from this phone.
+ */
+function tickNextHand() {
+  if (!el('shared-door')) {
+    clearInterval(shared.ticking);
+    shared.ticking = null;
+    return;
+  }
+  const screen = shared.screen;
+  if (!dealsNext(screen)) return;
+  const left = secondsToNextHand(screen);
+  const line = el('shared-dock-line');
+  if (line && screen.legal.length === 0) {
+    const words = dockWords(screen);
+    line.replaceChildren(
+      ...words.map((text) => {
+        const part = document.createElement('span');
+        part.textContent = text;
+        return part;
+      }),
+    );
+  }
+  if (left === 0 && shared.dealtKey !== shared.dueKey && !shared.busy) {
+    shared.dealtKey = shared.dueKey;
+    void act(() => api('/api/shared/deal', { id: shared.id }));
   }
 }
 
@@ -642,33 +913,6 @@ function renderSeatPicker() {
       renderSeatPicker();
     });
     row.appendChild(pick);
-  }
-}
-
-function renderTalk(screen) {
-  const box = el('shared-talk');
-  if (!screen || screen.hand === null) {
-    box.hidden = true;
-    return;
-  }
-  if (screen.handOver) {
-    box.hidden = false;
-    box.textContent = T('shared.handOver');
-    return;
-  }
-  const waiting = screen.waitingFor.filter((seat) => seat !== shared.seat);
-  if (screen.legal.length > 0) {
-    box.hidden = false;
-    box.textContent = T('shared.yourMove');
-  } else if (waiting.length > 0) {
-    box.hidden = false;
-    const names = waiting
-      .map((seat) => screen.seats.find((row) => row.seat === seat)?.name || '')
-      .filter(Boolean)
-      .join(', ');
-    box.textContent = T('shared.waitingFor', { names });
-  } else {
-    box.hidden = true;
   }
 }
 
@@ -718,6 +962,7 @@ function render() {
 
   const playable = Boolean(screen) && !screen.refused && !alone;
   el('shared-table').hidden = !playable;
+  el('shared-talk').hidden = true;
   /* The dock holds the buttons and nothing else, so with none it is not drawn. */
   const dock = el('shared-actions').parentElement;
   if (dock) dock.hidden = !playable;
@@ -725,12 +970,10 @@ function render() {
     renderClock(null);
     el('shared-measures').hidden = true;
     el('shared-actions').replaceChildren();
-    el('shared-talk').hidden = true;
     el('shared-ticker').hidden = true;
     el('shared-said').hidden = true;
     el('shared-reactions').hidden = true;
     el('shared-folklore').hidden = true;
-    el('shared-explain').hidden = true;
     return;
   }
 
@@ -750,57 +993,45 @@ function render() {
   box.className = order.length > 4 ? 'shared-seats many' : 'shared-seats';
   box.replaceChildren(...order.map(seatNode));
 
+  /*
+   * The table against the dealer, on the felt under the seats (item 4) — the
+   * same row §3.6 drew under the bars, moved with them. Only once more than one
+   * seat has played, because until then it is one player's figures twice.
+   */
+  const line = el('shared-table-line');
+  line.replaceChildren();
+  line.hidden = screen.table.seats <= 1;
+  if (screen.table.seats > 1) line.appendChild(tableRow(screen.table));
+
   renderClock(shared.clock);
   renderMeasures(screen);
   renderActions(screen);
-  renderTalk(screen);
   renderTicker(screen);
   renderSaid(screen);
   renderReactions(screen);
   renderFolklore(screen);
-  renderExplain(screen);
-}
-
-/**
- * My own decision's working, opened by **תסביר לי** (§3.9).
- *
- * Mine only, and this is where that promise is cheap to keep: the screen
- * object carries my decisions and nobody else's, because `seatView` will not
- * put another seat's in it until I have played my own hand. There is nothing
- * here to leak.
- */
-function renderExplain(screen) {
-  const box = el('shared-explain');
-  const last = screen && screen.mine.length > 0 ? screen.mine[screen.mine.length - 1] : null;
-  if (!shared.explaining || !last || !last.returns || !window.EVReturns) {
-    box.hidden = true;
-    box.replaceChildren();
-    return;
-  }
-  box.hidden = false;
-  /*
-   * The private table's own block, drawn by the private table's own file, from
-   * a `returns` object the private table's own function built. Nothing about
-   * what a hand comes back is worked out twice in this app, and this is the
-   * place it would have been easiest to do it.
-   */
-  box.replaceChildren(
-    window.EVReturns.block(
-      {
-        returns: last.returns,
-        ranked: last.ranked.map((row) => ({ ...row, label: T(`action.${row.action}`) })),
-      },
-      { helpId: 'shared-returns-help' },
-    ),
-  );
 }
 
 /* --- Talking to the table ------------------------------------------------ */
 
-/** Every call that changes the table funnels through here, so two cannot overlap. */
-async function act(run) {
-  if (shared.busy) return;
+/**
+ * Every call that changes the table funnels through here, so two cannot overlap.
+ *
+ * One press may wait (round 30). With the next hand dealing itself, two phones
+ * can both deal at the same moment, and the slower one is still busy with its
+ * own deal when the new hand's buttons are already on its screen — a press then
+ * used to vanish without a trace. A move pressed while something else is in
+ * flight now waits for it and then goes; a second move pressed on top of a
+ * first still does not, because that is a double tap, not a decision.
+ */
+async function act(run, kind = 'other') {
+  if (shared.busy) {
+    if (kind === 'move' && shared.busyKind !== 'move' && !shared.waiting) shared.waiting = run;
+    return;
+  }
   shared.busy = true;
+  shared.busyKind = kind;
+  shared.seq++;
   try {
     const answer = await run();
     apply(answer);
@@ -813,7 +1044,13 @@ async function act(run) {
     }
   } finally {
     shared.busy = false;
+    shared.busyKind = null;
     render();
+    if (shared.waiting) {
+      const next = shared.waiting;
+      shared.waiting = null;
+      void act(next, 'move');
+    }
   }
 }
 
@@ -844,12 +1081,21 @@ async function refresh() {
     return;
   }
   if (!shared.id || shared.busy) return;
+  /*
+   * A poll that set off before a write must not land after it (round 30): it
+   * would draw the table as it was, the buttons would go and come back, and the
+   * dock's hold would start again under the player's thumb.
+   */
+  const seq = shared.seq;
+  let answer;
   try {
-    apply(await api('/api/shared/view', { id: shared.id }));
+    answer = await api('/api/shared/view', { id: shared.id });
   } catch {
     // A poll that fails changes nothing: the table is still what it was.
     return;
   }
+  if (seq !== shared.seq || shared.busy) return;
+  apply(answer);
   render();
 }
 
@@ -896,6 +1142,24 @@ function openShared() {
     if (navigator.clipboard) void navigator.clipboard.writeText(link);
     el('shared-copy').textContent = T('shared.copied');
   });
+
+  /*
+   * Leaving is the home link (round 30, item 1). Idan left that way anyway, and
+   * a Leave button between hands was one of the two a quick thumb kept landing
+   * on. It stays one tap and in plain sight, which is what §3.3 asks of the
+   * door: leaving costs nothing, and coming back by the same link seats him
+   * again from the next hand.
+   */
+  const home = document.querySelector('#shared-bar a.back');
+  if (home) {
+    home.setAttribute('title', T('shared.leaveHint'));
+    home.addEventListener('click', () => {
+      if (shared.id && shared.seat !== null) void api('/api/shared/leave', { id: shared.id });
+    });
+  }
+
+  if (shared.ticking) clearInterval(shared.ticking);
+  shared.ticking = setInterval(tickNextHand, 250);
 
   render();
 

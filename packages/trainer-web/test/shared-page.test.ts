@@ -184,25 +184,48 @@ test('the shared screen draws on the route two phones took: door, link, then a t
     assert.ok(names.every((name: string) => name.trim().length > 0), 'a seat is drawn without a name');
     assert.ok(names.includes('נירו'), 'the friend is not at the table');
 
-    const deal = el('shared-actions').children.find((button: any) => button.id === 'shared-deal');
-    assert.ok(deal, 'there is no way to deal the first hand');
+    /*
+     * 4. Round 30, item 1: nothing to press between hands. The dock holds words
+     * — the countdown to the first hand — and neither Deal nor Leave.
+     */
+    const pressable = () =>
+      el('shared-actions').children.filter((node: any) => node.type === 'button').map((b: any) => b.id || b.dataset.action);
+    assert.deepEqual(pressable(), [], `between hands the dock offers ${pressable()}`);
+    const words = () => walk(el('shared-actions')).map((node: any) => String(node.textContent ?? '')).join(' ');
+    assert.match(words(), /[0-9]/, 'the dock does not say when the first hand comes');
     assertControlsSpeak(doc, ['shared-actions', 'shared-reactions', 'shared-seats-row'], 'before the first hand');
 
-    // 4. Deal, and the same holds with cards on the table. The seed is the
-    // table's own, so the hand may end on the deal (a natural): then the next
-    // deal is offered instead of a decision — never an empty dock.
-    deal.listeners.click[0]();
+    // The bars are on the felt, beside each name (item 4).
+    const seatBars = walk(el('shared-seats')).filter((node: any) => String(node.className).includes('shared-seat-bar'));
+    assert.equal(seatBars.length, 2, 'the bars are not on the felt beside the seats');
+    assert.ok(seatBars.every((bar: any) => String(bar.textContent).trim().length > 0), 'a seat bar says nothing');
+
+    // 5. The first hand deals itself.
     const offered = () =>
-      el('shared-actions').children.map((button: any) => button.dataset.action ?? button.id).filter(Boolean);
-    await until(() => offered().includes('hit') || (seats[0]!.hands === 1 && offered().includes('shared-deal')));
-    assert.equal(seats[0]!.hands, 1, 'the deal was not written');
-    assert.ok(
-      offered().includes('hit') || offered().includes('shared-deal'),
-      `after the deal the dock offers only ${offered()}`,
-    );
+      el('shared-actions').children.map((button: any) => button.dataset.action).filter(Boolean);
+    await until(() => Number(seats[0]!.hands) >= 1 && offered().length > 0, 8000);
+    assert.equal(Number(seats[0]!.hands) >= 1, true, 'the first hand was never dealt');
     const cards = walk(el('shared-seats')).filter((node: any) => String(node.className).includes('card'));
     assert.ok(cards.length >= 4, `after the deal the felt shows ${cards.length} cards for two seats`);
     assertControlsSpeak(doc, ['shared-actions', 'shared-reactions', 'shared-clock'], 'in a hand');
+
+    // 6. I decide, and the analysis appears under the felt: the verdict and the rows (item 5).
+    if (offered().includes('stand')) {
+      const stand = el('shared-actions').children.find((button: any) => button.dataset.action === 'stand');
+      await settle(500); // the dock's settle-in hold
+      stand.listeners.click[0]();
+      const analysis = () =>
+        walk(el('shared-measures')).find((node: any) => String(node.className).includes('shared-analysis'));
+      await until(() => Boolean(analysis()));
+      assert.ok(analysis(), 'after a decision there is no analysis under the felt');
+      const verdict = walk(analysis()).find((node: any) => node.className === 'verdict');
+      assert.ok(verdict && String(verdict.textContent).trim().length > 0, 'the analysis has no verdict');
+      assert.deepEqual(
+        pressable().filter((id: string) => id === 'shared-deal' || id === 'shared-leave'),
+        [],
+        'Deal or Leave came back after a decision',
+      );
+    }
   } finally {
     page?.stopWatching();
     for (const handle of timers) clearInterval(handle);

@@ -22,6 +22,7 @@ import { sharedScreen, BAR_SETTLES_AT } from '../src/shared-screen.ts';
 import {
   counterfactualBack,
   deriveTable,
+  isLive,
   seatCardsHash,
   sharedSpots,
   type SeatMove,
@@ -178,6 +179,7 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     'seatCardsHash',
     'counterfactualBack',
     'sharedSpots',
+    'isLive',
     `${code}
      return {
        sharedCreate, sharedJoin, sharedRefresh, sharedAct, sharedDeal,
@@ -185,7 +187,7 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
        sharedReact, sharedCounterfactual, sharedCounterfactualShown, sharedSpotsNow,
        sharedScreenNow, sharedClock, sharedState,
      };`,
-  )(store, sharedScreen, deriveTable, seatCardsHash, counterfactualBack, sharedSpots) as any;
+  )(store, sharedScreen, deriveTable, seatCardsHash, counterfactualBack, sharedSpots, isLive) as any;
 
   return {
     create: (options = {}) =>
@@ -506,6 +508,46 @@ test('leaving deliberately writes the same event and costs nothing', async () =>
   // And it carries the hand rather than a time, so the cards still follow the log.
   assert.equal(typeof (left as any).hand, 'number');
   assert.equal(Object.prototype.hasOwnProperty.call(left, 'at'), false);
+});
+
+test('a player who left by the home link and follows the link back is dealt in again', async () => {
+  /*
+   * Round 30 made the home link the way to leave, one tap from the felt — so
+   * coming back has to work. Before, nothing ever wrote a return, and a seat
+   * that had left sat at its own table for ever without a card.
+   */
+  const { store, idan, dani, id } = await twoSeats(13);
+  await idan.deal();
+  await dani.refresh();
+  await dani.leave();
+  await idan.refresh();
+  assert.equal(idan.screen().seats.find((seat: any) => seat.seat === 1).status, 'away');
+
+  // He follows the same link again, from his own phone.
+  const back = phone(store, { id: 'dani', name: 'Dani' });
+  await back.join(id);
+  const record = (await store.readTable(id))!;
+  const events = (record.seats.find((row: any) => row.seat === 1) as any).events as Array<{ kind: string; hand: number }>;
+  const returned = events.find((event) => event.kind === 'return');
+  assert.ok(returned, 'coming back wrote no return');
+  const left = events.find((event) => event.kind === 'drop')!;
+  assert.ok(returned!.hand > left.hand, 'he was put back into the hand he had left');
+
+  // The next hand is dealt to him.
+  await idan.refresh();
+  for (let guard = 0; guard < 40 && (idan.screen().hand ?? -1) < returned!.hand; guard++) {
+    for (const who of [idan, back]) {
+      await who.refresh();
+      const mine = who.screen();
+      if (mine.legal.length > 0) await who.act(mine.legal.includes('stand') ? 'stand' : mine.legal[0]);
+    }
+    await idan.refresh();
+    if (idan.screen().handOver) await idan.deal();
+  }
+  await back.refresh();
+  const him = back.screen().seats.find((seat: any) => seat.seat === 1);
+  assert.notEqual(him.status, 'away', 'back at the table, he is still away');
+  assert.ok(him.split.length > 0, 'back at the table, he is not dealt a hand');
 });
 
 test('nothing about a drop is written as a timestamp', () => {
@@ -844,16 +886,24 @@ test('waiting for a friend is playing the private table, not sitting on an empty
   assert.match(screen, /shared-meanwhile/, 'there is no way to go and play meanwhile');
 });
 
-/* --- 7. The leave control is as prominent as the rest ----------------------------------- */
+/* --- 7. Leaving is one tap, in plain sight — and never between hands (round 30) -------- */
 
-test('the leave control sits with the actions rather than in a menu', () => {
+test('leaving is the home link, one tap and in plain sight, and nothing to press appears between hands', () => {
   const screen = source('public', 'shared.js');
-  const actions = screen.slice(screen.indexOf('function renderActions('), screen.indexOf('function renderTalk('));
-  assert.match(actions, /shared-leave/, 'leaving is not among the actions');
-  assert.match(actions, /class = 'action shared-leave'|'action shared-leave'/, 'leaving does not look like an action');
   /*
-   * §3.3 makes this part of the spec rather than a preference: if silence is
-   * punished then speaking has to be cheap, and an exit buried in a menu means
-   * the penalty lands on somebody who did not know there was a door.
+   * §3.3 still holds: if silence is punished then leaving has to be cheap, and
+   * never buried in a menu. Round 30 moved the door, not the rule — it is the
+   * home link at the top of the screen, which is where Idan left from anyway,
+   * and pressing it writes the same free leave the button did.
    */
+  assert.ok(screen.includes("querySelector('#shared-bar a.back')"), 'the home link does not leave the table');
+  assert.ok(screen.includes("api('/api/shared/leave'"), 'leaving no longer writes the leave');
+  /*
+   * And the space between hands has nothing to press in it: no Deal, no Leave.
+   * Those two appeared where Hit and Stand had just been, and a quick thumb
+   * landed on them (Idan: *"ולחצת בטעות — ובלאגן"*).
+   */
+  const dock = screen.slice(screen.indexOf('function renderActions('), screen.indexOf('function dockWords('));
+  assert.doesNotMatch(dock, /shared-deal|shared-leave/, 'the dock still offers Deal or Leave');
+  assert.ok(dock.includes('EVDock.ready()'), "the new hand's buttons take a press the moment they appear");
 });

@@ -22,9 +22,11 @@
  * a provisional rating does.
  */
 
-import { parseScenarioKey } from '@evtrainer/ev-engine';
+import { parseScenarioKey, severityForCost, type BlackjackAction } from '@evtrainer/ev-engine';
 
-import { RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
+import { explain } from './explain.ts';
+import { PER_SITTING, RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
+import type { Locale } from './i18n.ts';
 import { returnsBlock, stakeFor } from './returns-block.ts';
 import { cardView, totalOf, type CardView } from './session.ts';
 import {
@@ -35,6 +37,7 @@ import {
   tableEvents,
   tableReactions,
   type DerivedDecision,
+  type HandDetail,
   type ReactionKey,
   type ReactionPost,
   type SeatGlance,
@@ -59,6 +62,18 @@ export interface SeatPanel {
    * because the other seats' ids are nothing this screen needs.
    */
   seated: boolean;
+  /**
+   * What the seat did in the hand on screen, in order — facts about the play,
+   * never a grade (round 30, item 2). A neighbour's appear once I have made my
+   * own first move of the hand, or once it is over (§3.7).
+   */
+  actions: string[];
+  /**
+   * Each hand the seat holds, with its own total and — once the dealer has
+   * turned — its own result (round 30, item 3). One entry for an ordinary
+   * hand, two or more after a split.
+   */
+  split: SplitHand[];
   bet: number;
   status: SeatStatus;
   /** Every hand this seat holds, as faces. More than one after a split. */
@@ -123,6 +138,18 @@ export interface TableMeasures {
   streak: number;
 }
 
+/** One of a seat's hands, as the felt draws it after a split. */
+export interface SplitHand {
+  cards: CardView[];
+  total: number;
+  /** Null until the hand is settled. */
+  net: number | null;
+  doubled: boolean;
+  surrendered: boolean;
+  /** The hand being decided right now. */
+  active: boolean;
+}
+
 /**
  * One line of what has just happened at the table (§3.10).
  *
@@ -168,6 +195,16 @@ export interface DecisionView {
    * this hand come back", and the whole app rests on there being one.
    */
   returns: unknown;
+  /**
+   * The private table's own words for this decision (round 30, item 5):
+   * the headline and the three steps `explain()` writes for the solo feedback
+   * card, from the same scenario, the same evaluation and the same rules.
+   */
+  headline: string;
+  steps: string[];
+  /** The engine's own severity tier for the cost, as the solo card colours it. */
+  severity: string;
+  correct: boolean;
 }
 
 export interface SharedScreen {
@@ -197,6 +234,12 @@ export interface SharedScreen {
   ticker: TickerItem[];
   /** My own graded decisions for the hand on screen, and nobody else's (§3.9). */
   mine: DecisionView[];
+  /**
+   * The hand's analysis (round 30, item 5): my decisions in the latest hand I
+   * have played, so what I just did stays readable after the next hand is
+   * dealt and until I make my next decision. Mine only.
+   */
+  analysis: DecisionView[];
 }
 
 /**
@@ -263,42 +306,74 @@ function tickerFor(record: TableRecord): TickerItem[] {
   const items: TickerItem[] = [];
   const nameOf = (seat: number) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
 
-  /* A record broken: a seat's best run at this table passing its own high. */
-  const best = new Map<number, number>();
+  /*
+   * THE SOLO GAME'S RARITY, KEPT (round 30). This used to hand
+   * `gestureForSettlement` a blank history every time and announce a record on
+   * every right decision past a seat's own best — so on the first real night,
+   * 97 hands said "played it right and lost" 53 times and "best run at this
+   * table" 32 times, and not once mentioned any of the 37 mistakes. Idan: *"זה
+   * נראה כאילו אתה צודק כל הזמן."* Each seat now keeps what the solo session
+   * keeps — a sitting's count, one a hand, "right and lost" once, a record
+   * announced once a run — and the table is the sitting.
+   */
+  const shown = new Map<number, { sitting: number; rightAndLost: boolean; announced: boolean }>();
+  const shownOf = (seat: number) => {
+    let entry = shown.get(seat);
+    if (!entry) {
+      entry = { sitting: 0, rightAndLost: false, announced: false };
+      shown.set(seat, entry);
+    }
+    return entry;
+  };
   const run = new Map<number, number>();
+  /* "The best at this table so far" is the table's, not each seat's own. */
+  let tableBest = 0;
+
   for (const hand of table.hands) {
+    /* A hand still being played says nothing: its last decision may not be in. */
+    if (hand.incomplete) break;
+    const spokeThisHand = new Set<number>();
+
     for (const decision of hand.decisions) {
+      if (decision.round < 0) continue; // insurance nobody was asked is not a decision
       const seat = decision.seat;
+      const mark = shownOf(seat);
       if (decision.evCost > 0) {
         run.set(seat, 0);
+        mark.announced = false;
         continue;
       }
       const now = (run.get(seat) ?? 0) + 1;
       run.set(seat, now);
-      const high = best.get(seat) ?? 0;
-      if (now > high) {
-        best.set(seat, now);
-        /*
-         * Only once a run is long enough to be worth saying out loud, and only
-         * at the moment it passes the last one — the same floor the solo
-         * game's record gesture uses, so a run that is a record here is a
-         * record there.
-         */
-        if (now >= RECORD_FLOOR) {
-          items.push({ kind: 'record', seat, name: nameOf(seat), hand: hand.hand, streak: now });
-        }
+      if (
+        now > tableBest &&
+        tableBest >= RECORD_FLOOR &&
+        !mark.announced &&
+        !spokeThisHand.has(seat) &&
+        mark.sitting < PER_SITTING
+      ) {
+        items.push({ kind: 'record', seat, name: nameOf(seat), hand: hand.hand, streak: now });
+        mark.announced = true;
+        mark.sitting++;
+        spokeThisHand.add(seat);
       }
+      tableBest = Math.max(tableBest, now);
     }
 
     /* A hand played right and lost, which a hand that won can never produce. */
     for (const seatHand of hand.seats) {
       if (seatHand.net === null || seatHand.net >= 0) continue;
-      const mine = hand.decisions.filter((decision) => decision.seat === seatHand.seat);
+      const mark = shownOf(seatHand.seat);
+      const mine = hand.decisions.filter((decision) => decision.seat === seatHand.seat && decision.round >= 0);
       const gesture = gestureForSettlement({
         net: seatHand.net,
         decisions: mine.length,
         allOptimal: mine.every((decision) => decision.evCost <= 0),
-        shown: { sitting: 0, thisHand: false, rightAndLostThisSitting: false },
+        shown: {
+          sitting: mark.sitting,
+          thisHand: spokeThisHand.has(seatHand.seat),
+          rightAndLostThisSitting: mark.rightAndLost,
+        },
       });
       if (gesture && gesture.kind === 'rightAndLost') {
         items.push({
@@ -308,6 +383,9 @@ function tickerFor(record: TableRecord): TickerItem[] {
           hand: hand.hand,
           decisions: gesture.decisions,
         });
+        mark.rightAndLost = true;
+        mark.sitting++;
+        spokeThisHand.add(seatHand.seat);
       }
     }
   }
@@ -345,6 +423,7 @@ function mineFor(
   record: TableRecord,
   decisions: DerivedDecision[],
   seat: number | null,
+  locale: Locale,
 ): DecisionView[] {
   if (seat === null) return [];
   const rules = rulesFor(record);
@@ -355,6 +434,19 @@ function mineFor(
         .map(([action, ev]) => ({ action, ev: ev ?? 0, value: 1 + (ev ?? 0) }))
         .sort((a, b) => b.ev - a.ev);
       const key = scenarioKeyOf(decision);
+      const scenario = key === null ? ({ kind: 'insurance' } as const) : parseScenarioKey(key);
+      const words = explain(
+        scenario as Parameters<typeof explain>[0],
+        {
+          legalActions: Object.keys(decision.evByAction) as BlackjackAction[],
+          evByAction: decision.evByAction as Partial<Record<BlackjackAction, number>>,
+          optimalAction: decision.optimalAction as BlackjackAction,
+          optimalEv: decision.evByAction[decision.optimalAction] ?? 0,
+        },
+        rules,
+        locale,
+        decision.action as BlackjackAction,
+      );
       return {
         hand: decision.hand,
         round: decision.round,
@@ -363,8 +455,30 @@ function mineFor(
         evCost: decision.evCost,
         ranked,
         returns: key === null ? null : returnsBlock(parseScenarioKey(key), ranked, stakeFor(key), rules),
+        headline: words.headline,
+        steps: [...words.steps],
+        severity: severityForCost(decision.evCost),
+        correct: decision.evCost <= 0,
       };
     });
+}
+
+/**
+ * My decisions in the latest hand I made any in, for the analysis (round 30).
+ *
+ * Read from the derivation rather than from the view, because the view carries
+ * the hand on screen only — and the analysis has to outlive it: the next hand
+ * is dealt without anybody pressing anything, and what I just did must not
+ * vanish the moment it is.
+ */
+function analysisFor(record: TableRecord, seat: number | null, locale: Locale): DecisionView[] {
+  if (seat === null) return [];
+  const table = deriveTable(record);
+  for (let i = table.hands.length - 1; i >= 0; i--) {
+    const own = table.hands[i]!.decisions.filter((decision) => decision.seat === seat && decision.round >= 0);
+    if (own.length > 0) return mineFor(record, own, seat, locale);
+  }
+  return [];
 }
 
 function panel(glance: SeatGlance, mine: boolean): SeatPanel {
@@ -374,6 +488,8 @@ function panel(glance: SeatGlance, mine: boolean): SeatPanel {
     name: glance.name,
     mine,
     seated: glance.playerId !== null,
+    actions: [...glance.acted],
+    split: splitOf(hands, glance.detail, glance.active),
     bet: glance.bet,
     status: glance.status,
     hands: hands.map((cards) => cards.map((card) => cardView(card))),
@@ -388,6 +504,21 @@ function panel(glance: SeatGlance, mine: boolean): SeatPanel {
     evLostPer100: per100(glance.evLost, glance.decisions),
     streak: glance.streak,
   };
+}
+
+/** Each hand of a seat's, with its total, and its result once it has one. */
+function splitOf(hands: number[][], detail: HandDetail[], active: number | null): SplitHand[] {
+  return hands.map((cards, index) => {
+    const known = detail[index];
+    return {
+      cards: cards.map((card) => cardView(card)),
+      total: totalOf(cards),
+      net: known ? known.net : null,
+      doubled: known ? known.doubled : false,
+      surrendered: known ? known.surrendered : false,
+      active: active === index,
+    };
+  });
 }
 
 /**
@@ -412,7 +543,7 @@ function comparisonOf(seats: SeatPanel[]): Comparison | null {
 }
 
 /** One seat's whole screen, from the record and nothing else. */
-export function sharedScreen(record: TableRecord, seat: number | null): SharedScreen {
+export function sharedScreen(record: TableRecord, seat: number | null, locale: Locale = 'en'): SharedScreen {
   const view = seatView(record, seat);
   const seats = view.seats.map((glance) => panel(glance, glance.seat === seat));
   const me = seats.find((panel) => panel.mine) ?? null;
@@ -443,6 +574,7 @@ export function sharedScreen(record: TableRecord, seat: number | null): SharedSc
     table: tableMeasures(seats),
     reactions: tableReactions(record),
     ticker: tickerFor(record),
-    mine: mineFor(record, view.decisions, seat),
+    mine: mineFor(record, view.decisions, seat, locale),
+    analysis: analysisFor(record, seat, locale),
   };
 }

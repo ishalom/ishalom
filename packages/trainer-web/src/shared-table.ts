@@ -275,6 +275,26 @@ export interface DerivedSeatHand {
   /** Its hands at the end, which is more than one after a split. */
   hands: Card[][];
   net: number | null;
+  /**
+   * Each of those hands as the engine settled it (round 30): its own result,
+   * and whether it was doubled or surrendered. Read off the engine's own hands,
+   * so a split's two results are the engine's two results and never a second
+   * settlement worked out here.
+   */
+  detail: HandDetail[];
+  /** Which hand the seat is deciding now, while it owes one; null otherwise. */
+  active: number | null;
+}
+
+/** One hand of a seat's, as the engine left it. */
+export interface HandDetail {
+  net: number | null;
+  doubled: boolean;
+  surrendered: boolean;
+}
+
+function detailOf(hands: ReadonlyArray<{ net: number | null; doubled: boolean; surrendered: boolean }>): HandDetail[] {
+  return hands.map((hand) => ({ net: hand.net, doubled: hand.doubled, surrendered: hand.surrendered }));
 }
 
 /**
@@ -718,6 +738,8 @@ function playHand(
         cards: [first[index]!, second[index]!, ...(draws.get(seat.seat) ?? [])],
         hands: plays[index]!.table.view.hands.map((hand) => [...hand.cards]),
         net: null,
+        detail: detailOf(plays[index]!.table.view.hands),
+        active: owing.has(seat.seat) ? plays[index]!.table.view.activeHandIndex : null,
       })),
     };
   }
@@ -775,6 +797,8 @@ function playHand(
         cards: [first[index]!, second[index]!, ...(draws.get(seat.seat) ?? [])],
         hands: view.hands.map((hand) => [...hand.cards]),
         net: view.netUnits,
+        detail: detailOf(view.hands),
+        active: null,
       };
     }),
   };
@@ -1051,6 +1075,20 @@ export interface SeatGlance {
   streak: number;
   /** How many hands this seat has been dealt into here. Summed by §3.6. */
   handsPlayed: number;
+  /**
+   * What this seat did in the hand on screen, in order (round 30) — `hit`,
+   * `stand`, `double`, `split`, `surrender`, and `forfeit` when the clock
+   * ended his hand for him.
+   *
+   * A fact about the play and never a grade. A neighbour's arrive under the same
+   * rule as his graded decisions (§3.7): once I have made my own first move of
+   * the hand, or once the hand is over. Mine are always here.
+   */
+  acted: string[];
+  /** Each of this seat's hands as the engine settled it. See `DerivedSeatHand.detail`. */
+  detail: HandDetail[];
+  /** Which of his hands he is deciding now, or null. */
+  active: number | null;
 }
 
 export interface SeatView {
@@ -1116,6 +1154,39 @@ function countDecision(tally: SeatTally, decision: DerivedDecision): void {
   }
 }
 
+/**
+ * Whether one graded decision belongs in the bars a given screen draws (round 30).
+ *
+ * Two kinds stay out, and both are about what the screen shows, not what is
+ * recorded — the rating is not read from here.
+ *
+ *   - **A neighbour's decision in the hand still being played, before I have
+ *     made mine.** The bar moving the instant he acted said whether he got it
+ *     right before I had played my own hand, which §3.7 forbids — Idan's
+ *     *"אחוזי ההצלחה השתנו"*, the figure moving when it should not.
+ *   - **Insurance nobody was asked.** The shared table has no insurance
+ *     button, so the derivation declines it for every seat under an ace, and
+ *     that was being counted as a right decision for everybody — a point
+ *     earned by nobody deciding anything.
+ */
+function countsOnScreen(
+  record: TableRecord,
+  decision: DerivedDecision,
+  hand: DerivedHand,
+  current: DerivedHand | null,
+  seat: number | null,
+): boolean {
+  if (decision.round === -1) {
+    const asked = record.seats
+      .find((entry) => entry.seat === decision.seat)
+      ?.moves.some((move) => move.hand === decision.hand && move.round === -1);
+    if (!asked) return false;
+  }
+  if (hand !== current || !current.incomplete) return true;
+  if (decision.seat === seat) return true;
+  return seat !== null && hasActed(record, seat, current.hand);
+}
+
 /** Whether a seat has recorded anything at all for a hand. */
 function hasActed(record: TableRecord, seat: number, hand: number): boolean {
   return record.seats.some(
@@ -1153,12 +1224,22 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     for (const decision of hand.decisions) {
       const tally = counts.get(decision.seat);
       if (!tally) continue;
+      if (!countsOnScreen(record, decision, hand, current, seat)) continue;
       countDecision(tally, decision);
     }
   }
 
   const handIndex = current ? current.hand : null;
   const iActed = seat !== null && handIndex !== null && hasActed(record, seat, handIndex);
+  /* A neighbour's play is shown once mine is in, or once the hand is over (§3.7). */
+  const seesAll = iActed || Boolean(current && !current.incomplete);
+  const forfeits = new Set(
+    handIndex === null
+      ? []
+      : votedOut(record)
+          .filter((event) => event.hand === handIndex)
+          .map((event) => event.seat),
+  );
 
   const glance = (entry: SeatRecord): SeatGlance => {
     const seatHand = current?.seats.find((row) => row.seat === entry.seat) ?? null;
@@ -1184,6 +1265,17 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       evLost: tally.evLost,
       streak: tally.streak,
       handsPlayed: dealtIn.get(entry.seat) ?? 0,
+      acted:
+        handIndex !== null && (entry.seat === seat || seesAll)
+          ? [
+              ...movesOf(entry, handIndex)
+                .filter((move) => move.action !== 'takeInsurance' && move.action !== 'declineInsurance')
+                .map((move) => String(move.action)),
+              ...(forfeits.has(entry.seat) ? ['forfeit'] : []),
+            ]
+          : [],
+      detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
+      active: seatHand ? seatHand.active : null,
     };
   };
 

@@ -13,6 +13,9 @@
     <!-- The returns block, shared by both tables: "תסביר לי" opens the same one
          the private table draws, rather than a second copy of it (§3.9). -->
     <script src="/returns.js"></script>
+    <!-- The dock's settle-in hold and the reading level, shared with the private table (round 30). -->
+    <script src="/dock.js"></script>
+    <script src="/level.js"></script>
   </head>
   <body>
     <div class="shell">
@@ -94,6 +97,9 @@
         </section>
 
         <div id="shared-seats"></div>
+
+        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->
+        <div class="shared-table-line" id="shared-table-line" hidden></div>
       </main>
 
       <!--
@@ -115,8 +121,12 @@
       -->
       <section class="shared-said" id="shared-said" hidden aria-live="polite"></section>
 
-      <!-- The two measures, side by side, with the line that names them (§3.5),
-           and the table's own row beneath them (§3.6). -->
+      <!--
+        Under the felt: this hand's analysis first — the private table's own
+        commentary for my latest decision — and then the table's figures and the
+        lines that name the two measures (round 30, item 5). The bars themselves
+        moved onto the felt, beside each name.
+      -->
       <section class="shared-measures" id="shared-measures" hidden></section>
 
       <!--
@@ -126,12 +136,7 @@
       -->
       <section class="shared-folklore" id="shared-folklore" hidden></section>
 
-      <!--
-        What "תסביר לי" opens, on my own screen and nobody else's (§3.9): my
-        last decision's returns block, drawn by the private table's own file
-        from the private table's own figures.
-      -->
-      <section class="shared-explain" id="shared-explain" hidden></section>
+
 
       <p class="table-talk" id="shared-talk" hidden aria-live="polite"></p>
 
