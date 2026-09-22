@@ -718,15 +718,60 @@ test('the calculation says its amounts are averages, and leaves the tie out of t
   }
 });
 
-test('folding and the pre-flop check carry no calculation, because neither has one', () => {
-  for (const { work, phase } of lines(11, 25)) {
+test('folding carries no calculation, because it has no chance in it at all', () => {
+  for (const { work } of lines(11, 25)) {
     if (work.kind !== 'uthShares') continue;
     assert.notEqual(work.action, 'fold', 'folding was given a chance of winning');
-    assert.ok(
-      !(phase === 'preflop' && work.action === 'check'),
-      'checking before the flop was given a calculation it has no counts for',
+  }
+});
+
+test('checking before the flop now has its percentages, out of its own scale', () => {
+  /*
+   * The gap round 27 named and round 28 closed. It is the one branch whose
+   * endings are **not** the raise branch's 2,097,572,400: a five-card board is
+   * reached by ten different flops and the check line is not the same line on
+   * each, so it runs to 20,975,724,000. The table stores that scale, and this
+   * checks the shares are taken out of it rather than out of the other one.
+   */
+  const CHECK_OUT = 20_975_724_000;
+  const row = preflopRow('AA');
+  assert.notEqual(row.checkOutcomes, undefined, 'the table has not been regenerated');
+  assert.equal(row.checkOutcomes, CHECK_OUT, 'the check branch is out of the wrong scale');
+  assert.equal(
+    row.checkWins! + row.checkTies! + row.checkLosses!,
+    CHECK_OUT,
+    'the check branch counts do not add up to their own scale',
+  );
+
+  let seen = 0;
+  for (const { work, phase } of lines(55, 30)) {
+    if (phase !== 'preflop' || work.action !== 'check') continue;
+    if (work.oddsWin === undefined) continue;
+    seen++;
+    const total = work.oddsTieHidden
+      ? work.oddsWin + work.oddsLose + work.oddsTie
+      : work.oddsWin + work.oddsTie + work.oddsLose;
+    assert.equal(total, 100, 'the pre-flop check shares do not add to 100');
+  }
+  assert.ok(seen > 0, 'checking before the flop still shows no percentages');
+});
+
+test('and its calculation, which rebuilds the figure like every other', () => {
+  let seen = 0;
+  for (const { work, phase } of lines(55, 30)) {
+    if (phase !== 'preflop' || work.action !== 'check' || work.kind !== 'uthShares') continue;
+    seen++;
+    assert.notEqual(work.digits, null, 'no decimals make the pre-flop check sum come out');
+    const round = (value: number) => Number(value.toFixed(work.digits));
+    const rebuilt =
+      1 + (round(work.shareWin) * round(work.winPay) - round(work.shareLose) * round(work.losePay)) / UTH_STAKE;
+    assert.equal(
+      returnFigure(rebuilt),
+      returnFigure(work.value),
+      'the pre-flop check calculation does not reach the figure it explains',
     );
   }
+  assert.ok(seen > 0, 'checking before the flop still carries no calculation');
 });
 
 /**

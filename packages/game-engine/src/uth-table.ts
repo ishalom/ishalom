@@ -204,6 +204,8 @@ export interface UthEvaluation {
     checkLosses?: number;
     checkWinUnits?: number;
     checkLossUnits?: number;
+    /** What the check branch's counts are out of. Not the raise branch's figure. */
+    checkOutcomes?: number;
     /*
      * Pre-flop only (round 20), from the offline table. The Ante and the Blind
      * across the winning endings and across all of them, which is what lets one
@@ -453,6 +455,19 @@ export class UthTable {
               flopRaises: row.flopRaises,
               flopRaiseValue: row.flopRaiseValue,
               flopCheckValue: row.flopCheckValue,
+              /*
+               * And the check branch's own endings (round 28), out of their own
+               * scale — ten times the raise branch's, because a five-card board
+               * is reached by ten different flops and the check line is not the
+               * same line on each. The table stores the scale so nothing here
+               * has to assume it.
+               */
+              checkWins: row.checkWins,
+              checkTies: row.checkTies,
+              checkLosses: row.checkLosses,
+              checkWinUnits: row.checkWinUnits,
+              checkLossUnits: row.checkLossUnits,
+              checkOutcomes: row.checkOutcomes,
             };
       evaluation = {
         phase: 'preflop',

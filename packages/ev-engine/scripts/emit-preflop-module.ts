@@ -41,6 +41,13 @@ interface Row {
   flopRaises?: number;
   flopRaiseValue?: number;
   flopCheckValue?: number;
+  /* The check branch's endings and what they are worth (round 28). */
+  checkWins?: number;
+  checkTies?: number;
+  checkLosses?: number;
+  checkWinUnits?: number;
+  checkLossUnits?: number;
+  checkOutcomes?: number;
 }
 
 interface Asset {
@@ -88,6 +95,21 @@ const rows = labels
             `flopRaiseValue: ${row.flopRaiseValue}`,
             `flopCheckValue: ${row.flopCheckValue}`,
           ]),
+    /*
+     * The check branch's own endings (round 28), emitted separately because a
+     * table solved before them has the fields above and not these — and a
+     * missing counter must read as "not counted" rather than as zero.
+     */
+    ...(row.checkWins === undefined
+      ? []
+      : [
+          `checkWins: ${row.checkWins}`,
+          `checkTies: ${row.checkTies}`,
+          `checkLosses: ${row.checkLosses}`,
+          `checkWinUnits: ${row.checkWinUnits}`,
+          `checkLossUnits: ${row.checkLossUnits}`,
+          `checkOutcomes: ${row.checkOutcomes}`,
+        ]),
     ].join(', ');
     return `  ${JSON.stringify(label)}: { label: ${JSON.stringify(label)}, ${fields} },`;
   })
@@ -151,6 +173,28 @@ export interface PreflopRow {
   flopRaises?: number;
   flopRaiseValue?: number;
   flopCheckValue?: number;
+
+  /*
+   * And the check branch's own endings (round 28), which round 20 did not take.
+   * Without them checking was the one action in the block that could show no
+   * percentages and no arithmetic from them.
+   *
+   * **They are out of \`checkOutcomes\`, not out of 2,097,572,400.** A five-card
+   * board is reached by ten different flops and the check line is not the same
+   * line on each — the same five cards may be raised on one flop and checked on
+   * another, because the decision is made from three of them. So the check
+   * branch runs to 19,600 x 1,081 x 990 = 20,975,724,000 endings. The scale is
+   * stored rather than assumed, because a reader who used the raise branch's
+   * figure would be out by a factor of ten and the shares would still look
+   * plausible.
+   */
+  checkWins?: number;
+  checkTies?: number;
+  checkLosses?: number;
+  /** What those endings pay and cost, so the shares can state their own sum. */
+  checkWinUnits?: number;
+  checkLossUnits?: number;
+  checkOutcomes?: number;
 }
 
 /** The blind paytable these numbers were solved against. */

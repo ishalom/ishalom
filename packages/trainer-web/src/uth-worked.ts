@@ -58,6 +58,8 @@ export interface UthCounts {
   checkLosses?: number;
   checkWinUnits?: number;
   checkLossUnits?: number;
+  /** What the check branch's counts are out of — not the raise branch's figure. */
+  checkOutcomes?: number;
   /** Pre-flop only: enough to rebuild any raise size, and the check branch's groups. */
   winSide?: number;
   side?: number;
@@ -354,7 +356,25 @@ export function uthOddsFor(
     const ties = counts.outcomes - counts.wins - counts.losses;
     return { wins: counts.wins, ties: Math.max(0, ties), losses: counts.losses };
   }
-  // Pre-flop check: see the note above. Nothing counted it, so nothing is shown.
+  /*
+   * And checking before the flop (round 28). It was the one action in the block
+   * with no percentages, because round 20's enumeration counted the raise
+   * branch and took only values for this one. The regenerated table counts it,
+   * out of its own scale — see `checkOutcomes`, which is ten times the raise
+   * branch's and is stored rather than assumed.
+   *
+   * A table solved before round 28 has none of this, and then the action says
+   * what it always said: its arithmetic, and no shares.
+   */
+  if (phase === 'preflop' && action === 'check') {
+    if (counts.checkWins === undefined) return null;
+    return {
+      wins: counts.checkWins,
+      ties: counts.checkTies ?? 0,
+      losses: counts.checkLosses ?? 0,
+    };
+  }
+
   return null;
 }
 
@@ -393,6 +413,11 @@ export function uthSharesFor(
   let winUnits: number;
   let lossUnits: number;
   if (phase === 'flop' && action === 'check') {
+    if (counts.checkWinUnits === undefined || counts.checkLossUnits === undefined) return null;
+    winUnits = counts.checkWinUnits;
+    lossUnits = counts.checkLossUnits;
+  } else if (phase === 'preflop' && action === 'check') {
+    /* The check branch's own units, which round 28's table finally carries. */
     if (counts.checkWinUnits === undefined || counts.checkLossUnits === undefined) return null;
     winUnits = counts.checkWinUnits;
     lossUnits = counts.checkLossUnits;

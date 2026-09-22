@@ -18,9 +18,3 @@ handoff/
 # an untracked folder marks every build dirty (round 22).
 Claude outputs/
 
-# Tonight's pre-flop regeneration, in flight (round 28). It is written after
-# every class so an hours-long job survives a closed lid, which means it is a
-# half-finished file for most of its life — and an untracked file marks every
-# build dirty. It is committed only once every EV in it has been checked
-# bit-identical against the one that shipped.
-packages/ev-engine/assets/uth-preflop-r28.json
