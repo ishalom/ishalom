@@ -96,6 +96,14 @@ function fakeStore() {
     async pushSeat(id: string, seat: number, record: any) {
       const row = seats.get(id)?.find((entry) => entry.seat === seat);
       if (!row) return false;
+      /*
+       * The real write is filtered on the writer's own id, `player_id=eq.…`,
+       * and a filter that matches nothing is not an error — PostgREST answers
+       * 204 and changes nothing. This stand-in used to write by seat alone, so
+       * a join that wrote its event from a row still reading "nobody here"
+       * passed every test and lost the event on every phone (round 29).
+       */
+      if (row.player_id === null || row.player_id !== record.playerId) return true;
       writes++;
       const key = `${id}:${seat}`;
       store.writesByRow.set(key, (store.writesByRow.get(key) ?? 0) + 1);

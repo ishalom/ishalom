@@ -19,6 +19,9 @@
 const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
 const el = (id) => document.getElementById(id);
 
+/** The seats somebody is sitting in. An empty chair is drawn nowhere (round 29). */
+const seatedAt = (screen) => (screen ? screen.seats.filter((seat) => seat.seated) : []);
+
 async function api(path, body) {
   const response = await fetch(path, {
     method: body === undefined ? 'GET' : 'POST',
@@ -39,6 +42,12 @@ const shared = {
   busy: false,
   /** Set when the page has no store to talk to: the artifact copy says so (§3.11). */
   unavailable: false,
+  /**
+   * Set when the link names a table the store does not have, or the join
+   * failed (round 29). Either way there is nothing to draw but the door, and
+   * before this there was nothing drawn at all.
+   */
+  lost: false,
   /** How many seats a new table gets. Two unless somebody says otherwise. */
   seats: 2,
   /** Which ticker item is showing, and when it last changed (§3.10). */
@@ -159,7 +168,7 @@ function seatNode(seat) {
  */
 function renderMeasures(screen) {
   const box = el('shared-measures');
-  if (!screen || screen.seats.length === 0) {
+  if (seatedAt(screen).length === 0) {
     box.hidden = true;
     return;
   }
@@ -168,7 +177,7 @@ function renderMeasures(screen) {
 
   const table = document.createElement('div');
   table.className = 'shared-measure-rows';
-  for (const seat of screen.seats) {
+  for (const seat of seatedAt(screen)) {
     const row = document.createElement('div');
     row.className = 'shared-measure' + (seat.mine ? ' mine' : '');
 
@@ -325,7 +334,7 @@ function renderSaid(screen) {
  */
 function renderReactions(screen) {
   const box = el('shared-reactions');
-  if (!screen || shared.seat === null || screen.seats.length < 2) {
+  if (!screen || shared.seat === null || seatedAt(screen).length < 2) {
     box.hidden = true;
     box.replaceChildren();
     return;
@@ -415,7 +424,7 @@ function tickerText(item) {
  */
 function renderFolklore(screen) {
   const box = el('shared-folklore');
-  const canAsk = Boolean(screen) && screen.handOver && screen.seats.length > 1 && shared.seat !== null;
+  const canAsk = Boolean(screen) && screen.handOver && seatedAt(screen).length > 1 && shared.seat !== null;
   if (!canAsk && !shared.folkloreAsked) {
     box.hidden = true;
     box.replaceChildren();
@@ -666,7 +675,17 @@ function renderTalk(screen) {
 function render() {
   const screen = shared.screen;
 
-  el('shared-door').hidden = Boolean(shared.id);
+  /*
+   * A link with no table behind it opens the door, with a line saying why,
+   * rather than a page with nothing on it (round 29).
+   */
+  const lost = shared.lost && !screen;
+  el('shared-door').hidden = Boolean(shared.id) && !lost;
+  if (lost) {
+    const note = el('shared-door-note');
+    note.hidden = false;
+    note.textContent = T('shared.missing');
+  }
   el('shared-refused').hidden = !(screen && screen.refused);
 
   if (shared.unavailable) {
@@ -675,6 +694,8 @@ function render() {
     note.hidden = false;
     note.textContent = T('shared.needsHosted');
     el('shared-make').hidden = true;
+    const dock = el('shared-actions').parentElement;
+    if (dock) dock.hidden = true;
     return;
   }
 
@@ -683,9 +704,9 @@ function render() {
    * the only growth this app has (§3.11) — so it is the whole screen until
    * somebody sits down, rather than a line beside a felt nobody can play.
    */
-  const seated = Boolean(screen) ? screen.seats.filter((seat) => seat.playerId !== null).length : 0;
+  const seated = seatedAt(screen).length;
   const alone = Boolean(screen) && seated < 2;
-  const free = Boolean(screen) && screen.seats.some((seat) => seat.playerId === null);
+  const free = Boolean(screen) && screen.seats.some((seat) => !seat.seated);
   /*
    * The link stays reachable while any seat is empty — at six seats people
    * arrive one at a time — but it is only the *whole* screen while nobody else
@@ -697,6 +718,9 @@ function render() {
 
   const playable = Boolean(screen) && !screen.refused && !alone;
   el('shared-table').hidden = !playable;
+  /* The dock holds the buttons and nothing else, so with none it is not drawn. */
+  const dock = el('shared-actions').parentElement;
+  if (dock) dock.hidden = !playable;
   if (!playable) {
     renderClock(null);
     el('shared-measures').hidden = true;
@@ -716,7 +740,7 @@ function render() {
   el('shared-dealer-total').textContent = screen.dealerTotal === null ? '' : String(screen.dealerTotal);
 
   /* Mine first, always: it is the hand being played (§3.1). */
-  const order = [...screen.seats].sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
+  const order = seatedAt(screen).sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
   const box = el('shared-seats');
   /*
    * Beyond four the other seats collapse into a list (§3.1): mine stays full
@@ -781,6 +805,7 @@ async function act(run) {
     const answer = await run();
     apply(answer);
   } catch (failure) {
+    if (!shared.screen && shared.id) shared.lost = true;
     const note = el('shared-door-note');
     if (note) {
       note.hidden = false;
@@ -798,13 +823,26 @@ function apply(answer) {
     shared.unavailable = true;
     return;
   }
-  if (answer.id) shared.id = answer.id;
+  if (answer.missing) shared.lost = true;
+  if (answer.id) {
+    shared.id = answer.id;
+    shared.lost = false;
+  }
   if (answer.seat !== undefined && answer.seat !== null) shared.seat = answer.seat;
   if (answer.screen !== undefined) shared.screen = answer.screen;
   if (answer.clock !== undefined) shared.clock = answer.clock;
 }
 
 async function refresh() {
+  /*
+   * The screen was left: another one is mounted in its place, and a poll that
+   * went on drawing would be drawing into elements that are not there.
+   */
+  if (!el('shared-door')) {
+    clearInterval(shared.timer);
+    shared.timer = null;
+    return;
+  }
   if (!shared.id || shared.busy) return;
   try {
     apply(await api('/api/shared/view', { id: shared.id }));
@@ -815,7 +853,18 @@ async function refresh() {
   render();
 }
 
-function initShared() {
+/*
+ * The screen, started.
+ *
+ * Not called `initShared`, and that is the whole of round 29. The built page
+ * wraps this file in a function of that name and calls the wrapper; a function
+ * of the same name in here was declared inside it, shadowed by nothing, and
+ * called by nobody — so from round 22 to round 28 the shared table drew no
+ * door, no seats and no buttons on any phone, while every route under it
+ * passed its tests. The call at the bottom of this file is what runs it, in
+ * the local app and the built page alike.
+ */
+function openShared() {
   const id = tableFromLocation();
   shared.id = id || null;
   shared.seat = null;
@@ -855,3 +904,5 @@ function initShared() {
   if (shared.timer) clearInterval(shared.timer);
   shared.timer = setInterval(() => void refresh(), 1500);
 }
+
+window.EV.ready.then(openShared);

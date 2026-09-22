@@ -50,6 +50,15 @@ export interface SeatPanel {
   name: string;
   /** True for the seat whose screen this is. */
   mine: boolean;
+  /**
+   * Whether anybody is sitting in it (round 29).
+   *
+   * The screen used to ask `seat.playerId`, which is not on a panel: every
+   * chair read as taken, so a player alone at his new table was shown a felt
+   * with two seats instead of the link to send. A flag rather than the id,
+   * because the other seats' ids are nothing this screen needs.
+   */
+  seated: boolean;
   bet: number;
   status: SeatStatus;
   /** Every hand this seat holds, as faces. More than one after a split. */
@@ -364,6 +373,7 @@ function panel(glance: SeatGlance, mine: boolean): SeatPanel {
     seat: glance.seat,
     name: glance.name,
     mine,
+    seated: glance.playerId !== null,
     bet: glance.bet,
     status: glance.status,
     hands: hands.map((cards) => cards.map((card) => cardView(card))),

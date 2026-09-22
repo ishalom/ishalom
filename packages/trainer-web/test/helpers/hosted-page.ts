@@ -72,6 +72,13 @@ function element(): any {
       remove(...names: string[]) {
         for (const name of names) classes.delete(name);
       },
+      // The shared screen marks its invite as waiting (round 29's test reaches it).
+      toggle(name: string, force?: boolean) {
+        const on = force ?? !classes.has(name);
+        if (on) classes.add(name);
+        else classes.delete(name);
+        return on;
+      },
       contains: (name: string) => classes.has(name) || String(node.className ?? '').split(' ').includes(name),
     },
     setAttribute(name: string, value: string) {

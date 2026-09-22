@@ -29,6 +29,17 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * `hidden` means hidden, whatever else the element's class says (round 29).
+ *
+ * The browser's own `[hidden] { display: none }` is the weakest rule on the
+ * page, so any class that sets `display` quietly overrides it. That is how the
+ * shared table showed an empty felt and an empty outlined box to two people on
+ * two phones: `.table` is flex and `.shared-clock` is flex, both were marked
+ * hidden, and both were drawn.
+ */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   min-height: 100dvh;

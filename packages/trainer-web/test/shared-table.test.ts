@@ -398,6 +398,35 @@ test('two seats agree about what was dealt, and a table that disagrees is refuse
   assert.equal(seatsAgree(record, table), true);
 });
 
+test('a seat that wrote before the next deal still agrees; one whose past changed does not (round 29)', () => {
+  const record = freshTable(29, 2);
+  // Both write with nothing dealt yet — the friend who has just sat down.
+  const before = deriveTable(record);
+  for (const seat of record.seats) seat.cardsHash = seatCardsHash(before, seat.seat);
+  assert.match(record.seats[1]!.cardsHash!, /^0:/, 'a seat with no cards did not write a count of zero');
+
+  // Then the table moves on without them. Round 28 refused it here, on both phones.
+  const later = playRandom(record, 3, 29);
+  assert.ok((later.seen.get(1) ?? []).length > 0, 'the test dealt nothing');
+  assert.equal(seatsAgree(record, later), true, 'the first deal after a join refused the table');
+
+  // Halfway: what a seat had seen then is still a prefix of what it has seen now.
+  const seen = later.seen.get(1)!;
+  const half = Math.floor(seen.length / 2);
+  record.seats[1]!.cardsHash = `${half}:${cardsHash(seen.slice(0, half))}`;
+  assert.equal(seatsAgree(record, later), true, 'an honest seat that wrote mid-shoe was refused');
+
+  // But a past that changed is still a refusal...
+  const drifted = [...seen.slice(0, half)];
+  drifted[0] = drifted[0] === 1 ? 2 : 1;
+  record.seats[1]!.cardsHash = `${half}:${cardsHash(drifted)}`;
+  assert.equal(seatsAgree(record, later), false, 'a seat whose earlier cards changed was accepted');
+
+  // ...and so is a seat claiming more cards than the table has dealt it.
+  record.seats[1]!.cardsHash = `${seen.length + 1}:${cardsHash(seen)}`;
+  assert.equal(seatsAgree(record, later), false, 'a seat ahead of the table was accepted');
+});
+
 // --- 5. The join, against a stand-in for PostgREST ---------------------------------------------
 
 /**

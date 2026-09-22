@@ -369,6 +369,14 @@ async function sharedJoin(id, player) {
        * through a hand joins the next one, rather than appearing in the middle
        * of a deal he was not dealt into.
        */
+      /*
+       * Read back first (round 29). The record in hand is from before the seat
+       * was taken, so my row in it still says nobody sits there — and my own
+       * write is filtered on my own id, so writing from that row matched no row
+       * at all, the store answered 204, and the join event was lost without a
+       * word. The friend who arrived by link was never dealt in.
+       */
+      await sharedRefresh();
       const seen = sharedScreenNow();
       const from = seen && seen.hand !== null ? seen.hand + 1 : 0;
       await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from });

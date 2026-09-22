@@ -964,9 +964,15 @@ function votedOut(record: TableRecord): TableEvent[] {
   return out;
 }
 
-/** Every card a seat saw, hashed — what each seat writes into its own row. */
+/**
+ * Every card a seat saw, hashed — what each seat writes into its own row.
+ *
+ * Written as `count:hash`: how many cards the seat had seen when it wrote, and
+ * the hash of those. The count is what makes the check below fair (round 29).
+ */
 export function seatCardsHash(table: DerivedTable, seat: number): string {
-  return cardsHash(table.seen.get(seat) ?? []);
+  const seen = table.seen.get(seat) ?? [];
+  return `${seen.length}:${cardsHash(seen)}`;
 }
 
 /**
@@ -975,11 +981,28 @@ export function seatCardsHash(table: DerivedTable, seat: number): string {
  * They always should. If they ever do not, something about the derivation has
  * drifted between two devices, and the only honest answer is to refuse the
  * table rather than show two people two different truths about one hand.
+ *
+ * AGREEING ABOUT THE PAST, NOT ABOUT THE PRESENT (round 29). A seat's hash is
+ * what it had seen *when it last wrote*, and the table moves on without it: the
+ * friend who sat down wrote his row with no cards in it, the other phone dealt,
+ * and the derivation now gives him two. Compared whole, that read as the two
+ * phones disagreeing, and the first hand ever dealt at a real two-phone table
+ * refused itself on both. Cards are only ever appended to what a seat has seen,
+ * so the honest question is whether the first `count` of them are still the
+ * ones it saw — and a seat claiming more cards than the table has dealt it is a
+ * disagreement too. A hash with no count (written before this) is compared
+ * whole, as it always was.
  */
 export function seatsAgree(record: TableRecord, table: DerivedTable): boolean {
-  return record.seats.every(
-    (seat) => seat.cardsHash === undefined || seat.cardsHash === seatCardsHash(table, seat.seat),
-  );
+  return record.seats.every((seat) => {
+    if (seat.cardsHash === undefined) return true;
+    const seen = table.seen.get(seat.seat) ?? [];
+    const at = seat.cardsHash.indexOf(':');
+    if (at < 0) return seat.cardsHash === cardsHash(seen);
+    const count = Number(seat.cardsHash.slice(0, at));
+    if (!Number.isInteger(count) || count < 0 || count > seen.length) return false;
+    return seat.cardsHash.slice(at + 1) === cardsHash(seen.slice(0, count));
+  });
 }
 
 /* ---------------------------------------------------------------------------
