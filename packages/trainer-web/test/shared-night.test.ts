@@ -168,3 +168,20 @@ test('a mistake’s remark is the player’s own: the ticker has no kind for one
   const remark = screen.slice(screen.indexOf('function mistakeLine('), screen.indexOf('function mistakeLine(') + 600);
   assert.doesNotMatch(remark, /ticker|react/, 'the remark reaches something other players see');
 });
+
+test('nothing the shared table says tells a player to deal: the next hand deals itself', () => {
+  /*
+   * Found by the live walk after round 30 was deployed: on a hand with no
+   * decision in it (a natural) the dock fell back to "The hand is over. Deal
+   * when you are ready." — a button that no longer exists.
+   */
+  const screen = readFileSync(join(HERE, '..', 'public', 'shared.js'), 'utf8');
+  const keys = new Set([...screen.matchAll(/T\('(shared\.[A-Za-z.]+)'/g)].map((match) => match[1]!));
+  const strings = readFileSync(join(HERE, '..', 'src', 'i18n.ts'), 'utf8');
+  for (const key of keys) {
+    for (const line of strings.split('\n').filter((row) => row.includes(`'${key}':`))) {
+      assert.doesNotMatch(line, /Deal when|חלקו כש/, `${key} still tells a player to deal`);
+    }
+  }
+  assert.ok(keys.has('shared.handOver'), 'the scan found none of the dock’s strings');
+});
