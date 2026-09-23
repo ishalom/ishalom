@@ -412,6 +412,9 @@ test('an Ultimate table draws on the same route: one board, the dealer face down
     assert.equal(el('shared-evening').hidden, false, 'no "evening so far" line after a finished hand');
     assert.ok(has('shared-measures', 'shared-history').length === 1, 'no hand history under the felt');
     assert.equal(has('shared-table-line', 'shared-accuracy').length, 1, 'no shared accuracy bar');
+    // The evening is kept for home to sum up after leaving, before any tap on the home link (round 34).
+    const kept = JSON.parse(String(page.storage().get('ev:lastEvening') || 'null'));
+    assert.ok(kept && kept.hands >= 1, 'the evening is not kept for the home screen');
   } finally {
     page?.stopWatching();
     for (const handle of timers) clearInterval(handle);

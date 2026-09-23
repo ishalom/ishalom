@@ -1365,6 +1365,15 @@ function render() {
    * The evening's summary (round 34, item 9), once there is an evening to sum
    * up and nobody left to play it with — the table has ended for me.
    */
+  /*
+   * The evening, kept for the home screen to sum up once after leaving (round
+   * 34). Kept on every drawing rather than on the tap on the home link: the
+   * screen changes before that tap's own handler runs — found on the live walk,
+   * where home had already looked and found nothing.
+   */
+  if (screen && screen.handsFinished > 0 && shared.seat !== null && window.EVEvening) {
+    window.EVEvening.keep(eveningSummary(screen));
+  }
   const summaryBox = el('shared-summary');
   if (summaryBox) {
     /*
@@ -1601,10 +1610,6 @@ function openShared() {
   if (home) {
     home.setAttribute('title', T('shared.leaveHint'));
     home.addEventListener('click', () => {
-      /* The evening, kept for the home screen to sum up once (round 34, item 9). */
-      if (shared.screen && shared.screen.handsFinished > 0 && window.EVEvening) {
-        window.EVEvening.keep(eveningSummary(shared.screen));
-      }
       if (shared.id && shared.seat !== null) void api('/api/shared/leave', { id: shared.id });
     });
   }
