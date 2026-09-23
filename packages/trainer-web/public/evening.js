@@ -43,12 +43,26 @@
   function picture(data) {
     const canvas = document.createElement('canvas');
     const width = 1080;
-    const text = lines(data);
-    const height = 360 + text.length * 96;
-    canvas.width = width;
-    canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
+    const font = '500 44px system-ui, sans-serif';
+    /* A long line wraps onto the next rather than being squeezed to fit. */
+    ctx.font = font;
+    const wrapped = [];
+    for (const line of lines(data)) {
+      let current = '';
+      for (const word of line.split(' ')) {
+        const next = current ? `${current} ${word}` : word;
+        if (current && ctx.measureText(next).width > width - 120) {
+          wrapped.push(current);
+          current = word;
+        } else current = next;
+      }
+      if (current) wrapped.push(current);
+    }
+    const height = 330 + wrapped.length * 72;
+    canvas.width = width;
+    canvas.height = height;
     const rtl = document.documentElement.getAttribute('dir') === 'rtl';
     ctx.fillStyle = '#0f4d2e';
     ctx.fillRect(0, 0, width, height);
@@ -58,11 +72,11 @@
     ctx.font = '700 64px system-ui, sans-serif';
     ctx.fillText(T('shared.summaryTitle'), width / 2, 130);
     ctx.fillStyle = '#e8eee9';
-    ctx.font = '500 44px system-ui, sans-serif';
-    text.forEach((line, index) => ctx.fillText(line, width / 2, 240 + index * 96, width - 80));
+    ctx.font = font;
+    wrapped.forEach((line, index) => ctx.fillText(line, width / 2, 230 + index * 72));
     ctx.fillStyle = '#9fc2ad';
     ctx.font = '500 34px system-ui, sans-serif';
-    ctx.fillText('EV Trainer · ishalom.github.io/ishalom', width / 2, height - 60);
+    ctx.fillText('EV Trainer · ishalom.github.io/ishalom', width / 2, height - 50);
     return canvas;
   }
 
@@ -140,5 +154,5 @@
     return taken && Date.now() - taken.at < 5000 ? taken.data : null;
   }
 
-  window.EVEvening = { card, keep, takeKept, lines };
+  window.EVEvening = { card, keep, takeKept, lines, picture };
 })();
