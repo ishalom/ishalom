@@ -30,6 +30,8 @@ let refuseUthColumns = false;
 
 /** Rows as the table sends them for the Blackjack list, already in rating order. */
 const ROWS = [
+  // Every decision made at a shared table: rated, and no private-table figure (round 31).
+  { id: 's', name: 'Shared only', rating: 1948, peak: 1959, provisional: false, mode: 'basic', hands: 0, decisions: 0, lifetime_decisions: 182, accuracy: 1, ev_lost_per_100: 0, feed: [], updated_at: '2026-09-22T22:13:00Z' },
   { id: 'a', name: 'Maya', rating: 1640, peak: 1660, provisional: false, mode: 'basic', hands: 412, decisions: 398, lifetime_decisions: 900, accuracy: 0.9412, ev_lost_per_100: 0.83, feed: [], updated_at: '2026-09-13T10:00:00Z' },
   { id: 'me', name: 'Dana', rating: 1310, peak: 1320, provisional: true, mode: 'basic', hands: 25, decisions: 22, lifetime_decisions: 22, accuracy: 0.8, ev_lost_per_100: 2.5, feed: [], updated_at: '2026-09-14T10:00:00Z' },
   { id: 'b', name: 'Opened only', rating: 0, peak: 1200, provisional: true, mode: 'basic', hands: 0, decisions: 0, lifetime_decisions: 0, accuracy: 0, ev_lost_per_100: 0, feed: [], updated_at: '2026-09-14T11:00:00Z' },
@@ -103,10 +105,13 @@ test('the Blackjack leaderboard: the same question to the table, and the same ro
   const line = (accuracy: string, hands: number) =>
     EN['social.playerLine']!.replace('{accuracy}', accuracy).replace('{hands}', String(hands));
   assert.deepEqual(rows, [
-    { me: false, cells: ['1', 'Maya', '1640', line('94.1', 412)] },
-    { me: true, cells: ['2', 'Dana', '1310', line('80.0', 25)] },
-    { me: false, cells: ['3', 'Uth only', '—', line('100.0', 3)] },
+    { me: false, cells: ['1', 'Shared only', '1948', EN['social.playerLineAll']!.replace('{decisions}', '182')] },
+    { me: false, cells: ['2', 'Maya', '1640', line('94.1', 412)] },
+    { me: true, cells: ['3', 'Dana', '1310', line('80.0', 25)] },
+    { me: false, cells: ['4', 'Uth only', '—', line('100.0', 3)] },
   ]);
+  /* The figure beside a rating says which table it is from (round 31). */
+  assert.match(EN['social.playerLine']!, /private table/);
   page.stopWatching();
 });
 

@@ -376,7 +376,14 @@ async function absorbSharedRating() {
   if (!sharedState.record || sharedState.seat === null) return;
   const owed = sharedUnrated();
   if (owed.length === 0) return;
-  session.absorbRated(rulesFor(sharedState.record), owed);
+  /*
+   * An insurance nobody was asked is not a decision (round 31): it stays out
+   * of the rating, and the mark still passes it, so the list the mark counts
+   * along is the same on every device and after every build.
+   */
+  const record = sharedState.record;
+  const seat = sharedState.seat;
+  session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
   await sharedMarkRated(owed.length);
   saveProgressLocally();
   void publish();
@@ -496,6 +503,21 @@ async function restoreMine() {
         me.id = remote.mergedInto;
         store.set('ev:playerId', me.id);
         remote = await backend.load(me.id);
+        /*
+         * And forget what belonged to the retired row (round 31). The stored
+         * proof is SHA-256 of *its* id and the code, so written onto the
+         * survivor it matches nobody's code, and the door refuses its owner for
+         * good. The name goes the same way: the survivor answers to its own
+         * name, and saving this browser's would rename it — after which the
+         * name it had is free for anybody to take.
+         */
+        me.pinHash = null;
+        store.set('ev:pinHash', '');
+        if (remote?.name) {
+          me.name = remote.name;
+          store.set('ev:playerName', me.name);
+          session.setPlayerName(me.name);
+        }
       }
 
       if (remote) {

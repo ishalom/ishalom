@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 
 import { PER_SITTING, RECORD_FLOOR } from '../src/gestures.ts';
 import { sharedScreen } from '../src/shared-screen.ts';
-import { deriveTable, type TableRecord } from '../src/shared-table.ts';
+import { deriveTable, seatRatable, wasAsked, type TableRecord } from '../src/shared-table.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const night = (): TableRecord =>
@@ -184,4 +184,25 @@ test('nothing the shared table says tells a player to deal: the next hand deals 
     }
   }
   assert.ok(keys.has('shared.handOver'), 'the scan found none of the dock’s strings');
+});
+
+test('an insurance nobody was asked never reaches the rating, and the mark still passes it (round 31)', () => {
+  /*
+   * Round 30 took these out of the bars and left them in the rating: each of
+   * the two players absorbed six "right" declines of an insurance the shared
+   * table never offers. The list the mark counts along keeps them, so a table
+   * rated under the old build hands nothing over twice.
+   */
+  const record = night();
+  for (const seat of [0, 1]) {
+    const all = seatRatable(record, seat);
+    const rated = all.filter((decision) => wasAsked(record, seat, decision));
+    assert.equal(all.length - rated.length, 6, `seat ${seat}: unasked insurances`);
+    assert.ok(rated.every((decision) => decision.round !== -1), `seat ${seat} is rated on an insurance`);
+  }
+
+  const shell = readFileSync(join(HERE, '..', 'artifact', 'shell.js'), 'utf8');
+  const absorb = shell.slice(shell.indexOf('async function absorbSharedRating'), shell.indexOf('function saveProgressLocally'));
+  assert.match(absorb, /absorbRated\([^;]*wasAsked/, 'the shell rates every listed decision again');
+  assert.match(absorb, /sharedMarkRated\(owed\.length\)/, 'the mark no longer passes the whole list');
 });

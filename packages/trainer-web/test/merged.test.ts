@@ -188,6 +188,46 @@ test('a browser holding a merged id ends up on the surviving record', async () =
   app.stopWatching();
 });
 
+test('a browser arriving from a merged row brings neither its code nor its name to the survivor', async () => {
+  /*
+   * Round 31, Idan's own merge. His phone held `Shalom`, a row with a code;
+   * the survivor `שלום` has none. The stored proof is SHA-256 of the *retired*
+   * id and the code, so written onto the survivor it matches nobody — the door
+   * would refuse him on his own name for good. And saving the phone's name
+   * would rename the survivor, freeing the name it answered to.
+   *
+   * The test before this one leaves a save in flight, and it lands on the
+   * survivor as a whole row; it has to land before this table is set.
+   */
+  await new Promise((r) => setTimeout(r, 300));
+  reset();
+  rows[0]!.pin_hash = null;
+  rows[0]!.name = 'שלום';
+  rows[0]!.name_key = 'שלום';
+  rows[1]!.name = 'Shalom';
+  rows[1]!.name_key = 'shalom';
+  rows[1]!.pin_hash = 'hash-of-retired-id-and-code';
+  const app = loadPage({
+    'ev:playerId': 'retired',
+    'ev:playerName': 'Shalom',
+    'ev:pinHash': 'hash-of-retired-id-and-code',
+  });
+  try {
+    await app.booted;
+    await new Promise((r) => setTimeout(r, 100));
+
+    assert.equal(app.me().id, 'survivor');
+    assert.equal(app.me().pinHash, null, 'the retired row’s proof came along');
+    assert.equal(app.me().name, 'שלום', 'the browser kept the retired row’s name');
+    for (const write of seen.filter((r) => r.method === 'POST' && r.body?.id === 'survivor')) {
+      assert.equal(write.body.pin_hash, undefined, 'the retired row’s proof was written onto the survivor');
+      assert.equal(write.body.name_key, 'שלום', `the survivor was renamed to ${write.body.name}`);
+    }
+  } finally {
+    app.stopWatching();
+  }
+});
+
 test('the two saved copies are compared on a counter that never resets', async () => {
   /*
    * A rule change zeroes `decisions` while keeping the rating, so comparing on

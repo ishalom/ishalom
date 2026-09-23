@@ -1155,6 +1155,22 @@ function countDecision(tally: SeatTally, decision: DerivedDecision): void {
 }
 
 /**
+ * Whether a seat was actually asked this decision.
+ *
+ * Only insurance can fail it. The shared table has no insurance button, so the
+ * derivation declines insurance for every seat under an ace, and nobody decided
+ * anything. Round 30 kept those out of the bars; round 31 keeps them out of the
+ * rating, which had been taking each as a free right answer. A seat's own moves
+ * holding an answer at round -1 is what "asked" means.
+ */
+export function wasAsked(record: TableRecord, seat: number, decision: { hand: number; round: number }): boolean {
+  if (decision.round !== -1) return true;
+  return (record.seats.find((entry) => entry.seat === seat)?.moves ?? []).some(
+    (move) => move.hand === decision.hand && move.round === -1,
+  );
+}
+
+/**
  * Whether one graded decision belongs in the bars a given screen draws (round 30).
  *
  * Two kinds stay out, and both are about what the screen shows, not what is
@@ -1176,12 +1192,7 @@ function countsOnScreen(
   current: DerivedHand | null,
   seat: number | null,
 ): boolean {
-  if (decision.round === -1) {
-    const asked = record.seats
-      .find((entry) => entry.seat === decision.seat)
-      ?.moves.some((move) => move.hand === decision.hand && move.round === -1);
-    if (!asked) return false;
-  }
+  if (!wasAsked(record, decision.seat, decision)) return false;
   if (hand !== current || !current.incomplete) return true;
   if (decision.seat === seat) return true;
   return seat !== null && hasActed(record, seat, current.hand);

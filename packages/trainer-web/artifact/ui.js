@@ -321,8 +321,14 @@ function renderLeaderboard(box) {
   box.appendChild(caption);
   if (boardGame === 'uth') return void renderUthBoard(box);
 
-  // The Blackjack side, as it was before round 10: same rows, same order.
-  const rated = leaderboard.filter((p) => p.decisions > 0);
+  /*
+   * The Blackjack side, as it was before round 10: same rows, same order —
+   * except who is on it (round 31). Everything a player plays counts, so a
+   * player whose decisions were all made at a shared table is on the board by
+   * the rating they moved, where `decisions > 0` had hidden him.
+   */
+  const lifetimeOf = (p) => Number(p.lifetime_decisions ?? p.lifetimeDecisions ?? p.decisions) || 0;
+  const rated = leaderboard.filter((p) => p.decisions > 0 || lifetimeOf(p) > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
 
   const list = document.createElement('ol');
@@ -346,10 +352,20 @@ function renderLeaderboard(box) {
 
     const detail = document.createElement('span');
     detail.className = 'board-detail';
-    detail.textContent = tr('social.playerLine', {
-      accuracy: (player.accuracy * 100).toFixed(1),
-      hands: player.hands,
-    });
+    /*
+     * One kind of judgement per figure (round 31, Idan: *"שלא יהיה ערבוב בין
+     * סוגים של שיפוט"*). The accuracy stored on a row is the private table's,
+     * and the line now says so; a player with none there gets his whole count
+     * instead, named as that — never "100.0% over 0 hands" beside a rating
+     * built somewhere else.
+     */
+    detail.textContent =
+      player.decisions > 0
+        ? tr('social.playerLine', {
+            accuracy: (player.accuracy * 100).toFixed(1),
+            hands: player.hands,
+          })
+        : tr('social.playerLineAll', { decisions: window.EVFigure.units(lifetimeOf(player)) });
 
     row.append(place, who, score, detail);
     list.appendChild(row);

@@ -44,6 +44,7 @@ function artifactBackend(db) {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
+        name: summary.exists ? (summary.data()?.name ?? null) : null,
         updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
     },
@@ -356,7 +357,7 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into,updated_at`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=name,progress,feed,merged_into,updated_at`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
@@ -369,6 +370,8 @@ function httpBackend({ url, key, table = 'players' }) {
         // has to know, or it will read a dormant session back and then write to
         // it — which would put an abandoned rating back on the leaderboard.
         mergedInto: rows[0].merged_into ?? null,
+        // The row's own name, for a browser arriving from a merged one (round 31).
+        name: rows[0].name ?? null,
         // When the row was last written: the last day a player from before the
         // day count is known to have played (round 9).
         updatedAt: Date.parse(rows[0].updated_at) || null,
