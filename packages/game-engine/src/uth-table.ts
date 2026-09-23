@@ -136,6 +136,18 @@ export interface UthTableOptions {
   /** The blind paytable. Only `standard` is solved pre-flop; see `preflop-table.ts`. */
   paytable?: BlindPaytable;
   seed?: number;
+  /**
+   * Evaluations already solved, shared between tables (round 32).
+   *
+   * A shared Ultimate table is derived again from its log on every read, and
+   * each derivation plays every seat of every hand through its own `UthTable`
+   * — so without this, each read re-solved every flop the table had ever seen,
+   * at ~60 ms apiece. An evaluation is a pure function of the hole cards and
+   * the board the player can see, so one solved for those cards is the answer
+   * for those cards on any table. This is a memo and nothing else: the figures
+   * are the solver's, unchanged, and a table without one solves as it always has.
+   */
+  solved?: Map<string, UthEvaluation>;
 }
 
 export interface UthView {
@@ -276,9 +288,13 @@ export class UthTable {
    */
   private evaluation: UthEvaluation | null = null;
 
+  /** See `UthTableOptions.solved`. */
+  private readonly solved: Map<string, UthEvaluation> | null;
+
   constructor(options: UthTableOptions = {}) {
     this.paytable = options.paytable ?? DEFAULT_BLIND_PAYTABLE;
     this.rng = makeRng(options.seed ?? Date.now() % 2147483647);
+    this.solved = options.solved ?? null;
   }
 
   // --- Reading the table ---------------------------------------------------
@@ -426,6 +442,18 @@ export class UthTable {
     const legal = this.legalActions();
     if (legal.length === 0) throw new Error(`Nothing to decide while ${this.phase}`);
     if (this.evaluation) return this.evaluation;
+    /*
+     * The key is everything the answer depends on: the paytable, the decision
+     * point, the hole cards and the board as far as it is face up.
+     */
+    const key = this.solved
+      ? `${JSON.stringify(this.paytable)}|${this.phase}|${this.hole.join(',')}|${this.board.slice(0, REVEALED[this.phase]).join(',')}`
+      : '';
+    const known = this.solved?.get(key);
+    if (known) {
+      this.evaluation = known;
+      return known;
+    }
 
     const started = now();
     let evaluation: Omit<UthEvaluation, 'optimalAction' | 'solveMs'>;
@@ -531,6 +559,7 @@ export class UthTable {
       }
     }
     this.evaluation = { ...evaluation, optimalAction, solveMs };
+    this.solved?.set(key, this.evaluation);
     return this.evaluation;
   }
 

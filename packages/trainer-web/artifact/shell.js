@@ -383,7 +383,13 @@ async function absorbSharedRating() {
    */
   const record = sharedState.record;
   const seat = sharedState.seat;
-  session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
+  /*
+   * An Ultimate table's decisions go to the Ultimate rating (round 32), through
+   * the Ultimate session's own rule — never to Blackjack's, which is the one
+   * thing the two ratings have always been kept apart on.
+   */
+  if (isUthTable(record)) uthSession.absorbRated(owed);
+  else session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
   await sharedMarkRated(owed.length);
   saveProgressLocally();
   void publish();
@@ -709,15 +715,19 @@ async function api(path, body) {
      * ---------------------------------------------------------------- */
     case '/api/shared/create': {
       if (!sharedAvailable()) return { available: false };
+      /* Which game (round 32): an Ultimate table is recorded under its own preset. */
+      const uth = b.game === 'uth';
       const made = await sharedCreate({
         playerId: me.id,
         name: me.name,
         bet: 1,
-        presetId: store.get('ev:preset') || 'vegas-strip-6d-s17',
-        restrictions: {
-          noSurrender: store.get('ev:noSurrender') === '1',
-          likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
-        },
+        presetId: uth ? UTH_PRESET_ID : store.get('ev:preset') || 'vegas-strip-6d-s17',
+        restrictions: uth
+          ? {}
+          : {
+              noSurrender: store.get('ev:noSurrender') === '1',
+              likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
+            },
         seats: Math.max(2, Math.min(6, Number(b.seats) || 2)),
       });
       return { ...made, screen: sharedScreenNow(), clock: sharedClock() };

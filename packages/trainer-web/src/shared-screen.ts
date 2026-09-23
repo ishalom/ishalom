@@ -29,6 +29,8 @@ import { PER_SITTING, RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
 import type { Locale } from './i18n.ts';
 import { returnsBlock, stakeFor } from './returns-block.ts';
 import { cardView, totalOf, type CardView } from './session.ts';
+import { isUthTable } from './shared-uth.ts';
+import { UthSession, pokerCardView } from './uth-session.ts';
 import {
   deriveTable,
   rulesFor,
@@ -107,6 +109,14 @@ export interface SeatPanel {
   evLostPer100: number | null;
   /** Its longest run of right decisions at this table. */
   streak: number;
+  /** How many of its cards I see face down: an Ultimate neighbour's, mid-hand (round 32). */
+  faceDown: number;
+  /**
+   * Ultimate only (round 32): the hand in words, as the private table's seat
+   * header says it — the class of the two cards before the flop, the best hand
+   * after. Null in Blackjack, where the total says it.
+   */
+  words: string | null;
 }
 
 /**
@@ -205,9 +215,18 @@ export interface DecisionView {
   /** The engine's own severity tier for the cost, as the solo card colours it. */
   severity: string;
   correct: boolean;
+  /**
+   * Ultimate only (round 32): the private table's own card for this decision,
+   * whole — verdict, rows, worked lines, the percentages and the calculation,
+   * the sentence and its notes — from `UthSession.explainDecision`, which is
+   * `compose()`, the function the private card is built with.
+   */
+  feedback?: unknown;
 }
 
 export interface SharedScreen {
+  /** Which game the table deals (round 32). */
+  game: 'blackjack' | 'uth';
   hand: number | null;
   dealer: CardView[];
   dealerTotal: number | null;
@@ -240,6 +259,16 @@ export interface SharedScreen {
    * dealt and until I make my next decision. Mine only.
    */
   analysis: DecisionView[];
+  /**
+   * Ultimate only (round 32): the one board, as far as it has turned, and how
+   * many of its five are still face down; which street the table is deciding
+   * (0, 1, 2; 3 once the hand is over); and the dealer's hand in words once
+   * his cards are turned. Empty and null in Blackjack.
+   */
+  board: CardView[];
+  boardHidden: number;
+  street: number | null;
+  dealerWords: string | null;
 }
 
 /**
@@ -426,6 +455,7 @@ function mineFor(
   locale: Locale,
 ): DecisionView[] {
   if (seat === null) return [];
+  if (isUthTable(record)) return uthMineFor(decisions, seat, locale);
   const rules = rulesFor(record);
   return decisions
     .filter((decision) => decision.seat === seat)
@@ -464,6 +494,49 @@ function mineFor(
 }
 
 /**
+ * The private table's session for one language, kept to word Ultimate cards.
+ *
+ * It deals nothing and holds nothing of anybody's: it is here for `compose()`
+ * and the hand words, which are its methods, so that a shared decision is worded
+ * by the same function a private one is.
+ */
+const UTH_SPEAKERS = new Map<Locale, UthSession>();
+
+function uthSpeaker(locale: Locale): UthSession {
+  let speaker = UTH_SPEAKERS.get(locale);
+  if (!speaker) {
+    speaker = new UthSession(1);
+    speaker.setLocale(locale);
+    UTH_SPEAKERS.set(locale, speaker);
+  }
+  return speaker;
+}
+
+/** My own Ultimate decisions, each with the private table's whole card. */
+function uthMineFor(decisions: DerivedDecision[], seat: number, locale: Locale): DecisionView[] {
+  const speaker = uthSpeaker(locale);
+  return decisions
+    .filter((decision) => decision.seat === seat && decision.uth)
+    .map((decision) => {
+      const card = speaker.explainDecision(decision.uth!);
+      return {
+        hand: decision.hand,
+        round: decision.round,
+        action: String(decision.action),
+        optimalAction: decision.optimalAction,
+        evCost: decision.evCost,
+        ranked: card.ranked.map((row) => ({ action: row.action, ev: row.ev, value: row.value })),
+        returns: card.returns,
+        headline: card.headline,
+        steps: [],
+        severity: card.severity,
+        correct: card.correct,
+        feedback: card,
+      };
+    });
+}
+
+/**
  * My decisions in the latest hand I made any in, for the analysis (round 30).
  *
  * Read from the derivation rather than from the view, because the view carries
@@ -481,19 +554,24 @@ function analysisFor(record: TableRecord, seat: number | null, locale: Locale): 
   return [];
 }
 
-function panel(glance: SeatGlance, mine: boolean): SeatPanel {
+function panel(
+  glance: SeatGlance,
+  mine: boolean,
+  uth: { words: string | null } | null = null,
+): SeatPanel {
   const hands = glance.hands.length > 0 ? glance.hands : glance.cards.length > 0 ? [glance.cards] : [];
+  const face = uth ? pokerCardView : cardView;
   return {
     seat: glance.seat,
     name: glance.name,
     mine,
     seated: glance.playerId !== null,
     actions: [...glance.acted],
-    split: splitOf(hands, glance.detail, glance.active),
+    split: uth ? uthSplitOf(hands, glance.detail, glance.active) : splitOf(hands, glance.detail, glance.active),
     bet: glance.bet,
     status: glance.status,
-    hands: hands.map((cards) => cards.map((card) => cardView(card))),
-    total: hands.length > 0 ? totalOf(hands[0]!) : null,
+    hands: hands.map((cards) => cards.map((card) => face(card))),
+    total: uth ? null : hands.length > 0 ? totalOf(hands[0]!) : null,
     net: glance.net,
     stack: glance.stack,
     decisions: glance.decisions,
@@ -503,7 +581,22 @@ function panel(glance: SeatGlance, mine: boolean): SeatPanel {
     evLost: glance.evLost,
     evLostPer100: per100(glance.evLost, glance.decisions),
     streak: glance.streak,
+    faceDown: glance.faceDown,
+    words: uth ? uth.words : null,
   };
+}
+
+/** An Ultimate seat's one hand, for the felt: its cards and, once settled, its result. */
+function uthSplitOf(hands: number[][], detail: HandDetail[], active: number | null): SplitHand[] {
+  return hands.map((cards, index) => ({
+    cards: cards.map((card) => pokerCardView(card)),
+    // No total in Ultimate; the header carries the hand in words instead.
+    total: 0,
+    net: detail[index] ? detail[index]!.net : null,
+    doubled: false,
+    surrendered: false,
+    active: active === index,
+  }));
 }
 
 /** Each hand of a seat's, with its total, and its result once it has one. */
@@ -545,6 +638,7 @@ function comparisonOf(seats: SeatPanel[]): Comparison | null {
 /** One seat's whole screen, from the record and nothing else. */
 export function sharedScreen(record: TableRecord, seat: number | null, locale: Locale = 'en'): SharedScreen {
   const view = seatView(record, seat);
+  if (isUthTable(record)) return uthScreen(record, view, seat, locale);
   const seats = view.seats.map((glance) => panel(glance, glance.seat === seat));
   const me = seats.find((panel) => panel.mine) ?? null;
   /*
@@ -568,7 +662,7 @@ export function sharedScreen(record: TableRecord, seat: number | null, locale: L
     round: view.round,
     onlyMe: view.onlyMe,
     waitingFor: view.waitingFor,
-    handOver: view.hand !== null && view.dealerRevealed,
+    handOver: view.hand !== null && view.handOver,
     refused: view.disagrees,
     comparison: comparisonOf(seats),
     table: tableMeasures(seats),
@@ -576,5 +670,60 @@ export function sharedScreen(record: TableRecord, seat: number | null, locale: L
     ticker: tickerFor(record),
     mine: mineFor(record, view.decisions, seat, locale),
     analysis: analysisFor(record, seat, locale),
+    game: 'blackjack',
+    board: [],
+    boardHidden: 0,
+    street: null,
+    dealerWords: null,
+  };
+}
+
+/**
+ * One seat's Ultimate screen (round 32): the same object, with the board.
+ *
+ * Everything that is not about the cards — the bars, the measures, the ticker,
+ * the reactions, the clock's inputs, the analysis — is the Blackjack screen's
+ * own code, reached through the same derivation interface. What differs is the
+ * felt: one board for everybody, the dealer's two cards face down until the
+ * hand is over, and every hand named in words rather than totalled.
+ */
+function uthScreen(record: TableRecord, view: ReturnType<typeof seatView>, seat: number | null, locale: Locale): SharedScreen {
+  const speaker = uthSpeaker(locale);
+  const board = view.uth ? view.uth.board : [];
+  /* The class of two cards before the flop; the best hand in them and the board after. */
+  const wordsOf = (cards: number[]): string | null => {
+    if (cards.length !== 2) return null;
+    return speaker.describeCards(board.length >= 3 ? [...cards, ...board] : [...cards]).words;
+  };
+  const seats = view.seats.map((glance) =>
+    panel(glance, glance.seat === seat, { words: wordsOf(glance.cards) }),
+  );
+  const me = seats.find((entry) => entry.mine) ?? null;
+  /* Neither of the dealer's cards is in the object until he turns them. */
+  const dealer = view.dealerRevealed ? view.dealer : [];
+  return {
+    game: 'uth',
+    hand: view.hand,
+    dealer: dealer.map((card) => pokerCardView(card)),
+    dealerTotal: null,
+    dealerRevealed: view.dealerRevealed,
+    seats,
+    me,
+    legal: view.legal,
+    round: view.round,
+    onlyMe: view.onlyMe,
+    waitingFor: view.waitingFor,
+    handOver: view.hand !== null && view.handOver,
+    refused: view.disagrees,
+    comparison: comparisonOf(seats),
+    table: tableMeasures(seats),
+    reactions: tableReactions(record),
+    ticker: tickerFor(record),
+    mine: mineFor(record, view.decisions, seat, locale),
+    analysis: analysisFor(record, seat, locale),
+    board: board.map((card) => pokerCardView(card)),
+    boardHidden: view.hand === null ? 0 : 5 - board.length,
+    street: view.uth ? view.uth.street : null,
+    dealerWords: dealer.length === 2 && board.length === 5 ? speaker.describeCards([...dealer, ...board]).words : null,
   };
 }

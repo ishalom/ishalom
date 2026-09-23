@@ -50,6 +50,8 @@ const shared = {
   lost: false,
   /** How many seats a new table gets. Two unless somebody says otherwise. */
   seats: 2,
+  /** Which game a new table deals (round 32): 'blackjack' unless Ultimate is chosen. */
+  game: 'blackjack',
   /** Which ticker item is showing, and when it last changed (§3.10). */
   tickerAt: 0,
   tickerShownAt: 0,
@@ -66,6 +68,37 @@ const shared = {
   waiting: null,
   seq: 0,
 };
+
+/**
+ * An action's name, as the buttons say it — in either game (round 32).
+ *
+ * Ultimate's actions are named by the private Ultimate table's own keys, so a
+ * button here and a button there say the same words.
+ */
+const UTH_ACTION_KEYS = {
+  raise4x: 'uth.raise4',
+  raise3x: 'uth.raise3',
+  raise2x: 'uth.raise2',
+  raise1x: 'uth.raise1',
+  check: 'uth.check',
+  fold: 'uth.fold',
+};
+const actionLabel = (action) => T(UTH_ACTION_KEYS[action] || `action.${action}`);
+
+/**
+ * Ultimate's buttons in the private table's rows: each street's two choices
+ * side by side, yes on the left (round 4b), and 3× on a row of its own.
+ */
+function sharedUthRows(legal) {
+  const rows = [];
+  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
+    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
+  }
+  if (legal.includes('raise3x')) rows.push(['raise3x']);
+  const placed = new Set(rows.flat());
+  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  return rows;
+}
 
 /** The six, in Idan's order. The page draws them; the record stores the key. */
 const REACTION_KEYS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
@@ -154,7 +187,7 @@ function seatNode(seat) {
   const total = document.createElement('span');
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
-  total.textContent = only ? headerFigure(only) : '';
+  total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
   title.append(who, bar, status, total);
   box.appendChild(title);
 
@@ -165,7 +198,7 @@ function seatNode(seat) {
     for (const action of seat.actions) {
       const chip = document.createElement('span');
       chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '');
-      chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : T(`action.${action}`);
+      chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : actionLabel(action);
       acts.appendChild(chip);
     }
     box.appendChild(acts);
@@ -196,6 +229,12 @@ function seatNode(seat) {
     cards.className = 'cards';
     for (const card of only.cards) cards.appendChild(cardNode(card));
     box.appendChild(cards);
+  } else if (seat.faceDown > 0) {
+    /* An Ultimate neighbour's two cards are his own until the hand is over (round 32). */
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    for (let i = 0; i < seat.faceDown; i++) cards.appendChild(faceDownNode());
+    box.appendChild(cards);
   } else {
     const empty = document.createElement('p');
     empty.className = 'shared-empty';
@@ -223,14 +262,16 @@ function barText(bar) {
  * words (*ניצחה*, *הפסידה*), because at a shared table the hand may be a
  * neighbour's and "you won" would be wrong about it.
  */
-function headerFigure(hand) {
+function headerFigure(hand, words) {
   let outcome = null;
+  /* Ultimate has no total: the hand in words stands where the total would (round 32). */
+  const figure = words ? words : String(hand.total);
   if (hand.surrendered) outcome = T('hand.surrendered');
-  else if (hand.total > 21) outcome = T('shared.hand.bust');
+  else if (!words && hand.total > 21) outcome = T('shared.hand.bust');
   else if (hand.net !== null) {
     outcome = T(hand.net > 0 ? 'shared.hand.won' : hand.net < 0 ? 'shared.hand.lost' : 'shared.hand.push');
   }
-  return outcome ? `${hand.total} · ${outcome}` : String(hand.total);
+  return outcome ? `${figure} · ${outcome}` : figure;
 }
 
 /**
@@ -293,11 +334,11 @@ function renderMeasures(screen) {
   }
 }
 
-/** An action's name, as the buttons say it. */
-const actionLabel = (action) => T(`action.${action}`);
 
 /** The verdict line, in the private card's own words. */
 function verdictText(decision) {
+  /* Ultimate's card already carries its verdict, in the private card's words. */
+  if (decision.feedback && decision.feedback.verdict) return decision.feedback.verdict;
   return decision.correct
     ? T('fb.correct', { action: actionLabel(decision.optimalAction) })
     : T('fb.wrong', { severity: T(`fb.${decision.severity}`), cost: decision.evCost.toFixed(3) });
@@ -312,6 +353,7 @@ function verdictText(decision) {
 function analysisCard(decisions) {
   if (!decisions || decisions.length === 0) return null;
   const last = decisions[decisions.length - 1];
+  if (last.feedback) return uthAnalysisCard(decisions);
   const card = document.createElement('section');
   card.className = `quickcard shared-analysis ${last.severity}`;
   card.setAttribute('aria-label', T('shared.analysisTitle'));
@@ -380,6 +422,73 @@ function analysisCard(decisions) {
     boldText(text, last.steps[i]);
     step.append(title, text);
     reveal.appendChild(step);
+  }
+  if (reveal.children.length > 0) card.appendChild(reveal);
+  return card;
+}
+
+/**
+ * The analysis of my latest Ultimate hand (round 32): the private Ultimate
+ * table's own card, built from the object `compose()` made for it — headline,
+ * verdict, the rows with their worked lines, the percentages and the
+ * calculation, what was chosen instead, then the sentence and its notes — in
+ * the order the private table draws them. The mistake remark sits under the
+ * rows, as it does on the Blackjack side of this screen.
+ */
+function uthAnalysisCard(decisions) {
+  const last = decisions[decisions.length - 1];
+  const feedback = last.feedback;
+  const card = document.createElement('section');
+  card.className = `quickcard shared-analysis ${feedback.severity}`;
+  card.setAttribute('aria-label', T('shared.analysisTitle'));
+
+  for (const earlier of decisions.slice(0, -1)) {
+    const line = document.createElement('p');
+    line.className = 'shared-analysis-earlier';
+    line.textContent = `${earlier.headline} — ${verdictText(earlier)}`;
+    card.appendChild(line);
+  }
+
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  const head = document.createElement('b');
+  head.textContent = feedback.headline;
+  anchor.appendChild(head);
+  card.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = feedback.verdict;
+  card.appendChild(verdict);
+
+  if (window.EVReturns) {
+    card.appendChild(
+      window.EVReturns.block(feedback, {
+        game: 'uth',
+        decisions: shared.screen && shared.screen.me ? shared.screen.me.decisions : 0,
+        helpId: 'shared-returns-help',
+      }),
+    );
+  }
+
+  const oops = mistakeLine(last);
+  if (oops) card.appendChild(oops);
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    card.appendChild(did);
+  }
+
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal';
+  for (const text of [feedback.sentence, ...(feedback.notes || [])]) {
+    if (!text) continue;
+    const line = document.createElement('p');
+    line.className = 'reason';
+    boldText(line, text);
+    reveal.appendChild(line);
   }
   if (reveal.children.length > 0) card.appendChild(reveal);
   return card;
@@ -600,7 +709,9 @@ function tickerText(item) {
  */
 function renderFolklore(screen) {
   const box = el('shared-folklore');
-  const canAsk = Boolean(screen) && screen.handOver && seatedAt(screen).length > 1 && shared.seat !== null;
+  /* Ultimate has no "he took my card": no choice of anybody's moves a card there (round 32). */
+  const canAsk =
+    Boolean(screen) && screen.game !== 'uth' && screen.handOver && seatedAt(screen).length > 1 && shared.seat !== null;
   if (!canAsk && !shared.folkloreAsked) {
     box.hidden = true;
     box.replaceChildren();
@@ -769,17 +880,35 @@ function renderActions(screen) {
   const offer = screen.legal.join(',');
   if (window.EVDock) window.EVDock.enter(`shared:${screen.hand}:${screen.round}:${offer}`);
 
-  for (const action of screen.legal) {
+  const press = (action) => {
     const button = document.createElement('button');
-    button.className = 'action' + (action === 'hit' || action === 'stand' ? ' primary' : '');
+    /*
+     * In Ultimate every decision button looks the same, as at the private
+     * Ultimate table: colouring one would be the page suggesting an answer.
+     */
+    button.className =
+      'action' + (screen.game !== 'uth' && (action === 'hit' || action === 'stand') ? ' primary' : '');
     button.type = 'button';
     button.dataset.action = action;
-    button.textContent = T(`action.${action}`);
+    button.textContent = actionLabel(action);
     button.addEventListener('click', () => {
       if (window.EVDock && !window.EVDock.ready()) return;
       void act(() => api('/api/shared/act', { id: shared.id, action }), 'move');
     });
-    box.appendChild(button);
+    return button;
+  };
+  if (screen.game === 'uth' && screen.legal.length > 0) {
+    box.classList.add('rows');
+    for (const actions of sharedUthRows(screen.legal)) {
+      const line = document.createElement('div');
+      line.className = 'action-row';
+      line.style.setProperty('--cols', String(actions.length));
+      line.append(...actions.map(press));
+      box.appendChild(line);
+    }
+  } else {
+    box.classList.remove('rows');
+    for (const action of screen.legal) box.appendChild(press(action));
   }
 
   if (screen.legal.length === 0) {
@@ -916,6 +1045,26 @@ function renderSeatPicker() {
   }
 }
 
+/** Which game, chosen before the table exists (round 32). Blackjack unless changed. */
+function renderGamePicker() {
+  const row = el('shared-game-row');
+  if (!row) return;
+  row.replaceChildren();
+  for (const [game, key] of [['blackjack', 'ui.blackjack'], ['uth', 'ui.ultimate']]) {
+    const pick = document.createElement('button');
+    pick.className = 'action game-pick' + (game === shared.game ? ' primary' : '');
+    pick.type = 'button';
+    pick.dataset.game = game;
+    pick.textContent = T(key);
+    pick.setAttribute('aria-pressed', game === shared.game ? 'true' : 'false');
+    pick.addEventListener('click', () => {
+      shared.game = game;
+      renderGamePicker();
+    });
+    row.appendChild(pick);
+  }
+}
+
 function render() {
   /*
    * Nothing to draw into once another screen is mounted (round 31). A poll or
@@ -984,10 +1133,30 @@ function render() {
     return;
   }
 
+  /* Which game this table deals, in the bar at the top. */
+  el('shared-rules').textContent = T(screen.game === 'uth' ? 'ui.ultimate' : 'ui.blackjack');
+
   const dealerCards = el('shared-dealer-cards');
   dealerCards.replaceChildren(...screen.dealer.map(cardNode));
-  if (!screen.dealerRevealed) dealerCards.appendChild(faceDownNode());
-  el('shared-dealer-total').textContent = screen.dealerTotal === null ? '' : String(screen.dealerTotal);
+  if (screen.game === 'uth') {
+    /* Ultimate: both of the dealer's cards are down until the hand is over. */
+    if (screen.hand !== null && screen.dealer.length === 0) {
+      dealerCards.append(faceDownNode(), faceDownNode());
+    }
+    el('shared-dealer-total').textContent = screen.dealerWords || '';
+  } else {
+    if (!screen.dealerRevealed) dealerCards.appendChild(faceDownNode());
+    el('shared-dealer-total').textContent = screen.dealerTotal === null ? '' : String(screen.dealerTotal);
+  }
+
+  /* The one board (round 32): what has turned, and the rest face down. */
+  const boardSeat = el('shared-board-seat');
+  if (boardSeat) {
+    boardSeat.hidden = screen.game !== 'uth' || screen.hand === null;
+    const board = el('shared-board');
+    board.replaceChildren(...(screen.board || []).map(cardNode));
+    for (let i = 0; i < (screen.boardHidden || 0); i++) board.appendChild(faceDownNode());
+  }
 
   /* Mine first, always: it is the hand being played (§3.1). */
   const order = seatedAt(screen).sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
@@ -1126,10 +1295,11 @@ function openShared() {
   shared.unavailable = false;
 
   renderSeatPicker();
+  renderGamePicker();
 
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', { seats: shared.seats });
+      const made = await api('/api/shared/create', { seats: shared.seats, game: shared.game });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }

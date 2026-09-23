@@ -30,9 +30,11 @@ import {
   categoryOf,
   evaluateCards,
   formatCard,
+  holeClassLabel,
   preflopRow,
   rankOf,
   riverOdds,
+  severityForCost,
   significantRanks,
   suitOf,
   type Card,
@@ -98,7 +100,7 @@ export interface PokerCardView {
   code: number;
 }
 
-function pokerCardView(card: Card): PokerCardView {
+export function pokerCardView(card: Card): PokerCardView {
   const suit = suitOf(card);
   const rank = POKER_RANKS[rankOf(card)]!;
   return {
@@ -457,6 +459,25 @@ const zeroSeverity = (): Record<SeverityTier, number> => ({
   blunder: 0,
 });
 
+/**
+ * An evaluation, with the river facts the card words added when it is a river.
+ *
+ * The same 990 holdings the river was graded on, asked which ones beat the
+ * player most narrowly. Counted again rather than read off the grade, and held
+ * to the solver's counts by a test in the engine. One function, because the
+ * shared table (round 32) words its river decisions with the private table's
+ * own card and must not grow a second way of finding the threats.
+ */
+function withRiverFacts(evaluation: UthEvaluation, hole: Card[], board: Card[]): Explained {
+  const explained: Explained = { ...evaluation };
+  if (explained.phase !== 'river') return explained;
+  const odds = riverOdds(hole, board, 3);
+  explained.threats = odds.closest.map((g) => ({ category: g.category, ranks: g.ranks, count: g.count }));
+  explained.covered = odds.closest.reduce((sum, g) => sum + g.count, 0) === odds.losses;
+  explained.playerValue = odds.playerValue;
+  return explained;
+}
+
 /** The best play in a pre-flop row, and what it is worth. */
 function bestOf(row: PreflopRow): { action: UthAction; ev: number } {
   if (row.optimalAction === 'raise4x') return { action: 'raise4x', ev: row.ev4x };
@@ -586,19 +607,8 @@ export class UthSession {
   act(action: UthAction): unknown {
     const holeClass = this.table.holeClass;
     // Read before acting: `act()` moves the phase on and clears the cache.
-    const evaluation: Explained = { ...this.table.evaluate() };
-    if (evaluation.phase === 'river') {
-      /*
-       * The same 990 holdings the river was graded on, asked which ones beat the
-       * player most narrowly. Counted again rather than read off the grade, and
-       * held to the solver's counts by a test in the engine.
-       */
-      const view = this.table.view;
-      const odds = riverOdds(view.hole, view.board, 3);
-      evaluation.threats = odds.closest.map((g) => ({ category: g.category, ranks: g.ranks, count: g.count }));
-      evaluation.covered = odds.closest.reduce((sum, g) => sum + g.count, 0) === odds.losses;
-      evaluation.playerValue = odds.playerValue;
-    }
+    const before = this.table.view;
+    const evaluation = withRiverFacts(this.table.evaluate(), before.hole, before.board);
     const record = this.table.act(action);
     this.last = { record, evaluation, holeClass };
     this.count(record, evaluation);
@@ -703,6 +713,81 @@ export class UthSession {
         playerValue: evaluation.playerValue,
       },
     });
+  }
+
+  // --- The shared table (round 32) ------------------------------------------
+
+  /**
+   * Decisions made at a shared Ultimate table, taken into this player's rating.
+   *
+   * Blackjack's `absorbRated`, for the other game: the table grades with its own
+   * `UthTable`s and never meets a session, and this is where its graded
+   * decisions reach the one Ultimate rating — through `uthDifficulty` and
+   * `updateUthRating`, exactly as `count()` rates a decision at the private
+   * table. **Only the rating and the lifetime count move**, as in Blackjack:
+   * this sitting's hands, accuracy, stack and log describe the private table,
+   * and a hand dealt somewhere else did not happen at it.
+   *
+   * A forfeit is rated at the cost of the worst action where the seat was
+   * sitting (Idan, round 26) and is not a decision, so it does not count as one.
+   * Returns how many decisions moved the rating.
+   */
+  absorbRated(
+    decisions: ReadonlyArray<{ evByAction?: Partial<Record<string, number>>; evCost: number; forfeit?: true }>,
+  ): number {
+    let rated = 0;
+    for (const decision of decisions) {
+      if (!decision.forfeit) this.lifetimeDecisions++;
+      // Nothing to read a difficulty from is nothing to rate, as `count()` declines an obvious spot.
+      if (!decision.evByAction) continue;
+      const difficulty = uthDifficulty(decision.evByAction);
+      if (difficulty === null) continue;
+      updateUthRating(this.rating, difficulty, severityForCost(decision.evCost));
+      rated++;
+    }
+    // A save taken now is between the private table's hands; keep the two in step.
+    const phase = this.table.view.phase;
+    if (phase === 'idle' || phase === 'settled') this.ratingAtDeal = { ...this.rating };
+    return rated;
+  }
+
+  /**
+   * The private table's own card, for a decision made at a shared table.
+   *
+   * The same `compose()` — headline, verdict, rows, worked lines, the
+   * percentages and the calculation — asked about a decision this session did
+   * not deal, so a shared Ultimate decision is explained by the one function
+   * that explains a private one. `bet` is the seat's own Ante, which is what the
+   * money lines are counted in.
+   */
+  explainDecision(decision: {
+    record: UthDecisionRecord;
+    evaluation: UthEvaluation;
+    holeClass: string;
+    hole: Card[];
+    board: Card[];
+    bet: number;
+  }): UthFeedback {
+    const evaluation = withRiverFacts(decision.evaluation, decision.hole, decision.board);
+    const kept = this.handBet;
+    this.handBet = decision.bet;
+    try {
+      return this.compose({ record: decision.record, evaluation, holeClass: decision.holeClass });
+    } finally {
+      this.handBet = kept;
+    }
+  }
+
+  /**
+   * A hand in words, as the private table's seat headers say it (round 19):
+   * two hole cards by their class, five or more cards by the best hand in them.
+   */
+  describeCards(cards: Card[]): { words: string; five: string | null; codes: Card[] } {
+    if (cards.length === 2) {
+      return { words: this.classWords(holeClassLabel(cards[0]!, cards[1]!)), five: null, codes: [...cards] };
+    }
+    const hand = this.handWords(cards);
+    return { words: hand.phrase, five: hand.five, codes: [...hand.cards] };
   }
 
   // --- The bet -------------------------------------------------------------

@@ -42,6 +42,11 @@
           <legend data-i18n="shared.howMany">How many of you?</legend>
           <div class="shared-seats-row" id="shared-seats-row"></div>
         </fieldset>
+        <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->
+        <fieldset class="shared-seats-pick" id="shared-game-pick">
+          <legend data-i18n="shared.whichGame">Which game?</legend>
+          <div class="shared-seats-row" id="shared-game-row"></div>
+        </fieldset>
         <button class="action primary" type="button" id="shared-make" data-i18n="shared.make">
           Make a table
         </button>
@@ -94,6 +99,12 @@
             <span class="seat-total" id="shared-dealer-total"></span>
           </h2>
           <div class="cards" id="shared-dealer-cards"></div>
+        </section>
+
+        <!-- Ultimate only (round 32): the one board, the same cards for everybody. -->
+        <section class="seat uth-board" id="shared-board-seat" data-i18n-attr="aria-label:uth.board" hidden>
+          <h2 class="seat-title"><span data-i18n="uth.board">Board</span></h2>
+          <div class="cards" id="shared-board"></div>
         </section>
 
         <div id="shared-seats"></div>

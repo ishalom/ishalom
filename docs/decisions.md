@@ -314,6 +314,34 @@ Now that each chip carries its denomination, the row must sum to the figure
 beside it, so the chip breakdown is exact by construction and tested across
 every reachable balance.
 
+## The shared Ultimate table deals by seat, not by arrival (round 32)
+
+Every card of an Ultimate hand is laid out at the shuffle, at a position fixed
+by seat index: seat k holds `deck[2k]`, `deck[2k+1]`, the dealer `deck[12..13]`,
+the board `deck[14..18]`. Nobody draws after the deal, so no neighbour's choice,
+arrival or departure can move a card anybody else holds. *Rejected:* dealing in
+live-seat order, as Blackjack does, which would let a drop mid-hand re-deal
+everyone's cards.
+
+- **The game is the preset.** An Ultimate table is `preset_id = 'uth-standard'`;
+  no column, no migration.
+- **One grading path.** Each seat plays on its own `UthTable`, stacked with its
+  nine cards; the card a player reads is `UthSession.explainDecision`, which is
+  the private table's `compose()`. Tested by comparison, card for card.
+- **A solve memo (`UthTableOptions.solved`).** The table is re-derived on every
+  poll; without it every flop (~60 ms) was re-solved each read. Keyed by
+  paytable, street, hole cards and visible board; figures unchanged.
+  *Rejected:* storing grades in the seats' rows, which would stop the table
+  being derived.
+- **Neighbours' two cards stay face down until the hand is over**, as at a real
+  table. The grade never counts them, so showing them would show a player
+  something the grade then ignores.
+- **Everybody folding keeps the dealer's cards down**, as the private table does.
+- **No "he took my card" and no shared spots in Ultimate**: no choice moves a
+  card, and two hole-card pairs are not one spot.
+- **Shared Ultimate decisions move only the Ultimate rating and its lifetime
+  count** (`UthSession.absorbRated`), as Blackjack's move only its own.
+
 ## Working practice
 
 - **Git is run without asking.** Commit and push on

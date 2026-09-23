@@ -66,8 +66,19 @@ import {
 } from '@evtrainer/ev-engine';
 import { BlackjackTable, DealingShoe, makeRng } from '@evtrainer/game-engine';
 
+import type { UthAction } from '@evtrainer/game-engine';
+
 import { applyRestrictions, type Restrictions } from './restrictions.ts';
 import { totalOf } from './session.ts';
+import {
+  isUthTable,
+  deriveUthTable,
+  uthForfeitSpot,
+  uthLegalFor,
+  uthSeatRatable,
+  type UthDecisionFacts,
+  type UthHandFacts,
+} from './shared-uth.ts';
 
 /** How many seats a table can hold. Spec A 3.1: your own full size, the rest compact. */
 export const MAX_SEATS = 6;
@@ -85,7 +96,7 @@ export interface SeatMove {
    * from the wrong place.
    */
   round: number;
-  action: BlackjackAction | 'takeInsurance' | 'declineInsurance';
+  action: BlackjackAction | 'takeInsurance' | 'declineInsurance' | UthAction;
 }
 
 /** One seat, as its own row holds it. Only this seat ever writes here. */
@@ -266,6 +277,8 @@ export interface DerivedDecision {
   evByAction: Partial<Record<string, number>>;
   optimalAction: string;
   evCost: number;
+  /** An Ultimate decision's evaluation and cards (round 32). Absent in Blackjack. */
+  uth?: UthDecisionFacts;
 }
 
 export interface DerivedSeatHand {
@@ -332,6 +345,8 @@ export interface DerivedHand {
   burned: Card[];
   /** What each round put aside for each seat, before any of them acted. */
   reserved: Reservation[];
+  /** The board, the street and the dealer's reveal of an Ultimate hand (round 32). */
+  uth?: UthHandFacts;
 }
 
 export interface DerivedTable {
@@ -759,7 +774,7 @@ function playHand(
         continue;
       }
       if (play.phase !== 'player') break;
-      play.table.act(move.action);
+      play.table.act(move.action as BlackjackAction);
     }
     return play;
   });
@@ -820,6 +835,17 @@ function movesOf(seat: SeatRecord, hand: number): SeatMove[] {
  * random tables.
  */
 export function deriveTable(record: TableRecord): DerivedTable {
+  if (isUthTable(record)) return deriveUthTable(record);
+  return run(record, handsDealt(record), (seat, hand, round) => {
+    const move = record.seats
+      .find((entry) => entry.seat === seat)
+      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
+    return move ? move.action : null;
+  });
+}
+
+/** How many hands a table has dealt, read from the seats' own rows. */
+export function handsDealt(record: TableRecord): number {
   /*
    * How far the table runs: what the seats say they have been dealt, and never
    * less than the log needs — a move at hand 7 is proof that hand 7 was dealt,
@@ -834,12 +860,7 @@ export function deriveTable(record: TableRecord): DerivedTable {
     handCount = Math.max(handCount, seat.hands ?? 0);
     for (const move of seat.moves) handCount = Math.max(handCount, move.hand + 1);
   }
-  return run(record, handCount, (seat, hand, round) => {
-    const move = record.seats
-      .find((entry) => entry.seat === seat)
-      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
-    return move ? move.action : null;
-  });
+  return handCount;
 }
 
 /**
@@ -1089,6 +1110,13 @@ export interface SeatGlance {
   detail: HandDetail[];
   /** Which of his hands he is deciding now, or null. */
   active: number | null;
+  /**
+   * How many of his cards are face down to me (round 32). An Ultimate player's
+   * two cards are his own, as at a real table, until the hand is over — and the
+   * grade never counts them, so showing them would show a player something
+   * the grade then ignores. Zero in Blackjack, where everything is face up.
+   */
+  faceDown: number;
 }
 
 export interface SeatView {
@@ -1117,6 +1145,16 @@ export interface SeatView {
   decisions: DerivedDecision[];
   /** True when two seats disagree about what was dealt. The table is refused. */
   disagrees: boolean;
+  /**
+   * True once every seat has played and the hand is settled (round 32).
+   *
+   * Blackjack read this off the dealer's reveal, which is the same moment
+   * there. In Ultimate it is not always: a hand everybody folded is over with
+   * the dealer's cards still down.
+   */
+  handOver: boolean;
+  /** The Ultimate hand's board and reveal, for the seat's screen. Absent in Blackjack. */
+  uth?: UthHandFacts;
 }
 
 /**
@@ -1253,12 +1291,20 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
   );
 
   const glance = (entry: SeatRecord): SeatGlance => {
-    const seatHand = current?.seats.find((row) => row.seat === entry.seat) ?? null;
+    const dealt = current?.seats.find((row) => row.seat === entry.seat) ?? null;
+    const hidden = Boolean(dealt && current && current.uth && current.incomplete && entry.seat !== seat);
+    const seatHand = dealt && hidden ? { ...dealt, cards: [], hands: [] } : dealt;
     const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 };
     let status: SeatStatus = 'betting';
     if (handIndex !== null && !isLive(record, entry.seat, handIndex)) status = 'away';
     else if (!current) status = 'betting';
     else if (current.waitingFor.includes(entry.seat)) status = 'deciding';
+    /*
+     * An Ultimate seat that has raised or folded has nothing left to decide in
+     * the hand (round 32, Idan): it is finished, and shown as finished, while
+     * the others play the streets out.
+     */
+    else if (current.incomplete && current.uth && seatHand && isFinishedUth(current, entry.seat)) status = 'done';
     else if (current.incomplete) status = 'decided';
     else status = seatHand && seatHand.net !== null ? 'done' : 'waitingForDealer';
     return {
@@ -1287,6 +1333,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
           : [],
       detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
       active: seatHand ? seatHand.active : null,
+      faceDown: hidden ? dealt!.cards.length : 0,
     };
   };
 
@@ -1312,7 +1359,9 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
   return {
     hand: handIndex,
     dealer: current ? [...current.dealer] : [],
-    dealerRevealed: Boolean(current && !current.incomplete),
+    dealerRevealed: Boolean(current && !current.incomplete && (current.uth ? current.uth.dealerShown : true)),
+    handOver: Boolean(current && !current.incomplete),
+    ...(current && current.uth ? { uth: current.uth } : {}),
     me: mine ? glance(mine) : null,
     seats,
     legal,
@@ -1322,6 +1371,12 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     decisions: current ? current.decisions.filter((d) => d.seat === seat || iActed) : [],
     disagrees,
   };
+}
+
+/** Whether an Ultimate seat has nothing left to decide in the hand: it raised, or it folded. */
+function isFinishedUth(hand: DerivedHand, seat: number): boolean {
+  if (!hand.uth) return false;
+  return (hand.uth.playBet.get(seat) ?? 0) > 0 || (hand.uth.folded.get(seat) ?? false);
 }
 
 /**
@@ -1337,6 +1392,7 @@ function legalFor(
   hand: number,
   seat: number,
 ): { legal: string[]; round: number } {
+  if (isUthTable(record)) return uthLegalFor(record, hand, seat);
   let legal: string[] = [];
   let round = 0;
   const asked = { ...record, seats: record.seats.map((entry) => ({ ...entry })) };
@@ -1439,6 +1495,12 @@ export function counterfactual(
   hand: number,
   showing = hand,
 ): Counterfactual | null {
+  /*
+   * Ultimate has none to give (round 32): every card of a hand is laid out at
+   * the shuffle, by seat, so no neighbour's choice moves a single one of them.
+   * "He took my card" is not a thing that can happen there, so it is not asked.
+   */
+  if (isUthTable(record)) return null;
   const actual = deriveTable(record);
   const mineNow = handFor(actual, showing, seat);
   if (!mineNow || mineNow.length === 0) return null;
@@ -1508,6 +1570,7 @@ export function counterfactual(
  * this round would be false about the rule the whole table is built on.
  */
 export function counterfactualBack(record: TableRecord, seat: number, upTo: number): Counterfactual | null {
+  if (isUthTable(record)) return null;
   /*
    * Only the last few hands are searched, and that is about cost rather than
    * taste: every candidate replays the whole table from the seed, so the price
@@ -1619,6 +1682,8 @@ export interface SharedSpot {
  * say about it, and the screen has one line to spend.
  */
 export function sharedSpots(record: TableRecord, seat: number): SharedSpot[] {
+  // Blackjack's chart cells. Ultimate has none, and two hole-card pairs are not one spot.
+  if (isUthTable(record)) return [];
   const table = deriveTable(record);
   const mine = new Map<string, { hand: number; action: string; right: boolean }>();
   const theirs = new Map<
@@ -1734,6 +1799,11 @@ export interface RatableDecision {
    * here.
    */
   forfeit?: true;
+  /**
+   * An Ultimate decision's EVs (round 32): the Ultimate rating reads a spot's
+   * difficulty from them rather than from a chart cell. Absent in Blackjack.
+   */
+  evByAction?: Partial<Record<string, number>>;
 }
 
 /**
@@ -1764,6 +1834,8 @@ export interface ForfeitSpot {
   /** What he could have done, for a report or a screen that wants to say it. */
   legal: string[];
   worstAction: string;
+  /** Ultimate only: the spot's EVs, which the Ultimate rating is read from. */
+  evByAction?: Partial<Record<string, number>>;
 }
 
 /**
@@ -1788,6 +1860,7 @@ export interface ForfeitSpot {
  *     it is when a player answers it himself.
  */
 export function forfeitSpot(record: TableRecord, seat: number, hand: number): ForfeitSpot | null {
+  if (isUthTable(record)) return uthForfeitSpot(record, seat, hand);
   /*
    * The same table, minus the drop that is being priced. Without this the seat
    * is not live at the hand and there is nothing to look at — the drop having
@@ -1907,6 +1980,7 @@ function spotKeyFor(
  * devices and on the same device tomorrow.
  */
 export function seatRatable(record: TableRecord, seat: number): RatableDecision[] {
+  if (isUthTable(record)) return uthSeatRatable(record, seat);
   const table = deriveTable(record);
   const out: RatableDecision[] = [];
   for (const hand of table.hands) {

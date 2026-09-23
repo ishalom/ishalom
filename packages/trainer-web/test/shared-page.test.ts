@@ -111,7 +111,8 @@ function walk(node: any, out: any[] = []): any[] {
 function assertControlsSpeak(doc: any, ids: string[], where: string) {
   for (const id of ids) {
     for (const node of walk(doc.getElementById(id))) {
-      if (!String(node.className ?? '').includes('action') && node.type !== 'button') continue;
+      // A control is a button or carries the `action` class; a row of them (`action-row`) is not one.
+      if (!String(node.className ?? '').split(/\s+/).includes('action') && node.type !== 'button') continue;
       const text = String(node.textContent ?? '').trim();
       assert.ok(text.length > 0, `${where}: a control in #${id} has no text`);
       assert.doesNotMatch(text, /^[a-z]+(\.[a-zA-Z]+)+$/, `${where}: #${id} shows a raw key "${text}"`);
@@ -298,4 +299,103 @@ test('a poll that lands after the player has left draws nothing (round 31)', () 
   const body = source.slice(source.indexOf('function render() {'));
   const firstStatement = body.split('\n').slice(1).find((line) => /^\s+[^\s/*]/.test(line)) ?? '';
   assert.match(firstStatement, /if \(!el\('shared-door'\)\) return;/, 'render draws before checking the screen is still there');
+});
+
+test('an Ultimate table draws on the same route: one board, the dealer face down, and the board turns when both have decided (round 32)', async () => {
+  const { server, tables, seats } = fakeRest();
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  const timers: any[] = [];
+  const realInterval = globalThis.setInterval;
+  (globalThis as any).setInterval = (fn: any, ms: number, ...rest: any[]) => {
+    const handle = realInterval(fn, ms, ...rest);
+    timers.push(handle);
+    return handle;
+  };
+  let page: ReturnType<typeof loadHosted> | null = null;
+  try {
+    page = loadHosted(
+      '#shared',
+      [['ev:playerName', 'Idan'], ['ev:playerId', 'idan-row'], ['ev:locale', 'he']],
+      { url: origin, key: 'k' },
+    );
+    await page.booted;
+    await settle();
+    const doc = page.document;
+    const el = (id: string) => doc.getElementById(id);
+
+    // The door offers the game, and Ultimate can be chosen.
+    const games = el('shared-game-row').children;
+    assert.equal(games.length, 2, 'the door offers no choice of game');
+    assertControlsSpeak(doc, ['shared-game-row'], 'the game picker');
+    const ultimate = games.find((pick: any) => pick.dataset.game === 'uth');
+    ultimate.listeners.click[0]();
+    for (const make of el('shared-make').listeners.click) make();
+    await until(() => seats.length === 2);
+    assert.equal(tables[0]!.preset_id, 'uth-standard', 'the table was not made as an Ultimate table');
+
+    const friend = seats.find((row) => row.seat === 1)!;
+    Object.assign(friend, { player_id: 'niro-row', name: 'נירו', events: [{ kind: 'join', seat: 1, hand: 0 }] });
+    await until(() => el('shared-table').hidden === false);
+
+    const offered = () =>
+      walk(el('shared-actions')).map((node: any) => node.dataset?.action).filter(Boolean);
+    const press = async (action: string) => {
+      const button = walk(el('shared-actions')).find((node: any) => node.dataset?.action === action);
+      assert.ok(button, `no ${action} button; offered ${offered()}`);
+      await settle(500); // the dock's settle-in hold
+      button.listeners.click[0]();
+    };
+    const classes = (node: any) => String(node.className ?? '').split(/\s+/);
+    const cardsIn = (id: string) => walk(el(id)).filter((node: any) => classes(node).includes('card'));
+    const faceUp = (id: string) => cardsIn(id).filter((node: any) => !classes(node).includes('back'));
+
+    // The first hand deals itself: my two cards, his two face down, the dealer's two face down, five on the board face down.
+    await until(() => offered().length > 0, 8000);
+    assert.deepEqual(offered(), ['raise4x', 'check', 'raise3x'], 'the pre-flop choices are not the private table\'s');
+    assertControlsSpeak(doc, ['shared-actions'], 'pre-flop');
+    assert.equal(el('shared-board-seat').hidden, false, 'no board on an Ultimate table');
+    assert.equal(cardsIn('shared-board').length, 5);
+    assert.equal(faceUp('shared-board').length, 0, 'the board is face up before anybody decided');
+    assert.equal(cardsIn('shared-dealer-cards').length, 2);
+    assert.equal(faceUp('shared-dealer-cards').length, 0, 'the dealer\'s cards are face up mid-hand');
+    assert.equal(faceUp('shared-seats').length, 2, 'I see more or fewer than my own two cards');
+    assert.equal(cardsIn('shared-seats').length, 4, 'the friend\'s two cards are not on the felt face down');
+    assert.match(el('shared-rules').textContent, /אולטימייט/, 'the bar does not say which game this is');
+
+    // I check. Nothing turns until the friend has decided too.
+    await press('check');
+    await until(() => offered().length === 0);
+    assert.equal(faceUp('shared-board').length, 0, 'the flop turned before everyone had decided');
+    assert.ok(walk(el('shared-actions')).some((node: any) => /נירו/.test(String(node.textContent))), 'the dock does not say who we wait for');
+
+    friend.moves = [{ hand: 0, round: 0, action: 'check' }];
+    await until(() => faceUp('shared-board').length === 3);
+    assert.equal(faceUp('shared-board').length, 3, 'the flop did not turn once both had decided');
+    assert.deepEqual(offered(), ['raise2x', 'check']);
+
+    // He raises on the flop and is finished; I check, and the turn and river come.
+    friend.moves = [...(friend.moves as unknown[]), { hand: 0, round: 1, action: 'raise2x' }];
+    await press('check');
+    await until(() => faceUp('shared-board').length === 5);
+    assert.equal(faceUp('shared-board').length, 5, 'the river did not come when everyone owing had decided');
+    assert.deepEqual(offered(), ['raise1x', 'fold']);
+    await press('raise1x');
+
+    // Showdown: the dealer turns, the friend's cards turn, and my analysis is under the felt.
+    await until(() => faceUp('shared-dealer-cards').length === 2);
+    assert.equal(faceUp('shared-dealer-cards').length, 2, 'the dealer did not turn his cards at the end');
+    assert.equal(faceUp('shared-seats').length, 4, 'the friend\'s cards were not shown at the end');
+    const analysis = walk(el('shared-measures')).find((node: any) => String(node.className).includes('shared-analysis'));
+    assert.ok(analysis, 'no analysis under the felt');
+    const verdict = walk(analysis).find((node: any) => node.className === 'verdict');
+    assert.ok(verdict && String(verdict.textContent).trim().length > 0, 'the analysis has no verdict');
+    assert.equal(el('shared-folklore').hidden, true, 'Blackjack\'s "he took my card" is offered at an Ultimate table');
+  } finally {
+    page?.stopWatching();
+    for (const handle of timers) clearInterval(handle);
+    (globalThis as any).setInterval = realInterval;
+    server.closeAllConnections();
+    server.close();
+  }
 });
