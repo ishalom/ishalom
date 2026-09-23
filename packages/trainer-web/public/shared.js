@@ -1367,7 +1367,13 @@ function render() {
    */
   const summaryBox = el('shared-summary');
   if (summaryBox) {
-    const ended = Boolean(screen) && alone && screen.handsFinished > 0 && window.EVEvening;
+    /*
+     * "Alone" here counts the players still playing: somebody who left by the
+     * home link keeps his seat — he can come back by the same link — so the
+     * seat count alone never drops when the evening ends.
+     */
+    const playing = screen ? seatedAt(screen).filter((seat) => seat.status !== 'away').length : 0;
+    const ended = Boolean(screen) && playing < 2 && screen.handsFinished > 0 && window.EVEvening;
     summaryBox.hidden = !ended;
     summaryBox.replaceChildren(...(ended ? [window.EVEvening.card(eveningSummary(screen))] : []));
   }

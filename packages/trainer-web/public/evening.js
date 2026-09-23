@@ -116,15 +116,28 @@
     }
   }
 
-  /** The kept evening, handed over once and then forgotten. */
+  /**
+   * The kept evening, handed over once and then forgotten.
+   *
+   * Leaving by the home link mounts home twice in quick succession — once for
+   * the click and once for the address changing — and the first mount used to
+   * take the evening and the second find nothing and hide it (found on the live
+   * walk, round 34). So what was taken is still handed to a mount in the next
+   * few seconds, and to nothing after that.
+   */
+  let taken = null;
   function takeKept() {
     try {
       const data = JSON.parse(localStorage.getItem(KEY) || 'null');
-      localStorage.setItem(KEY, '');
-      return data && typeof data.hands === 'number' ? data : null;
+      if (data && typeof data.hands === 'number') {
+        localStorage.setItem(KEY, '');
+        taken = { data, at: Date.now() };
+        return data;
+      }
     } catch {
-      return null;
+      // No storage: nothing was kept.
     }
+    return taken && Date.now() - taken.at < 5000 ? taken.data : null;
   }
 
   window.EVEvening = { card, keep, takeKept, lines };
