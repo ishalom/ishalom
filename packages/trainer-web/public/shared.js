@@ -917,6 +917,13 @@ function renderSeatPicker() {
 }
 
 function render() {
+  /*
+   * Nothing to draw into once another screen is mounted (round 31). A poll or
+   * a move already in flight when the player left lands afterwards and calls
+   * this — found by the live walk as "Cannot set properties of null (setting
+   * 'hidden')" the moment a phone went home from the table.
+   */
+  if (!el('shared-door')) return;
   const screen = shared.screen;
 
   /*

@@ -286,3 +286,16 @@ test('the shared screen is started by its own file, not by a function nobody cal
   assert.doesNotMatch(source, /\nfunction initShared\(/, 'shared.js declares an initShared the wrapper shadows');
   assert.match(source, /\nwindow\.EV\.ready\.then\(openShared\);\s*$/, 'shared.js does not start its own screen');
 });
+
+test('a poll that lands after the player has left draws nothing (round 31)', () => {
+  /*
+   * Found on the live site, not here: this DOM invents any element it is asked
+   * for, so it cannot show one missing. A request in flight when the phone went
+   * home finished afterwards, called render(), and threw on the door that was
+   * no longer there. The guard is the first thing render does.
+   */
+  const source = readFileSync(join(HERE, '..', 'public', 'shared.js'), 'utf8');
+  const body = source.slice(source.indexOf('function render() {'));
+  const firstStatement = body.split('\n').slice(1).find((line) => /^\s+[^\s/*]/.test(line)) ?? '';
+  assert.match(firstStatement, /if \(!el\('shared-door'\)\) return;/, 'render draws before checking the screen is still there');
+});
