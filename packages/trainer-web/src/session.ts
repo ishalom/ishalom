@@ -56,10 +56,12 @@ import {
 } from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 import {
+  crownFor,
   gestureForDecision,
   gestureForSettlement,
   masteryState,
   sittingSummary,
+  type CrownTier,
   type Gesture,
 } from './gestures.ts';
 import { t, type Locale } from './i18n.ts';
@@ -313,7 +315,15 @@ export function bandFor(rating: number): SpotBand {
   return 'routine';
 }
 
-export const STREAK_MILESTONES: readonly number[] = [10, 25, 50, 100];
+/*
+ * 10 and 25 gave way to the crowns at 7, 14 and 21 (round 31): a run of 25
+ * would otherwise have been remarked on at 7, 10, 14, 21 and 25. The line
+ * returns past the largest crown.
+ */
+export const STREAK_MILESTONES: readonly number[] = [50, 100];
+
+/** Below this gap between the two best actions, a decision is a close call. */
+export const CLOSE_CALL = 0.01;
 
 /** Every ladder a player can climb. One rating each, kept for the session. */
 export const RATING_MODES: readonly DifficultyMode[] = ['basic', 'recall', 'value'];
@@ -442,6 +452,7 @@ export class TrainerSession {
   private sittingSpots = new Map<string, { attempts: number; correct: number; evCostTotal: number }>();
   private streakHard = 0;
   private streakMilestone: number | null = null;
+  private streakCrown: CrownTier | null = null;
   private bySeverity: Record<SeverityTier, number> = {
     optimal: 0,
     negligible: 0,
@@ -577,6 +588,7 @@ export class TrainerSession {
     this.lastRatingDelta = null;
     // A milestone belongs to the decision that reached it, not to the run.
     this.streakMilestone = null;
+    this.streakCrown = null;
     // And a gesture belongs to the hand that earned it: one a hand, at most.
     this.gestureThisHand = false;
     this.settlementGesture = null;
@@ -621,7 +633,7 @@ export class TrainerSession {
    * only: they still count toward mastery, the drill queue and the rating, since
    * those are exactly the cells a serious player most wants to own.
    */
-  private static readonly CLOSE_CALL = 0.01;
+  private static readonly CLOSE_CALL = CLOSE_CALL;
 
   /**
    * What the player sits down with, in units of the base bet.
@@ -707,6 +719,8 @@ export class TrainerSession {
     this.streakBest = Math.max(this.streakBest, this.streak);
     this.streakMilestone =
       this.streak > before && STREAK_MILESTONES.includes(this.streak) ? this.streak : null;
+    // A crown is a gesture: read off the run, reaching nothing that scores.
+    this.streakCrown = crownFor(before, this.streak);
 
     /*
      * What each action is worth, and what a player now reads for it.
@@ -813,6 +827,7 @@ export class TrainerSession {
       ratingDelta: this.lastRatingDelta,
       streak: { current: this.streak, best: this.streakBest, hard: this.streakHard },
       milestone: this.streakMilestone,
+      crown: this.streakCrown,
       chosen: record.chosenAction,
       chosenLabel: prettyAction(record.chosenAction, this.locale),
       optimal: record.optimalAction,

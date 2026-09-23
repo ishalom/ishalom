@@ -24,11 +24,11 @@
 
 import { parseScenarioKey, severityForCost, type BlackjackAction } from '@evtrainer/ev-engine';
 
-import { explain } from './explain.ts';
-import { PER_SITTING, RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
+import { contest, explain } from './explain.ts';
+import { PER_SITTING, RECORD_FLOOR, crownFor, gestureForSettlement, type CrownTier } from './gestures.ts';
 import type { Locale } from './i18n.ts';
 import { returnsBlock, stakeFor } from './returns-block.ts';
-import { cardView, totalOf, type CardView } from './session.ts';
+import { CLOSE_CALL, advanceStreak, cardView, totalOf, type CardView } from './session.ts';
 import {
   deriveTable,
   rulesFor,
@@ -36,6 +36,7 @@ import {
   seatView,
   tableEvents,
   tableReactions,
+  wasAsked,
   type DerivedDecision,
   type HandDetail,
   type ReactionKey,
@@ -205,6 +206,11 @@ export interface DecisionView {
   /** The engine's own severity tier for the cost, as the solo card colours it. */
   severity: string;
   correct: boolean;
+  /**
+   * The crown this decision earned, if its run reached 7, 14 or 21 (round 31).
+   * Mine only, like everything in this object; the ticker never hears of it.
+   */
+  crown: CrownTier | null;
 }
 
 export interface SharedScreen {
@@ -427,6 +433,7 @@ function mineFor(
 ): DecisionView[] {
   if (seat === null) return [];
   const rules = rulesFor(record);
+  const crowns = crownsOf(record, seat);
   return decisions
     .filter((decision) => decision.seat === seat)
     .map((decision) => {
@@ -459,8 +466,47 @@ function mineFor(
         steps: [...words.steps],
         severity: severityForCost(decision.evCost),
         correct: decision.evCost <= 0,
+        crown: crowns.get(`${decision.hand}:${decision.round}`) ?? null,
       };
     });
+}
+
+/**
+ * Every crown a seat has earned at this table, by the decision that earned it.
+ *
+ * The run is the private table's own, `advanceStreak`, over the seat's
+ * decisions in the order the shoe dealt them: a right decision extends it, a
+ * wrong one ends it, a close call does neither. Two things only a shared table
+ * has: an insurance nobody was asked is not a decision and is skipped, and a
+ * forfeit — a turn the clock took — ends the run, because it is rated as the
+ * worst thing he could have done. Leaving on purpose is not a forfeit.
+ */
+function crownsOf(record: TableRecord, seat: number): Map<string, CrownTier> {
+  const table = deriveTable(record);
+  const forfeits = new Set(
+    tableEvents(record)
+      .filter((event) => event.seat === seat && event.kind === 'drop' && event.why !== 'left')
+      .map((event) => event.hand),
+  );
+  const out = new Map<string, CrownTier>();
+  let run = 0;
+  for (const hand of table.hands) {
+    if (forfeits.has(hand.hand)) run = 0;
+    for (const decision of hand.decisions) {
+      if (decision.seat !== seat || !wasAsked(record, seat, decision)) continue;
+      const gap = contest({
+        legalActions: Object.keys(decision.evByAction) as BlackjackAction[],
+        evByAction: decision.evByAction as Partial<Record<BlackjackAction, number>>,
+        optimalAction: decision.optimalAction as BlackjackAction,
+        optimalEv: decision.evByAction[decision.optimalAction] ?? 0,
+      }).gap;
+      const before = run;
+      run = advanceStreak(run, { correct: decision.evCost <= 0, closeCall: gap < CLOSE_CALL });
+      const crown = crownFor(before, run);
+      if (crown) out.set(`${decision.hand}:${decision.round}`, crown);
+    }
+  }
+  return out;
 }
 
 /**

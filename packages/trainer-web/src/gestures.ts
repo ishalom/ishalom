@@ -177,3 +177,31 @@ export function sittingSummary(input: {
   }
   return { decisions: input.decisions, mistakes: input.mistakes, leak, leakCount };
 }
+
+/**
+ * Crowns (round 31): a run of right decisions reaching 7, 14 or 21.
+ *
+ * Idan: *"כתרים על החלטות נכונות רצופות: 7 כתר קטן, 14 כתר בינוני, 21 כתר
+ * גדול."* A crown is earned at the decision that *reaches* the number, so a
+ * run says each of its crowns once, on the way up, and a run that is broken
+ * starts again from nothing.
+ *
+ * The run is the app's one run — `advanceStreak`: a right decision extends it,
+ * a wrong one ends it, and a close call does neither — so the crown means the
+ * same thing at the private table and the shared one. This takes the run before
+ * and after the decision as numbers, which is all it may see: like everything
+ * in this file it reaches no rating, no grade and no mastery grid.
+ */
+export const CROWNS = [
+  { run: 7, tier: 'small' },
+  { run: 14, tier: 'medium' },
+  { run: 21, tier: 'large' },
+] as const;
+
+export type CrownTier = (typeof CROWNS)[number]['tier'];
+
+/** The crown the decision that moved the run from `before` to `after` earned, or null. */
+export function crownFor(before: number, after: number): CrownTier | null {
+  if (!(after > before)) return null;
+  return CROWNS.find((crown) => crown.run === after)?.tier ?? null;
+}
