@@ -11,6 +11,7 @@
     <script src="/fontswitch.js"></script>
     <script src="/figure.js"></script>
     <script src="/crown.js"></script>
+    <script src="/evening.js"></script>
     <!-- The returns block, shared by both tables: "תסביר לי" opens the same one
          the private table draws, rather than a second copy of it (§3.9). -->
     <script src="/returns.js"></script>
@@ -37,12 +38,8 @@
         <p class="shared-door-body" data-i18n="shared.doorBody">
           The same table, your own cards, and nobody waits for anybody.
         </p>
-        <!-- How many seats. Two is the common case and the default; six is the
-             most a shoe this size seats comfortably (§3.1). -->
-        <fieldset class="shared-seats-pick" id="shared-seats-pick">
-          <legend data-i18n="shared.howMany">How many of you?</legend>
-          <div class="shared-seats-row" id="shared-seats-row"></div>
-        </fieldset>
+        <!-- No "how many of you" (round 34): a table has room for six, and seats
+             fill as people arrive by the link. -->
         <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->
         <fieldset class="shared-seats-pick" id="shared-game-pick">
           <legend data-i18n="shared.whichGame">Which game?</legend>
@@ -55,6 +52,9 @@
       </section>
 
       <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->
+      <!-- The evening, summed up once there is nobody left to play it with (round 34). -->
+      <section class="shared-summary" id="shared-summary" hidden></section>
+
       <section class="shared-invite" id="shared-invite" hidden>
         <h2 data-i18n="shared.inviteTitle">Send this to your friend</h2>
         <p class="shared-link" id="shared-link"></p>
@@ -92,6 +92,9 @@
         and it never announces money.
       -->
       <p class="shared-ticker" id="shared-ticker" hidden aria-live="polite"></p>
+
+      <!-- The evening so far (round 34): who leads on the bar, who leads on chips. -->
+      <p class="shared-evening" id="shared-evening" hidden></p>
 
       <main class="table felt" id="shared-table" hidden>
         <section class="seat" data-i18n-attr="aria-label:ui.dealer">

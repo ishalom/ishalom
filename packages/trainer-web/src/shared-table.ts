@@ -836,13 +836,39 @@ function movesOf(seat: SeatRecord, hand: number): SeatMove[] {
  * random tables.
  */
 export function deriveTable(record: TableRecord): DerivedTable {
-  if (isUthTable(record)) return deriveUthTable(record);
-  return run(record, handsDealt(record), (seat, hand, round) => {
-    const move = record.seats
-      .find((entry) => entry.seat === seat)
-      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
-    return move ? move.action : null;
-  });
+  /*
+   * One screen asks for the same table four or five times — the view, the
+   * ticker, the analysis, the evening — and a long table costs a whole
+   * derivation each time (round 34). The last one is kept, keyed by every
+   * field the derivation reads; the next record with the same key gets the
+   * same answer, which a pure function would have given it anyway. Callers
+   * treat what they are handed as read-only.
+   */
+  const key = derivationKey(record);
+  if (LAST_DERIVED && LAST_DERIVED.key === key) return LAST_DERIVED.table;
+  const table = isUthTable(record)
+    ? deriveUthTable(record)
+    : run(record, handsDealt(record), (seat, hand, round) => {
+        const move = record.seats
+          .find((entry) => entry.seat === seat)
+          ?.moves.find((entry) => entry.hand === hand && entry.round === round);
+        return move ? move.action : null;
+      });
+  LAST_DERIVED = { key, table };
+  return table;
+}
+
+/** The last table derived, and the key it was derived for. See `deriveTable`. */
+let LAST_DERIVED: { key: string; table: DerivedTable } | null = null;
+
+/** Everything the derivation reads from a record, and nothing it does not. */
+function derivationKey(record: TableRecord): string {
+  return JSON.stringify([
+    record.seed,
+    record.presetId,
+    record.restrictions,
+    record.seats.map((seat) => [seat.seat, seat.bet, seat.moves, seat.hands ?? 0, seat.events ?? [], seat.vote ?? null]),
+  ]);
 }
 
 /** How many hands a table has dealt, read from the seats' own rows. */
@@ -1111,6 +1137,10 @@ export interface SeatGlance {
   detail: HandDetail[];
   /** Which of his hands he is deciding now, or null. */
   active: number | null;
+  /** The round each entry of `acted` was made at (round 34), so a tag can find its grade. */
+  actedRounds: number[];
+  /** His graded decisions in the hand on screen that this screen may show (round 34). */
+  shown: DerivedDecision[];
   /**
    * How many of his cards are face down to me (round 32). An Ultimate player's
    * two cards are his own, as at a real table, until the hand is over — and the
@@ -1247,11 +1277,38 @@ function countsOnScreen(
   hand: DerivedHand,
   current: DerivedHand | null,
   seat: number | null,
+  pending: number | null,
 ): boolean {
   if (!wasAsked(record, decision.seat, decision)) return false;
+  return gradeVisible(decision, hand, current, seat, pending);
+}
+
+/**
+ * Whether a graded decision may be shown on one seat's screen (round 34).
+ *
+ * One rule for everything that shows a grade: the bars, the crowns, the
+ * coloured action tags and the figures beside each seat. It is §3.7's, made
+ * exact per round. A neighbour's decision in the hand still being played is
+ * hidden **while I still owe a decision at that round or a later one** —
+ * `pending` is the round I owe, or null when I owe nothing. Once I have
+ * answered that round, or have nothing left to decide, or the hand is over,
+ * his grade there can tell me nothing I have yet to decide.
+ *
+ * It replaces round 30's coarser rule ("once I have acted at all this hand"),
+ * which let a neighbour's flop grade show while I was still deciding my flop.
+ * A watcher with no seat sees no grade from a hand in play.
+ */
+function gradeVisible(
+  decision: DerivedDecision,
+  hand: DerivedHand,
+  current: DerivedHand | null,
+  seat: number | null,
+  pending: number | null,
+): boolean {
   if (hand !== current || !current.incomplete) return true;
   if (decision.seat === seat) return true;
-  return seat !== null && hasActed(record, seat, current.hand);
+  if (seat === null) return false;
+  return pending === null || decision.round < pending;
 }
 
 /** Whether a seat has recorded anything at all for a hand. */
@@ -1274,6 +1331,22 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
   const disagrees = !seatsAgree(record, table);
   const current = table.hands[table.hands.length - 1] ?? null;
   const mine = seat === null ? null : (record.seats.find((entry) => entry.seat === seat) ?? null);
+
+  /*
+   * What I may do, asked of the engine rather than worked out here — the same
+   * `legalActions()` the solo game asks, on a table stacked with my own cards.
+   * Asked first, because the round I owe is what decides which of my
+   * neighbours' grades this screen may show (`gradeVisible`).
+   */
+  let legal: string[] = [];
+  let round = 0;
+  let pending: number | null = null;
+  if (seat !== null && current && current.incomplete && current.waitingFor.includes(seat)) {
+    const asked = legalFor(record, current.hand, seat);
+    legal = asked.legal;
+    round = asked.round;
+    pending = asked.round;
+  }
 
   /* This table's running numbers, per seat, summed over every settled hand. */
   const stacks = new Map<number, number>();
@@ -1311,7 +1384,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     for (const decision of hand.decisions) {
       const tally = counts.get(decision.seat);
       if (!tally) continue;
-      if (!countsOnScreen(record, decision, hand, current, seat)) continue;
+      if (!countsOnScreen(record, decision, hand, current, seat, pending)) continue;
       countDecision(tally, decision);
     }
   }
@@ -1371,6 +1444,25 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
               ...(forfeits.has(entry.seat) ? ['forfeit'] : []),
             ]
           : [],
+      actedRounds:
+        handIndex !== null && (entry.seat === seat || seesAll)
+          ? movesOf(entry, handIndex)
+              .filter((move) => move.action !== 'takeInsurance' && move.action !== 'declineInsurance')
+              .map((move) => move.round)
+          : [],
+      /*
+       * This seat's graded decisions in the hand on screen that this screen may
+       * show (round 34): what colours his tags and fills the figures beside his
+       * cards. Held by the same rule as the bars — see `gradeVisible`.
+       */
+      shown: current
+        ? current.decisions.filter(
+            (decision) =>
+              decision.seat === entry.seat &&
+              decision.round >= 0 &&
+              gradeVisible(decision, current, current, seat, pending),
+          )
+        : [],
       detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
       active: seatHand ? seatHand.active : null,
       faceDown: hidden ? dealt!.cards.length : 0,
@@ -1380,22 +1472,6 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
 
   const seats = record.seats.map(glance);
   const waitingFor = current ? current.waitingFor : [];
-
-  /*
-   * What I may do, asked of the engine rather than worked out here — the same
-   * `legalActions()` the solo game asks, on a table stacked with my own cards.
-   */
-  let legal: string[] = [];
-  let round = 0;
-  if (seat !== null && handIndex !== null && waitingFor.includes(seat)) {
-    const live = record.seats.filter((entry) => isLive(record, entry.seat, handIndex));
-    const at = live.findIndex((entry) => entry.seat === seat);
-    if (at >= 0) {
-      const asked = legalFor(record, handIndex, seat);
-      legal = asked.legal;
-      round = asked.round;
-    }
-  }
 
   return {
     hand: handIndex,
@@ -1409,7 +1485,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     round,
     onlyMe: seat !== null && waitingFor.length === 1 && waitingFor[0] === seat,
     waitingFor: [...waitingFor],
-    decisions: current ? current.decisions.filter((d) => d.seat === seat || iActed) : [],
+    decisions: current ? current.decisions.filter((d) => d.seat === seat || (iActed && gradeVisible(d, current, current, seat, pending))) : [],
     disagrees,
   };
 }

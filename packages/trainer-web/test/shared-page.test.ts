@@ -148,21 +148,17 @@ test('the shared screen draws on the route two phones took: door, link, then a t
 
     assert.equal(page.screen(), 'shared', 'the door did not open the shared screen');
 
-    // 1. The door: how many of you, and a way to make the table.
-    const picks = el('shared-seats-row').children;
-    assert.deepEqual(
-      picks.map((pick: any) => pick.textContent),
-      ['2', '3', '4', '5', '6'],
-      'the door drew no seat picker — the screen never started',
-    );
+    // 1. The door: which game, and a way to make the table — and no "how many of you" (round 34).
+    const games = el('shared-game-row').children;
+    assert.equal(games.length, 2, 'the door drew no game picker — the screen never started');
+    assert.equal(el('shared-seats-row').children.length, 0, 'the door still asks how many will play');
     assert.equal(el('shared-door').hidden, false, 'the door is hidden with no table to show');
     assert.equal(el('shared-table').hidden, true, 'a felt is shown before there is a table');
 
-    // 2. Make a table for two. Alone at it, the link is the screen.
-    picks[0].listeners.click[0]();
+    // 2. Make a table. It has room for six; alone at it, the link is the screen.
     for (const make of el('shared-make').listeners.click) make();
-    await until(() => seats.length === 2 && el('shared-invite').hidden === false);
-    assert.equal(seats.length, 2, 'making the table did not write its two seats');
+    await until(() => seats.length === 6 && el('shared-invite').hidden === false);
+    assert.equal(seats.length, 6, 'a new table does not have room for six');
     assert.equal(el('shared-invite').hidden, false, 'alone at a new table, the link to send is not shown');
     assert.match(el('shared-link').textContent, /#shared=[a-z0-9]{10}$/, 'the link does not name the table');
     assert.equal(el('shared-table').hidden, true, 'alone at a new table, an empty felt is shown instead');
@@ -179,6 +175,8 @@ test('the shared screen draws on the route two phones took: door, link, then a t
 
     assert.equal(el('shared-invite').hidden, true, 'the link is still the screen after the friend sat down');
     assert.equal(el('shared-table').hidden, false, 'with two seated, the felt is not shown');
+    // Four seats are still free: the link stays one tap away, under the felt.
+    assert.ok(walk(el('shared-measures')).some((node: any) => node.id === 'shared-copy-inline'), 'a table with free seats offers no link');
     const drawn = el('shared-seats').children;
     assert.equal(drawn.length, 2, `the felt draws ${drawn.length} seats, not the two who are sitting`);
     const names = drawn.map((seat: any) => seat.children[0].children[0].textContent);
@@ -194,12 +192,13 @@ test('the shared screen draws on the route two phones took: door, link, then a t
     assert.deepEqual(pressable(), [], `between hands the dock offers ${pressable()}`);
     const words = () => walk(el('shared-actions')).map((node: any) => String(node.textContent ?? '')).join(' ');
     assert.match(words(), /[0-9]/, 'the dock does not say when the first hand comes');
-    assertControlsSpeak(doc, ['shared-actions', 'shared-reactions', 'shared-seats-row'], 'before the first hand');
+    assertControlsSpeak(doc, ['shared-actions', 'shared-reactions', 'shared-game-row', 'shared-measures'], 'before the first hand');
 
-    // The bars are on the felt, beside each name (item 4).
-    const seatBars = walk(el('shared-seats')).filter((node: any) => String(node.className).includes('shared-seat-bar'));
-    assert.equal(seatBars.length, 2, 'the bars are not on the felt beside the seats');
-    assert.ok(seatBars.every((bar: any) => String(bar.textContent).trim().length > 0), 'a seat bar says nothing');
+    // Round 34: chips beside each name, and one accuracy bar for the table instead of one per seat.
+    const classed = (name: string) => (node: any) => String(node.className ?? '').split(/\s+/).includes(name);
+    assert.equal(walk(el('shared-seats')).filter(classed('shared-chips')).length, 2, 'a seat shows no chips');
+    assert.equal(walk(el('shared-seats')).filter(classed('shared-seat-bar')).length, 0, 'a seat still has its own bar');
+    assert.equal(walk(el('shared-table-line')).filter(classed('shared-accuracy')).length, 1, 'there is no shared bar');
 
     // 5. The first hand deals itself.
     const offered = () =>
@@ -259,7 +258,7 @@ test('a link to a table that is not there opens the door and says so, rather tha
     assert.equal(el('shared-door').hidden, false, 'a dead link draws nothing at all');
     assert.equal(el('shared-door-note').hidden, false, 'the door does not say why it is showing');
     assert.ok(el('shared-door-note').textContent.trim().length > 0, 'the door says nothing about the link');
-    assert.equal(el('shared-seats-row').children.length, 5, 'the door offers no way to make a new table');
+    assert.equal(el('shared-game-row').children.length, 2, 'the door offers no way to make a new table');
   } finally {
     page?.stopWatching();
     for (const handle of timers) clearInterval(handle);
@@ -352,7 +351,7 @@ test('an Ultimate table draws on the same route: one board, the dealer face down
 
     // The first hand deals itself: my two cards, his two face down, the dealer's two face down, five on the board face down.
     await until(() => offered().length > 0, 8000);
-    assert.deepEqual(offered(), ['raise4x', 'check', 'raise3x'], 'the pre-flop choices are not the private table\'s');
+    assert.deepEqual(offered(), ['raise4x', 'raise3x', 'check'], 'the pre-flop choices are not the private table\'s');
     assertControlsSpeak(doc, ['shared-actions'], 'pre-flop');
     assert.equal(el('shared-board-seat').hidden, false, 'no board on an Ultimate table');
     assert.equal(cardsIn('shared-board').length, 5);
@@ -391,6 +390,74 @@ test('an Ultimate table draws on the same route: one board, the dealer face down
     const verdict = walk(analysis).find((node: any) => node.className === 'verdict');
     assert.ok(verdict && String(verdict.textContent).trim().length > 0, 'the analysis has no verdict');
     assert.equal(el('shared-folklore').hidden, true, 'Blackjack\'s "he took my card" is offered at an Ultimate table');
+
+    /*
+     * Round 34, on the same hand. Every tag on the felt is coloured now the hand
+     * is over; the figures sit beside both seats' cards; the dock, with nothing
+     * to press, holds the spot's figures at full size; the evening line, the
+     * history and the one accuracy bar are drawn.
+     */
+    const has = (id: string, name: string) =>
+      walk(el(id)).filter((node: any) => String(node.className ?? '').split(/\s+/).includes(name));
+    const tags = has('shared-seats', 'shared-act');
+    assert.ok(tags.length >= 4, `only ${tags.length} tags on the felt`);
+    assert.ok(
+      tags.every((tag: any) => ['right', 'wrong'].some((grade) => String(tag.className).split(/\s+/).includes(grade))),
+      'a tag is not coloured once the hand is over',
+    );
+    assert.equal(has('shared-seats', 'shared-figures').length, 2, 'the figures are not beside both seats\' cards');
+    assert.equal(has('shared-actions', 'shared-figures').length, 1, 'the dock does not hold the spot\'s figures');
+    assert.equal(has('shared-actions', 'shared-figures')[0].className.includes('full'), true);
+    await until(() => el('shared-evening').hidden === false);
+    assert.equal(el('shared-evening').hidden, false, 'no "evening so far" line after a finished hand');
+    assert.ok(has('shared-measures', 'shared-history').length === 1, 'no hand history under the felt');
+    assert.equal(has('shared-table-line', 'shared-accuracy').length, 1, 'no shared accuracy bar');
+  } finally {
+    page?.stopWatching();
+    for (const handle of timers) clearInterval(handle);
+    (globalThis as any).setInterval = realInterval;
+    server.closeAllConnections();
+    server.close();
+  }
+});
+
+test('a seventh arrival is told the table is full, at the door (round 34)', async () => {
+  const { server, tables, seats } = fakeRest();
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  tables.push({ id: 'fulltable01', seed: 5, preset_id: 'uth-standard', restrictions: {}, state: 'open', seats: 6 });
+  for (let seat = 0; seat < 6; seat++) {
+    seats.push({
+      table_id: 'fulltable01',
+      seat,
+      player_id: `p${seat}`,
+      name: `P${seat}`,
+      bet: 1,
+      moves: [],
+      hands: 0,
+      events: [{ kind: 'join', seat, hand: 0 }],
+      reactions: {},
+    });
+  }
+  const timers: any[] = [];
+  const realInterval = globalThis.setInterval;
+  (globalThis as any).setInterval = (fn: any, ms: number, ...rest: any[]) => {
+    const handle = realInterval(fn, ms, ...rest);
+    timers.push(handle);
+    return handle;
+  };
+  let page: ReturnType<typeof loadHosted> | null = null;
+  try {
+    page = loadHosted('#shared=fulltable01', [['ev:playerName', 'Seventh'], ['ev:playerId', 'seventh-row'], ['ev:locale', 'he']], {
+      url: origin,
+      key: 'k',
+    });
+    await page.booted;
+    const el = (id: string) => page!.document.getElementById(id);
+    await until(() => String(el('shared-door-note').textContent).length > 0);
+    assert.equal(el('shared-door').hidden, false, 'a full table shows no door');
+    assert.match(el('shared-door-note').textContent, /מלא/, 'the seventh is not told the table is full');
+    assert.ok(seats.every((row) => row.player_id !== 'seventh-row'), 'a seventh took a seat');
   } finally {
     page?.stopWatching();
     for (const handle of timers) clearInterval(handle);

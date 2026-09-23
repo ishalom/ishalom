@@ -73,9 +73,10 @@ test('the engine’s order never decides the layout', () => {
 
 // --- UTH ------------------------------------------------------------------------
 
-test('UTH before the flop: Raise 4× | Check, then Raise 3× across the row', () => {
+test('UTH before the flop: Raise 4× | Raise 3× | Check, three to a row (round 34)', () => {
   const legal = ['raise4x', 'raise3x', 'check'];
-  assert.deepEqual(uthRows(legal), [['raise4x', 'check'], ['raise3x']]);
+  assert.deepEqual(uthRows(legal), [['raise4x', 'raise3x', 'check']]);
+  assert.deepEqual(uthRows(['check', 'raise3x', 'raise4x']), [['raise4x', 'raise3x', 'check']]);
   same(uthRows(legal), legal);
 });
 

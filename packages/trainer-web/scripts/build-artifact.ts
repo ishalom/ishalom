@@ -124,6 +124,8 @@ const waitingStrip = read(ARTIFACT, 'waiting.js');
 const figureJs = read(PUBLIC, 'figure.js');
 // The crown on a player's current run, drawn the same at all three tables (round 33).
 const crownJs = read(PUBLIC, 'crown.js');
+// The shared table's evening, summed up and shared as a picture (round 34).
+const eveningJs = read(PUBLIC, 'evening.js');
 // Shared by both tables, and read by home to open the hand a row names.
 const trackJs = read(PUBLIC, 'track.js');
 // The bet rail, the moving chips and their one click, shared by both tables.
@@ -221,6 +223,7 @@ const SHARED_HTML = ${jsString(sharedHtml)};
 /* How a figure is written on screen, for every page (round 8). */
 ${figureJs}
 ${crownJs}
+${eveningJs}
 
 /* The decision track, shared by both tables (round 6). */
 ${trackJs}

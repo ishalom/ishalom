@@ -28,7 +28,9 @@ import { explain } from './explain.ts';
 import { PER_SITTING, RECORD_FLOOR, gestureForSettlement } from './gestures.ts';
 import type { Locale } from './i18n.ts';
 import { returnsBlock, stakeFor } from './returns-block.ts';
-import { cardView, totalOf, type CardView } from './session.ts';
+import { cardView, describeScenarioKey, totalOf, type CardView } from './session.ts';
+import { returned } from './returns.ts';
+import { UTH_STAKE } from './uth-worked.ts';
 import { isUthTable } from './shared-uth.ts';
 import { UthSession, pokerCardView } from './uth-session.ts';
 import {
@@ -113,6 +115,18 @@ export interface SeatPanel {
   faceDown: number;
   /** The crown on its current run, and the run (round 33). Never in the ticker. */
   crown: { tier: string | null; run: number };
+  /**
+   * Whether each of `actions` was right, in the same order (round 34):
+   * 'right', 'wrong', or null while the grade may not be shown here yet. The
+   * bars' grade — right when it cost nothing — held by the bars' rule.
+   */
+  grades: Array<'right' | 'wrong' | null>;
+  /**
+   * The figures for the latest decision of his this screen may show (round 34):
+   * each action's return, best first, and which he chose. Numbers only — the
+   * screen puts no words beside them. Null when there is none to show.
+   */
+  figures: SeatFigures | null;
   /**
    * Ultimate only (round 32): the hand in words, as the private table's seat
    * header says it — the class of the two cards before the flop, the best hand
@@ -226,6 +240,35 @@ export interface DecisionView {
   feedback?: unknown;
 }
 
+/** One seat's figures for one spot: the returns block's numbers, without its words. */
+export interface SeatFigures {
+  rows: Array<{ action: string; value: number }>;
+  chosen: string;
+  optimal: string;
+  correct: boolean;
+}
+
+/** One finished hand in the table's history (round 34): what each seat did, and how it went. */
+export interface HistoryHand {
+  hand: number;
+  seats: Array<{
+    seat: number;
+    name: string;
+    actions: Array<{ action: string; grade: 'right' | 'wrong' }>;
+    forfeit: boolean;
+    net: number | null;
+  }>;
+}
+
+/** The spot that cost the table most, among spots it has met more than once (round 34). */
+export interface PriciestSpot {
+  label: string;
+  /** How many times the table met it, how many of those were wrong, and what they cost in all. */
+  times: number;
+  wrong: number;
+  cost: number;
+}
+
 export interface SharedScreen {
   /** Which game the table deals (round 32). */
   game: 'blackjack' | 'uth';
@@ -271,6 +314,12 @@ export interface SharedScreen {
   boardHidden: number;
   street: number | null;
   dealerWords: string | null;
+  /** The last finished hands, newest first (round 34). */
+  history: HistoryHand[];
+  /** The costliest spot met more than once, or null (round 34). */
+  priciest: PriciestSpot | null;
+  /** How many hands this table has finished (round 34). */
+  handsFinished: number;
 }
 
 /**
@@ -585,8 +634,93 @@ function panel(
     streak: glance.streak,
     faceDown: glance.faceDown,
     crown: { ...glance.crown },
+    grades: glance.acted.map((action, index) => {
+      if (action === 'forfeit') return 'wrong';
+      const decision = glance.shown.find((entry) => entry.round === glance.actedRounds[index]);
+      return decision ? (decision.evCost <= 0 ? 'right' : 'wrong') : null;
+    }),
+    figures: figuresOf(glance.shown[glance.shown.length - 1] ?? null, uth !== null),
     words: uth ? uth.words : null,
   };
+}
+
+/**
+ * A decision's figures, as the returns block states them (round 34): what each
+ * action brings back per unit staked, best first. Blackjack's unit is the bet;
+ * Ultimate's is the Ante and the Blind together, exactly as its private card.
+ */
+function figuresOf(decision: DerivedDecision | null, uth: boolean): SeatFigures | null {
+  if (!decision) return null;
+  const rows = Object.entries(decision.evByAction)
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number')
+    .map(([action, ev]) => ({ action, value: uth ? returned(ev, UTH_STAKE) : 1 + ev }))
+    .sort((a, b) => b.value - a.value);
+  return {
+    rows,
+    chosen: String(decision.action),
+    optimal: decision.optimalAction,
+    correct: decision.evCost <= 0,
+  };
+}
+
+/** A decision's spot, when the table can meet the same one again (round 34). */
+function spotOf(decision: DerivedDecision, locale: Locale): { key: string; label: string } | null {
+  if (decision.uth) {
+    // Ultimate repeats only before the flop, where the spot is the two cards' class.
+    if (decision.round !== 0) return null;
+    return {
+      key: `uth:pre:${decision.uth.holeClass}`,
+      label: uthSpeaker(locale).describeCards([...decision.uth.hole]).words,
+    };
+  }
+  const key = scenarioKeyOf(decision);
+  return key === null ? null : { key, label: describeScenarioKey(key, locale) };
+}
+
+/** The table's history and its priciest spot, from the finished hands (round 34). */
+function eveningOf(record: TableRecord, locale: Locale) {
+  const table = deriveTable(record);
+  const finished = table.hands.filter((hand) => !hand.incomplete);
+  const nameOf = (seat: number) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
+  const drops = tableEvents(record).filter((event) => event.kind === 'drop' && event.why !== 'left');
+
+  const history: HistoryHand[] = finished
+    .slice(-6)
+    .reverse()
+    .map((hand) => ({
+      hand: hand.hand,
+      seats: hand.seats.map((seatHand) => ({
+        seat: seatHand.seat,
+        name: nameOf(seatHand.seat),
+        actions: hand.decisions
+          .filter((d) => d.seat === seatHand.seat && d.round >= 0)
+          .map((d) => ({ action: String(d.action), grade: d.evCost <= 0 ? ('right' as const) : ('wrong' as const) })),
+        forfeit: drops.some((event) => event.seat === seatHand.seat && event.hand === hand.hand),
+        net: seatHand.net,
+      })),
+    }));
+
+  const spots = new Map<string, PriciestSpot>();
+  for (const hand of finished) {
+    for (const decision of hand.decisions) {
+      if (decision.round < 0) continue;
+      const spot = spotOf(decision, locale);
+      if (!spot) continue;
+      const entry = spots.get(spot.key) ?? { label: spot.label, times: 0, wrong: 0, cost: 0 };
+      entry.times++;
+      if (decision.evCost > 0) {
+        entry.wrong++;
+        entry.cost += decision.evCost;
+      }
+      spots.set(spot.key, entry);
+    }
+  }
+  let priciest: PriciestSpot | null = null;
+  for (const entry of spots.values()) {
+    if (entry.times < 2 || entry.cost <= 0) continue;
+    if (!priciest || entry.cost > priciest.cost) priciest = entry;
+  }
+  return { history, priciest, handsFinished: finished.length };
 }
 
 /** An Ultimate seat's one hand, for the felt: its cards and, once settled, its result. */
@@ -678,6 +812,7 @@ export function sharedScreen(record: TableRecord, seat: number | null, locale: L
     boardHidden: 0,
     street: null,
     dealerWords: null,
+    ...eveningOf(record, locale),
   };
 }
 
@@ -728,5 +863,6 @@ function uthScreen(record: TableRecord, view: ReturnType<typeof seatView>, seat:
     boardHidden: view.hand === null ? 0 : 5 - board.length,
     street: view.uth ? view.uth.street : null,
     dealerWords: dealer.length === 2 && board.length === 5 ? speaker.describeCards([...dealer, ...board]).words : null,
+    ...eveningOf(record, locale),
   };
 }

@@ -762,14 +762,16 @@ function uthRenderCard(view) {
  * the river. Layout only — built from the legal actions the session sends.
  */
 function uthRows(legal) {
+  /*
+   * Three to a row (round 34): before the flop Raise 4×, Raise 3× and Check fit
+   * on one line at 360 px in both languages, the raises on the left — round
+   * 4b's yes-on-the-left, with the smaller raise between them. The shared
+   * table lays its buttons out the same way.
+   */
+  const order = ['raise4x', 'raise3x', 'raise2x', 'raise1x', 'check', 'fold'];
+  const sorted = [...legal].sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const rows = [];
-  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
-    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
-  }
-  if (legal.includes('raise3x')) rows.push(['raise3x']);
-  // Anything a future rule adds that no row names still gets a button.
-  const placed = new Set(rows.flat());
-  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  for (let i = 0; i < sorted.length; i += 3) rows.push(sorted.slice(i, i + 3));
   return rows;
 }
 

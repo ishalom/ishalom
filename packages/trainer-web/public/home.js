@@ -655,8 +655,21 @@ function renderClaimed() {
   box.hidden = false;
 }
 
+/**
+ * The last shared table's evening, summed up once on the way home from it
+ * (round 34) — with the button that makes it a picture to send.
+ */
+function renderLastEvening() {
+  const box = el('home-evening');
+  if (!box || !window.EVEvening) return;
+  const kept = window.EVEvening.takeKept();
+  box.hidden = !kept;
+  box.replaceChildren(...(kept ? [window.EVEvening.card(kept)] : []));
+}
+
 // After the locale handshake, so the first render is already in the right language.
 Promise.resolve(window.EV && window.EV.ready).then(() => {
   renderClaimed();
+  renderLastEvening();
   return refresh();
 });

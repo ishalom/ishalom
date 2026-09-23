@@ -48,8 +48,6 @@ const shared = {
    * before this there was nothing drawn at all.
    */
   lost: false,
-  /** How many seats a new table gets. Two unless somebody says otherwise. */
-  seats: 2,
   /** Which game a new table deals (round 32): 'blackjack' unless Ultimate is chosen. */
   game: 'blackjack',
   /** Which ticker item is showing, and when it last changed (§3.10). */
@@ -89,14 +87,16 @@ const actionLabel = (action) => T(UTH_ACTION_KEYS[action] || `action.${action}`)
  * Ultimate's buttons in the private table's rows: each street's two choices
  * side by side, yes on the left (round 4b), and 3× on a row of its own.
  */
-function sharedUthRows(legal) {
+function uthButtonRows(legal) {
+  /*
+   * Three to a row (round 34, item 3): before the flop 4×, 3× and Check fit on
+   * one line at 360 px in both languages, the raises on the left — round 4b's
+   * yes-on-the-left, with the smaller raise between them.
+   */
+  const order = ['raise4x', 'raise3x', 'raise2x', 'raise1x', 'check', 'fold'];
+  const sorted = [...legal].sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const rows = [];
-  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
-    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
-  }
-  if (legal.includes('raise3x')) rows.push(['raise3x']);
-  const placed = new Set(rows.flat());
-  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  for (let i = 0; i < sorted.length; i += 3) rows.push(sorted.slice(i, i + 3));
   return rows;
 }
 
@@ -106,8 +106,7 @@ const REACTION_KEYS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
 /** One line of the ticker every eight seconds (§3.10). */
 const TICKER_MS = 8000;
 
-/** The smallest and largest table (§3.1). */
-const SHARED_MIN_SEATS = 2;
+/** The largest table (§3.1): a new table is opened with room for this many (round 34). */
 const SHARED_MAX_SEATS = 6;
 
 /** The table this link points at, or null for the door. */
@@ -184,9 +183,21 @@ function seatNode(seat) {
    * never says it, and when a mistake ends the run it is simply not drawn.
    */
   const crown = window.EVCrown ? window.EVCrown.node(seat.crown) : null;
-  const bar = document.createElement('span');
-  bar.className = 'shared-seat-bar' + (seat.bar === null ? ' settling' : '');
-  bar.textContent = barText(seat.bar);
+  /*
+   * His chips at this table (round 34): the fun number, beside the name. The
+   * fair one — the share of decisions right — is on the one bar under the
+   * seats, with everybody on the same scale (item 5).
+   */
+  const chips = document.createElement('span');
+  chips.className = 'shared-chips';
+  chips.title = T('shared.chipsLabel');
+  chips.setAttribute('aria-label', `${T('shared.chipsLabel')}: ${seat.stack}`);
+  const coin = document.createElement('span');
+  coin.className = 'shared-coin';
+  coin.setAttribute('aria-hidden', 'true');
+  const sum = document.createElement('span');
+  sum.textContent = window.EVFigure ? window.EVFigure.units(seat.stack, true) : String(seat.stack);
+  chips.append(coin, sum);
   const status = document.createElement('span');
   status.className = 'shared-status';
   status.textContent = T(`shared.status.${seat.status}`);
@@ -194,19 +205,27 @@ function seatNode(seat) {
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
   total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
-  title.append(...[who, crown, bar, status, total].filter(Boolean));
+  title.append(...[who, crown, chips, status, total].filter(Boolean));
   box.appendChild(title);
 
   if (seat.actions.length > 0) {
     const acts = document.createElement('p');
     acts.className = 'shared-acts';
     acts.setAttribute('aria-label', T('shared.actsLabel'));
-    for (const action of seat.actions) {
+    seat.actions.forEach((action, index) => {
       const chip = document.createElement('span');
-      chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '');
+      /*
+       * Coloured by whether it was right (round 34) — the bars' grade, held by
+       * the bars' rule, so a neighbour's tag stays plain while it could still
+       * tell me something about a decision I have not made. No words: the
+       * colour is the whole of it, and the analysis card has the rest.
+       */
+      const grade = seat.grades ? seat.grades[index] : null;
+      chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '') + (grade ? ` ${grade}` : '');
+      if (grade) chip.dataset.grade = grade;
       chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : actionLabel(action);
       acts.appendChild(chip);
-    }
+    });
     box.appendChild(acts);
   }
 
@@ -234,13 +253,13 @@ function seatNode(seat) {
     const cards = document.createElement('div');
     cards.className = 'cards';
     for (const card of only.cards) cards.appendChild(cardNode(card));
-    box.appendChild(cards);
+    box.appendChild(withFigures(cards, seat.figures));
   } else if (seat.faceDown > 0) {
     /* An Ultimate neighbour's two cards are his own until the hand is over (round 32). */
     const cards = document.createElement('div');
     cards.className = 'cards';
     for (let i = 0; i < seat.faceDown; i++) cards.appendChild(faceDownNode());
-    box.appendChild(cards);
+    box.appendChild(withFigures(cards, seat.figures));
   } else {
     const empty = document.createElement('p');
     empty.className = 'shared-empty';
@@ -258,9 +277,110 @@ function seatNode(seat) {
   return box;
 }
 
-/** A bar as the seat header shows it: a percentage, or "settling" under ten decisions. */
-function barText(bar) {
-  return bar === null ? T('shared.settling') : T('shared.barValue', { pct: Math.round(bar * 100) });
+/**
+ * The cards, with the figures of the seat's latest decision on their left
+ * (round 34): what each action brings back per unit staked, best first, his
+ * choice ringed — the returns block's numbers and nothing of its words.
+ */
+function withFigures(cards, figures) {
+  if (!figures) return cards;
+  const row = document.createElement('div');
+  row.className = 'shared-cardrow';
+  row.append(figuresNode(figures, false), cards);
+  return row;
+}
+
+/**
+ * A spot's figures as rows of action · bar · figure (round 34). `full` is the
+ * size the dock draws them at when there is nothing to press.
+ *
+ * The bar is on the returns block's own scale, 0 to 2, so a row here and a row
+ * there are the same length for the same figure.
+ */
+function figuresNode(figures, full) {
+  const box = document.createElement('div');
+  box.className = 'shared-figures' + (full ? ' full' : '') + (figures.correct ? ' right' : ' wrong');
+  box.setAttribute('role', 'table');
+  const best = figures.rows.length > 0 ? figures.rows[0].value : 0;
+  for (const row of figures.rows) {
+    const line = document.createElement('div');
+    line.className =
+      'shared-figure' +
+      (row.action === figures.chosen ? ' chosen' : '') +
+      (Math.abs(row.value - best) < 1e-9 ? ' best' : '');
+    line.setAttribute('role', 'row');
+    const name = document.createElement('span');
+    name.className = 'shared-figure-name';
+    name.textContent = actionLabel(row.action);
+    const track = document.createElement('span');
+    track.className = 'shared-figure-track';
+    const fill = document.createElement('span');
+    fill.className = 'shared-figure-fill';
+    fill.style.width = `${Math.max(0, Math.min(100, (row.value / 2) * 100))}%`;
+    track.appendChild(fill);
+    const value = document.createElement('span');
+    value.className = 'shared-figure-value';
+    value.textContent = row.value.toFixed(3);
+    line.append(name, track, value);
+    box.appendChild(line);
+  }
+  return box;
+}
+
+/**
+ * The one accuracy bar (round 34, item 5): the whole table on one scale, a
+ * marker for each player at his own share of decisions right.
+ *
+ * A seat still settling (under ten decisions) has no figure and no marker —
+ * the same honesty the per-seat bar kept. Markers that would overlap are put
+ * on a second or third lane rather than on top of each other, so two players
+ * at 94% and 95% are both readable at 360 px.
+ */
+function accuracyNode(screen) {
+  const placed = seatedAt(screen)
+    .filter((seat) => seat.bar !== null)
+    .map((seat) => ({ seat, pct: Math.round(seat.bar * 100) }))
+    .sort((a, b) => a.pct - b.pct);
+  const box = document.createElement('div');
+  box.className = 'shared-accuracy';
+  box.setAttribute('aria-label', T('shared.barTitle'));
+  const track = document.createElement('div');
+  track.className = 'shared-accuracy-track';
+  box.appendChild(track);
+  if (placed.length === 0) {
+    const settling = document.createElement('span');
+    settling.className = 'shared-accuracy-settling';
+    settling.textContent = T('shared.settling');
+    box.appendChild(settling);
+    return box;
+  }
+  /* Lanes: a marker takes the first lane whose last marker is far enough away. */
+  const GAP = 16; // percent of the track a pill needs at 360 px
+  const lanes = [];
+  for (const entry of placed) {
+    let lane = lanes.findIndex((last) => entry.pct - last >= GAP);
+    if (lane < 0) {
+      lane = lanes.length;
+      lanes.push(entry.pct);
+    } else lanes[lane] = entry.pct;
+    const marker = document.createElement('span');
+    marker.className = 'shared-marker' + (entry.seat.mine ? ' mine' : '');
+    marker.dataset.seat = String(entry.seat.seat);
+    marker.dataset.lane = String(lane);
+    marker.style.left = `${entry.pct}%`;
+    marker.style.top = `${lane * 22}px`;
+    const name = entry.seat.mine ? T('shared.you') : entry.seat.name;
+    marker.title = `${name} · ${entry.pct}%`;
+    marker.setAttribute('aria-label', `${name} ${entry.pct}%`);
+    const initial = document.createElement('b');
+    initial.textContent = Array.from(name || '?')[0];
+    const pct = document.createElement('span');
+    pct.textContent = `${entry.pct}%`;
+    marker.append(initial, pct);
+    track.appendChild(marker);
+  }
+  track.style.height = `${lanes.length * 22}px`;
+  return box;
 }
 
 /**
@@ -298,6 +418,44 @@ function headerFigure(hand, words) {
  * Under it, as text and nothing to press: the table's figures, the line that
  * names the two measures, and the comparison when they disagree.
  */
+/**
+ * "The evening so far", above the felt (round 34, item 9): who leads on the bar
+ * and who leads on chips, in one line and no commentary. Only once a hand has
+ * finished with at least two people at the table.
+ */
+function renderEvening(screen) {
+  const box = el('shared-evening');
+  if (!box) return;
+  const seated = seatedAt(screen).filter((seat) => seat.handsPlayed > 0);
+  if (!screen || screen.handsFinished < 1 || seated.length < 2) {
+    box.hidden = true;
+    return;
+  }
+  const nameOf = (seat) => (seat.mine ? T('shared.you') : seat.name);
+  const rated = seated.filter((seat) => seat.bar !== null).sort((a, b) => b.bar - a.bar);
+  const rich = [...seated].sort((a, b) => b.stack - a.stack);
+  box.hidden = false;
+  box.textContent = T('shared.evening', {
+    bar: rated.length > 0 ? nameOf(rated[0]) : T('shared.settling'),
+    chips: nameOf(rich[0]),
+  });
+}
+
+/** The summary of the evening so far, as `EVEvening` draws and shares it (round 34). */
+function eveningSummary(screen) {
+  const seated = seatedAt(screen).filter((seat) => seat.handsPlayed > 0);
+  const rated = seated.filter((seat) => seat.bar !== null).sort((a, b) => b.bar - a.bar);
+  const rich = [...seated].sort((a, b) => b.stack - a.stack);
+  return {
+    game: screen.game,
+    hands: screen.handsFinished,
+    accurate: rated.length > 0 ? { name: rated[0].name, pct: Math.round(rated[0].bar * 100) } : null,
+    chips: rich.length > 0 ? { name: rich[0].name, n: rich[0].stack } : null,
+    priciest: screen.priciest,
+    players: seated.map((seat) => seat.name),
+  };
+}
+
 function renderMeasures(screen) {
   const box = el('shared-measures');
   if (!screen) {
@@ -311,6 +469,36 @@ function renderMeasures(screen) {
   if (card) box.appendChild(card);
 
   if (screen.table.seats > 1) box.appendChild(tableExtras(screen.table));
+
+  /* The priciest spot, once the table has met the same one more than once (round 34). */
+  if (screen.priciest) {
+    const line = document.createElement('p');
+    line.className = 'shared-priciest';
+    line.textContent = T('shared.priciest', {
+      spot: screen.priciest.label,
+      wrong: screen.priciest.wrong,
+      times: screen.priciest.times,
+      cost: screen.priciest.cost.toFixed(2),
+    });
+    box.appendChild(line);
+  }
+
+  /* The last hands, and what each player did in each (round 34). */
+  if (screen.history.length > 0) box.appendChild(historyNode(screen));
+
+  /* A free seat: the link, one tap away, for whoever arrives next (round 34). */
+  if (screen.seats.some((seat) => !seat.seated)) {
+    const invite = document.createElement('button');
+    invite.className = 'action shared-invite-inline';
+    invite.type = 'button';
+    invite.id = 'shared-copy-inline';
+    invite.textContent = T('shared.copy');
+    invite.addEventListener('click', () => {
+      if (navigator.clipboard) void navigator.clipboard.writeText(inviteLink());
+      invite.textContent = T('shared.copied');
+    });
+    box.appendChild(invite);
+  }
 
   const legend = document.createElement('p');
   legend.className = 'shared-legend';
@@ -564,6 +752,56 @@ function tableRow(measures) {
 
   row.append(name, bar, stack);
   return row;
+}
+
+/**
+ * The table's last hands (round 34): what each player did, each action
+ * coloured right or wrong as on the felt, and the hand's result. Finished hands
+ * only, so nothing here can tell anybody about a decision still to make.
+ */
+function historyNode(screen) {
+  const box = document.createElement('details');
+  box.className = 'shared-history';
+  const summary = document.createElement('summary');
+  summary.textContent = T('shared.historyTitle');
+  box.appendChild(summary);
+  for (const hand of screen.history) {
+    const row = document.createElement('div');
+    row.className = 'shared-history-hand';
+    const head = document.createElement('span');
+    head.className = 'shared-history-n';
+    head.textContent = T('shared.historyHand', { n: hand.hand + 1 });
+    row.appendChild(head);
+    for (const seat of hand.seats) {
+      const who = document.createElement('span');
+      who.className = 'shared-history-seat';
+      const name = document.createElement('b');
+      name.textContent = seat.seat === shared.seat ? T('shared.you') : seat.name;
+      who.appendChild(name);
+      for (const act of seat.actions) {
+        const tag = document.createElement('span');
+        tag.className = `shared-act ${act.grade}`;
+        tag.dataset.grade = act.grade;
+        tag.textContent = actionLabel(act.action);
+        who.appendChild(tag);
+      }
+      if (seat.forfeit) {
+        const tag = document.createElement('span');
+        tag.className = 'shared-act forfeit wrong';
+        tag.textContent = T('shared.act.forfeit');
+        who.appendChild(tag);
+      }
+      if (seat.net !== null) {
+        const net = document.createElement('span');
+        net.className = 'shared-history-net';
+        net.textContent = window.EVFigure ? window.EVFigure.units(seat.net, true) : String(seat.net);
+        who.appendChild(net);
+      }
+      row.appendChild(who);
+    }
+    box.appendChild(row);
+  }
+  return box;
 }
 
 /** The three figures that only the table has: hands, what it cost, the best run. */
@@ -905,7 +1143,7 @@ function renderActions(screen) {
   };
   if (screen.game === 'uth' && screen.legal.length > 0) {
     box.classList.add('rows');
-    for (const actions of sharedUthRows(screen.legal)) {
+    for (const actions of uthButtonRows(screen.legal)) {
       const line = document.createElement('div');
       line.className = 'action-row';
       line.style.setProperty('--cols', String(actions.length));
@@ -918,6 +1156,28 @@ function renderActions(screen) {
   }
 
   if (screen.legal.length === 0) {
+    /*
+     * With nothing to press, the space holds the figures of the spot I just
+     * played (round 34, item 3) — the same numbers as beside my cards, at full
+     * size. It is not a control: nothing in it can be pressed, so round 30's
+     * rule — nothing to press appears where a button was as a hand ends —
+     * still holds, and the 450 ms settle-in hold still guards the first tap on
+     * the buttons when they come back (it is keyed to the offer, which changes).
+     */
+    const last = screen.analysis.length > 0 ? screen.analysis[screen.analysis.length - 1] : null;
+    if (last) {
+      box.appendChild(
+        figuresNode(
+          {
+            rows: last.ranked.map((row) => ({ action: row.action, value: row.value })),
+            chosen: last.action,
+            optimal: last.optimalAction,
+            correct: last.correct,
+          },
+          true,
+        ),
+      );
+    }
     const line = document.createElement('p');
     line.className = 'shared-dock-line';
     line.id = 'shared-dock-line';
@@ -1026,31 +1286,6 @@ function tickNextHand() {
   }
 }
 
-/**
- * How many seats, chosen before the table exists.
- *
- * Buttons rather than a number field: this is a choice between five things on a
- * phone, and the answer is almost always the first one.
- */
-function renderSeatPicker() {
-  const row = el('shared-seats-row');
-  if (!row) return;
-  row.replaceChildren();
-  for (let seats = SHARED_MIN_SEATS; seats <= SHARED_MAX_SEATS; seats++) {
-    const pick = document.createElement('button');
-    pick.className = 'action seat-pick' + (seats === shared.seats ? ' primary' : '');
-    pick.type = 'button';
-    pick.dataset.seats = String(seats);
-    pick.textContent = String(seats);
-    pick.setAttribute('aria-pressed', seats === shared.seats ? 'true' : 'false');
-    pick.addEventListener('click', () => {
-      shared.seats = seats;
-      renderSeatPicker();
-    });
-    row.appendChild(pick);
-  }
-}
-
 /** Which game, chosen before the table exists (round 32). Blackjack unless changed. */
 function renderGamePicker() {
   const row = el('shared-game-row');
@@ -1086,11 +1321,11 @@ function render() {
    * rather than a page with nothing on it (round 29).
    */
   const lost = shared.lost && !screen;
-  el('shared-door').hidden = Boolean(shared.id) && !lost;
-  if (lost) {
+  el('shared-door').hidden = Boolean(shared.id) && !lost && !shared.full;
+  if (lost || shared.full) {
     const note = el('shared-door-note');
     note.hidden = false;
-    note.textContent = T('shared.missing');
+    note.textContent = T(shared.full ? 'shared.full' : 'shared.missing');
   }
   el('shared-refused').hidden = !(screen && screen.refused);
 
@@ -1118,8 +1353,24 @@ function render() {
    * arrive one at a time — but it is only the *whole* screen while nobody else
    * has come, which is the moment there is nothing else to show.
    */
-  el('shared-invite').hidden = !(shared.id && free && !(screen && screen.refused));
+  /*
+   * The link is the whole screen only while nobody else has come. Once people
+   * are playing, a table that still has a free seat (round 34: every table has
+   * six) offers the link as one small button under the felt instead — see
+   * `renderMeasures` — so the felt is not pushed down for the whole evening.
+   */
+  el('shared-invite').hidden = !(shared.id && free && alone && !(screen && screen.refused));
   el('shared-invite').classList.toggle('waiting', alone);
+  /*
+   * The evening's summary (round 34, item 9), once there is an evening to sum
+   * up and nobody left to play it with — the table has ended for me.
+   */
+  const summaryBox = el('shared-summary');
+  if (summaryBox) {
+    const ended = Boolean(screen) && alone && screen.handsFinished > 0 && window.EVEvening;
+    summaryBox.hidden = !ended;
+    summaryBox.replaceChildren(...(ended ? [window.EVEvening.card(eveningSummary(screen))] : []));
+  }
   if (shared.id && free) el('shared-link').textContent = inviteLink();
 
   const playable = Boolean(screen) && !screen.refused && !alone;
@@ -1182,9 +1433,11 @@ function render() {
    */
   const line = el('shared-table-line');
   line.replaceChildren();
-  line.hidden = screen.table.seats <= 1;
+  line.hidden = seatedAt(screen).length < 1;
+  line.appendChild(accuracyNode(screen));
   if (screen.table.seats > 1) line.appendChild(tableRow(screen.table));
 
+  renderEvening(screen);
   renderClock(shared.clock);
   renderMeasures(screen);
   renderActions(screen);
@@ -1248,6 +1501,8 @@ function apply(answer) {
     shared.lost = false;
   }
   if (answer.seat !== undefined && answer.seat !== null) shared.seat = answer.seat;
+  /* A seventh arrival: every seat has somebody, and he is told so at the door. */
+  if (answer.taken && (answer.seat === null || answer.seat === undefined)) shared.full = true;
   if (answer.screen !== undefined) shared.screen = answer.screen;
   if (answer.clock !== undefined) shared.clock = answer.clock;
 }
@@ -1300,12 +1555,15 @@ function openShared() {
   shared.clock = null;
   shared.unavailable = false;
 
-  renderSeatPicker();
   renderGamePicker();
 
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', { seats: shared.seats, game: shared.game });
+      /*
+       * No "how many of you" (round 34, item 7): a table is opened with room
+       * for six, and seats fill as people arrive by the link.
+       */
+      const made = await api('/api/shared/create', { seats: SHARED_MAX_SEATS, game: shared.game });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }
@@ -1337,6 +1595,10 @@ function openShared() {
   if (home) {
     home.setAttribute('title', T('shared.leaveHint'));
     home.addEventListener('click', () => {
+      /* The evening, kept for the home screen to sum up once (round 34, item 9). */
+      if (shared.screen && shared.screen.handsFinished > 0 && window.EVEvening) {
+        window.EVEvening.keep(eveningSummary(shared.screen));
+      }
       if (shared.id && shared.seat !== null) void api('/api/shared/leave', { id: shared.id });
     });
   }

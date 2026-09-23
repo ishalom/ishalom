@@ -3109,3 +3109,72 @@ button,
   margin-inline: 4px 2px;
   line-height: 0;
 }
+
+/* ===========================================================================
+ * The shared table's felt, round 34: display only.
+ * ======================================================================== */
+
+/* Each seat's chips, beside the name: a coin and the figure. */
+.shared-chips { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; color: #e8eee9; }
+.shared-coin {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe28a, #d4a017 70%);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18);
+}
+
+/* A tag coloured by whether the action was right. No words: the colour is the grade. */
+.shared-act.right { background: rgba(76, 208, 138, 0.22); color: #7ee2a8; box-shadow: inset 0 0 0 1px rgba(76, 208, 138, 0.55); }
+.shared-act.wrong { background: rgba(232, 93, 76, 0.22); color: #ff9a8c; box-shadow: inset 0 0 0 1px rgba(232, 93, 76, 0.55); }
+
+/* The cards, with the figures on their left in both languages. */
+.shared-cardrow { display: flex; align-items: center; justify-content: center; gap: 10px; direction: ltr; }
+.shared-figures {
+  display: grid; gap: 3px; min-width: 0; width: 118px; flex: 0 0 auto;
+  font-size: 11px; font-variant-numeric: tabular-nums; direction: ltr;
+}
+.shared-figure { display: grid; grid-template-columns: 34px 1fr 36px; align-items: center; gap: 4px; opacity: 0.8; }
+.shared-figure-name { overflow: hidden; text-overflow: clip; white-space: nowrap; }
+[dir="rtl"] .shared-figure-name { direction: rtl; text-align: right; }
+.shared-figure-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.shared-figure-fill { display: block; height: 100%; background: rgba(232, 238, 233, 0.55); }
+.shared-figure.best .shared-figure-fill { background: #4cd08a; }
+.shared-figure.best .shared-figure-value { color: #7ee2a8; }
+.shared-figure-value { text-align: right; }
+.shared-figure.chosen { opacity: 1; font-weight: 700; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-fill { background: #e85d4c; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-value { color: #ff9a8c; }
+/* The same table in the dock, at full size, when there is nothing to press. */
+.shared-figures.full { width: 100%; max-width: 420px; margin: 0 auto 6px; font-size: 14px; gap: 5px; pointer-events: none; }
+.shared-figures.full .shared-figure { grid-template-columns: 7.5em 1fr 4.2em; }
+.shared-figures.full .shared-figure-track { height: 9px; border-radius: 5px; }
+
+/* One accuracy bar for the table, a marker for each player on it. */
+.shared-accuracy { position: relative; margin: 6px 4px 10px; direction: ltr; }
+.shared-accuracy-track {
+  position: relative; min-height: 22px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.06), rgba(76, 208, 138, 0.22));
+  border-radius: 11px;
+}
+.shared-marker {
+  position: absolute; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px;
+  border-radius: 10px; background: #1d2a24; color: #e8eee9; font-size: 11px; white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(232, 238, 233, 0.35);
+}
+.shared-marker.mine { box-shadow: 0 0 0 1.5px #f2c14e; }
+.shared-marker b { font-weight: 800; }
+.shared-accuracy-settling { display: block; text-align: center; font-size: 12px; opacity: 0.7; }
+
+/* The evening so far, the priciest spot, the history, and the summary. */
+.shared-evening { margin: 4px 16px; font-size: 13px; opacity: 0.85; text-align: center; }
+.shared-priciest { font-size: 13px; opacity: 0.85; }
+.shared-history { margin-top: 8px; font-size: 13px; }
+.shared-history summary { cursor: pointer; font-weight: 700; }
+.shared-history-hand { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.shared-history-n { opacity: 0.7; }
+.shared-history-seat { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.shared-history-net { font-variant-numeric: tabular-nums; opacity: 0.7; }
+.shared-summary-card { margin: 12px 16px; padding: 14px 16px; border-radius: 14px; background: #123d27; box-shadow: inset 0 0 0 1px rgba(242, 193, 78, 0.35); }
+.shared-summary-card h2 { margin: 0 0 8px; color: #f2c14e; font-size: 18px; }
+.shared-summary-card p { margin: 4px 0; }
+.shared-summary-card .shared-share { margin-top: 10px; width: 100%; }
