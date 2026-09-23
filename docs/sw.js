@@ -16,7 +16,7 @@
  * previous one is removed once this version takes over.
  */
 
-const CACHE = 'ev-trainer-689ea0e4e5a0-20260922220005';
+const CACHE = 'ev-trainer-630739f23d70-20260923185009';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (event) => {

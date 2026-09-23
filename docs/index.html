@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="689ea0e4e5a0f3cbc3dfbdfd66b4e8593a51937b" />
-<meta name="ev-build-at" content="2026-09-22T22:00:05.199Z" />
+<meta name="ev-build-commit" content="630739f23d70080c837c1506638fc5763ba58136" />
+<meta name="ev-build-at" content="2026-09-23T18:50:09.832Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -9187,7 +9187,8 @@ const EN            = {
   'social.offline': 'Playing on your own here — the shared table needs a connection this page could not get. Everything else works.',
   'social.noPlayers': 'Nobody has played a rated hand yet. Be first.',
   'social.noFeed': 'Nothing on the feed yet. Hands land here when someone drops a big one or holds a hard spot.',
-  'social.playerLine': '{accuracy}% over {hands} hands',
+  'social.playerLine': '{accuracy}% at the private table, over {hands} hands',
+  'social.playerLineAll': '{decisions} decisions in all',
   'social.you': 'You',
   'social.held': 'Held it — **{action}** was right.',
   'social.missed': 'Played {chosen}; **{optimal}** was right. Cost {cost}.',
@@ -10243,7 +10244,8 @@ const HE            = {
   'social.offline': 'כאן אתה משחק לבד — השולחן המשותף דורש חיבור שהדף הזה לא הצליח לקבל. כל השאר עובד.',
   'social.noPlayers': 'אף אחד עוד לא שיחק יד מדורגת. תהיה הראשון.',
   'social.noFeed': 'עוד אין כלום בפיד. ידיים מגיעות לכאן כשמישהו עושה טעות גדולה או מחזיק מצב קשה.',
-  'social.playerLine': '{accuracy}% על פני {hands} ידיים',
+  'social.playerLine': '{accuracy}% בשולחן הפרטי, על פני {hands} ידיים',
+  'social.playerLineAll': '{decisions} החלטות בסך הכול',
   'social.you': 'אתה',
   'social.held': 'החזיק — **{action}** היה נכון.',
   'social.missed': 'שיחק {chosen}; **{optimal}** היה נכון. עלות {cost}.',
@@ -17542,6 +17544,22 @@ function countDecision(tally           , decision                 )       {
 }
 
 /**
+ * Whether a seat was actually asked this decision.
+ *
+ * Only insurance can fail it. The shared table has no insurance button, so the
+ * derivation declines insurance for every seat under an ace, and nobody decided
+ * anything. Round 30 kept those out of the bars; round 31 keeps them out of the
+ * rating, which had been taking each as a free right answer. A seat's own moves
+ * holding an answer at round -1 is what "asked" means.
+ */
+function wasAsked(record             , seat        , decision                                 )          {
+  if (decision.round !== -1) return true;
+  return (record.seats.find((entry) => entry.seat === seat)?.moves ?? []).some(
+    (move) => move.hand === decision.hand && move.round === -1,
+  );
+}
+
+/**
  * Whether one graded decision belongs in the bars a given screen draws (round 30).
  *
  * Two kinds stay out, and both are about what the screen shows, not what is
@@ -17563,12 +17581,7 @@ function countsOnScreen(
   current                    ,
   seat               ,
 )          {
-  if (decision.round === -1) {
-    const asked = record.seats
-      .find((entry) => entry.seat === decision.seat)
-      ?.moves.some((move) => move.hand === decision.hand && move.round === -1);
-    if (!asked) return false;
-  }
+  if (!wasAsked(record, decision.seat, decision)) return false;
   if (hand !== current || !current.incomplete) return true;
   if (decision.seat === seat) return true;
   return seat !== null && hasActed(record, seat, current.hand);
@@ -25458,6 +25471,7 @@ function artifactBackend(db) {
         progress: saved.exists ? (saved.data()?.progress ?? null) : null,
         feed: feed.exists ? (feed.data()?.items ?? []) : [],
         mergedInto: summary.exists ? (summary.data()?.mergedInto ?? null) : null,
+        name: summary.exists ? (summary.data()?.name ?? null) : null,
         updatedAt: summary.exists ? (summary.data()?.at ?? null) : null,
       };
     },
@@ -25770,7 +25784,7 @@ function httpBackend({ url, key, table = 'players' }) {
 
     async load(id) {
       const response = await fetch(
-        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=progress,feed,merged_into,updated_at`,
+        `${endpoint}?id=eq.${encodeURIComponent(id)}&select=name,progress,feed,merged_into,updated_at`,
         { headers },
       );
       if (!response.ok) throw new Error(`load failed: ${response.status}`);
@@ -25783,6 +25797,8 @@ function httpBackend({ url, key, table = 'players' }) {
         // has to know, or it will read a dormant session back and then write to
         // it — which would put an abandoned rating back on the leaderboard.
         mergedInto: rows[0].merged_into ?? null,
+        // The row's own name, for a browser arriving from a merged one (round 31).
+        name: rows[0].name ?? null,
         // When the row was last written: the last day a player from before the
         // day count is known to have played (round 9).
         updatedAt: Date.parse(rows[0].updated_at) || null,
@@ -26958,7 +26974,14 @@ async function absorbSharedRating() {
   if (!sharedState.record || sharedState.seat === null) return;
   const owed = sharedUnrated();
   if (owed.length === 0) return;
-  session.absorbRated(rulesFor(sharedState.record), owed);
+  /*
+   * An insurance nobody was asked is not a decision (round 31): it stays out
+   * of the rating, and the mark still passes it, so the list the mark counts
+   * along is the same on every device and after every build.
+   */
+  const record = sharedState.record;
+  const seat = sharedState.seat;
+  session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
   await sharedMarkRated(owed.length);
   saveProgressLocally();
   void publish();
@@ -27078,6 +27101,21 @@ async function restoreMine() {
         me.id = remote.mergedInto;
         store.set('ev:playerId', me.id);
         remote = await backend.load(me.id);
+        /*
+         * And forget what belonged to the retired row (round 31). The stored
+         * proof is SHA-256 of *its* id and the code, so written onto the
+         * survivor it matches nobody's code, and the door refuses its owner for
+         * good. The name goes the same way: the survivor answers to its own
+         * name, and saving this browser's would rename it — after which the
+         * name it had is free for anybody to take.
+         */
+        me.pinHash = null;
+        store.set('ev:pinHash', '');
+        if (remote?.name) {
+          me.name = remote.name;
+          store.set('ev:playerName', me.name);
+          session.setPlayerName(me.name);
+        }
       }
 
       if (remote) {
@@ -28246,8 +28284,14 @@ function renderLeaderboard(box) {
   box.appendChild(caption);
   if (boardGame === 'uth') return void renderUthBoard(box);
 
-  // The Blackjack side, as it was before round 10: same rows, same order.
-  const rated = leaderboard.filter((p) => p.decisions > 0);
+  /*
+   * The Blackjack side, as it was before round 10: same rows, same order —
+   * except who is on it (round 31). Everything a player plays counts, so a
+   * player whose decisions were all made at a shared table is on the board by
+   * the rating they moved, where `decisions > 0` had hidden him.
+   */
+  const lifetimeOf = (p) => Number(p.lifetime_decisions ?? p.lifetimeDecisions ?? p.decisions) || 0;
+  const rated = leaderboard.filter((p) => p.decisions > 0 || lifetimeOf(p) > 0);
   if (rated.length === 0) return void box.appendChild(emptyNote(tr('social.noPlayers')));
 
   const list = document.createElement('ol');
@@ -28271,10 +28315,20 @@ function renderLeaderboard(box) {
 
     const detail = document.createElement('span');
     detail.className = 'board-detail';
-    detail.textContent = tr('social.playerLine', {
-      accuracy: (player.accuracy * 100).toFixed(1),
-      hands: player.hands,
-    });
+    /*
+     * One kind of judgement per figure (round 31, Idan: *"שלא יהיה ערבוב בין
+     * סוגים של שיפוט"*). The accuracy stored on a row is the private table's,
+     * and the line now says so; a player with none there gets his whole count
+     * instead, named as that — never "100.0% over 0 hands" beside a rating
+     * built somewhere else.
+     */
+    detail.textContent =
+      player.decisions > 0
+        ? tr('social.playerLine', {
+            accuracy: (player.accuracy * 100).toFixed(1),
+            hands: player.hands,
+          })
+        : tr('social.playerLineAll', { decisions: window.EVFigure.units(lifetimeOf(player)) });
 
     row.append(place, who, score, detail);
     list.appendChild(row);
