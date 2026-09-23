@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="630739f23d70080c837c1506638fc5763ba58136" />
-<meta name="ev-build-at" content="2026-09-23T18:50:09.832Z" />
+<meta name="ev-build-commit" content="d7235a2bf8ee8619e7f69f92668247fb73a6c1e9" />
+<meta name="ev-build-at" content="2026-09-23T19:13:50.599Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -25054,6 +25054,13 @@ function renderSeatPicker() {
 }
 
 function render() {
+  /*
+   * Nothing to draw into once another screen is mounted (round 31). A poll or
+   * a move already in flight when the player left lands afterwards and calls
+   * this — found by the live walk as "Cannot set properties of null (setting
+   * 'hidden')" the moment a phone went home from the table.
+   */
+  if (!el('shared-door')) return;
   const screen = shared.screen;
 
   /*
