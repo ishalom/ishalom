@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="d7235a2bf8ee8619e7f69f92668247fb73a6c1e9" />
-<meta name="ev-build-at" content="2026-09-23T19:13:50.599Z" />
+<meta name="ev-build-commit" content="249adf73a11296e56cd05b4e996376bd2a7d5bc1" />
+<meta name="ev-build-at" content="2026-09-23T20:00:29.694Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -7760,6 +7760,18 @@ const RAISE_SIZE                                     = {
                                                                                         
                            
                 
+     
+                                                                  
+    
+                                                                             
+                                                                              
+                                                                               
+                                                                             
+                                                                              
+                                                                               
+                                                                                  
+     
+                                      
  
 
                           
@@ -7900,9 +7912,13 @@ class UthTable {
    */
           evaluation                       = null;
 
+  /** See `UthTableOptions.solved`. */
+                   solved                                   ;
+
   constructor(options                  = {}) {
     this.paytable = options.paytable ?? DEFAULT_BLIND_PAYTABLE;
     this.rng = makeRng(options.seed ?? Date.now() % 2147483647);
+    this.solved = options.solved ?? null;
   }
 
   // --- Reading the table ---------------------------------------------------
@@ -8050,6 +8066,18 @@ class UthTable {
     const legal = this.legalActions();
     if (legal.length === 0) throw new Error(`Nothing to decide while ${this.phase}`);
     if (this.evaluation) return this.evaluation;
+    /*
+     * The key is everything the answer depends on: the paytable, the decision
+     * point, the hole cards and the board as far as it is face up.
+     */
+    const key = this.solved
+      ? `${JSON.stringify(this.paytable)}|${this.phase}|${this.hole.join(',')}|${this.board.slice(0, REVEALED[this.phase]).join(',')}`
+      : '';
+    const known = this.solved?.get(key);
+    if (known) {
+      this.evaluation = known;
+      return known;
+    }
 
     const started = now();
     let evaluation                                                  ;
@@ -8155,6 +8183,7 @@ class UthTable {
       }
     }
     this.evaluation = { ...evaluation, optimalAction, solveMs };
+    this.solved?.set(key, this.evaluation);
     return this.evaluation;
   }
 
@@ -8329,6 +8358,7 @@ const EN            = {
   'waiting.arrived': '{name} sat down. You will join at the end of this hand.',
   'waiting.go': 'Go to the table',
   'shared.howMany': 'How many of you?',
+  'shared.whichGame': 'Which game?',
   'shared.make': 'Make a table',
   'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
   'shared.missing': 'That table is not there any more — the link may be old. You can open a new one here.',
@@ -9407,6 +9437,7 @@ const HE            = {
   'waiting.arrived': '{name} התיישב. תצטרף בסוף היד הזאת.',
   'waiting.go': 'לשולחן',
   'shared.howMany': 'כמה אתם?',
+  'shared.whichGame': 'איזה משחק?',
   'shared.make': 'לפתוח שולחן',
   'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
   'shared.missing': 'השולחן הזה כבר לא קיים — אולי הקישור ישן. אפשר לפתוח כאן שולחן חדש.',
@@ -14952,6 +14983,25 @@ const zeroSeverity = ()                               => ({
   blunder: 0,
 });
 
+/**
+ * An evaluation, with the river facts the card words added when it is a river.
+ *
+ * The same 990 holdings the river was graded on, asked which ones beat the
+ * player most narrowly. Counted again rather than read off the grade, and held
+ * to the solver's counts by a test in the engine. One function, because the
+ * shared table (round 32) words its river decisions with the private table's
+ * own card and must not grow a second way of finding the threats.
+ */
+function withRiverFacts(evaluation               , hole        , board        )            {
+  const explained            = { ...evaluation };
+  if (explained.phase !== 'river') return explained;
+  const odds = riverOdds(hole, board, 3);
+  explained.threats = odds.closest.map((g) => ({ category: g.category, ranks: g.ranks, count: g.count }));
+  explained.covered = odds.closest.reduce((sum, g) => sum + g.count, 0) === odds.losses;
+  explained.playerValue = odds.playerValue;
+  return explained;
+}
+
 /** The best play in a pre-flop row, and what it is worth. */
 function bestOf(row            )                                    {
   if (row.optimalAction === 'raise4x') return { action: 'raise4x', ev: row.ev4x };
@@ -15081,19 +15131,8 @@ class UthSession {
   act(action           )          {
     const holeClass = this.table.holeClass;
     // Read before acting: `act()` moves the phase on and clears the cache.
-    const evaluation            = { ...this.table.evaluate() };
-    if (evaluation.phase === 'river') {
-      /*
-       * The same 990 holdings the river was graded on, asked which ones beat the
-       * player most narrowly. Counted again rather than read off the grade, and
-       * held to the solver's counts by a test in the engine.
-       */
-      const view = this.table.view;
-      const odds = riverOdds(view.hole, view.board, 3);
-      evaluation.threats = odds.closest.map((g) => ({ category: g.category, ranks: g.ranks, count: g.count }));
-      evaluation.covered = odds.closest.reduce((sum, g) => sum + g.count, 0) === odds.losses;
-      evaluation.playerValue = odds.playerValue;
-    }
+    const before = this.table.view;
+    const evaluation = withRiverFacts(this.table.evaluate(), before.hole, before.board);
     const record = this.table.act(action);
     this.last = { record, evaluation, holeClass };
     this.count(record, evaluation);
@@ -15198,6 +15237,81 @@ class UthSession {
         playerValue: evaluation.playerValue,
       },
     });
+  }
+
+  // --- The shared table (round 32) ------------------------------------------
+
+  /**
+   * Decisions made at a shared Ultimate table, taken into this player's rating.
+   *
+   * Blackjack's `absorbRated`, for the other game: the table grades with its own
+   * `UthTable`s and never meets a session, and this is where its graded
+   * decisions reach the one Ultimate rating — through `uthDifficulty` and
+   * `updateUthRating`, exactly as `count()` rates a decision at the private
+   * table. **Only the rating and the lifetime count move**, as in Blackjack:
+   * this sitting's hands, accuracy, stack and log describe the private table,
+   * and a hand dealt somewhere else did not happen at it.
+   *
+   * A forfeit is rated at the cost of the worst action where the seat was
+   * sitting (Idan, round 26) and is not a decision, so it does not count as one.
+   * Returns how many decisions moved the rating.
+   */
+  absorbRated(
+    decisions                                                                                                 ,
+  )         {
+    let rated = 0;
+    for (const decision of decisions) {
+      if (!decision.forfeit) this.lifetimeDecisions++;
+      // Nothing to read a difficulty from is nothing to rate, as `count()` declines an obvious spot.
+      if (!decision.evByAction) continue;
+      const difficulty = uthDifficulty(decision.evByAction);
+      if (difficulty === null) continue;
+      updateUthRating(this.rating, difficulty, severityForCost(decision.evCost));
+      rated++;
+    }
+    // A save taken now is between the private table's hands; keep the two in step.
+    const phase = this.table.view.phase;
+    if (phase === 'idle' || phase === 'settled') this.ratingAtDeal = { ...this.rating };
+    return rated;
+  }
+
+  /**
+   * The private table's own card, for a decision made at a shared table.
+   *
+   * The same `compose()` — headline, verdict, rows, worked lines, the
+   * percentages and the calculation — asked about a decision this session did
+   * not deal, so a shared Ultimate decision is explained by the one function
+   * that explains a private one. `bet` is the seat's own Ante, which is what the
+   * money lines are counted in.
+   */
+  explainDecision(decision   
+                              
+                              
+                      
+                 
+                  
+                
+   )              {
+    const evaluation = withRiverFacts(decision.evaluation, decision.hole, decision.board);
+    const kept = this.handBet;
+    this.handBet = decision.bet;
+    try {
+      return this.compose({ record: decision.record, evaluation, holeClass: decision.holeClass });
+    } finally {
+      this.handBet = kept;
+    }
+  }
+
+  /**
+   * A hand in words, as the private table's seat headers say it (round 19):
+   * two hole cards by their class, five or more cards by the best hand in them.
+   */
+  describeCards(cards        )                                                        {
+    if (cards.length === 2) {
+      return { words: this.classWords(holeClassLabel(cards[0] , cards[1] )), five: null, codes: [...cards] };
+    }
+    const hand = this.handWords(cards);
+    return { words: hand.phrase, five: hand.five, codes: [...hand.cards] };
   }
 
   // --- The bet -------------------------------------------------------------
@@ -16458,6 +16572,7 @@ function analyse(request                 )          {
 
 
 
+
 /** How many seats a table can hold. Spec A 3.1: your own full size, the rest compact. */
 const MAX_SEATS = 6;
 
@@ -16474,7 +16589,7 @@ const MAX_SEATS = 6;
                           
      
                 
-                                                                 
+                                                                             
  
 
 /** One seat, as its own row holds it. Only this seat ever writes here. */
@@ -16655,6 +16770,8 @@ function tableReactions(record             )                 {
                                               
                         
                  
+                                                                                     
+                         
  
 
                                   
@@ -16721,6 +16838,8 @@ function detailOf(hands                                                         
                  
                                                                            
                           
+                                                                                      
+                     
  
 
                                
@@ -17148,7 +17267,7 @@ function playHand(
         continue;
       }
       if (play.phase !== 'player') break;
-      play.table.act(move.action);
+      play.table.act(move.action                   );
     }
     return play;
   });
@@ -17209,6 +17328,17 @@ function movesOf(seat            , hand        )             {
  * random tables.
  */
 function deriveTable(record             )               {
+  if (isUthTable(record)) return deriveUthTable(record);
+  return run(record, handsDealt(record), (seat, hand, round) => {
+    const move = record.seats
+      .find((entry) => entry.seat === seat)
+      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
+    return move ? move.action : null;
+  });
+}
+
+/** How many hands a table has dealt, read from the seats' own rows. */
+function handsDealt(record             )         {
   /*
    * How far the table runs: what the seats say they have been dealt, and never
    * less than the log needs — a move at hand 7 is proof that hand 7 was dealt,
@@ -17223,12 +17353,7 @@ function deriveTable(record             )               {
     handCount = Math.max(handCount, seat.hands ?? 0);
     for (const move of seat.moves) handCount = Math.max(handCount, move.hand + 1);
   }
-  return run(record, handCount, (seat, hand, round) => {
-    const move = record.seats
-      .find((entry) => entry.seat === seat)
-      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
-    return move ? move.action : null;
-  });
+  return handCount;
 }
 
 /**
@@ -17478,6 +17603,13 @@ function seatsAgree(record             , table              )          {
                        
                                                         
                         
+     
+                                                                               
+                                                                                
+                                                                           
+                                                                            
+     
+                   
  
 
                            
@@ -17505,6 +17637,16 @@ function seatsAgree(record             , table              )          {
      
                                
                                                                                  
+                     
+     
+                                                                        
+    
+                                                                          
+                                                                              
+                                   
+     
+                    
+                                                                                          
                      
  
 
@@ -17642,12 +17784,20 @@ function seatView(record             , seat               )           {
   );
 
   const glance = (entry            )             => {
-    const seatHand = current?.seats.find((row) => row.seat === entry.seat) ?? null;
+    const dealt = current?.seats.find((row) => row.seat === entry.seat) ?? null;
+    const hidden = Boolean(dealt && current && current.uth && current.incomplete && entry.seat !== seat);
+    const seatHand = dealt && hidden ? { ...dealt, cards: [], hands: [] } : dealt;
     const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 };
     let status             = 'betting';
     if (handIndex !== null && !isLive(record, entry.seat, handIndex)) status = 'away';
     else if (!current) status = 'betting';
     else if (current.waitingFor.includes(entry.seat)) status = 'deciding';
+    /*
+     * An Ultimate seat that has raised or folded has nothing left to decide in
+     * the hand (round 32, Idan): it is finished, and shown as finished, while
+     * the others play the streets out.
+     */
+    else if (current.incomplete && current.uth && seatHand && isFinishedUth(current, entry.seat)) status = 'done';
     else if (current.incomplete) status = 'decided';
     else status = seatHand && seatHand.net !== null ? 'done' : 'waitingForDealer';
     return {
@@ -17676,6 +17826,7 @@ function seatView(record             , seat               )           {
           : [],
       detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
       active: seatHand ? seatHand.active : null,
+      faceDown: hidden ? dealt .cards.length : 0,
     };
   };
 
@@ -17701,7 +17852,9 @@ function seatView(record             , seat               )           {
   return {
     hand: handIndex,
     dealer: current ? [...current.dealer] : [],
-    dealerRevealed: Boolean(current && !current.incomplete),
+    dealerRevealed: Boolean(current && !current.incomplete && (current.uth ? current.uth.dealerShown : true)),
+    handOver: Boolean(current && !current.incomplete),
+    ...(current && current.uth ? { uth: current.uth } : {}),
     me: mine ? glance(mine) : null,
     seats,
     legal,
@@ -17711,6 +17864,12 @@ function seatView(record             , seat               )           {
     decisions: current ? current.decisions.filter((d) => d.seat === seat || iActed) : [],
     disagrees,
   };
+}
+
+/** Whether an Ultimate seat has nothing left to decide in the hand: it raised, or it folded. */
+function isFinishedUth(hand             , seat        )          {
+  if (!hand.uth) return false;
+  return (hand.uth.playBet.get(seat) ?? 0) > 0 || (hand.uth.folded.get(seat) ?? false);
 }
 
 /**
@@ -17726,6 +17885,7 @@ function legalFor(
   hand        ,
   seat        ,
 )                                     {
+  if (isUthTable(record)) return uthLegalFor(record, hand, seat);
   let legal           = [];
   let round = 0;
   const asked = { ...record, seats: record.seats.map((entry) => ({ ...entry })) };
@@ -17828,6 +17988,12 @@ function counterfactual(
   hand        ,
   showing = hand,
 )                        {
+  /*
+   * Ultimate has none to give (round 32): every card of a hand is laid out at
+   * the shuffle, by seat, so no neighbour's choice moves a single one of them.
+   * "He took my card" is not a thing that can happen there, so it is not asked.
+   */
+  if (isUthTable(record)) return null;
   const actual = deriveTable(record);
   const mineNow = handFor(actual, showing, seat);
   if (!mineNow || mineNow.length === 0) return null;
@@ -17897,6 +18063,7 @@ function counterfactual(
  * this round would be false about the rule the whole table is built on.
  */
 function counterfactualBack(record             , seat        , upTo        )                        {
+  if (isUthTable(record)) return null;
   /*
    * Only the last few hands are searched, and that is about cost rather than
    * taste: every candidate replays the whole table from the seed, so the price
@@ -18008,6 +18175,8 @@ function replayWith(
  * say about it, and the screen has one line to spend.
  */
 function sharedSpots(record             , seat        )               {
+  // Blackjack's chart cells. Ultimate has none, and two hole-card pairs are not one spot.
+  if (isUthTable(record)) return [];
   const table = deriveTable(record);
   const mine = new Map                                                          ();
   const theirs = new Map 
@@ -18123,6 +18292,11 @@ function ratingKeyOf(decision                 )         {
           
      
                  
+     
+                                                                              
+                                                                             
+     
+                                               
  
 
 /**
@@ -18153,6 +18327,8 @@ function ratingKeyOf(decision                 )         {
                                                                                 
                   
                       
+                                                                               
+                                               
  
 
 /**
@@ -18177,6 +18353,7 @@ function ratingKeyOf(decision                 )         {
  *     it is when a player answers it himself.
  */
 function forfeitSpot(record             , seat        , hand        )                     {
+  if (isUthTable(record)) return uthForfeitSpot(record, seat, hand);
   /*
    * The same table, minus the drop that is being priced. Without this the seat
    * is not live at the hand and there is nothing to look at — the drop having
@@ -18296,6 +18473,7 @@ function spotKeyFor(
  * devices and on the same device tomorrow.
  */
 function seatRatable(record             , seat        )                    {
+  if (isUthTable(record)) return uthSeatRatable(record, seat);
   const table = deriveTable(record);
   const out                    = [];
   for (const hand of table.hands) {
@@ -18339,6 +18517,451 @@ function seatRatable(record             , seat        )                    {
   return out.sort((a, b) => a.hand - b.hand || a.round - b.round);
 }
 
+/* ===== packages/trainer-web/src/shared-uth.ts ===== */
+/**
+ * The shared Ultimate table (round 32) — one board, one dealer, every seat its
+ * own two cards.
+ *
+ * Idan settled the shape before a line was written: *as in a real casino*. The
+ * flop, the turn and the river are the same cards for everybody, the dealer
+ * plays one hand against all of them, and each player still wins or loses
+ * against the dealer on his own. Nobody plays against anybody.
+ *
+ * And he settled how a hand runs, in one sentence: **everyone decides; when
+ * everyone has decided, the board turns; and again, three times.**
+ *
+ * WHY NOTHING OF BLACKJACK'S DEALING IS HERE. Blackjack's reservation rule
+ * exists because players draw cards in parallel and a card must not go to
+ * whoever's network is faster. In Ultimate nobody draws a card after the deal.
+ * So every card of a hand is laid out the moment the deck is shuffled, at a
+ * position fixed by **seat index** rather than by who happens to be live:
+ *
+ *   seat k's two cards   deck[2k], deck[2k + 1]      (k = 0 … 5)
+ *   the dealer's two     deck[12], deck[13]
+ *   the board            deck[14 … 18]
+ *
+ * Nobody's choice, nobody's arrival and nobody's departure can move a card
+ * anybody else holds, or the board — which is Idan's "no way for one player's
+ * choice to change another's cards", made structural rather than argued. A
+ * seat that is not live leaves its two cards in the deck, unseen.
+ *
+ * WHAT STAYS FROM BLACKJACK, BECAUSE IT COSTS NOTHING AND PROTECTS EVERYTHING.
+ * The table is a pure function of the seed and the seats' own rows, with no
+ * wall clock anywhere in it; every seat still writes a checksum of what it saw,
+ * now including the board, which is what proves two phones show the same one;
+ * who is live is read from the same events, and a drop is the same vote.
+ *
+ * WHAT THIS FILE REFUSES TO DO, AS ITS BLACKJACK COUSIN DOES. It does not grade
+ * and it does not settle. Each live seat plays its hand on its own `UthTable` —
+ * the class the private table plays on — stacked with exactly the nine cards
+ * that seat's hand is made of, and every grade and every unit comes out of that
+ * table's own `act()` and `settle()`. A shared decision and the same decision
+ * alone are graded by one code path; `test/shared-uth.test.ts` proves it by
+ * comparison.
+ */
+
+
+/**
+ * The preset a shared Ultimate table is recorded under.
+ *
+ * The `tables` row already carries a preset id and nothing else about the game,
+ * so the game is the preset: no column was added and no migration was needed.
+ */
+const UTH_PRESET_ID = 'uth-standard';
+
+/** Whether a table record is an Ultimate table. Everything else is Blackjack. */
+function isUthTable(record                               )          {
+  return record.presetId === UTH_PRESET_ID;
+}
+
+/** The three decision points, in order: the move's `round` is the index here. */
+const UTH_STREETS = ['preflop', 'flop', 'river']         ;
+
+/** How much of the board is face up while the table decides each street. */
+const UTH_BOARD_AT = [0, 3, 5]         ;
+
+/** Where the dealer's cards and the board sit in each hand's deck. See the header. */
+const UTH_DEALER_AT = 12;
+const UTH_BOARD_FROM = 14;
+
+/**
+ * Every evaluation this page has solved, shared by every seat and every read.
+ *
+ * The table is derived afresh on every poll, and each derivation plays every
+ * seat of every hand; a flop solve is ~60 ms, so without this a long evening
+ * would re-solve the whole table's flops every second and a half. The memo is
+ * keyed by the cards the answer depends on (see `UthTableOptions.solved`), so
+ * it is correct for any table and any seat.
+ */
+const UTH_SOLVED = new Map                       ();
+
+/**
+ * What an Ultimate decision carries beyond what every decision carries: the
+ * evaluation it was graded on, the class and cards the card words, and the
+ * seat's Ante — everything the private table's card is composed from.
+ */
+                                   
+                            
+                            
+                    
+                    
+                                                                
+                     
+              
+ 
+
+/** Everything the Ultimate derivation adds to a hand. */
+                               
+                                                            
+                     
+                                                                                  
+                 
+     
+                                                                             
+                                                                             
+                                                                          
+     
+                       
+                                                                            
+                               
+                               
+ 
+
+/** The cards one hand is made of, from its deck. */
+function uthCardsOf(deck                      , seat        ) {
+  return {
+    hole: [deck[2 * seat] , deck[2 * seat + 1] ],
+    dealer: [deck[UTH_DEALER_AT] , deck[UTH_DEALER_AT + 1] ],
+    board: deck.slice(UTH_BOARD_FROM, UTH_BOARD_FROM + 5),
+  };
+}
+
+/** What `inspect` is shown: the seat the table is waiting on, and its spot. */
+                   
+               
+                
+                  
+                                                                                     
+          
+
+/**
+ * Deal one hand to the seats live for it, and play it street by street.
+ *
+ * `moveFor` answers a seat's action at a street, or null while it has not
+ * decided. The street is the whole of the lock-step: a street is over when
+ * every seat that owes it a decision has made one, and only then does the
+ * board turn for anybody. A seat that has raised or folded owes nothing
+ * further, so it never holds the table up.
+ */
+function playUthHand(
+  handIndex        ,
+  deck                      ,
+  live              ,
+  moveFor                                                                             ,
+  record                                     ,
+  inspect             ,
+)              {
+  const plays = live.map((seat) => {
+    const cards = uthCardsOf(deck, seat.seat);
+    const table = new UthTable({ seed: 1, solved: UTH_SOLVED });
+    table.stackNextHand([...cards.hole, ...cards.dealer, ...cards.board]);
+    table.startHand();
+    return { seat, table, hole: cards.hole };
+  });
+
+  const owing = new Set        ();
+  let street = 0;
+  for (; street < UTH_STREETS.length; street++) {
+    for (const { seat, table, hole } of plays) {
+      if (table.view.phase !== UTH_STREETS[street]) continue;
+      const legal = table.legalActions()            ;
+      const action = moveFor(seat.seat, street, legal);
+      if (action === null) {
+        owing.add(seat.seat);
+        if (inspect) {
+          const waiting = table.evaluate();
+          inspect(seat.seat, street, legal, {
+            evByAction: waiting.evByAction                                   ,
+            optimalAction: waiting.optimalAction,
+          });
+        }
+        continue;
+      }
+      /*
+       * Everything the card needs is read before the engine is asked: `act()`
+       * moves the street on and clears the evaluation it graded with.
+       */
+      const evaluation = table.evaluate();
+      const holeClass = table.holeClass;
+      const board = [...table.view.board];
+      const graded = table.act(action             );
+      record({
+        seat: seat.seat,
+        hand: handIndex,
+        round: street,
+        action,
+        cards: [...hole],
+        // Ultimate has no upcard. Nothing reads this for an Ultimate decision.
+        upcard: -1,
+        fromSplit: false,
+        handCount: 1,
+        evByAction: { ...graded.evByAction }                                   ,
+        optimalAction: graded.optimalAction,
+        evCost: graded.evCost,
+        uth: { record: graded, evaluation, holeClass, hole: [...hole], board, bet: seat.bet },
+      });
+    }
+    // The board turns only once every seat that owed this street has answered.
+    if (owing.size > 0) break;
+  }
+
+  const incomplete = owing.size > 0;
+  const shown = incomplete ? UTH_BOARD_AT[street]  : 5;
+  const dealt = uthCardsOf(deck, 0);
+  const folded = new Map                 ();
+  const playBet = new Map                ();
+  for (const { seat, table } of plays) {
+    folded.set(seat.seat, table.view.settlement?.folded ?? false);
+    playBet.set(seat.seat, table.view.playBet);
+  }
+  const dealerShown = !incomplete && plays.some(({ table }) => !table.view.settlement?.folded);
+
+  return {
+    hand: handIndex,
+    incomplete,
+    waitingFor: [...owing].sort((a, b) => a - b),
+    dealer: [...dealt.dealer],
+    burned: [],
+    reserved: [],
+    decisions: [],
+    seats: plays.map(({ seat, table, hole }) => {
+      // In chips: the seat's own Ante times what the engine settled, in units.
+      const net = incomplete || table.view.netUnits === null ? null : table.view.netUnits * seat.bet;
+      return {
+        seat: seat.seat,
+        cards: [...hole],
+        hands: [[...hole]],
+        net,
+        detail: [{ net, doubled: false, surrendered: false }],
+        active: owing.has(seat.seat) ? 0 : null,
+      };
+    }),
+    uth: {
+      board: dealt.board.slice(0, shown),
+      street: incomplete ? street : UTH_STREETS.length,
+      dealerShown,
+      folded,
+      playBet,
+    },
+  };
+}
+
+/**
+ * The one loop behind every Ultimate derivation: shuffle, deal, play.
+ *
+ * One shuffle per hand, from one seeded generator, whether or not anybody is
+ * live for that hand — so hand N's deck depends on the seed and N and on
+ * nothing that anybody did.
+ */
+function runUth(
+  record             ,
+  handCount        ,
+  moveFor                                                                                           ,
+  inspect             ,
+)               {
+  const rng = makeRng(record.seed);
+  const hands                = [];
+  const seen = new Map                  ();
+  for (const seat of record.seats) seen.set(seat.seat, []);
+
+  for (let hand = 0; hand < handCount; hand++) {
+    const deck = fullDeck();
+    shuffleInPlace(deck, rng);
+    const live = record.seats.filter((seat) => isLive(record, seat.seat, hand));
+    if (live.length === 0) continue;
+    const decisions                    = [];
+    const derived = playUthHand(
+      hand,
+      deck,
+      live,
+      (seat, round, legal) => moveFor(seat, hand, round, legal),
+      (decision) => decisions.push(decision),
+      inspect,
+    );
+    derived.decisions = decisions;
+    /*
+     * What each seat saw: its own two cards, the board as far as it has turned,
+     * and the dealer's two once they are shown. The board is in every seat's
+     * checksum, which is what makes "two phones see the same board" a thing the
+     * table checks rather than a thing it hopes.
+     */
+    const facts = derived.uth ;
+    for (const seatHand of derived.seats) {
+      seen
+        .get(seatHand.seat) 
+        .push(...seatHand.cards, ...facts.board, ...(facts.dealerShown ? derived.dealer : []));
+    }
+    hands.push(derived);
+  }
+  return { hands, seen };
+}
+
+/** A seat's recorded move at one street of one hand, or null. */
+function uthMoveOf(record             , seat        , hand        , round        )                            {
+  return (
+    record.seats
+      .find((entry) => entry.seat === seat)
+      ?.moves.find((entry) => entry.hand === hand && entry.round === round)?.action ?? null
+  );
+}
+
+/** Derive the whole Ultimate table from its seed and its record. */
+function deriveUthTable(record             )               {
+  return runUth(record, handsDealt(record), (seat, hand, round) => uthMoveOf(record, seat, hand, round));
+}
+
+/**
+ * Play an Ultimate table out, choosing each action as it comes, and write the
+ * moves into the record — `playTable`'s counterpart, for the tests.
+ */
+function playUthTable(
+  record             ,
+  hands        ,
+  choose                                                                                                 ,
+)               {
+  const derived = runUth(record, hands, (seat, hand, round, legal) => {
+    const action = choose({ seat, hand, round, legal });
+    record.seats.find((entry) => entry.seat === seat)?.moves.push({ hand, round, action });
+    return action;
+  });
+  for (const seat of record.seats) seat.hands = Math.max(seat.hands ?? 0, hands);
+  return derived;
+}
+
+/**
+ * What one seat may do now, and at which street it would be recorded.
+ *
+ * Asked of its own `UthTable` at the moment the replay runs out of its moves —
+ * the same `legalActions()` the private table asks.
+ */
+function uthLegalFor(record             , hand        , seat        )                                     {
+  let legal           = [];
+  let round = 0;
+  runUth(record, hand + 1, (who, atHand, atRound, options) => {
+    const move = uthMoveOf(record, who, atHand, atRound);
+    if (who === seat && atHand === hand && move === null) {
+      legal = [...options];
+      round = atRound;
+    }
+    return move;
+  });
+  return { legal, round };
+}
+
+/**
+ * The spot a dropped seat was sitting at — `forfeitSpot`'s counterpart.
+ *
+ * The same table with the drop being priced taken out, replayed until the seat
+ * is found owing a decision; the cost is that of the worst action open to it
+ * there (Idan, round 26), read off the evaluation the private table would have
+ * graded it on.
+ */
+function uthForfeitSpot(record             , seat        , hand        )                     {
+  const before              = {
+    ...record,
+    seats: record.seats.map((entry) => ({
+      ...entry,
+      moves: [...entry.moves],
+      events:
+        entry.seat === seat
+          ? (entry.events ?? []).filter((event) => !(event.kind === 'drop' && event.hand === hand))
+          : entry.events,
+      vote: entry.vote && entry.vote.against === seat && entry.vote.hand === hand ? null : entry.vote,
+    })),
+  };
+  let waiting                                                                                                                                = null;
+  try {
+    runUth(
+      before,
+      hand + 1,
+      (who, atHand, atRound) => uthMoveOf(before, who, atHand, atRound),
+      (who, round, legal, evaluation) => {
+        if (waiting || who !== seat) return;
+        waiting = { round, legal: [...legal], evaluation };
+      },
+    );
+  } catch {
+    return null;
+  }
+  if (!waiting) return null;
+  const { round, legal, evaluation } = waiting     
+                  
+                    
+                                                                                       
+   ;
+  const best = evaluation.evByAction[evaluation.optimalAction] ?? 0;
+  let worstAction = evaluation.optimalAction;
+  let worst = best;
+  for (const action of legal) {
+    const ev = evaluation.evByAction[action];
+    if (ev !== undefined && ev < worst) {
+      worst = ev;
+      worstAction = action;
+    }
+  }
+  return {
+    seat,
+    hand,
+    round,
+    scenarioKey: `uth:${UTH_STREETS[round] ?? 'preflop'}`,
+    evCost: Math.max(0, best - worst),
+    legal,
+    worstAction,
+    evByAction: { ...evaluation.evByAction },
+  };
+}
+
+/**
+ * Everything one seat has decided at an Ultimate table, in the table's order,
+ * with the EVs the Ultimate rating reads its difficulty from — `seatRatable`'s
+ * counterpart.
+ */
+function uthSeatRatable(record             , seat        )                    {
+  const out                    = [];
+  for (const hand of deriveUthTable(record).hands) {
+    for (const decision of hand.decisions) {
+      if (decision.seat !== seat) continue;
+      out.push({
+        hand: hand.hand,
+        round: decision.round,
+        scenarioKey: `uth:${UTH_STREETS[decision.round]}`,
+        evCost: decision.evCost,
+        action: String(decision.action),
+        evByAction: { ...decision.evByAction },
+      });
+    }
+  }
+  for (const event of tableEvents(record)) {
+    if (event.seat !== seat || event.kind !== 'drop' || event.why === 'left') continue;
+    const spot = uthForfeitSpot(record, seat, event.hand);
+    if (!spot) continue;
+    out.push({
+      hand: spot.hand,
+      round: spot.round,
+      scenarioKey: spot.scenarioKey,
+      evCost: spot.evCost,
+      evByAction: spot.evByAction,
+      forfeit: true,
+    });
+  }
+  return out.sort((a, b) => a.hand - b.hand || a.round - b.round);
+}
+
+/** The class label of two hole cards, for a card that words a decision. */
+function uthHoleClass(hole                      )         {
+  return holeClassLabel(hole[0] , hole[1] );
+}
+
 /* ===== packages/trainer-web/src/shared-screen.ts ===== */
 /**
  * What a shared table looks like to one seat (round 22; spec A, round A2).
@@ -18363,6 +18986,8 @@ function seatRatable(record             , seat        )                    {
  * decisions the bar prints no percentage at all — it reads as settling, the way
  * a provisional rating does.
  */
+
+
 
 
 
@@ -18430,6 +19055,14 @@ const BAR_SETTLES_AT = 10;
                               
                                                           
                  
+                                                                                             
+                   
+     
+                                                                             
+                                                                               
+                                                       
+     
+                       
  
 
 /**
@@ -18528,9 +19161,18 @@ const BAR_SETTLES_AT = 10;
                                                                                   
                    
                    
+     
+                                                                              
+                                                                              
+                                                                             
+                                                              
+     
+                     
  
 
                                
+                                               
+                            
                       
                      
                              
@@ -18563,6 +19205,16 @@ const BAR_SETTLES_AT = 10;
                                                         
      
                            
+     
+                                                                              
+                                                                             
+                                                                            
+                                                       
+     
+                    
+                      
+                        
+                             
  
 
 /**
@@ -18749,6 +19401,7 @@ function mineFor(
   locale        ,
 )                 {
   if (seat === null) return [];
+  if (isUthTable(record)) return uthMineFor(decisions, seat, locale);
   const rules = rulesFor(record);
   return decisions
     .filter((decision) => decision.seat === seat)
@@ -18787,6 +19440,49 @@ function mineFor(
 }
 
 /**
+ * The private table's session for one language, kept to word Ultimate cards.
+ *
+ * It deals nothing and holds nothing of anybody's: it is here for `compose()`
+ * and the hand words, which are its methods, so that a shared decision is worded
+ * by the same function a private one is.
+ */
+const UTH_SPEAKERS = new Map                    ();
+
+function uthSpeaker(locale        )             {
+  let speaker = UTH_SPEAKERS.get(locale);
+  if (!speaker) {
+    speaker = new UthSession(1);
+    speaker.setLocale(locale);
+    UTH_SPEAKERS.set(locale, speaker);
+  }
+  return speaker;
+}
+
+/** My own Ultimate decisions, each with the private table's whole card. */
+function uthMineFor(decisions                   , seat        , locale        )                 {
+  const speaker = uthSpeaker(locale);
+  return decisions
+    .filter((decision) => decision.seat === seat && decision.uth)
+    .map((decision) => {
+      const card = speaker.explainDecision(decision.uth );
+      return {
+        hand: decision.hand,
+        round: decision.round,
+        action: String(decision.action),
+        optimalAction: decision.optimalAction,
+        evCost: decision.evCost,
+        ranked: card.ranked.map((row) => ({ action: row.action, ev: row.ev, value: row.value })),
+        returns: card.returns,
+        headline: card.headline,
+        steps: [],
+        severity: card.severity,
+        correct: card.correct,
+        feedback: card,
+      };
+    });
+}
+
+/**
  * My decisions in the latest hand I made any in, for the analysis (round 30).
  *
  * Read from the derivation rather than from the view, because the view carries
@@ -18804,19 +19500,24 @@ function analysisFor(record             , seat               , locale        )  
   return [];
 }
 
-function panel(glance            , mine         )            {
+function panel(
+  glance            ,
+  mine         ,
+  uth                                  = null,
+)            {
   const hands = glance.hands.length > 0 ? glance.hands : glance.cards.length > 0 ? [glance.cards] : [];
+  const face = uth ? pokerCardView : cardView;
   return {
     seat: glance.seat,
     name: glance.name,
     mine,
     seated: glance.playerId !== null,
     actions: [...glance.acted],
-    split: splitOf(hands, glance.detail, glance.active),
+    split: uth ? uthSplitOf(hands, glance.detail, glance.active) : splitOf(hands, glance.detail, glance.active),
     bet: glance.bet,
     status: glance.status,
-    hands: hands.map((cards) => cards.map((card) => cardView(card))),
-    total: hands.length > 0 ? totalOf(hands[0] ) : null,
+    hands: hands.map((cards) => cards.map((card) => face(card))),
+    total: uth ? null : hands.length > 0 ? totalOf(hands[0] ) : null,
     net: glance.net,
     stack: glance.stack,
     decisions: glance.decisions,
@@ -18826,7 +19527,22 @@ function panel(glance            , mine         )            {
     evLost: glance.evLost,
     evLostPer100: per100(glance.evLost, glance.decisions),
     streak: glance.streak,
+    faceDown: glance.faceDown,
+    words: uth ? uth.words : null,
   };
+}
+
+/** An Ultimate seat's one hand, for the felt: its cards and, once settled, its result. */
+function uthSplitOf(hands            , detail              , active               )              {
+  return hands.map((cards, index) => ({
+    cards: cards.map((card) => pokerCardView(card)),
+    // No total in Ultimate; the header carries the hand in words instead.
+    total: 0,
+    net: detail[index] ? detail[index] .net : null,
+    doubled: false,
+    surrendered: false,
+    active: active === index,
+  }));
 }
 
 /** Each hand of a seat's, with its total, and its result once it has one. */
@@ -18868,6 +19584,7 @@ function comparisonOf(seats             )                    {
 /** One seat's whole screen, from the record and nothing else. */
 function sharedScreen(record             , seat               , locale         = 'en')               {
   const view = seatView(record, seat);
+  if (isUthTable(record)) return uthScreen(record, view, seat, locale);
   const seats = view.seats.map((glance) => panel(glance, glance.seat === seat));
   const me = seats.find((panel) => panel.mine) ?? null;
   /*
@@ -18891,7 +19608,7 @@ function sharedScreen(record             , seat               , locale         =
     round: view.round,
     onlyMe: view.onlyMe,
     waitingFor: view.waitingFor,
-    handOver: view.hand !== null && view.dealerRevealed,
+    handOver: view.hand !== null && view.handOver,
     refused: view.disagrees,
     comparison: comparisonOf(seats),
     table: tableMeasures(seats),
@@ -18899,6 +19616,61 @@ function sharedScreen(record             , seat               , locale         =
     ticker: tickerFor(record),
     mine: mineFor(record, view.decisions, seat, locale),
     analysis: analysisFor(record, seat, locale),
+    game: 'blackjack',
+    board: [],
+    boardHidden: 0,
+    street: null,
+    dealerWords: null,
+  };
+}
+
+/**
+ * One seat's Ultimate screen (round 32): the same object, with the board.
+ *
+ * Everything that is not about the cards — the bars, the measures, the ticker,
+ * the reactions, the clock's inputs, the analysis — is the Blackjack screen's
+ * own code, reached through the same derivation interface. What differs is the
+ * felt: one board for everybody, the dealer's two cards face down until the
+ * hand is over, and every hand named in words rather than totalled.
+ */
+function uthScreen(record             , view                             , seat               , locale        )               {
+  const speaker = uthSpeaker(locale);
+  const board = view.uth ? view.uth.board : [];
+  /* The class of two cards before the flop; the best hand in them and the board after. */
+  const wordsOf = (cards          )                => {
+    if (cards.length !== 2) return null;
+    return speaker.describeCards(board.length >= 3 ? [...cards, ...board] : [...cards]).words;
+  };
+  const seats = view.seats.map((glance) =>
+    panel(glance, glance.seat === seat, { words: wordsOf(glance.cards) }),
+  );
+  const me = seats.find((entry) => entry.mine) ?? null;
+  /* Neither of the dealer's cards is in the object until he turns them. */
+  const dealer = view.dealerRevealed ? view.dealer : [];
+  return {
+    game: 'uth',
+    hand: view.hand,
+    dealer: dealer.map((card) => pokerCardView(card)),
+    dealerTotal: null,
+    dealerRevealed: view.dealerRevealed,
+    seats,
+    me,
+    legal: view.legal,
+    round: view.round,
+    onlyMe: view.onlyMe,
+    waitingFor: view.waitingFor,
+    handOver: view.hand !== null && view.handOver,
+    refused: view.disagrees,
+    comparison: comparisonOf(seats),
+    table: tableMeasures(seats),
+    reactions: tableReactions(record),
+    ticker: tickerFor(record),
+    mine: mineFor(record, view.decisions, seat, locale),
+    analysis: analysisFor(record, seat, locale),
+    board: board.map((card) => pokerCardView(card)),
+    boardHidden: view.hand === null ? 0 : 5 - board.length,
+    street: view.uth ? view.uth.street : null,
+    dealerWords: dealer.length === 2 && board.length === 5 ? speaker.describeCards([...dealer, ...board]).words : null,
   };
 }
 
@@ -18910,7 +19682,7 @@ const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the a
 const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <!--\n          The badge states the rules; it is not a control (§10.1). It was a\n          second line on the felt, printed on every hand in both phases, saying\n          what the name above it already half said — so round 17 moved it in\n          here, where the switches that change it are, and left one line on the\n          table. The link beside it opens nothing new: it is the anchor the\n          restrictions below answer to.\n        -->\n        <p class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </p>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n        <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <!--\n          Two readings of the same 311 cells (round 20): what the right play is,\n          and which of them this player has mastered. The second is the mastery\n          grid — a collection that also says what to practise next — and it is a\n          mode here rather than a screen of its own, because the keys are the\n          same keys and two screens would be two places to keep them right.\n        -->\n        <div class=\"chart-modes\" id=\"chart-modes\"></div>\n        <p class=\"muted fine\" id=\"mastery-legend\" hidden></p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n      <!--\n        The rules are a statement (§10.1), and since round 19 there is a door\n        beside them: the Trips pay table can be chosen, and the language and the\n        level live behind it, where a player looks for them on the other table.\n        The Blind pay table is stated inside and is not a control — every figure\n        the trainer shows was solved against it.\n      -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n        </div>\n        <button class=\"link\" id=\"uth-open-rules\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <!-- What he is holding, in words, once his cards are turned over —\n               round 17's treatment of his total on the Blackjack table. -->\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span><span class=\"seat-hand\" id=\"uth-dealer-hand\"></span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span><span class=\"seat-hand\" id=\"uth-you-hand\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"uth-rules\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n\n          <!-- Stated, not offered. The note says why, in one sentence. -->\n          <p class=\"rules-sub\"><span class=\"rules-badge\" id=\"uth-blind-line\"></span></p>\n          <p class=\"muted fine\" id=\"uth-blind-note\"></p>\n\n          <h3 class=\"sub-title\" data-i18n=\"uth.rules.trips\">Trips pay table</h3>\n          <div id=\"uth-trips-list\"></div>\n          <p class=\"muted fine\" id=\"uth-trips-note\"></p>\n\n          <p class=\"muted fine\" id=\"uth-limits-line\"></p>\n\n          <!--\n            Not rules: the language and how much the app explains. They were\n            behind \"How to play\" while this table had no panel; they belong\n            here, in the same place as on the Blackjack table.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
-const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play at the same table</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          The same table, your own cards, and nobody waits for anybody.\n        </p>\n        <!-- How many seats. Two is the common case and the default; six is the\n             most a shoe this size seats comfortably (§3.1). -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-seats-pick\">\n          <legend data-i18n=\"shared.howMany\">How many of you?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-seats-row\"></div>\n        </fieldset>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n        <!--\n          Waiting is the worst screen in the app, so nobody has to sit in it:\n          the ordinary private table is one tap away and a strip along the top\n          keeps saying what he is waiting for (round 23).\n        -->\n        <button class=\"action primary\" type=\"button\" id=\"shared-meanwhile\" data-i18n=\"waiting.meanwhile\">\n          Play meanwhile\n        </button>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <!--\n        The ticker (§3.10). One line, rotating every eight seconds, and it\n        holds still while a hand is live: a line that changed under a player\n        deciding would be the app talking over him. It fades and does not move,\n        and it never announces money.\n      -->\n      <p class=\"shared-ticker\" id=\"shared-ticker\" hidden aria-live=\"polite\"></p>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n\n        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->\n        <div class=\"shared-table-line\" id=\"shared-table-line\" hidden></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        What has just been said, attributed (§3.9).\n\n        Its own block, apart from everything the app says about a decision, and\n        never on a card or in a verdict line. That separation is the condition\n        Cowork set when it withdrew the decisions-never-outcomes rule for player\n        speech: two of Idan's six are about luck, and they are fine between\n        friends precisely because it is a friend saying them and the screen\n        makes that unmistakable.\n      -->\n      <section class=\"shared-said\" id=\"shared-said\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        Under the felt: this hand's analysis first — the private table's own\n        commentary for my latest decision — and then the table's figures and the\n        lines that name the two measures (round 30, item 5). The bars themselves\n        moved onto the felt, beside each name.\n      -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <!--\n        He took my card (§3.8) — offered, not shown, and once a session. The\n        answer is a real replay of this shoe with one decision of his changed,\n        which is why the app can say it at all.\n      -->\n      <section class=\"shared-folklore\" id=\"shared-folklore\" hidden></section>\n\n\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <!--\n        The six things a player can say (§3.9). One tap, above the dock and\n        below the felt, so sending one never covers the cards.\n      -->\n      <nav class=\"shared-reactions\" id=\"shared-reactions\" hidden\n           data-i18n-attr=\"aria-label:shared.say\"></nav>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
+const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play at the same table</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          The same table, your own cards, and nobody waits for anybody.\n        </p>\n        <!-- How many seats. Two is the common case and the default; six is the\n             most a shoe this size seats comfortably (§3.1). -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-seats-pick\">\n          <legend data-i18n=\"shared.howMany\">How many of you?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-seats-row\"></div>\n        </fieldset>\n        <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-game-pick\">\n          <legend data-i18n=\"shared.whichGame\">Which game?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-game-row\"></div>\n        </fieldset>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n        <!--\n          Waiting is the worst screen in the app, so nobody has to sit in it:\n          the ordinary private table is one tap away and a strip along the top\n          keeps saying what he is waiting for (round 23).\n        -->\n        <button class=\"action primary\" type=\"button\" id=\"shared-meanwhile\" data-i18n=\"waiting.meanwhile\">\n          Play meanwhile\n        </button>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <!--\n        The ticker (§3.10). One line, rotating every eight seconds, and it\n        holds still while a hand is live: a line that changed under a player\n        deciding would be the app talking over him. It fades and does not move,\n        and it never announces money.\n      -->\n      <p class=\"shared-ticker\" id=\"shared-ticker\" hidden aria-live=\"polite\"></p>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <!-- Ultimate only (round 32): the one board, the same cards for everybody. -->\n        <section class=\"seat uth-board\" id=\"shared-board-seat\" data-i18n-attr=\"aria-label:uth.board\" hidden>\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"shared-board\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n\n        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->\n        <div class=\"shared-table-line\" id=\"shared-table-line\" hidden></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        What has just been said, attributed (§3.9).\n\n        Its own block, apart from everything the app says about a decision, and\n        never on a card or in a verdict line. That separation is the condition\n        Cowork set when it withdrew the decisions-never-outcomes rule for player\n        speech: two of Idan's six are about luck, and they are fine between\n        friends precisely because it is a friend saying them and the screen\n        makes that unmistakable.\n      -->\n      <section class=\"shared-said\" id=\"shared-said\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        Under the felt: this hand's analysis first — the private table's own\n        commentary for my latest decision — and then the table's figures and the\n        lines that name the two measures (round 30, item 5). The bars themselves\n        moved onto the felt, beside each name.\n      -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <!--\n        He took my card (§3.8) — offered, not shown, and once a session. The\n        answer is a real replay of this shoe with one decision of his changed,\n        which is why the app can say it at all.\n      -->\n      <section class=\"shared-folklore\" id=\"shared-folklore\" hidden></section>\n\n\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <!--\n        The six things a player can say (§3.9). One tap, above the dock and\n        below the felt, so sending one never covers the cards.\n      -->\n      <nav class=\"shared-reactions\" id=\"shared-reactions\" hidden\n           data-i18n-attr=\"aria-label:shared.say\"></nav>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
 /*
@@ -24187,6 +24959,8 @@ const shared = {
   lost: false,
   /** How many seats a new table gets. Two unless somebody says otherwise. */
   seats: 2,
+  /** Which game a new table deals (round 32): 'blackjack' unless Ultimate is chosen. */
+  game: 'blackjack',
   /** Which ticker item is showing, and when it last changed (§3.10). */
   tickerAt: 0,
   tickerShownAt: 0,
@@ -24203,6 +24977,37 @@ const shared = {
   waiting: null,
   seq: 0,
 };
+
+/**
+ * An action's name, as the buttons say it — in either game (round 32).
+ *
+ * Ultimate's actions are named by the private Ultimate table's own keys, so a
+ * button here and a button there say the same words.
+ */
+const UTH_ACTION_KEYS = {
+  raise4x: 'uth.raise4',
+  raise3x: 'uth.raise3',
+  raise2x: 'uth.raise2',
+  raise1x: 'uth.raise1',
+  check: 'uth.check',
+  fold: 'uth.fold',
+};
+const actionLabel = (action) => T(UTH_ACTION_KEYS[action] || `action.${action}`);
+
+/**
+ * Ultimate's buttons in the private table's rows: each street's two choices
+ * side by side, yes on the left (round 4b), and 3× on a row of its own.
+ */
+function sharedUthRows(legal) {
+  const rows = [];
+  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
+    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
+  }
+  if (legal.includes('raise3x')) rows.push(['raise3x']);
+  const placed = new Set(rows.flat());
+  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  return rows;
+}
 
 /** The six, in Idan's order. The page draws them; the record stores the key. */
 const REACTION_KEYS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
@@ -24291,7 +25096,7 @@ function seatNode(seat) {
   const total = document.createElement('span');
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
-  total.textContent = only ? headerFigure(only) : '';
+  total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
   title.append(who, bar, status, total);
   box.appendChild(title);
 
@@ -24302,7 +25107,7 @@ function seatNode(seat) {
     for (const action of seat.actions) {
       const chip = document.createElement('span');
       chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '');
-      chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : T(`action.${action}`);
+      chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : actionLabel(action);
       acts.appendChild(chip);
     }
     box.appendChild(acts);
@@ -24333,6 +25138,12 @@ function seatNode(seat) {
     cards.className = 'cards';
     for (const card of only.cards) cards.appendChild(cardNode(card));
     box.appendChild(cards);
+  } else if (seat.faceDown > 0) {
+    /* An Ultimate neighbour's two cards are his own until the hand is over (round 32). */
+    const cards = document.createElement('div');
+    cards.className = 'cards';
+    for (let i = 0; i < seat.faceDown; i++) cards.appendChild(faceDownNode());
+    box.appendChild(cards);
   } else {
     const empty = document.createElement('p');
     empty.className = 'shared-empty';
@@ -24360,14 +25171,16 @@ function barText(bar) {
  * words (*ניצחה*, *הפסידה*), because at a shared table the hand may be a
  * neighbour's and "you won" would be wrong about it.
  */
-function headerFigure(hand) {
+function headerFigure(hand, words) {
   let outcome = null;
+  /* Ultimate has no total: the hand in words stands where the total would (round 32). */
+  const figure = words ? words : String(hand.total);
   if (hand.surrendered) outcome = T('hand.surrendered');
-  else if (hand.total > 21) outcome = T('shared.hand.bust');
+  else if (!words && hand.total > 21) outcome = T('shared.hand.bust');
   else if (hand.net !== null) {
     outcome = T(hand.net > 0 ? 'shared.hand.won' : hand.net < 0 ? 'shared.hand.lost' : 'shared.hand.push');
   }
-  return outcome ? `${hand.total} · ${outcome}` : String(hand.total);
+  return outcome ? `${figure} · ${outcome}` : figure;
 }
 
 /**
@@ -24430,11 +25243,11 @@ function renderMeasures(screen) {
   }
 }
 
-/** An action's name, as the buttons say it. */
-const actionLabel = (action) => T(`action.${action}`);
 
 /** The verdict line, in the private card's own words. */
 function verdictText(decision) {
+  /* Ultimate's card already carries its verdict, in the private card's words. */
+  if (decision.feedback && decision.feedback.verdict) return decision.feedback.verdict;
   return decision.correct
     ? T('fb.correct', { action: actionLabel(decision.optimalAction) })
     : T('fb.wrong', { severity: T(`fb.${decision.severity}`), cost: decision.evCost.toFixed(3) });
@@ -24449,6 +25262,7 @@ function verdictText(decision) {
 function analysisCard(decisions) {
   if (!decisions || decisions.length === 0) return null;
   const last = decisions[decisions.length - 1];
+  if (last.feedback) return uthAnalysisCard(decisions);
   const card = document.createElement('section');
   card.className = `quickcard shared-analysis ${last.severity}`;
   card.setAttribute('aria-label', T('shared.analysisTitle'));
@@ -24517,6 +25331,73 @@ function analysisCard(decisions) {
     boldText(text, last.steps[i]);
     step.append(title, text);
     reveal.appendChild(step);
+  }
+  if (reveal.children.length > 0) card.appendChild(reveal);
+  return card;
+}
+
+/**
+ * The analysis of my latest Ultimate hand (round 32): the private Ultimate
+ * table's own card, built from the object `compose()` made for it — headline,
+ * verdict, the rows with their worked lines, the percentages and the
+ * calculation, what was chosen instead, then the sentence and its notes — in
+ * the order the private table draws them. The mistake remark sits under the
+ * rows, as it does on the Blackjack side of this screen.
+ */
+function uthAnalysisCard(decisions) {
+  const last = decisions[decisions.length - 1];
+  const feedback = last.feedback;
+  const card = document.createElement('section');
+  card.className = `quickcard shared-analysis ${feedback.severity}`;
+  card.setAttribute('aria-label', T('shared.analysisTitle'));
+
+  for (const earlier of decisions.slice(0, -1)) {
+    const line = document.createElement('p');
+    line.className = 'shared-analysis-earlier';
+    line.textContent = `${earlier.headline} — ${verdictText(earlier)}`;
+    card.appendChild(line);
+  }
+
+  const anchor = document.createElement('p');
+  anchor.className = 'anchor';
+  const head = document.createElement('b');
+  head.textContent = feedback.headline;
+  anchor.appendChild(head);
+  card.appendChild(anchor);
+
+  const verdict = document.createElement('p');
+  verdict.className = 'verdict';
+  verdict.textContent = feedback.verdict;
+  card.appendChild(verdict);
+
+  if (window.EVReturns) {
+    card.appendChild(
+      window.EVReturns.block(feedback, {
+        game: 'uth',
+        decisions: shared.screen && shared.screen.me ? shared.screen.me.decisions : 0,
+        helpId: 'shared-returns-help',
+      }),
+    );
+  }
+
+  const oops = mistakeLine(last);
+  if (oops) card.appendChild(oops);
+
+  if (feedback.youChose) {
+    const did = document.createElement('p');
+    did.className = 'did';
+    did.textContent = feedback.youChose;
+    card.appendChild(did);
+  }
+
+  const reveal = document.createElement('div');
+  reveal.className = 'reveal';
+  for (const text of [feedback.sentence, ...(feedback.notes || [])]) {
+    if (!text) continue;
+    const line = document.createElement('p');
+    line.className = 'reason';
+    boldText(line, text);
+    reveal.appendChild(line);
   }
   if (reveal.children.length > 0) card.appendChild(reveal);
   return card;
@@ -24737,7 +25618,9 @@ function tickerText(item) {
  */
 function renderFolklore(screen) {
   const box = el('shared-folklore');
-  const canAsk = Boolean(screen) && screen.handOver && seatedAt(screen).length > 1 && shared.seat !== null;
+  /* Ultimate has no "he took my card": no choice of anybody's moves a card there (round 32). */
+  const canAsk =
+    Boolean(screen) && screen.game !== 'uth' && screen.handOver && seatedAt(screen).length > 1 && shared.seat !== null;
   if (!canAsk && !shared.folkloreAsked) {
     box.hidden = true;
     box.replaceChildren();
@@ -24906,17 +25789,35 @@ function renderActions(screen) {
   const offer = screen.legal.join(',');
   if (window.EVDock) window.EVDock.enter(`shared:${screen.hand}:${screen.round}:${offer}`);
 
-  for (const action of screen.legal) {
+  const press = (action) => {
     const button = document.createElement('button');
-    button.className = 'action' + (action === 'hit' || action === 'stand' ? ' primary' : '');
+    /*
+     * In Ultimate every decision button looks the same, as at the private
+     * Ultimate table: colouring one would be the page suggesting an answer.
+     */
+    button.className =
+      'action' + (screen.game !== 'uth' && (action === 'hit' || action === 'stand') ? ' primary' : '');
     button.type = 'button';
     button.dataset.action = action;
-    button.textContent = T(`action.${action}`);
+    button.textContent = actionLabel(action);
     button.addEventListener('click', () => {
       if (window.EVDock && !window.EVDock.ready()) return;
       void act(() => api('/api/shared/act', { id: shared.id, action }), 'move');
     });
-    box.appendChild(button);
+    return button;
+  };
+  if (screen.game === 'uth' && screen.legal.length > 0) {
+    box.classList.add('rows');
+    for (const actions of sharedUthRows(screen.legal)) {
+      const line = document.createElement('div');
+      line.className = 'action-row';
+      line.style.setProperty('--cols', String(actions.length));
+      line.append(...actions.map(press));
+      box.appendChild(line);
+    }
+  } else {
+    box.classList.remove('rows');
+    for (const action of screen.legal) box.appendChild(press(action));
   }
 
   if (screen.legal.length === 0) {
@@ -25053,6 +25954,26 @@ function renderSeatPicker() {
   }
 }
 
+/** Which game, chosen before the table exists (round 32). Blackjack unless changed. */
+function renderGamePicker() {
+  const row = el('shared-game-row');
+  if (!row) return;
+  row.replaceChildren();
+  for (const [game, key] of [['blackjack', 'ui.blackjack'], ['uth', 'ui.ultimate']]) {
+    const pick = document.createElement('button');
+    pick.className = 'action game-pick' + (game === shared.game ? ' primary' : '');
+    pick.type = 'button';
+    pick.dataset.game = game;
+    pick.textContent = T(key);
+    pick.setAttribute('aria-pressed', game === shared.game ? 'true' : 'false');
+    pick.addEventListener('click', () => {
+      shared.game = game;
+      renderGamePicker();
+    });
+    row.appendChild(pick);
+  }
+}
+
 function render() {
   /*
    * Nothing to draw into once another screen is mounted (round 31). A poll or
@@ -25121,10 +26042,30 @@ function render() {
     return;
   }
 
+  /* Which game this table deals, in the bar at the top. */
+  el('shared-rules').textContent = T(screen.game === 'uth' ? 'ui.ultimate' : 'ui.blackjack');
+
   const dealerCards = el('shared-dealer-cards');
   dealerCards.replaceChildren(...screen.dealer.map(cardNode));
-  if (!screen.dealerRevealed) dealerCards.appendChild(faceDownNode());
-  el('shared-dealer-total').textContent = screen.dealerTotal === null ? '' : String(screen.dealerTotal);
+  if (screen.game === 'uth') {
+    /* Ultimate: both of the dealer's cards are down until the hand is over. */
+    if (screen.hand !== null && screen.dealer.length === 0) {
+      dealerCards.append(faceDownNode(), faceDownNode());
+    }
+    el('shared-dealer-total').textContent = screen.dealerWords || '';
+  } else {
+    if (!screen.dealerRevealed) dealerCards.appendChild(faceDownNode());
+    el('shared-dealer-total').textContent = screen.dealerTotal === null ? '' : String(screen.dealerTotal);
+  }
+
+  /* The one board (round 32): what has turned, and the rest face down. */
+  const boardSeat = el('shared-board-seat');
+  if (boardSeat) {
+    boardSeat.hidden = screen.game !== 'uth' || screen.hand === null;
+    const board = el('shared-board');
+    board.replaceChildren(...(screen.board || []).map(cardNode));
+    for (let i = 0; i < (screen.boardHidden || 0); i++) board.appendChild(faceDownNode());
+  }
 
   /* Mine first, always: it is the hand being played (§3.1). */
   const order = seatedAt(screen).sort((a, b) => Number(b.mine) - Number(a.mine) || a.seat - b.seat);
@@ -25263,10 +26204,11 @@ function openShared() {
   shared.unavailable = false;
 
   renderSeatPicker();
+  renderGamePicker();
 
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', { seats: shared.seats });
+      const made = await api('/api/shared/create', { seats: shared.seats, game: shared.game });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }
@@ -26988,7 +27930,13 @@ async function absorbSharedRating() {
    */
   const record = sharedState.record;
   const seat = sharedState.seat;
-  session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
+  /*
+   * An Ultimate table's decisions go to the Ultimate rating (round 32), through
+   * the Ultimate session's own rule — never to Blackjack's, which is the one
+   * thing the two ratings have always been kept apart on.
+   */
+  if (isUthTable(record)) uthSession.absorbRated(owed);
+  else session.absorbRated(rulesFor(record), owed.filter((decision) => wasAsked(record, seat, decision)));
   await sharedMarkRated(owed.length);
   saveProgressLocally();
   void publish();
@@ -27314,15 +28262,19 @@ async function api(path, body) {
      * ---------------------------------------------------------------- */
     case '/api/shared/create': {
       if (!sharedAvailable()) return { available: false };
+      /* Which game (round 32): an Ultimate table is recorded under its own preset. */
+      const uth = b.game === 'uth';
       const made = await sharedCreate({
         playerId: me.id,
         name: me.name,
         bet: 1,
-        presetId: store.get('ev:preset') || 'vegas-strip-6d-s17',
-        restrictions: {
-          noSurrender: store.get('ev:noSurrender') === '1',
-          likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
-        },
+        presetId: uth ? UTH_PRESET_ID : store.get('ev:preset') || 'vegas-strip-6d-s17',
+        restrictions: uth
+          ? {}
+          : {
+              noSurrender: store.get('ev:noSurrender') === '1',
+              likeRanksOnly: store.get('ev:likeRanksOnly') === '1',
+            },
         seats: Math.max(2, Math.min(6, Number(b.seats) || 2)),
       });
       return { ...made, screen: sharedScreenNow(), clock: sharedClock() };
