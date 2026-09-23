@@ -178,6 +178,12 @@ function seatNode(seat) {
   const who = document.createElement('span');
   who.className = 'shared-name';
   who.textContent = seat.mine ? T('shared.you') : seat.name || T('shared.seatN', { n: seat.seat + 1 });
+  /*
+   * The crown on this seat's current run (round 33): on his own row, beside his
+   * name — mine on mine, a neighbour's on his. A fact about the run; the ticker
+   * never says it, and when a mistake ends the run it is simply not drawn.
+   */
+  const crown = window.EVCrown ? window.EVCrown.node(seat.crown) : null;
   const bar = document.createElement('span');
   bar.className = 'shared-seat-bar' + (seat.bar === null ? ' settling' : '');
   bar.textContent = barText(seat.bar);
@@ -188,7 +194,7 @@ function seatNode(seat) {
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
   total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
-  title.append(who, bar, status, total);
+  title.append(...[who, crown, bar, status, total].filter(Boolean));
   box.appendChild(title);
 
   if (seat.actions.length > 0) {

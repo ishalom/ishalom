@@ -626,5 +626,37 @@ try {
 } catch {
   selectTab(pendingOpen ? 'hands' : 'standing');
 }
+/**
+ * The line that says a name was just claimed (round 33).
+ *
+ * Somebody who types a name that had no code, and a code of his own, takes
+ * over that record and everything in it. That should never happen without his
+ * knowing: one line, once, on the first home screen after the door.
+ */
+function renderClaimed() {
+  const box = el('claimed');
+  if (!box) return;
+  let claimed = null;
+  try {
+    claimed = JSON.parse(localStorage.getItem('ev:claimed') || 'null');
+    // Emptied rather than removed: once said, it is not said again.
+    localStorage.setItem('ev:claimed', '');
+  } catch {
+    claimed = null;
+  }
+  if (!claimed || !claimed.name) {
+    box.hidden = true;
+    return;
+  }
+  box.textContent = T(claimed.decisions > 0 ? 'welcome.claimed' : 'welcome.claimedNew', {
+    name: claimed.name,
+    n: window.EVFigure ? window.EVFigure.units(claimed.decisions) : String(claimed.decisions),
+  });
+  box.hidden = false;
+}
+
 // After the locale handshake, so the first render is already in the right language.
-Promise.resolve(window.EV && window.EV.ready).then(refresh);
+Promise.resolve(window.EV && window.EV.ready).then(() => {
+  renderClaimed();
+  return refresh();
+});

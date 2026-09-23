@@ -3094,3 +3094,18 @@ button,
 .shared-analysis-earlier { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
 .shared-analysis .reveal .step { display: block; padding: 6px 0; }
 .shared-analysis .reveal .step p { margin: 2px 0 0; }
+
+/*
+ * The crown on a player's current run (round 33): beside the name, in line
+ * with it, three sizes of one drawing. It never moves and never animates.
+ */
+.crown-slot,
+.crown {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.crown {
+  margin-inline: 4px 2px;
+  line-height: 0;
+}

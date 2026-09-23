@@ -274,6 +274,8 @@ function uthSeatHands(view) {
   };
   write('uth-you-hand', seats.you);
   write('uth-dealer-hand', seats.dealer);
+  // The crown on the current run, beside "You" while it lasts (round 33).
+  if (window.EVCrown) window.EVCrown.show(el('uth-you-crown'), view.crown);
 }
 
 // --- The strip, its tooltips, the hand log and How to play --------------------

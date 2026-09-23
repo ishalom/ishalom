@@ -51,6 +51,7 @@ import {
 } from '@evtrainer/game-engine';
 
 import { newRating, type Rating } from './difficulty.ts';
+import { advanceRun, crownFor } from './gestures.ts';
 import {
   PREFLOP_OUTCOMES,
   UTH_STAKE,
@@ -506,6 +507,11 @@ export class UthSession {
   private bySeverity = zeroSeverity();
   private lifetimeDecisions = 0;
   private history: UthPlayedHand[] = [];
+  /**
+   * The current run of right decisions (round 33), which the crown is read off.
+   * Live only, as Blackjack's is: it starts again with the session.
+   */
+  private run = 0;
 
   /** The Ultimate rating (round 10): its own ladder, never Blackjack's, Basic mode only. */
   private rating: Rating = newRating('basic');
@@ -677,6 +683,8 @@ export class UthSession {
       .sort((a, b) => b - a);
     const closeCall = evs.length > 1 && evs[0]! - evs[1]! < UTH_CLOSE_CALL;
     const correct = record.evCost === 0;
+    // The live run, for the crown (round 33): the app's one rule, and never saved.
+    this.run = advanceRun(this.run, { correct, closeCall });
 
     this.decisions++;
     this.lifetimeDecisions++;
@@ -999,6 +1007,7 @@ export class UthSession {
   }
 
   private reset(): void {
+    this.run = 0;
     this.chips = newChipBook();
     this.handBet = 1;
     this.hands = 0;
@@ -1037,6 +1046,8 @@ export class UthSession {
     const iso = isolateFor(this.locale);
     return {
       game: 'uth',
+      // The crown on the current run (round 33). It reaches no score.
+      crown: { tier: crownFor(this.run), run: this.run },
       phase: table.phase,
       hole: table.hole.map(pokerCardView),
       dealerHole: table.dealerHole.map(pokerCardView),

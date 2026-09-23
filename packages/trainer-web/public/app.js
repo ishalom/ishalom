@@ -494,6 +494,8 @@ function renderHands(view) {
   el('player-total').textContent = only
     ? seatHeader(only.total, handOutcome(only), only.startTotal)
     : '';
+  // The crown on the current run, beside "You" while it lasts (round 33).
+  if (window.EVCrown) window.EVCrown.show(el('player-crown'), view.crown);
 
   // Each seat keeps its own record, so splitting into a second hand does not
   // make the first one look newly dealt.

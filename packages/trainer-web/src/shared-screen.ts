@@ -111,6 +111,8 @@ export interface SeatPanel {
   streak: number;
   /** How many of its cards I see face down: an Ultimate neighbour's, mid-hand (round 32). */
   faceDown: number;
+  /** The crown on its current run, and the run (round 33). Never in the ticker. */
+  crown: { tier: string | null; run: number };
   /**
    * Ultimate only (round 32): the hand in words, as the private table's seat
    * header says it — the class of the two cards before the flop, the best hand
@@ -582,6 +584,7 @@ function panel(
     evLostPer100: per100(glance.evLost, glance.decisions),
     streak: glance.streak,
     faceDown: glance.faceDown,
+    crown: { ...glance.crown },
     words: uth ? uth.words : null,
   };
 }

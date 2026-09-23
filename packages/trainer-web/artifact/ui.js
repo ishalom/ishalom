@@ -578,6 +578,19 @@ function askName() {
        * is taken over so the next save writes to their row rather than making
        * another one, and their record is pulled down before anything is shown.
        */
+      /*
+       * A claim takes over a record somebody else could see was unguarded, so
+       * the player is told it happened (round 33): the name is now his, under
+       * the code he just chose, and its history came with it. Said once, on
+       * the home screen he lands on.
+       */
+      if (decision.action === 'claim') {
+        const row = (rows ?? []).find((entry) => entry.id === decision.id) ?? {};
+        store.set(
+          'ev:claimed',
+          JSON.stringify({ name, decisions: Number(row.lifetimeDecisions ?? row.decisions ?? 0) || 0 }),
+        );
+      }
       me.id = decision.id;
       store.set('ev:playerId', decision.id);
       if (decision.pinHash) {

@@ -56,6 +56,8 @@ import {
 } from './difficulty.ts';
 import { chartFor, ruleSensitivity, type SensitivityNote } from './sensitivity.ts';
 import {
+  advanceRun,
+  crownFor,
   gestureForDecision,
   gestureForSettlement,
   masteryState,
@@ -329,8 +331,8 @@ export function advanceStreak(
   current: number,
   outcome: { correct: boolean; closeCall: boolean },
 ): number {
-  if (outcome.closeCall) return current;
-  return outcome.correct ? current + 1 : 0;
+  // The rule lives beside the crowns it feeds (round 33), so Ultimate runs by the same one.
+  return advanceRun(current, outcome);
 }
 
 /** Two significant figures, so a rounded number reads as one. */
@@ -979,6 +981,11 @@ export class TrainerSession {
     const settled = view.phase === 'settled';
     return {
       phase: view.phase,
+      /*
+       * The crown on the current run (round 33), and the run it is worn for.
+       * Read off the streak and nothing else; it reaches no score.
+       */
+      crown: { tier: crownFor(this.streak), run: this.streak },
       hands: view.hands.map((hand, index) => ({
         cards: hand.cards.map(cardView),
         total: totalOf(hand.cards),

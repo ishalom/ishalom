@@ -147,6 +147,8 @@ export function loadHosted(
     return byId.get(id);
   };
   doc.createElement = () => element();
+  // An SVG element is an element to this stub; the crown is drawn with one (round 33).
+  doc.createElementNS = () => element();
   doc.createTextNode = (text: string) => ({ textContent: text, nodeType: 3 });
   doc.documentElement = element();
   doc.body = element();

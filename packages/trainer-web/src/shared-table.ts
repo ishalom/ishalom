@@ -68,6 +68,7 @@ import { BlackjackTable, DealingShoe, makeRng } from '@evtrainer/game-engine';
 
 import type { UthAction } from '@evtrainer/game-engine';
 
+import { advanceRun, crownFor, isCloseCall, type CrownTier } from './gestures.ts';
 import { applyRestrictions, type Restrictions } from './restrictions.ts';
 import { totalOf } from './session.ts';
 import {
@@ -1117,6 +1118,13 @@ export interface SeatGlance {
    * the grade then ignores. Zero in Blackjack, where everything is face up.
    */
   faceDown: number;
+  /**
+   * The crown on this seat's current run (round 33): a fact about his run, on
+   * his own row. Read from the decisions this screen may see, so it can no more
+   * say whether a neighbour got this hand right before I have played mine than
+   * the bar can.
+   */
+  crown: { tier: CrownTier | null; run: number };
 }
 
 export interface SeatView {
@@ -1170,6 +1178,12 @@ interface SeatTally {
   evLost: number;
   streak: number;
   run: number;
+  /**
+   * The run the crown is read off (round 33) — the private tables' rule, not
+   * the bar's: a close call neither extends it nor breaks it, and a forfeit
+   * ends it. The bar's own `run` above counts every right decision.
+   */
+  crownRun: number;
 }
 
 /**
@@ -1181,6 +1195,10 @@ interface SeatTally {
  * exactly the hands where the chart is indifferent.
  */
 function countDecision(tally: SeatTally, decision: DerivedDecision): void {
+  tally.crownRun = advanceRun(tally.crownRun, {
+    correct: decision.evCost <= 0,
+    closeCall: isCloseCall(decision.evByAction),
+  });
   tally.decisions++;
   if (decision.evCost <= 0) {
     tally.right++;
@@ -1262,10 +1280,30 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
   const counts = new Map<number, SeatTally>();
   for (const entry of record.seats) {
     stacks.set(entry.seat, 0);
-    counts.set(entry.seat, { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 });
+    counts.set(entry.seat, { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0, crownRun: 0 });
   }
   const dealtIn = new Map<number, number>();
+  /*
+   * A forfeit ends the crown's run (round 33): the clock taking a turn is
+   * rated as the worst thing he could have done. Leaving on purpose is not a
+   * forfeit and ends nothing. Each seat's forfeits, by the hand they fell at.
+   */
+  const forfeitAt = new Map<number, number[]>();
+  for (const event of tableEvents(record)) {
+    if (event.kind !== 'drop' || event.why === 'left') continue;
+    forfeitAt.set(event.seat, [...(forfeitAt.get(event.seat) ?? []), event.hand]);
+  }
+  const endRunsUpTo = (hand: number) => {
+    for (const [who, hands] of forfeitAt) {
+      const due = hands.filter((at) => at <= hand);
+      if (due.length === 0) continue;
+      const tally = counts.get(who);
+      if (tally) tally.crownRun = 0;
+      forfeitAt.set(who, hands.filter((at) => at > hand));
+    }
+  };
   for (const hand of table.hands) {
+    endRunsUpTo(hand.hand);
     for (const seatHand of hand.seats) {
       dealtIn.set(seatHand.seat, (dealtIn.get(seatHand.seat) ?? 0) + 1);
       if (seatHand.net !== null) stacks.set(seatHand.seat, (stacks.get(seatHand.seat) ?? 0) + seatHand.net);
@@ -1277,6 +1315,8 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       countDecision(tally, decision);
     }
   }
+
+  endRunsUpTo(Number.POSITIVE_INFINITY);
 
   const handIndex = current ? current.hand : null;
   const iActed = seat !== null && handIndex !== null && hasActed(record, seat, handIndex);
@@ -1294,7 +1334,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     const dealt = current?.seats.find((row) => row.seat === entry.seat) ?? null;
     const hidden = Boolean(dealt && current && current.uth && current.incomplete && entry.seat !== seat);
     const seatHand = dealt && hidden ? { ...dealt, cards: [], hands: [] } : dealt;
-    const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0 };
+    const tally = counts.get(entry.seat) ?? { decisions: 0, right: 0, evLost: 0, streak: 0, run: 0, crownRun: 0 };
     let status: SeatStatus = 'betting';
     if (handIndex !== null && !isLive(record, entry.seat, handIndex)) status = 'away';
     else if (!current) status = 'betting';
@@ -1334,6 +1374,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
       active: seatHand ? seatHand.active : null,
       faceDown: hidden ? dealt!.cards.length : 0,
+      crown: { tier: crownFor(tally.crownRun), run: tally.crownRun },
     };
   };
 

@@ -177,3 +177,53 @@ export function sittingSummary(input: {
   }
   return { decisions: input.decisions, mistakes: input.mistakes, leak, leakCount };
 }
+
+/**
+ * Crowns (round 33): a badge on the player's current run of right decisions.
+ *
+ * Idan: *"הכתרים זה דינמי לרצף הפעיל של השחקן. אם הוא טעה, לוקחים לו את הכתר
+ * והוא מתחיל מהתחלה."* So a crown is not a remark that fires and is spent — it
+ * is a **state**, shown while it is true: small from 7 right in a row, medium
+ * from 14, large from 21. A mistake ends the run and the crown goes with it,
+ * quietly; the next one is earned again from 7.
+ *
+ * The run is the app's one run, `advanceStreak`: a right decision extends it, a
+ * wrong one ends it, a close call does neither. Like everything in this file it
+ * reaches no rating, no grade and no mastery grid — it is read off a number and
+ * returns a size.
+ */
+export const CROWNS = [
+  { run: 7, tier: 'small' },
+  { run: 14, tier: 'medium' },
+  { run: 21, tier: 'large' },
+] as const;
+
+export type CrownTier = (typeof CROWNS)[number]['tier'];
+
+/**
+ * The run of right decisions, one decision on — `advanceStreak`'s rule, kept
+ * here so that both games and both tables run by exactly one. A close call
+ * neither extends it nor breaks it.
+ */
+export function advanceRun(current: number, outcome: { correct: boolean; closeCall: boolean }): number {
+  if (outcome.closeCall) return current;
+  return outcome.correct ? current + 1 : 0;
+}
+
+/**
+ * Whether a decision is a close call: its two best actions within 0.01 of each
+ * other — the threshold both private tables use (`CLOSE_CALL`, `UTH_CLOSE_CALL`).
+ */
+export function isCloseCall(evByAction: Partial<Record<string, number>>): boolean {
+  const evs = Object.values(evByAction)
+    .filter((ev): ev is number => typeof ev === 'number')
+    .sort((a, b) => b - a);
+  return evs.length > 1 && evs[0]! - evs[1]! < 0.01;
+}
+
+/** The crown a run of `run` right decisions wears, or null below 7. */
+export function crownFor(run: number): CrownTier | null {
+  let tier: CrownTier | null = null;
+  for (const crown of CROWNS) if (run >= crown.run) tier = crown.tier;
+  return tier;
+}
