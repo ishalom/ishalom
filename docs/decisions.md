@@ -366,6 +366,23 @@ neighbour's grade early; a forfeit ends the run, leaving does not.
 home screen: the name is yours, the code is set, the history came with it.
 Stored as `ev:claimed` and emptied once shown.
 
+## One rule for every grade on the shared felt (round 34)
+
+A neighbour's grade in the hand being played is shown only once I have
+answered that round or owe nothing more (`gradeVisible`): the bars, the crowns,
+the coloured action tags and the figures beside each seat all use it.
+*Rejected:* round 30's "once I have acted at all this hand", which let a
+neighbour's flop grade show while I was still deciding my flop.
+
+- **The last derivation is memoised**, keyed by every field it reads. One screen
+  used to derive the same table four or five times.
+- **A new table has room for six** and seats fill by the link. A player who
+  leaves keeps his seat: the seat's row holds the history the table is derived
+  from, so it cannot be handed to somebody else without a second row per seat.
+- **Pace is not shown.** Moves carry no time; measuring it honestly means each
+  phone recording its own decision time into its own move, which is a change
+  to what is written and waits for a yes.
+
 ## Working practice
 
 - **Git is run without asking.** Commit and push on
