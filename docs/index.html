@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="887940434cb3023a7032024d9414984163807bb2" />
-<meta name="ev-build-at" content="2026-09-23T20:40:37.990Z" />
+<meta name="ev-build-commit" content="2213cf9865f57029df61794e3c4f0d5f3d87b862" />
+<meta name="ev-build-at" content="2026-09-23T22:25:23.060Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -3133,6 +3133,75 @@ button,
   margin-inline: 4px 2px;
   line-height: 0;
 }
+
+/* ===========================================================================
+ * The shared table's felt, round 34: display only.
+ * ======================================================================== */
+
+/* Each seat's chips, beside the name: a coin and the figure. */
+.shared-chips { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; color: #e8eee9; }
+.shared-coin {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe28a, #d4a017 70%);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18);
+}
+
+/* A tag coloured by whether the action was right. No words: the colour is the grade. */
+.shared-act.right { background: rgba(76, 208, 138, 0.22); color: #7ee2a8; box-shadow: inset 0 0 0 1px rgba(76, 208, 138, 0.55); }
+.shared-act.wrong { background: rgba(232, 93, 76, 0.22); color: #ff9a8c; box-shadow: inset 0 0 0 1px rgba(232, 93, 76, 0.55); }
+
+/* The cards, with the figures on their left in both languages. */
+.shared-cardrow { display: flex; align-items: center; justify-content: center; gap: 10px; direction: ltr; }
+.shared-figures {
+  display: grid; gap: 3px; min-width: 0; width: 118px; flex: 0 0 auto;
+  font-size: 11px; font-variant-numeric: tabular-nums; direction: ltr;
+}
+.shared-figure { display: grid; grid-template-columns: 34px 1fr 36px; align-items: center; gap: 4px; opacity: 0.8; }
+.shared-figure-name { overflow: hidden; text-overflow: clip; white-space: nowrap; }
+[dir="rtl"] .shared-figure-name { direction: rtl; text-align: right; }
+.shared-figure-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.shared-figure-fill { display: block; height: 100%; background: rgba(232, 238, 233, 0.55); }
+.shared-figure.best .shared-figure-fill { background: #4cd08a; }
+.shared-figure.best .shared-figure-value { color: #7ee2a8; }
+.shared-figure-value { text-align: right; }
+.shared-figure.chosen { opacity: 1; font-weight: 700; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-fill { background: #e85d4c; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-value { color: #ff9a8c; }
+/* The same table in the dock, at full size, when there is nothing to press. */
+.shared-figures.full { width: 100%; max-width: 420px; margin: 0 auto 6px; font-size: 14px; gap: 5px; pointer-events: none; }
+.shared-figures.full .shared-figure { grid-template-columns: 7.5em 1fr 4.2em; }
+.shared-figures.full .shared-figure-track { height: 9px; border-radius: 5px; }
+
+/* One accuracy bar for the table, a marker for each player on it. */
+.shared-accuracy { position: relative; margin: 6px 4px 10px; direction: ltr; }
+.shared-accuracy-track {
+  position: relative; min-height: 22px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.06), rgba(76, 208, 138, 0.22));
+  border-radius: 11px;
+}
+.shared-marker {
+  position: absolute; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px;
+  border-radius: 10px; background: #1d2a24; color: #e8eee9; font-size: 11px; white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(232, 238, 233, 0.35);
+}
+.shared-marker.mine { box-shadow: 0 0 0 1.5px #f2c14e; }
+.shared-marker b { font-weight: 800; }
+.shared-accuracy-settling { display: block; text-align: center; font-size: 12px; opacity: 0.7; }
+
+/* The evening so far, the priciest spot, the history, and the summary. */
+.shared-evening { margin: 4px 16px; font-size: 13px; opacity: 0.85; text-align: center; }
+.shared-priciest { font-size: 13px; opacity: 0.85; }
+.shared-history { margin-top: 8px; font-size: 13px; }
+.shared-history summary { cursor: pointer; font-weight: 700; }
+.shared-history-hand { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.shared-history-n { opacity: 0.7; }
+.shared-history-seat { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.shared-history-net { font-variant-numeric: tabular-nums; opacity: 0.7; }
+.shared-summary-card { margin: 12px 16px; padding: 14px 16px; border-radius: 14px; background: #123d27; box-shadow: inset 0 0 0 1px rgba(242, 193, 78, 0.35); }
+.shared-summary-card h2 { margin: 0 0 8px; color: #f2c14e; font-size: 18px; }
+.shared-summary-card p { margin: 4px 0; }
+.shared-summary-card .shared-share { margin-top: 10px; width: 100%; }
 
 /* ===========================================================================
  * The shared build only.
@@ -8372,8 +8441,20 @@ const EN            = {
   'waiting.forFriend': 'Waiting for your friend at your table.',
   'waiting.arrived': '{name} sat down. You will join at the end of this hand.',
   'waiting.go': 'Go to the table',
-  'shared.howMany': 'How many of you?',
   'shared.whichGame': 'Which game?',
+  // Round 34: the table's evening, and the chips and bar on the felt.
+  'shared.chipsLabel': 'Chips at this table',
+  'shared.barTitle': 'Share of decisions right',
+  'shared.full': 'This table is full: six people are already sitting at it. You can open one of your own.',
+  'shared.evening': 'The evening so far · bar: {bar} · chips: {chips}',
+  'shared.priciest': 'The evening’s priciest spot: {spot} — wrong {wrong} of {times} times, {cost} units',
+  'shared.historyTitle': 'The last hands',
+  'shared.historyHand': 'Hand {n}',
+  'shared.summaryTitle': 'The evening at the table',
+  'shared.summaryHands': '{n} hands',
+  'shared.summaryAccurate': 'Most accurate: {name}, {pct}% right',
+  'shared.summaryChips': 'Most chips: {name}, {n}',
+  'shared.summaryShare': 'Share as a picture',
   'shared.make': 'Make a table',
   'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
   'shared.missing': 'That table is not there any more — the link may be old. You can open a new one here.',
@@ -9453,8 +9534,20 @@ const HE            = {
   'waiting.forFriend': 'מחכים לחבר שלך בשולחן שלך.',
   'waiting.arrived': '{name} התיישב. תצטרף בסוף היד הזאת.',
   'waiting.go': 'לשולחן',
-  'shared.howMany': 'כמה אתם?',
   'shared.whichGame': 'איזה משחק?',
+  // Round 34: the table's evening, and the chips and bar on the felt.
+  'shared.chipsLabel': 'הצ׳יפים בשולחן הזה',
+  'shared.barTitle': 'אחוז ההחלטות הנכונות',
+  'shared.full': 'השולחן מלא — כבר יושבים בו שישה. אפשר לפתוח שולחן משלך.',
+  'shared.evening': 'הערב עד עכשיו · בבר: {bar} · בצ׳יפים: {chips}',
+  'shared.priciest': 'המקום היקר של הערב: {spot} — טעות ב־{wrong} מתוך {times} פעמים, {cost} יחידות',
+  'shared.historyTitle': 'הידיים האחרונות',
+  'shared.historyHand': 'יד {n}',
+  'shared.summaryTitle': 'הערב בשולחן',
+  'shared.summaryHands': '{n} ידיים',
+  'shared.summaryAccurate': 'הכי מדויק: {name}, {pct}% נכון',
+  'shared.summaryChips': 'הכי הרבה צ׳יפים: {name}, {n}',
+  'shared.summaryShare': 'לשתף כתמונה',
   'shared.make': 'לפתוח שולחן',
   'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
   'shared.missing': 'השולחן הזה כבר לא קיים — אולי הקישור ישן. אפשר לפתוח כאן שולחן חדש.',
@@ -17414,13 +17507,39 @@ function movesOf(seat            , hand        )             {
  * random tables.
  */
 function deriveTable(record             )               {
-  if (isUthTable(record)) return deriveUthTable(record);
-  return run(record, handsDealt(record), (seat, hand, round) => {
-    const move = record.seats
-      .find((entry) => entry.seat === seat)
-      ?.moves.find((entry) => entry.hand === hand && entry.round === round);
-    return move ? move.action : null;
-  });
+  /*
+   * One screen asks for the same table four or five times — the view, the
+   * ticker, the analysis, the evening — and a long table costs a whole
+   * derivation each time (round 34). The last one is kept, keyed by every
+   * field the derivation reads; the next record with the same key gets the
+   * same answer, which a pure function would have given it anyway. Callers
+   * treat what they are handed as read-only.
+   */
+  const key = derivationKey(record);
+  if (LAST_DERIVED && LAST_DERIVED.key === key) return LAST_DERIVED.table;
+  const table = isUthTable(record)
+    ? deriveUthTable(record)
+    : run(record, handsDealt(record), (seat, hand, round) => {
+        const move = record.seats
+          .find((entry) => entry.seat === seat)
+          ?.moves.find((entry) => entry.hand === hand && entry.round === round);
+        return move ? move.action : null;
+      });
+  LAST_DERIVED = { key, table };
+  return table;
+}
+
+/** The last table derived, and the key it was derived for. See `deriveTable`. */
+let LAST_DERIVED                                              = null;
+
+/** Everything the derivation reads from a record, and nothing it does not. */
+function derivationKey(record             )         {
+  return JSON.stringify([
+    record.seed,
+    record.presetId,
+    record.restrictions,
+    record.seats.map((seat) => [seat.seat, seat.bet, seat.moves, seat.hands ?? 0, seat.events ?? [], seat.vote ?? null]),
+  ]);
 }
 
 /** How many hands a table has dealt, read from the seats' own rows. */
@@ -17689,6 +17808,10 @@ function seatsAgree(record             , table              )          {
                        
                                                         
                         
+                                                                                             
+                        
+                                                                                         
+                           
      
                                                                                
                                                                                 
@@ -17825,11 +17948,38 @@ function countsOnScreen(
   hand             ,
   current                    ,
   seat               ,
+  pending               ,
 )          {
   if (!wasAsked(record, decision.seat, decision)) return false;
+  return gradeVisible(decision, hand, current, seat, pending);
+}
+
+/**
+ * Whether a graded decision may be shown on one seat's screen (round 34).
+ *
+ * One rule for everything that shows a grade: the bars, the crowns, the
+ * coloured action tags and the figures beside each seat. It is §3.7's, made
+ * exact per round. A neighbour's decision in the hand still being played is
+ * hidden **while I still owe a decision at that round or a later one** —
+ * `pending` is the round I owe, or null when I owe nothing. Once I have
+ * answered that round, or have nothing left to decide, or the hand is over,
+ * his grade there can tell me nothing I have yet to decide.
+ *
+ * It replaces round 30's coarser rule ("once I have acted at all this hand"),
+ * which let a neighbour's flop grade show while I was still deciding my flop.
+ * A watcher with no seat sees no grade from a hand in play.
+ */
+function gradeVisible(
+  decision                 ,
+  hand             ,
+  current                    ,
+  seat               ,
+  pending               ,
+)          {
   if (hand !== current || !current.incomplete) return true;
   if (decision.seat === seat) return true;
-  return seat !== null && hasActed(record, seat, current.hand);
+  if (seat === null) return false;
+  return pending === null || decision.round < pending;
 }
 
 /** Whether a seat has recorded anything at all for a hand. */
@@ -17852,6 +18002,22 @@ function seatView(record             , seat               )           {
   const disagrees = !seatsAgree(record, table);
   const current = table.hands[table.hands.length - 1] ?? null;
   const mine = seat === null ? null : (record.seats.find((entry) => entry.seat === seat) ?? null);
+
+  /*
+   * What I may do, asked of the engine rather than worked out here — the same
+   * `legalActions()` the solo game asks, on a table stacked with my own cards.
+   * Asked first, because the round I owe is what decides which of my
+   * neighbours' grades this screen may show (`gradeVisible`).
+   */
+  let legal           = [];
+  let round = 0;
+  let pending                = null;
+  if (seat !== null && current && current.incomplete && current.waitingFor.includes(seat)) {
+    const asked = legalFor(record, current.hand, seat);
+    legal = asked.legal;
+    round = asked.round;
+    pending = asked.round;
+  }
 
   /* This table's running numbers, per seat, summed over every settled hand. */
   const stacks = new Map                ();
@@ -17889,7 +18055,7 @@ function seatView(record             , seat               )           {
     for (const decision of hand.decisions) {
       const tally = counts.get(decision.seat);
       if (!tally) continue;
-      if (!countsOnScreen(record, decision, hand, current, seat)) continue;
+      if (!countsOnScreen(record, decision, hand, current, seat, pending)) continue;
       countDecision(tally, decision);
     }
   }
@@ -17949,6 +18115,25 @@ function seatView(record             , seat               )           {
               ...(forfeits.has(entry.seat) ? ['forfeit'] : []),
             ]
           : [],
+      actedRounds:
+        handIndex !== null && (entry.seat === seat || seesAll)
+          ? movesOf(entry, handIndex)
+              .filter((move) => move.action !== 'takeInsurance' && move.action !== 'declineInsurance')
+              .map((move) => move.round)
+          : [],
+      /*
+       * This seat's graded decisions in the hand on screen that this screen may
+       * show (round 34): what colours his tags and fills the figures beside his
+       * cards. Held by the same rule as the bars — see `gradeVisible`.
+       */
+      shown: current
+        ? current.decisions.filter(
+            (decision) =>
+              decision.seat === entry.seat &&
+              decision.round >= 0 &&
+              gradeVisible(decision, current, current, seat, pending),
+          )
+        : [],
       detail: seatHand ? seatHand.detail.map((hand) => ({ ...hand })) : [],
       active: seatHand ? seatHand.active : null,
       faceDown: hidden ? dealt .cards.length : 0,
@@ -17958,22 +18143,6 @@ function seatView(record             , seat               )           {
 
   const seats = record.seats.map(glance);
   const waitingFor = current ? current.waitingFor : [];
-
-  /*
-   * What I may do, asked of the engine rather than worked out here — the same
-   * `legalActions()` the solo game asks, on a table stacked with my own cards.
-   */
-  let legal           = [];
-  let round = 0;
-  if (seat !== null && handIndex !== null && waitingFor.includes(seat)) {
-    const live = record.seats.filter((entry) => isLive(record, entry.seat, handIndex));
-    const at = live.findIndex((entry) => entry.seat === seat);
-    if (at >= 0) {
-      const asked = legalFor(record, handIndex, seat);
-      legal = asked.legal;
-      round = asked.round;
-    }
-  }
 
   return {
     hand: handIndex,
@@ -17987,7 +18156,7 @@ function seatView(record             , seat               )           {
     round,
     onlyMe: seat !== null && waitingFor.length === 1 && waitingFor[0] === seat,
     waitingFor: [...waitingFor],
-    decisions: current ? current.decisions.filter((d) => d.seat === seat || iActed) : [],
+    decisions: current ? current.decisions.filter((d) => d.seat === seat || (iActed && gradeVisible(d, current, current, seat, pending))) : [],
     disagrees,
   };
 }
@@ -19119,6 +19288,8 @@ function uthHoleClass(hole                      )         {
 
 
 
+
+
 /** Below this many decisions the bar prints no percentage. Spec §3.5. */
 const BAR_SETTLES_AT = 10;
 
@@ -19185,6 +19356,18 @@ const BAR_SETTLES_AT = 10;
                    
                                                                                    
                                               
+     
+                                                                       
+                                                                             
+                                                                       
+     
+                                          
+     
+                                                                                
+                                                                             
+                                                                       
+     
+                              
      
                                                                              
                                                                                
@@ -19298,6 +19481,35 @@ const BAR_SETTLES_AT = 10;
                      
  
 
+/** One seat's figures for one spot: the returns block's numbers, without its words. */
+                              
+                                                 
+                 
+                  
+                   
+ 
+
+/** One finished hand in the table's history (round 34): what each seat did, and how it went. */
+                              
+               
+                
+                 
+                 
+                                                                 
+                     
+                       
+     
+ 
+
+/** The spot that cost the table most, among spots it has met more than once (round 34). */
+                               
+                
+                                                                                                  
+                
+                
+               
+ 
+
                                
                                                
                             
@@ -19343,6 +19555,12 @@ const BAR_SETTLES_AT = 10;
                       
                         
                              
+                                                          
+                         
+                                                                   
+                                
+                                                           
+                        
  
 
 /**
@@ -19657,8 +19875,93 @@ function panel(
     streak: glance.streak,
     faceDown: glance.faceDown,
     crown: { ...glance.crown },
+    grades: glance.acted.map((action, index) => {
+      if (action === 'forfeit') return 'wrong';
+      const decision = glance.shown.find((entry) => entry.round === glance.actedRounds[index]);
+      return decision ? (decision.evCost <= 0 ? 'right' : 'wrong') : null;
+    }),
+    figures: figuresOf(glance.shown[glance.shown.length - 1] ?? null, uth !== null),
     words: uth ? uth.words : null,
   };
+}
+
+/**
+ * A decision's figures, as the returns block states them (round 34): what each
+ * action brings back per unit staked, best first. Blackjack's unit is the bet;
+ * Ultimate's is the Ante and the Blind together, exactly as its private card.
+ */
+function figuresOf(decision                        , uth         )                     {
+  if (!decision) return null;
+  const rows = Object.entries(decision.evByAction)
+    .filter((entry)                            => typeof entry[1] === 'number')
+    .map(([action, ev]) => ({ action, value: uth ? returned(ev, UTH_STAKE) : 1 + ev }))
+    .sort((a, b) => b.value - a.value);
+  return {
+    rows,
+    chosen: String(decision.action),
+    optimal: decision.optimalAction,
+    correct: decision.evCost <= 0,
+  };
+}
+
+/** A decision's spot, when the table can meet the same one again (round 34). */
+function spotOf(decision                 , locale        )                                        {
+  if (decision.uth) {
+    // Ultimate repeats only before the flop, where the spot is the two cards' class.
+    if (decision.round !== 0) return null;
+    return {
+      key: `uth:pre:${decision.uth.holeClass}`,
+      label: uthSpeaker(locale).describeCards([...decision.uth.hole]).words,
+    };
+  }
+  const key = scenarioKeyOf(decision);
+  return key === null ? null : { key, label: describeScenarioKey(key, locale) };
+}
+
+/** The table's history and its priciest spot, from the finished hands (round 34). */
+function eveningOf(record             , locale        ) {
+  const table = deriveTable(record);
+  const finished = table.hands.filter((hand) => !hand.incomplete);
+  const nameOf = (seat        ) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
+  const drops = tableEvents(record).filter((event) => event.kind === 'drop' && event.why !== 'left');
+
+  const history                = finished
+    .slice(-6)
+    .reverse()
+    .map((hand) => ({
+      hand: hand.hand,
+      seats: hand.seats.map((seatHand) => ({
+        seat: seatHand.seat,
+        name: nameOf(seatHand.seat),
+        actions: hand.decisions
+          .filter((d) => d.seat === seatHand.seat && d.round >= 0)
+          .map((d) => ({ action: String(d.action), grade: d.evCost <= 0 ? ('right'         ) : ('wrong'         ) })),
+        forfeit: drops.some((event) => event.seat === seatHand.seat && event.hand === hand.hand),
+        net: seatHand.net,
+      })),
+    }));
+
+  const spots = new Map                      ();
+  for (const hand of finished) {
+    for (const decision of hand.decisions) {
+      if (decision.round < 0) continue;
+      const spot = spotOf(decision, locale);
+      if (!spot) continue;
+      const entry = spots.get(spot.key) ?? { label: spot.label, times: 0, wrong: 0, cost: 0 };
+      entry.times++;
+      if (decision.evCost > 0) {
+        entry.wrong++;
+        entry.cost += decision.evCost;
+      }
+      spots.set(spot.key, entry);
+    }
+  }
+  let priciest                      = null;
+  for (const entry of spots.values()) {
+    if (entry.times < 2 || entry.cost <= 0) continue;
+    if (!priciest || entry.cost > priciest.cost) priciest = entry;
+  }
+  return { history, priciest, handsFinished: finished.length };
 }
 
 /** An Ultimate seat's one hand, for the felt: its cards and, once settled, its result. */
@@ -19750,6 +20053,7 @@ function sharedScreen(record             , seat               , locale         =
     boardHidden: 0,
     street: null,
     dealerWords: null,
+    ...eveningOf(record, locale),
   };
 }
 
@@ -19800,6 +20104,7 @@ function uthScreen(record             , view                             , seat 
     boardHidden: view.hand === null ? 0 : 5 - board.length,
     street: view.uth ? view.uth.street : null,
     dealerWords: dealer.length === 2 && board.length === 5 ? speaker.describeCards([...dealer, ...board]).words : null,
+    ...eveningOf(record, locale),
   };
 }
 
@@ -19807,11 +20112,11 @@ function uthScreen(record             , view                             , seat 
 
 <script>
 /* Screen markup, lifted from the pages the local app serves. */
-const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n        <!-- Said once, after a name with no code was just claimed (round 33). -->\n        <p class=\"hero-line claimed\" id=\"claimed\" role=\"status\" hidden></p>\n      </section>\n\n      <!--\n        How the sitting went, when there was one (round 20). One sentence, on\n        the way out of the table rather than on top of it: a reward and a\n        lesson, and the lesson is the half that lasts.\n      -->\n      <p class=\"sitting\" id=\"sitting\" hidden></p>\n\n      <!--\n        The records line (round 20). Idan asked for the app to give something\n        \"like chips\" when a player improves; chips are the currency of the\n        outcome and would break three figures that tell the truth, so this is\n        the chip-shaped thing without a chip's meaning. It touches no figure:\n        every number in it is a count of something the player did.\n      -->\n      <section class=\"records\" id=\"records\" hidden>\n        <span class=\"records-title\" data-i18n=\"records.title\">Your records</span>\n        <span class=\"records-line\" id=\"records-line\"></span>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <!-- The shared table (round 22). A door, because the link is the only\n             growth this app has and a door is where somebody starts one. -->\n        <a class=\"door shared\" href=\"#shared\">\n          <span class=\"door-pip\">♣</span>\n          <span class=\"door-title\" data-i18n=\"shared.doorTitle\">Play at the same table</span>\n          <span class=\"door-sub\" data-i18n=\"shared.doorSub\">With a friend, on two phones</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
+const HOME_HTML = "<div class=\"shell\">\n      <!--\n        The front of the app is a greeting and two doors. Everything measured\n        lives behind a tab, because a wall of figures is not a welcome — and\n        §3.1 would rather you came here to play than to check a scoreboard.\n      -->\n      <section class=\"hero\">\n        <!-- What the app is for, at the door (round 14). The claim is factual:\n             the comparison is this player's own play against the maths, not\n             optimal play against some theoretical alternative. -->\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"hero-top\">\n          <div class=\"initial\" id=\"initial\">P</div>\n          <input class=\"who-name\" id=\"name\" value=\"Player\" data-i18n-value=\"ui.defaultName\"\n                 data-i18n-attr=\"aria-label:ui.yourName\" spellcheck=\"false\" />\n        </div>\n        <p class=\"hero-line\" id=\"greeting\" data-i18n=\"ui.greeting\">Good to see you.</p>\n        <!-- Said once, after a name with no code was just claimed (round 33). -->\n        <p class=\"hero-line claimed\" id=\"claimed\" role=\"status\" hidden></p>\n      </section>\n\n      <!-- The last shared table's evening, summed up once after leaving it (round 34). -->\n      <section class=\"shared-summary\" id=\"home-evening\" hidden></section>\n\n      <!--\n        How the sitting went, when there was one (round 20). One sentence, on\n        the way out of the table rather than on top of it: a reward and a\n        lesson, and the lesson is the half that lasts.\n      -->\n      <p class=\"sitting\" id=\"sitting\" hidden></p>\n\n      <!--\n        The records line (round 20). Idan asked for the app to give something\n        \"like chips\" when a player improves; chips are the currency of the\n        outcome and would break three figures that tell the truth, so this is\n        the chip-shaped thing without a chip's meaning. It touches no figure:\n        every number in it is a count of something the player did.\n      -->\n      <section class=\"records\" id=\"records\" hidden>\n        <span class=\"records-title\" data-i18n=\"records.title\">Your records</span>\n        <span class=\"records-line\" id=\"records-line\"></span>\n      </section>\n\n      <section class=\"doors\">\n        <a class=\"door\" href=\"#table\">\n          <span class=\"door-pip\">♠</span>\n          <span class=\"door-title\" data-i18n=\"ui.blackjack\">Blackjack</span>\n          <span class=\"door-sub\" id=\"bj-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <a class=\"door secondary\" href=\"#ultimate\">\n          <span class=\"door-pip\">♦</span>\n          <span class=\"door-title\" data-i18n=\"ui.ultimate\">Ultimate</span>\n          <span class=\"door-sub\" data-i18n=\"ui.playAHand\">Play a hand</span>\n        </a>\n        <!-- The shared table (round 22). A door, because the link is the only\n             growth this app has and a door is where somebody starts one. -->\n        <a class=\"door shared\" href=\"#shared\">\n          <span class=\"door-pip\">♣</span>\n          <span class=\"door-title\" data-i18n=\"shared.doorTitle\">Play at the same table</span>\n          <span class=\"door-sub\" data-i18n=\"shared.doorSub\">With a friend, on two phones</span>\n        </a>\n        <a class=\"door analyse\" href=\"#analyse\">\n          <span class=\"door-pip\">?</span>\n          <span class=\"door-title\" data-i18n=\"an.open\">Analyse a hand</span>\n          <span class=\"door-sub\" data-i18n=\"an.sub\">Any cards, without playing</span>\n        </a>\n      </section>\n\n      <nav class=\"tabs\" role=\"tablist\" data-i18n-attr=\"aria-label:ui.yourPlay\">\n        <button class=\"tab\" role=\"tab\" data-tab=\"standing\" aria-selected=\"true\" data-i18n=\"ui.tab.standing\">Standing</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"hands\" aria-selected=\"false\" data-i18n=\"ui.tab.hands\">Hands</button>\n        <button class=\"tab\" role=\"tab\" data-tab=\"stats\" aria-selected=\"false\" data-i18n=\"ui.tab.stats\">Stats</button>\n      </nav>\n\n      <section class=\"tab-body\" id=\"panel-standing\" role=\"tabpanel\">\n        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->\n        <div class=\"standings\">\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"rating\">—</div>\n            <div class=\"standing-label\" id=\"rating-label\" data-i18n=\"ui.rating\">Blackjack rating</div>\n            <div class=\"rating-side\" id=\"rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"rating-note\"></p>\n          </div>\n          <div class=\"standing\">\n            <div class=\"standing-value\" id=\"uth-rating\">—</div>\n            <div class=\"standing-label\" id=\"uth-rating-label\" data-i18n=\"home.uthRating\">Ultimate rating</div>\n            <div class=\"rating-side\" id=\"uth-rating-swing\" hidden></div>\n            <p class=\"standing-note\" id=\"uth-rating-note\"></p>\n          </div>\n        </div>\n        <div class=\"modes\" role=\"group\" data-i18n-attr=\"aria-label:ui.drilledOn\">\n          <button class=\"mode\" type=\"button\" data-mode=\"basic\" aria-pressed=\"true\">\n            <span data-i18n=\"ui.mode.basic\">Basic</span><small data-i18n=\"ui.mode.basicNote\">the costly hands</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"recall\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.recall\">Recall</span><small data-i18n=\"ui.mode.recallNote\">thin and rare</small>\n          </button>\n          <button class=\"mode\" type=\"button\" data-mode=\"value\" aria-pressed=\"false\">\n            <span data-i18n=\"ui.mode.value\">Value</span><small data-i18n=\"ui.mode.valueNote\">your own leaks</small>\n          </button>\n        </div>\n        <div id=\"ladder\" class=\"ladder\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-hands\" role=\"tabpanel\" hidden>\n        <div id=\"hands\"></div>\n      </section>\n\n      <section class=\"tab-body\" id=\"panel-stats\" role=\"tabpanel\" hidden>\n        <div id=\"stats\"></div>\n      </section>\n\n      <p class=\"footer\" id=\"footer\"></p>\n    </div>";
 const TABLE_HTML = "<div class=\"shell\">\n    <!--\n      The first screen (round 14): what this app is, and one question — how\n      much should it explain? It takes over the table until it is answered,\n      because a question about how much you want explained is not a modal to\n      be dismissed on the way to a hand.\n    -->\n    <section class=\"first-screen\" id=\"welcome\" hidden>\n      <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n      <div class=\"first-screen-passage\" id=\"welcome-passage\">\n        <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n        <p class=\"intro-body\" id=\"intro-body\"></p>\n      </div>\n      <h2 class=\"first-screen-ask\" id=\"first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n      <div class=\"levels\" id=\"level-choices\"></div>\n      <p class=\"first-screen-note\" id=\"first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n    </section>\n\n    <!-- Spec §10.1: the rule-set badge is always visible and non-dismissible. -->\n    <header class=\"rules\" id=\"rules-bar\">\n      <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n      <div class=\"rules-main\">\n        <span class=\"rules-name\" id=\"rules-name\">—</span>\n      </div>\n      <button class=\"link\" id=\"open-settings\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n    </header>\n\n    <!--\n      Spec §9.2 and §3.1: the session bar leads with decision accuracy and EV\n      lost. Units won is present but last, and deliberately quiet.\n    -->\n    <section class=\"stats\" id=\"stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n      <button class=\"stat\" id=\"accuracy-stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-accuracy\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"evLost\" data-cell=\"evLost\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-evlost\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat\" type=\"button\" data-info=\"edge\" data-cell=\"edge\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-edge\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">your effective edge</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n      <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n              aria-expanded=\"false\" aria-controls=\"stat-info\">\n        <span class=\"stat-value\" id=\"stat-units\">—</span>\n        <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n        <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n      </button>\n    </section>\n\n    <!-- Opens under whichever figure was asked about, and stays until dismissed. -->\n    <section class=\"stat-info\" id=\"stat-info\" hidden aria-live=\"polite\"></section>\n\n    <!-- The decision track (round 6): the last twelve hands, one dot per\n         decision. Beside the felt on a wide screen, a row under the strip on a\n         phone. A tap opens the hand in the log on the home screen. -->\n    <div class=\"track-anchor\">\n      <section class=\"track\" id=\"bj-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n    </div>\n\n    <main class=\"table felt\" id=\"table\">\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span> <span class=\"seat-total\" id=\"dealer-total\"></span></h2>\n        <div class=\"cards\" id=\"dealer-cards\"></div>\n      </section>\n\n      <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n        <h2 class=\"seat-title\"><span data-i18n=\"ui.you\">You</span><span class=\"crown-slot\" id=\"player-crown\" hidden></span> <span class=\"seat-total\" id=\"player-total\"></span></h2>\n        <div id=\"player-hands\"></div>\n        <!-- What is in play, and what is behind it. -->\n        <div class=\"rail\" id=\"rail\"></div>\n      </section>\n\n      <p class=\"empty\" id=\"empty-state\" data-i18n=\"ui.pressDeal\">Press Deal to start.</p>\n    </main>\n\n    <!--\n      What the cards did, in one line (round 14). The dealer character is gone —\n      her avatar, her name, her bubble and her two questions — but the call she\n      made was the only place the table said what had just happened, and a hand\n      that ends on a dealer's blackjack needs someone to say so. It is a line\n      below the table now, in the table's own voice rather than a person's.\n    -->\n    <!--\n      The game itself, one tap away from the felt for a player who asked to be\n      taught it (round 15). Not in the footer menu: he asked, so it is where he\n      is playing.\n    -->\n    <section class=\"primer-here\" id=\"primer-here\" hidden>\n      <button class=\"primer-open\" id=\"primer-open\" type=\"button\" aria-expanded=\"false\"\n              aria-controls=\"primer-here-body\" data-i18n=\"prime.open\">How the game works</button>\n      <div class=\"primer\" id=\"primer-here-body\" hidden></div>\n    </section>\n\n    <p class=\"table-talk\" id=\"table-talk\" hidden aria-live=\"polite\"></p>\n\n    <!-- Spec §7.1. Shown after the decision and before the hand resolves. -->\n    <section class=\"feedback\" id=\"feedback\" hidden aria-live=\"polite\"></section>\n\n    <!--\n      Spec §10.1: primary actions along the bottom edge, reachable one-handed.\n\n      The verdict rides with them. Both are things the player looks at the moment\n      a hand resolves, and both were previously somewhere else on the page — so\n      they are pinned together and never scroll away. The reasoning stays above,\n      for anyone who wants it.\n    -->\n    <div class=\"dock\">\n      <section class=\"quickcard\" id=\"quickcard\" hidden aria-live=\"polite\"></section>\n      <nav class=\"actions\" id=\"actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n    </div>\n\n    <dialog id=\"settings\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n        <!--\n          The badge states the rules; it is not a control (§10.1). It was a\n          second line on the felt, printed on every hand in both phases, saying\n          what the name above it already half said — so round 17 moved it in\n          here, where the switches that change it are, and left one line on the\n          table. The link beside it opens nothing new: it is the anchor the\n          restrictions below answer to.\n        -->\n        <p class=\"rules-sub\">\n          <span class=\"rules-badge\" id=\"rules-badge\"></span>\n          <button class=\"link rules-change\" id=\"change-rules\" type=\"button\"\n                  data-i18n=\"ui.change\">change</button>\n        </p>\n        <p class=\"muted\" data-i18n=\"ui.ruleSetNote\">\n          Changing the rules starts a new session. The correct play changes with\n          them, which is the point.\n        </p>\n        <div id=\"preset-list\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"rules.house\">House restrictions</h3>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-no-surrender\" />\n          <span>\n            <strong data-i18n=\"rules.noSurrender\">No surrender</strong>\n            <small data-i18n=\"rules.noSurrenderNote\"></small>\n          </span>\n        </label>\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-like-ranks\" />\n          <span>\n            <strong data-i18n=\"rules.likeRanksOnly\">Split like ranks only</strong>\n            <small data-i18n=\"rules.likeRanksOnlyNote\"></small>\n          </span>\n        </label>\n        <p class=\"muted fine\" data-i18n=\"rules.restartsSession\"></p>\n\n        <!--\n          Not a rule, so it does not restart anything and has its own listener.\n          The second sentence of the note is a product statement, which is why\n          it is on the screen rather than only in a comment.\n        -->\n        <label class=\"check\">\n          <input type=\"checkbox\" id=\"opt-sound\" />\n          <span>\n            <strong data-i18n=\"sound.enable\">Sound</strong>\n            <small data-i18n=\"sound.note\"></small>\n          </span>\n        </label>\n\n        <!--\n          How much the app explains (round 14). Not a rule and not a difficulty:\n          it changes nothing that is graded, rated or ranked, so it restarts\n          nothing and has its own listener.\n        -->\n        <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n        <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n        <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n        <div class=\"levels levels-settings\" id=\"level-settings\"></div>\n        <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <dialog id=\"reference\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"ui.basicStrategy\">Basic strategy for these rules</h2>\n        <p class=\"muted\">\n          <span data-i18n=\"ui.chartNote\">Derived from the EV computation, not copied from a chart.</span>\n          <span class=\"legend\" data-i18n=\"ui.legend\">H hit · S stand · D double · P split · R surrender</span>\n        </p>\n        <!--\n          Two readings of the same 311 cells (round 20): what the right play is,\n          and which of them this player has mastered. The second is the mastery\n          grid — a collection that also says what to practise next — and it is a\n          mode here rather than a screen of its own, because the keys are the\n          same keys and two screens would be two places to keep them right.\n        -->\n        <div class=\"chart-modes\" id=\"chart-modes\"></div>\n        <p class=\"muted fine\" id=\"mastery-legend\" hidden></p>\n        <div id=\"chart-container\"></div>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n          <dialog id=\"howto\">\n      <form method=\"dialog\">\n        <h2 data-i18n=\"howto.title\">How this works</h2>\n        <p class=\"howto-lead\" id=\"howto-lead\"></p>\n        <div class=\"primer\" id=\"howto-primer\"></div>\n          <ol class=\"howto\" id=\"howto-list\"></ol>\n        <menu>\n          <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n        </menu>\n      </form>\n    </dialog>\n\n    <footer class=\"footer\">\n      <button class=\"link\" id=\"open-howto\" data-i18n=\"howto.open\">How to play</button>\n      <button class=\"link\" id=\"open-reference\" data-i18n=\"ui.strategyChart\">Strategy chart</button>\n      <span class=\"footer-note\" id=\"edge-note\"></span>\n    </footer>";
 const ULTIMATE_HTML = "<div class=\"shell uth\">\n      <!--\n        The first screen (round 14): what this app is, and one question — how\n        much should it explain? It takes over the table until it is answered.\n      -->\n      <section class=\"first-screen\" id=\"uth-welcome\" hidden>\n        <p class=\"slogan\" data-i18n=\"brand.slogan\">Simply winning more hands.</p>\n        <div class=\"first-screen-passage\" id=\"uth-welcome-passage\">\n          <h1 data-i18n=\"intro.title\">Before your first hand</h1>\n          <p class=\"intro-body\" id=\"uth-intro-body\"></p>\n        </div>\n        <h2 class=\"first-screen-ask\" id=\"uth-first-screen-ask\" data-i18n=\"level.question\">How much should the app explain?</h2>\n        <div class=\"levels\" id=\"uth-level-choices\"></div>\n        <p class=\"first-screen-note\" id=\"uth-first-screen-note\" data-i18n=\"level.note\">This changes only how much is explained, never your score.</p>\n\n      <!-- The answer to \"explain everything\": the game itself, here, before the\n           first hand — not behind a menu somewhere. -->\n      <div class=\"primer\" id=\"uth-primer\" hidden>\n        <h2 data-i18n=\"prime.title\">How the game works</h2>\n        <div id=\"uth-primer-body\"></div>\n        <button class=\"action primary\" type=\"button\" id=\"uth-primer-start\" data-i18n=\"prime.start\">Start playing</button>\n      </div>\n      </section>\n\n      <!--\n        The rules are a statement (§10.1), and since round 19 there is a door\n        beside them: the Trips pay table can be chosen, and the language and the\n        level live behind it, where a player looks for them on the other table.\n        The Blind pay table is stated inside and is not a control — every figure\n        the trainer shows was solved against it.\n      -->\n      <header class=\"rules\" id=\"rules-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" data-i18n=\"ui.ultimateTitle\">Ultimate Texas Hold’em</span>\n        </div>\n        <button class=\"link\" id=\"uth-open-rules\" data-i18n-attr=\"aria-label:ui.changeRuleSet\" data-i18n=\"ui.rules\">Rules</button>\n      </header>\n\n      <!-- The same strip as the Blackjack table, reading this game's figures. -->\n      <section class=\"stats\" id=\"uth-stats\" data-i18n-attr=\"aria-label:ui.sessionStats\">\n        <button class=\"stat\" type=\"button\" data-info=\"accuracy\" data-cell=\"accuracy\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-accuracy\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.decisionAccuracy\">decision accuracy</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEvLost\" data-cell=\"evLost\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-evlost\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.evLostPer100\">EV lost / 100 hands</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat\" type=\"button\" data-info=\"uthEdge\" data-cell=\"edge\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-edge\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.yourEdge\">house edge you face</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n        <button class=\"stat stat-quiet\" type=\"button\" data-info=\"units\" data-cell=\"units\"\n                aria-expanded=\"false\" aria-controls=\"uth-stat-info\">\n          <span class=\"stat-value\" id=\"uth-stat-units\">—</span>\n          <span class=\"stat-label\" data-i18n=\"ui.units\">units</span>\n          <span class=\"stat-more\" aria-hidden=\"true\">?</span>\n        </button>\n      </section>\n      <section class=\"stat-info\" id=\"uth-stat-info\" hidden aria-live=\"polite\"></section>\n\n      <!-- The decision track, as on the Blackjack table. It replaces the list of\n           hands this screen used to carry; the hands themselves are reviewed\n           on the home screen, and a tap on a row opens one there. -->\n      <div class=\"track-anchor\">\n        <section class=\"track\" id=\"uth-track\" data-i18n-attr=\"aria-label:track.title\"></section>\n      </div>\n\n      <main class=\"table felt uth-felt\" id=\"uth-table\">\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <!-- What he is holding, in words, once his cards are turned over —\n               round 17's treatment of his total on the Blackjack table. -->\n          <h2 class=\"seat-title\"><span data-i18n=\"ui.dealer\">Dealer</span><span class=\"seat-hand\" id=\"uth-dealer-hand\"></span></h2>\n          <div class=\"cards\" id=\"uth-dealer\"></div>\n        </section>\n\n        <section class=\"seat uth-board\" data-i18n-attr=\"aria-label:uth.board\">\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"uth-board\"></div>\n        </section>\n\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.yourHand\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.you\">You</span><span class=\"crown-slot\" id=\"uth-you-crown\" hidden></span><span class=\"seat-hand\" id=\"uth-you-hand\"></span>\n          </h2>\n          <div class=\"cards\" id=\"uth-hole\"></div>\n          <!-- Ante, Blind and Play, and the stack behind them. -->\n          <div class=\"uth-rail\" id=\"uth-rail\"></div>\n        </section>\n\n        <p class=\"empty\" id=\"uth-empty\"></p>\n      </main>\n\n      <!--\n        The commentary, below the table — Blackjack's model, which Idan named as\n        the right one (round 12). The reasoning, the notes and what the cards did\n        live here, where the page scrolls. Only the grade and its buttons are\n        pinned to the bottom, so nothing long can grow over the ringed cards.\n      -->\n      <section class=\"feedback\" id=\"uth-feedback\" hidden aria-live=\"polite\"></section>\n\n      <div class=\"dock\">\n        <!-- The grade first; the result under it, later and quieter (§3.1). -->\n        <section class=\"quickcard\" id=\"uth-card\" hidden aria-live=\"polite\"></section>\n        <nav class=\"actions\" id=\"uth-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n\n      <dialog id=\"uth-howto\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"howto.title\">How this works</h2>\n          <p class=\"howto-lead\" id=\"uth-howto-lead\"></p>\n          <ol class=\"howto\" id=\"uth-howto-list\"></ol>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <dialog id=\"uth-rules\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n\n          <!-- Stated, not offered. The note says why, in one sentence. -->\n          <p class=\"rules-sub\"><span class=\"rules-badge\" id=\"uth-blind-line\"></span></p>\n          <p class=\"muted fine\" id=\"uth-blind-note\"></p>\n\n          <h3 class=\"sub-title\" data-i18n=\"uth.rules.trips\">Trips pay table</h3>\n          <div id=\"uth-trips-list\"></div>\n          <p class=\"muted fine\" id=\"uth-trips-note\"></p>\n\n          <p class=\"muted fine\" id=\"uth-limits-line\"></p>\n\n          <!--\n            Not rules: the language and how much the app explains. They were\n            behind \"How to play\" while this table had no panel; they belong\n            here, in the same place as on the Blackjack table.\n          -->\n          <h3 class=\"sub-title\" data-i18n=\"ui.language\">Language</h3>\n          <div class=\"lang-slot\" id=\"lang-slot\"></div>\n\n          <h3 class=\"sub-title\" data-i18n=\"level.question\">How much should the app explain?</h3>\n          <div class=\"levels levels-settings\" id=\"uth-level-settings\"></div>\n          <p class=\"muted fine\" data-i18n=\"level.note\"></p>\n\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n\n      <footer class=\"footer\">\n        <button class=\"link\" id=\"uth-open-howto\" type=\"button\" data-i18n=\"howto.open\">How to play</button>\n      </footer>\n    </div>";
 const ANALYSE_HTML = "<div class=\"shell analyser\">\n      <header class=\"rules analyser-head\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <div class=\"rules-title\" data-i18n=\"an.title\">Analyse a hand</div>\n          <div class=\"rules-sub\" id=\"an-rules-line\"></div>\n        </div>\n        <button class=\"link\" id=\"an-rules\" data-i18n=\"an.rules\">Rules</button>\n      </header>\n\n      <!--\n        Three taps and an answer. The slots fill in order — your two cards, then\n        the dealer's — so the keypad never has to ask which one a tap is for,\n        and a hand is entered without a keyboard and without scrolling.\n      -->\n      <section class=\"an-slots\" id=\"an-slots\" aria-live=\"polite\"></section>\n      <p class=\"an-hint\" id=\"an-hint\" data-i18n=\"an.tapYours\">Tap two cards.</p>\n\n      <section class=\"an-pad\" id=\"an-pad\" data-i18n-attr=\"aria-label:an.yours\"></section>\n\n      <div class=\"an-controls\">\n        <button class=\"an-control\" id=\"an-add\" type=\"button\" data-i18n=\"an.addCard\">Add a card</button>\n        <button class=\"an-control\" id=\"an-clear\" type=\"button\" data-i18n=\"an.clear\">Start again</button>\n      </div>\n\n      <!-- Refusals and hands with nothing to decide land here, in a sentence. -->\n      <p class=\"an-says\" id=\"an-says\" hidden></p>\n\n      <section class=\"an-result\" id=\"an-result\" hidden>\n        <p class=\"an-headline\" id=\"an-headline\"></p>\n        <p class=\"an-best\" id=\"an-best\"></p>\n        <section class=\"quickcard an-card\" id=\"an-card\"></section>\n        <p class=\"sensitivity\" id=\"an-sensitivity\" hidden></p>\n        <section class=\"an-steps\" id=\"an-steps\"></section>\n      </section>\n\n      <p class=\"an-note\" data-i18n=\"an.notCounted\">Nothing here counts towards anything.</p>\n\n      <dialog id=\"an-rule-picker\">\n        <form method=\"dialog\">\n          <h2 data-i18n=\"ui.ruleSet\">Rule set</h2>\n          <div id=\"an-preset-list\"></div>\n          <menu>\n            <button value=\"cancel\" data-i18n=\"ui.close\">Close</button>\n          </menu>\n        </form>\n      </dialog>\n    </div>";
-const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play at the same table</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          The same table, your own cards, and nobody waits for anybody.\n        </p>\n        <!-- How many seats. Two is the common case and the default; six is the\n             most a shoe this size seats comfortably (§3.1). -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-seats-pick\">\n          <legend data-i18n=\"shared.howMany\">How many of you?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-seats-row\"></div>\n        </fieldset>\n        <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-game-pick\">\n          <legend data-i18n=\"shared.whichGame\">Which game?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-game-row\"></div>\n        </fieldset>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n        <!--\n          Waiting is the worst screen in the app, so nobody has to sit in it:\n          the ordinary private table is one tap away and a strip along the top\n          keeps saying what he is waiting for (round 23).\n        -->\n        <button class=\"action primary\" type=\"button\" id=\"shared-meanwhile\" data-i18n=\"waiting.meanwhile\">\n          Play meanwhile\n        </button>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <!--\n        The ticker (§3.10). One line, rotating every eight seconds, and it\n        holds still while a hand is live: a line that changed under a player\n        deciding would be the app talking over him. It fades and does not move,\n        and it never announces money.\n      -->\n      <p class=\"shared-ticker\" id=\"shared-ticker\" hidden aria-live=\"polite\"></p>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <!-- Ultimate only (round 32): the one board, the same cards for everybody. -->\n        <section class=\"seat uth-board\" id=\"shared-board-seat\" data-i18n-attr=\"aria-label:uth.board\" hidden>\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"shared-board\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n\n        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->\n        <div class=\"shared-table-line\" id=\"shared-table-line\" hidden></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        What has just been said, attributed (§3.9).\n\n        Its own block, apart from everything the app says about a decision, and\n        never on a card or in a verdict line. That separation is the condition\n        Cowork set when it withdrew the decisions-never-outcomes rule for player\n        speech: two of Idan's six are about luck, and they are fine between\n        friends precisely because it is a friend saying them and the screen\n        makes that unmistakable.\n      -->\n      <section class=\"shared-said\" id=\"shared-said\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        Under the felt: this hand's analysis first — the private table's own\n        commentary for my latest decision — and then the table's figures and the\n        lines that name the two measures (round 30, item 5). The bars themselves\n        moved onto the felt, beside each name.\n      -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <!--\n        He took my card (§3.8) — offered, not shown, and once a session. The\n        answer is a real replay of this shoe with one decision of his changed,\n        which is why the app can say it at all.\n      -->\n      <section class=\"shared-folklore\" id=\"shared-folklore\" hidden></section>\n\n\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <!--\n        The six things a player can say (§3.9). One tap, above the dock and\n        below the felt, so sending one never covers the cards.\n      -->\n      <nav class=\"shared-reactions\" id=\"shared-reactions\" hidden\n           data-i18n-attr=\"aria-label:shared.say\"></nav>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
+const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"shared-bar\">\n        <a class=\"back\" href=\"#home\">‹ <span data-i18n=\"ui.home\">Home</span></a>\n        <div class=\"rules-main\">\n          <span class=\"rules-name\" id=\"shared-rules\">—</span>\n        </div>\n      </header>\n\n      <!--\n        The door. A table is either made here or arrived at by link, and the two\n        are the same screen because a player who follows a link and finds the\n        seat taken has to be able to make his own without going anywhere.\n      -->\n      <section class=\"shared-door\" id=\"shared-door\" hidden>\n        <h1 data-i18n=\"shared.doorTitle\">Play at the same table</h1>\n        <p class=\"shared-door-body\" data-i18n=\"shared.doorBody\">\n          The same table, your own cards, and nobody waits for anybody.\n        </p>\n        <!-- No \"how many of you\" (round 34): a table has room for six, and seats\n             fill as people arrive by the link. -->\n        <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->\n        <fieldset class=\"shared-seats-pick\" id=\"shared-game-pick\">\n          <legend data-i18n=\"shared.whichGame\">Which game?</legend>\n          <div class=\"shared-seats-row\" id=\"shared-game-row\"></div>\n        </fieldset>\n        <button class=\"action primary\" type=\"button\" id=\"shared-make\" data-i18n=\"shared.make\">\n          Make a table\n        </button>\n        <p class=\"shared-note\" id=\"shared-door-note\" hidden></p>\n      </section>\n\n      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->\n      <!-- The evening, summed up once there is nobody left to play it with (round 34). -->\n      <section class=\"shared-summary\" id=\"shared-summary\" hidden></section>\n\n      <section class=\"shared-invite\" id=\"shared-invite\" hidden>\n        <h2 data-i18n=\"shared.inviteTitle\">Send this to your friend</h2>\n        <p class=\"shared-link\" id=\"shared-link\"></p>\n        <button class=\"action\" type=\"button\" id=\"shared-copy\" data-i18n=\"shared.copy\">Copy link</button>\n        <p class=\"shared-note\" id=\"shared-waiting\" data-i18n=\"shared.waiting\">\n          Waiting for somebody to sit down.\n        </p>\n        <!--\n          Waiting is the worst screen in the app, so nobody has to sit in it:\n          the ordinary private table is one tap away and a strip along the top\n          keeps saying what he is waiting for (round 23).\n        -->\n        <button class=\"action primary\" type=\"button\" id=\"shared-meanwhile\" data-i18n=\"waiting.meanwhile\">\n          Play meanwhile\n        </button>\n      </section>\n\n      <!--\n        The refusal (§A1). Two seats disagreeing about what was dealt is the one\n        thing this app will not paper over: it shows neither of them a table\n        rather than showing two people two different truths about one hand.\n      -->\n      <section class=\"shared-refused\" id=\"shared-refused\" hidden role=\"alert\">\n        <h2 data-i18n=\"shared.refusedTitle\">This table cannot be shown</h2>\n        <p data-i18n=\"shared.refusedBody\">\n          Two seats disagree about what was dealt. Rather than show you one\n          version and your friend another, the app is showing neither.\n        </p>\n      </section>\n\n      <!--\n        The ticker (§3.10). One line, rotating every eight seconds, and it\n        holds still while a hand is live: a line that changed under a player\n        deciding would be the app talking over him. It fades and does not move,\n        and it never announces money.\n      -->\n      <p class=\"shared-ticker\" id=\"shared-ticker\" hidden aria-live=\"polite\"></p>\n\n      <!-- The evening so far (round 34): who leads on the bar, who leads on chips. -->\n      <p class=\"shared-evening\" id=\"shared-evening\" hidden></p>\n\n      <main class=\"table felt\" id=\"shared-table\" hidden>\n        <section class=\"seat\" data-i18n-attr=\"aria-label:ui.dealer\">\n          <h2 class=\"seat-title\">\n            <span data-i18n=\"ui.dealer\">Dealer</span>\n            <span class=\"seat-total\" id=\"shared-dealer-total\"></span>\n          </h2>\n          <div class=\"cards\" id=\"shared-dealer-cards\"></div>\n        </section>\n\n        <!-- Ultimate only (round 32): the one board, the same cards for everybody. -->\n        <section class=\"seat uth-board\" id=\"shared-board-seat\" data-i18n-attr=\"aria-label:uth.board\" hidden>\n          <h2 class=\"seat-title\"><span data-i18n=\"uth.board\">Board</span></h2>\n          <div class=\"cards\" id=\"shared-board\"></div>\n        </section>\n\n        <div id=\"shared-seats\"></div>\n\n        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->\n        <div class=\"shared-table-line\" id=\"shared-table-line\" hidden></div>\n      </main>\n\n      <!--\n        The clock, and the vote. Visible to the player it is about and to\n        everybody waiting — §3.4: thirty seconds is only fair if a player can\n        see the table is waiting for him.\n      -->\n      <section class=\"shared-clock\" id=\"shared-clock\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        What has just been said, attributed (§3.9).\n\n        Its own block, apart from everything the app says about a decision, and\n        never on a card or in a verdict line. That separation is the condition\n        Cowork set when it withdrew the decisions-never-outcomes rule for player\n        speech: two of Idan's six are about luck, and they are fine between\n        friends precisely because it is a friend saying them and the screen\n        makes that unmistakable.\n      -->\n      <section class=\"shared-said\" id=\"shared-said\" hidden aria-live=\"polite\"></section>\n\n      <!--\n        Under the felt: this hand's analysis first — the private table's own\n        commentary for my latest decision — and then the table's figures and the\n        lines that name the two measures (round 30, item 5). The bars themselves\n        moved onto the felt, beside each name.\n      -->\n      <section class=\"shared-measures\" id=\"shared-measures\" hidden></section>\n\n      <!--\n        He took my card (§3.8) — offered, not shown, and once a session. The\n        answer is a real replay of this shoe with one decision of his changed,\n        which is why the app can say it at all.\n      -->\n      <section class=\"shared-folklore\" id=\"shared-folklore\" hidden></section>\n\n\n\n      <p class=\"table-talk\" id=\"shared-talk\" hidden aria-live=\"polite\"></p>\n\n      <!--\n        The six things a player can say (§3.9). One tap, above the dock and\n        below the felt, so sending one never covers the cards.\n      -->\n      <nav class=\"shared-reactions\" id=\"shared-reactions\" hidden\n           data-i18n-attr=\"aria-label:shared.say\"></nav>\n\n      <div class=\"dock\">\n        <nav class=\"actions\" id=\"shared-actions\" data-i18n-attr=\"aria-label:ui.actions\"></nav>\n      </div>\n    </div>";
 
 /* How a figure is written on screen, for every page (round 8). */
 /*
@@ -19932,6 +20237,138 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
   }
 
   window.EVCrown = { node, show };
+})();
+
+/*
+ * The evening at a shared table, summed up (round 34).
+ *
+ * How many hands, who was the most accurate, who won the most chips, and the
+ * spot that cost the table most — and a button that turns it into a picture
+ * to send on WhatsApp, because that picture is how somebody who has never
+ * opened the app first hears of it.
+ *
+ * Display only: everything here is read off the table's own screen object,
+ * which is read off the derivation. Nothing is written anywhere but this
+ * browser's own storage, which holds the last evening until the home screen
+ * has said it once.
+ *
+ * One file for the two places it is drawn — the table, once nobody is left to
+ * play with, and home, after leaving by the home link — on `window.EVEvening`.
+ */
+(function () {
+  const T = (key, params) => (window.EV ? window.EV.t(key, params) : key);
+  const KEY = 'ev:lastEvening';
+
+  /** The lines the card and the picture both say, in the player's language. */
+  function lines(data) {
+    const out = [T('shared.summaryHands', { n: data.hands })];
+    if (data.accurate) out.push(T('shared.summaryAccurate', { name: data.accurate.name, pct: data.accurate.pct }));
+    if (data.chips) {
+      const n = window.EVFigure ? window.EVFigure.units(data.chips.n, true) : String(data.chips.n);
+      out.push(T('shared.summaryChips', { name: data.chips.name, n }));
+    }
+    if (data.priciest) {
+      out.push(
+        T('shared.priciest', {
+          spot: data.priciest.label,
+          wrong: data.priciest.wrong,
+          times: data.priciest.times,
+          cost: Number(data.priciest.cost).toFixed(2),
+        }),
+      );
+    }
+    return out;
+  }
+
+  /** The picture: the same lines on the felt's green, with where the app lives. */
+  function picture(data) {
+    const canvas = document.createElement('canvas');
+    const width = 1080;
+    const text = lines(data);
+    const height = 360 + text.length * 96;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const rtl = document.documentElement.getAttribute('dir') === 'rtl';
+    ctx.fillStyle = '#0f4d2e';
+    ctx.fillRect(0, 0, width, height);
+    ctx.direction = rtl ? 'rtl' : 'ltr';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f2c14e';
+    ctx.font = '700 64px system-ui, sans-serif';
+    ctx.fillText(T('shared.summaryTitle'), width / 2, 130);
+    ctx.fillStyle = '#e8eee9';
+    ctx.font = '500 44px system-ui, sans-serif';
+    text.forEach((line, index) => ctx.fillText(line, width / 2, 240 + index * 96, width - 80));
+    ctx.fillStyle = '#9fc2ad';
+    ctx.font = '500 34px system-ui, sans-serif';
+    ctx.fillText('EV Trainer · ishalom.github.io/ishalom', width / 2, height - 60);
+    return canvas;
+  }
+
+  /** Hand the picture to the phone's share sheet, or save it where sharing files is not offered. */
+  function share(data) {
+    const canvas = picture(data);
+    if (!canvas || !canvas.toBlob) return;
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const file = typeof File === 'function' ? new File([blob], 'evening.png', { type: 'image/png' }) : null;
+      if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+        void navigator.share({ files: [file], text: 'EV Trainer — ishalom.github.io/ishalom' }).catch(() => {});
+        return;
+      }
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'evening.png';
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    }, 'image/png');
+  }
+
+  /** The card: the title, the lines, and the one button. */
+  function card(data) {
+    const box = document.createElement('section');
+    box.className = 'shared-summary-card';
+    const title = document.createElement('h2');
+    title.textContent = T('shared.summaryTitle');
+    box.appendChild(title);
+    for (const line of lines(data)) {
+      const p = document.createElement('p');
+      p.textContent = line;
+      box.appendChild(p);
+    }
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'action primary shared-share';
+    button.id = 'shared-share';
+    button.textContent = T('shared.summaryShare');
+    button.addEventListener('click', () => share(data));
+    box.appendChild(button);
+    return box;
+  }
+
+  /** Keep the evening for the home screen, which says it once. */
+  function keep(data) {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch {
+      // No storage: the summary is simply not repeated at home.
+    }
+  }
+
+  /** The kept evening, handed over once and then forgotten. */
+  function takeKept() {
+    try {
+      const data = JSON.parse(localStorage.getItem(KEY) || 'null');
+      localStorage.setItem(KEY, '');
+      return data && typeof data.hands === 'number' ? data : null;
+    } catch {
+      return null;
+    }
+  }
+
+  window.EVEvening = { card, keep, takeKept, lines };
 })();
 
 
@@ -22161,9 +22598,22 @@ function renderClaimed() {
   box.hidden = false;
 }
 
+/**
+ * The last shared table's evening, summed up once on the way home from it
+ * (round 34) — with the button that makes it a picture to send.
+ */
+function renderLastEvening() {
+  const box = el('home-evening');
+  if (!box || !window.EVEvening) return;
+  const kept = window.EVEvening.takeKept();
+  box.hidden = !kept;
+  box.replaceChildren(...(kept ? [window.EVEvening.card(kept)] : []));
+}
+
 // After the locale handshake, so the first render is already in the right language.
 Promise.resolve(window.EV && window.EV.ready).then(() => {
   renderClaimed();
+  renderLastEvening();
   return refresh();
 });
 
@@ -24708,14 +25158,16 @@ function uthRenderCard(view) {
  * the river. Layout only — built from the legal actions the session sends.
  */
 function uthRows(legal) {
+  /*
+   * Three to a row (round 34): before the flop Raise 4×, Raise 3× and Check fit
+   * on one line at 360 px in both languages, the raises on the left — round
+   * 4b's yes-on-the-left, with the smaller raise between them. The shared
+   * table lays its buttons out the same way.
+   */
+  const order = ['raise4x', 'raise3x', 'raise2x', 'raise1x', 'check', 'fold'];
+  const sorted = [...legal].sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const rows = [];
-  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
-    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
-  }
-  if (legal.includes('raise3x')) rows.push(['raise3x']);
-  // Anything a future rule adds that no row names still gets a button.
-  const placed = new Set(rows.flat());
-  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  for (let i = 0; i < sorted.length; i += 3) rows.push(sorted.slice(i, i + 3));
   return rows;
 }
 
@@ -25188,8 +25640,6 @@ const shared = {
    * before this there was nothing drawn at all.
    */
   lost: false,
-  /** How many seats a new table gets. Two unless somebody says otherwise. */
-  seats: 2,
   /** Which game a new table deals (round 32): 'blackjack' unless Ultimate is chosen. */
   game: 'blackjack',
   /** Which ticker item is showing, and when it last changed (§3.10). */
@@ -25229,14 +25679,16 @@ const actionLabel = (action) => T(UTH_ACTION_KEYS[action] || `action.${action}`)
  * Ultimate's buttons in the private table's rows: each street's two choices
  * side by side, yes on the left (round 4b), and 3× on a row of its own.
  */
-function sharedUthRows(legal) {
+function uthButtonRows(legal) {
+  /*
+   * Three to a row (round 34, item 3): before the flop 4×, 3× and Check fit on
+   * one line at 360 px in both languages, the raises on the left — round 4b's
+   * yes-on-the-left, with the smaller raise between them.
+   */
+  const order = ['raise4x', 'raise3x', 'raise2x', 'raise1x', 'check', 'fold'];
+  const sorted = [...legal].sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const rows = [];
-  for (const [yes, no] of [['raise4x', 'check'], ['raise2x', 'check'], ['raise1x', 'fold']]) {
-    if (legal.includes(yes) && legal.includes(no)) rows.push([yes, no]);
-  }
-  if (legal.includes('raise3x')) rows.push(['raise3x']);
-  const placed = new Set(rows.flat());
-  for (const action of legal) if (!placed.has(action)) rows.push([action]);
+  for (let i = 0; i < sorted.length; i += 3) rows.push(sorted.slice(i, i + 3));
   return rows;
 }
 
@@ -25246,8 +25698,7 @@ const REACTION_KEYS = ['brave', 'where', 'withYou', 'shame', 'mum', 'explain'];
 /** One line of the ticker every eight seconds (§3.10). */
 const TICKER_MS = 8000;
 
-/** The smallest and largest table (§3.1). */
-const SHARED_MIN_SEATS = 2;
+/** The largest table (§3.1): a new table is opened with room for this many (round 34). */
 const SHARED_MAX_SEATS = 6;
 
 /** The table this link points at, or null for the door. */
@@ -25324,9 +25775,21 @@ function seatNode(seat) {
    * never says it, and when a mistake ends the run it is simply not drawn.
    */
   const crown = window.EVCrown ? window.EVCrown.node(seat.crown) : null;
-  const bar = document.createElement('span');
-  bar.className = 'shared-seat-bar' + (seat.bar === null ? ' settling' : '');
-  bar.textContent = barText(seat.bar);
+  /*
+   * His chips at this table (round 34): the fun number, beside the name. The
+   * fair one — the share of decisions right — is on the one bar under the
+   * seats, with everybody on the same scale (item 5).
+   */
+  const chips = document.createElement('span');
+  chips.className = 'shared-chips';
+  chips.title = T('shared.chipsLabel');
+  chips.setAttribute('aria-label', `${T('shared.chipsLabel')}: ${seat.stack}`);
+  const coin = document.createElement('span');
+  coin.className = 'shared-coin';
+  coin.setAttribute('aria-hidden', 'true');
+  const sum = document.createElement('span');
+  sum.textContent = window.EVFigure ? window.EVFigure.units(seat.stack, true) : String(seat.stack);
+  chips.append(coin, sum);
   const status = document.createElement('span');
   status.className = 'shared-status';
   status.textContent = T(`shared.status.${seat.status}`);
@@ -25334,19 +25797,27 @@ function seatNode(seat) {
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
   total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
-  title.append(...[who, crown, bar, status, total].filter(Boolean));
+  title.append(...[who, crown, chips, status, total].filter(Boolean));
   box.appendChild(title);
 
   if (seat.actions.length > 0) {
     const acts = document.createElement('p');
     acts.className = 'shared-acts';
     acts.setAttribute('aria-label', T('shared.actsLabel'));
-    for (const action of seat.actions) {
+    seat.actions.forEach((action, index) => {
       const chip = document.createElement('span');
-      chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '');
+      /*
+       * Coloured by whether it was right (round 34) — the bars' grade, held by
+       * the bars' rule, so a neighbour's tag stays plain while it could still
+       * tell me something about a decision I have not made. No words: the
+       * colour is the whole of it, and the analysis card has the rest.
+       */
+      const grade = seat.grades ? seat.grades[index] : null;
+      chip.className = 'shared-act' + (action === 'forfeit' ? ' forfeit' : '') + (grade ? ` ${grade}` : '');
+      if (grade) chip.dataset.grade = grade;
       chip.textContent = action === 'forfeit' ? T('shared.act.forfeit') : actionLabel(action);
       acts.appendChild(chip);
-    }
+    });
     box.appendChild(acts);
   }
 
@@ -25374,13 +25845,13 @@ function seatNode(seat) {
     const cards = document.createElement('div');
     cards.className = 'cards';
     for (const card of only.cards) cards.appendChild(cardNode(card));
-    box.appendChild(cards);
+    box.appendChild(withFigures(cards, seat.figures));
   } else if (seat.faceDown > 0) {
     /* An Ultimate neighbour's two cards are his own until the hand is over (round 32). */
     const cards = document.createElement('div');
     cards.className = 'cards';
     for (let i = 0; i < seat.faceDown; i++) cards.appendChild(faceDownNode());
-    box.appendChild(cards);
+    box.appendChild(withFigures(cards, seat.figures));
   } else {
     const empty = document.createElement('p');
     empty.className = 'shared-empty';
@@ -25398,9 +25869,110 @@ function seatNode(seat) {
   return box;
 }
 
-/** A bar as the seat header shows it: a percentage, or "settling" under ten decisions. */
-function barText(bar) {
-  return bar === null ? T('shared.settling') : T('shared.barValue', { pct: Math.round(bar * 100) });
+/**
+ * The cards, with the figures of the seat's latest decision on their left
+ * (round 34): what each action brings back per unit staked, best first, his
+ * choice ringed — the returns block's numbers and nothing of its words.
+ */
+function withFigures(cards, figures) {
+  if (!figures) return cards;
+  const row = document.createElement('div');
+  row.className = 'shared-cardrow';
+  row.append(figuresNode(figures, false), cards);
+  return row;
+}
+
+/**
+ * A spot's figures as rows of action · bar · figure (round 34). `full` is the
+ * size the dock draws them at when there is nothing to press.
+ *
+ * The bar is on the returns block's own scale, 0 to 2, so a row here and a row
+ * there are the same length for the same figure.
+ */
+function figuresNode(figures, full) {
+  const box = document.createElement('div');
+  box.className = 'shared-figures' + (full ? ' full' : '') + (figures.correct ? ' right' : ' wrong');
+  box.setAttribute('role', 'table');
+  const best = figures.rows.length > 0 ? figures.rows[0].value : 0;
+  for (const row of figures.rows) {
+    const line = document.createElement('div');
+    line.className =
+      'shared-figure' +
+      (row.action === figures.chosen ? ' chosen' : '') +
+      (Math.abs(row.value - best) < 1e-9 ? ' best' : '');
+    line.setAttribute('role', 'row');
+    const name = document.createElement('span');
+    name.className = 'shared-figure-name';
+    name.textContent = actionLabel(row.action);
+    const track = document.createElement('span');
+    track.className = 'shared-figure-track';
+    const fill = document.createElement('span');
+    fill.className = 'shared-figure-fill';
+    fill.style.width = `${Math.max(0, Math.min(100, (row.value / 2) * 100))}%`;
+    track.appendChild(fill);
+    const value = document.createElement('span');
+    value.className = 'shared-figure-value';
+    value.textContent = row.value.toFixed(3);
+    line.append(name, track, value);
+    box.appendChild(line);
+  }
+  return box;
+}
+
+/**
+ * The one accuracy bar (round 34, item 5): the whole table on one scale, a
+ * marker for each player at his own share of decisions right.
+ *
+ * A seat still settling (under ten decisions) has no figure and no marker —
+ * the same honesty the per-seat bar kept. Markers that would overlap are put
+ * on a second or third lane rather than on top of each other, so two players
+ * at 94% and 95% are both readable at 360 px.
+ */
+function accuracyNode(screen) {
+  const placed = seatedAt(screen)
+    .filter((seat) => seat.bar !== null)
+    .map((seat) => ({ seat, pct: Math.round(seat.bar * 100) }))
+    .sort((a, b) => a.pct - b.pct);
+  const box = document.createElement('div');
+  box.className = 'shared-accuracy';
+  box.setAttribute('aria-label', T('shared.barTitle'));
+  const track = document.createElement('div');
+  track.className = 'shared-accuracy-track';
+  box.appendChild(track);
+  if (placed.length === 0) {
+    const settling = document.createElement('span');
+    settling.className = 'shared-accuracy-settling';
+    settling.textContent = T('shared.settling');
+    box.appendChild(settling);
+    return box;
+  }
+  /* Lanes: a marker takes the first lane whose last marker is far enough away. */
+  const GAP = 16; // percent of the track a pill needs at 360 px
+  const lanes = [];
+  for (const entry of placed) {
+    let lane = lanes.findIndex((last) => entry.pct - last >= GAP);
+    if (lane < 0) {
+      lane = lanes.length;
+      lanes.push(entry.pct);
+    } else lanes[lane] = entry.pct;
+    const marker = document.createElement('span');
+    marker.className = 'shared-marker' + (entry.seat.mine ? ' mine' : '');
+    marker.dataset.seat = String(entry.seat.seat);
+    marker.dataset.lane = String(lane);
+    marker.style.left = `${entry.pct}%`;
+    marker.style.top = `${lane * 22}px`;
+    const name = entry.seat.mine ? T('shared.you') : entry.seat.name;
+    marker.title = `${name} · ${entry.pct}%`;
+    marker.setAttribute('aria-label', `${name} ${entry.pct}%`);
+    const initial = document.createElement('b');
+    initial.textContent = Array.from(name || '?')[0];
+    const pct = document.createElement('span');
+    pct.textContent = `${entry.pct}%`;
+    marker.append(initial, pct);
+    track.appendChild(marker);
+  }
+  track.style.height = `${lanes.length * 22}px`;
+  return box;
 }
 
 /**
@@ -25438,6 +26010,44 @@ function headerFigure(hand, words) {
  * Under it, as text and nothing to press: the table's figures, the line that
  * names the two measures, and the comparison when they disagree.
  */
+/**
+ * "The evening so far", above the felt (round 34, item 9): who leads on the bar
+ * and who leads on chips, in one line and no commentary. Only once a hand has
+ * finished with at least two people at the table.
+ */
+function renderEvening(screen) {
+  const box = el('shared-evening');
+  if (!box) return;
+  const seated = seatedAt(screen).filter((seat) => seat.handsPlayed > 0);
+  if (!screen || screen.handsFinished < 1 || seated.length < 2) {
+    box.hidden = true;
+    return;
+  }
+  const nameOf = (seat) => (seat.mine ? T('shared.you') : seat.name);
+  const rated = seated.filter((seat) => seat.bar !== null).sort((a, b) => b.bar - a.bar);
+  const rich = [...seated].sort((a, b) => b.stack - a.stack);
+  box.hidden = false;
+  box.textContent = T('shared.evening', {
+    bar: rated.length > 0 ? nameOf(rated[0]) : T('shared.settling'),
+    chips: nameOf(rich[0]),
+  });
+}
+
+/** The summary of the evening so far, as `EVEvening` draws and shares it (round 34). */
+function eveningSummary(screen) {
+  const seated = seatedAt(screen).filter((seat) => seat.handsPlayed > 0);
+  const rated = seated.filter((seat) => seat.bar !== null).sort((a, b) => b.bar - a.bar);
+  const rich = [...seated].sort((a, b) => b.stack - a.stack);
+  return {
+    game: screen.game,
+    hands: screen.handsFinished,
+    accurate: rated.length > 0 ? { name: rated[0].name, pct: Math.round(rated[0].bar * 100) } : null,
+    chips: rich.length > 0 ? { name: rich[0].name, n: rich[0].stack } : null,
+    priciest: screen.priciest,
+    players: seated.map((seat) => seat.name),
+  };
+}
+
 function renderMeasures(screen) {
   const box = el('shared-measures');
   if (!screen) {
@@ -25451,6 +26061,36 @@ function renderMeasures(screen) {
   if (card) box.appendChild(card);
 
   if (screen.table.seats > 1) box.appendChild(tableExtras(screen.table));
+
+  /* The priciest spot, once the table has met the same one more than once (round 34). */
+  if (screen.priciest) {
+    const line = document.createElement('p');
+    line.className = 'shared-priciest';
+    line.textContent = T('shared.priciest', {
+      spot: screen.priciest.label,
+      wrong: screen.priciest.wrong,
+      times: screen.priciest.times,
+      cost: screen.priciest.cost.toFixed(2),
+    });
+    box.appendChild(line);
+  }
+
+  /* The last hands, and what each player did in each (round 34). */
+  if (screen.history.length > 0) box.appendChild(historyNode(screen));
+
+  /* A free seat: the link, one tap away, for whoever arrives next (round 34). */
+  if (screen.seats.some((seat) => !seat.seated)) {
+    const invite = document.createElement('button');
+    invite.className = 'action shared-invite-inline';
+    invite.type = 'button';
+    invite.id = 'shared-copy-inline';
+    invite.textContent = T('shared.copy');
+    invite.addEventListener('click', () => {
+      if (navigator.clipboard) void navigator.clipboard.writeText(inviteLink());
+      invite.textContent = T('shared.copied');
+    });
+    box.appendChild(invite);
+  }
 
   const legend = document.createElement('p');
   legend.className = 'shared-legend';
@@ -25704,6 +26344,56 @@ function tableRow(measures) {
 
   row.append(name, bar, stack);
   return row;
+}
+
+/**
+ * The table's last hands (round 34): what each player did, each action
+ * coloured right or wrong as on the felt, and the hand's result. Finished hands
+ * only, so nothing here can tell anybody about a decision still to make.
+ */
+function historyNode(screen) {
+  const box = document.createElement('details');
+  box.className = 'shared-history';
+  const summary = document.createElement('summary');
+  summary.textContent = T('shared.historyTitle');
+  box.appendChild(summary);
+  for (const hand of screen.history) {
+    const row = document.createElement('div');
+    row.className = 'shared-history-hand';
+    const head = document.createElement('span');
+    head.className = 'shared-history-n';
+    head.textContent = T('shared.historyHand', { n: hand.hand + 1 });
+    row.appendChild(head);
+    for (const seat of hand.seats) {
+      const who = document.createElement('span');
+      who.className = 'shared-history-seat';
+      const name = document.createElement('b');
+      name.textContent = seat.seat === shared.seat ? T('shared.you') : seat.name;
+      who.appendChild(name);
+      for (const act of seat.actions) {
+        const tag = document.createElement('span');
+        tag.className = `shared-act ${act.grade}`;
+        tag.dataset.grade = act.grade;
+        tag.textContent = actionLabel(act.action);
+        who.appendChild(tag);
+      }
+      if (seat.forfeit) {
+        const tag = document.createElement('span');
+        tag.className = 'shared-act forfeit wrong';
+        tag.textContent = T('shared.act.forfeit');
+        who.appendChild(tag);
+      }
+      if (seat.net !== null) {
+        const net = document.createElement('span');
+        net.className = 'shared-history-net';
+        net.textContent = window.EVFigure ? window.EVFigure.units(seat.net, true) : String(seat.net);
+        who.appendChild(net);
+      }
+      row.appendChild(who);
+    }
+    box.appendChild(row);
+  }
+  return box;
 }
 
 /** The three figures that only the table has: hands, what it cost, the best run. */
@@ -26045,7 +26735,7 @@ function renderActions(screen) {
   };
   if (screen.game === 'uth' && screen.legal.length > 0) {
     box.classList.add('rows');
-    for (const actions of sharedUthRows(screen.legal)) {
+    for (const actions of uthButtonRows(screen.legal)) {
       const line = document.createElement('div');
       line.className = 'action-row';
       line.style.setProperty('--cols', String(actions.length));
@@ -26058,6 +26748,28 @@ function renderActions(screen) {
   }
 
   if (screen.legal.length === 0) {
+    /*
+     * With nothing to press, the space holds the figures of the spot I just
+     * played (round 34, item 3) — the same numbers as beside my cards, at full
+     * size. It is not a control: nothing in it can be pressed, so round 30's
+     * rule — nothing to press appears where a button was as a hand ends —
+     * still holds, and the 450 ms settle-in hold still guards the first tap on
+     * the buttons when they come back (it is keyed to the offer, which changes).
+     */
+    const last = screen.analysis.length > 0 ? screen.analysis[screen.analysis.length - 1] : null;
+    if (last) {
+      box.appendChild(
+        figuresNode(
+          {
+            rows: last.ranked.map((row) => ({ action: row.action, value: row.value })),
+            chosen: last.action,
+            optimal: last.optimalAction,
+            correct: last.correct,
+          },
+          true,
+        ),
+      );
+    }
     const line = document.createElement('p');
     line.className = 'shared-dock-line';
     line.id = 'shared-dock-line';
@@ -26166,31 +26878,6 @@ function tickNextHand() {
   }
 }
 
-/**
- * How many seats, chosen before the table exists.
- *
- * Buttons rather than a number field: this is a choice between five things on a
- * phone, and the answer is almost always the first one.
- */
-function renderSeatPicker() {
-  const row = el('shared-seats-row');
-  if (!row) return;
-  row.replaceChildren();
-  for (let seats = SHARED_MIN_SEATS; seats <= SHARED_MAX_SEATS; seats++) {
-    const pick = document.createElement('button');
-    pick.className = 'action seat-pick' + (seats === shared.seats ? ' primary' : '');
-    pick.type = 'button';
-    pick.dataset.seats = String(seats);
-    pick.textContent = String(seats);
-    pick.setAttribute('aria-pressed', seats === shared.seats ? 'true' : 'false');
-    pick.addEventListener('click', () => {
-      shared.seats = seats;
-      renderSeatPicker();
-    });
-    row.appendChild(pick);
-  }
-}
-
 /** Which game, chosen before the table exists (round 32). Blackjack unless changed. */
 function renderGamePicker() {
   const row = el('shared-game-row');
@@ -26226,11 +26913,11 @@ function render() {
    * rather than a page with nothing on it (round 29).
    */
   const lost = shared.lost && !screen;
-  el('shared-door').hidden = Boolean(shared.id) && !lost;
-  if (lost) {
+  el('shared-door').hidden = Boolean(shared.id) && !lost && !shared.full;
+  if (lost || shared.full) {
     const note = el('shared-door-note');
     note.hidden = false;
-    note.textContent = T('shared.missing');
+    note.textContent = T(shared.full ? 'shared.full' : 'shared.missing');
   }
   el('shared-refused').hidden = !(screen && screen.refused);
 
@@ -26258,8 +26945,24 @@ function render() {
    * arrive one at a time — but it is only the *whole* screen while nobody else
    * has come, which is the moment there is nothing else to show.
    */
-  el('shared-invite').hidden = !(shared.id && free && !(screen && screen.refused));
+  /*
+   * The link is the whole screen only while nobody else has come. Once people
+   * are playing, a table that still has a free seat (round 34: every table has
+   * six) offers the link as one small button under the felt instead — see
+   * `renderMeasures` — so the felt is not pushed down for the whole evening.
+   */
+  el('shared-invite').hidden = !(shared.id && free && alone && !(screen && screen.refused));
   el('shared-invite').classList.toggle('waiting', alone);
+  /*
+   * The evening's summary (round 34, item 9), once there is an evening to sum
+   * up and nobody left to play it with — the table has ended for me.
+   */
+  const summaryBox = el('shared-summary');
+  if (summaryBox) {
+    const ended = Boolean(screen) && alone && screen.handsFinished > 0 && window.EVEvening;
+    summaryBox.hidden = !ended;
+    summaryBox.replaceChildren(...(ended ? [window.EVEvening.card(eveningSummary(screen))] : []));
+  }
   if (shared.id && free) el('shared-link').textContent = inviteLink();
 
   const playable = Boolean(screen) && !screen.refused && !alone;
@@ -26322,9 +27025,11 @@ function render() {
    */
   const line = el('shared-table-line');
   line.replaceChildren();
-  line.hidden = screen.table.seats <= 1;
+  line.hidden = seatedAt(screen).length < 1;
+  line.appendChild(accuracyNode(screen));
   if (screen.table.seats > 1) line.appendChild(tableRow(screen.table));
 
+  renderEvening(screen);
   renderClock(shared.clock);
   renderMeasures(screen);
   renderActions(screen);
@@ -26388,6 +27093,8 @@ function apply(answer) {
     shared.lost = false;
   }
   if (answer.seat !== undefined && answer.seat !== null) shared.seat = answer.seat;
+  /* A seventh arrival: every seat has somebody, and he is told so at the door. */
+  if (answer.taken && (answer.seat === null || answer.seat === undefined)) shared.full = true;
   if (answer.screen !== undefined) shared.screen = answer.screen;
   if (answer.clock !== undefined) shared.clock = answer.clock;
 }
@@ -26440,12 +27147,15 @@ function openShared() {
   shared.clock = null;
   shared.unavailable = false;
 
-  renderSeatPicker();
   renderGamePicker();
 
   el('shared-make').addEventListener('click', () =>
     void act(async () => {
-      const made = await api('/api/shared/create', { seats: shared.seats, game: shared.game });
+      /*
+       * No "how many of you" (round 34, item 7): a table is opened with room
+       * for six, and seats fill as people arrive by the link.
+       */
+      const made = await api('/api/shared/create', { seats: SHARED_MAX_SEATS, game: shared.game });
       if (made && made.id && location.hash !== `#shared=${made.id}`) {
         location.hash = `#shared=${made.id}`;
       }
@@ -26477,6 +27187,10 @@ function openShared() {
   if (home) {
     home.setAttribute('title', T('shared.leaveHint'));
     home.addEventListener('click', () => {
+      /* The evening, kept for the home screen to sum up once (round 34, item 9). */
+      if (shared.screen && shared.screen.handsFinished > 0 && window.EVEvening) {
+        window.EVEvening.keep(eveningSummary(shared.screen));
+      }
       if (shared.id && shared.seat !== null) void api('/api/shared/leave', { id: shared.id });
     });
   }
