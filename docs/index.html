@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="2213cf9865f57029df61794e3c4f0d5f3d87b862" />
-<meta name="ev-build-at" content="2026-09-23T22:25:23.060Z" />
+<meta name="ev-build-commit" content="fbd27cd681f3d59fdb8fd74b99b34fbf59fd8015" />
+<meta name="ev-build-at" content="2026-09-23T22:36:43.770Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -20357,15 +20357,28 @@ const SHARED_HTML = "<div class=\"shell\">\n      <header class=\"rules\" id=\"s
     }
   }
 
-  /** The kept evening, handed over once and then forgotten. */
+  /**
+   * The kept evening, handed over once and then forgotten.
+   *
+   * Leaving by the home link mounts home twice in quick succession — once for
+   * the click and once for the address changing — and the first mount used to
+   * take the evening and the second find nothing and hide it (found on the live
+   * walk, round 34). So what was taken is still handed to a mount in the next
+   * few seconds, and to nothing after that.
+   */
+  let taken = null;
   function takeKept() {
     try {
       const data = JSON.parse(localStorage.getItem(KEY) || 'null');
-      localStorage.setItem(KEY, '');
-      return data && typeof data.hands === 'number' ? data : null;
+      if (data && typeof data.hands === 'number') {
+        localStorage.setItem(KEY, '');
+        taken = { data, at: Date.now() };
+        return data;
+      }
     } catch {
-      return null;
+      // No storage: nothing was kept.
     }
+    return taken && Date.now() - taken.at < 5000 ? taken.data : null;
   }
 
   window.EVEvening = { card, keep, takeKept, lines };
@@ -26959,7 +26972,13 @@ function render() {
    */
   const summaryBox = el('shared-summary');
   if (summaryBox) {
-    const ended = Boolean(screen) && alone && screen.handsFinished > 0 && window.EVEvening;
+    /*
+     * "Alone" here counts the players still playing: somebody who left by the
+     * home link keeps his seat — he can come back by the same link — so the
+     * seat count alone never drops when the evening ends.
+     */
+    const playing = screen ? seatedAt(screen).filter((seat) => seat.status !== 'away').length : 0;
+    const ended = Boolean(screen) && playing < 2 && screen.handsFinished > 0 && window.EVEvening;
     summaryBox.hidden = !ended;
     summaryBox.replaceChildren(...(ended ? [window.EVEvening.card(eveningSummary(screen))] : []));
   }
