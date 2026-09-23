@@ -342,6 +342,30 @@ everyone's cards.
 - **Shared Ultimate decisions move only the Ultimate rating and its lifetime
   count** (`UthSession.absorbRated`), as Blackjack's move only its own.
 
+## A crown is a state on the current run, not a remark (round 33)
+
+Small from 7 right in a row, medium from 14, large from 21; a mistake ends the
+run and the crown goes with it, unannounced. `crownFor(run)` reads it off the
+run, and `advanceRun` is the one run rule for both games and both tables
+(`advanceStreak` now calls it). At the shared table each seat's crown is
+counted from the decisions that screen may see, so it cannot leak a
+neighbour's grade early; a forfeit ends the run, leaving does not.
+
+- **Rebuilt from `claude/crowns-r31`, not merged.** The branch fired a crown
+  once at the decision that reached 7/14/21; the rule is now a state, so only
+  the thresholds and the run rules carried over.
+- **The streak lines at 10 and 25 stay.** The branch had dropped them to avoid
+  a remark on top of a crown; a crown says nothing, so there is nothing to
+  collide with. *Rejected:* removing them without being asked.
+- **No new strings.** The crown's label is the existing `fb.streak`
+  ("{n} correct in a row").
+
+## A claimed name says so (round 33)
+
+`claim` (a live row with no code) now leaves a one-line notice on the first
+home screen: the name is yours, the code is set, the history came with it.
+Stored as `ev:claimed` and emptied once shown.
+
 ## Working practice
 
 - **Git is run without asking.** Commit and push on
