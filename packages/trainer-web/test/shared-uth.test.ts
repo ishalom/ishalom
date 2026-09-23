@@ -484,3 +484,20 @@ test('the conditional join gives an Ultimate seat to the first comer and tells t
     server.close();
   }
 });
+
+test('leaving by the home link costs nothing at an Ultimate table, and moves nobody else\'s cards', () => {
+  const record = freshTable(131, 2);
+  record.seats.forEach((seat) => (seat.hands = 1));
+  record.seats[0]!.moves.push({ hand: 0, round: 0, action: 'check' });
+  const before = deriveTable(record).hands[0]!;
+  // What `sharedLeave` writes: a drop in the leaver's own row, marked as leaving.
+  record.seats[1]!.events = [...(record.seats[1]!.events ?? []), { kind: 'drop', seat: 1, hand: 0, why: 'left' }];
+  const after = deriveTable(record).hands[0]!;
+  assert.equal(after.seats.some((seat) => seat.seat === 1), false, 'the seat that left is still dealt in');
+  assert.deepEqual(after.seats[0]!.cards, before.seats.find((s) => s.seat === 0)!.cards);
+  assert.deepEqual(after.dealer, before.dealer);
+  assert.deepEqual(seatRatable(record, 1), [], 'leaving on purpose was charged as a forfeit');
+  // The one still sitting goes on to the flop at once; nobody waits for the player who left.
+  assert.deepEqual(seatView(record, 0).waitingFor, [0], 'the table still waits for the player who left');
+  assert.equal(sharedScreen(record, 0).board.length, 3);
+});
