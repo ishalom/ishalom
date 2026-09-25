@@ -383,6 +383,27 @@ neighbour's flop grade show while I was still deciding my flop.
   phone recording its own decision time into its own move, which is a change
   to what is written and waits for a yes.
 
+## Pace, kept solves, freed seats, and a drop that stays a drop (round 35)
+
+- **Pace** is measured by each phone for its own player, from his buttons
+  appearing to his tap, into his own move as `ms`. The derivation never reads
+  it. No time on a first hand, after a reload, or while the page was hidden.
+- **Kept solves.** The phone keeps its flop solves in `localStorage`
+  (`ev:uthSolves`), tagged with the build that made them; each is checked on
+  the way in. Full, cleared or unreadable storage means a slow reload, never a
+  wrong one.
+- **A seat is freed when its player leaves by the home link.** The row stays,
+  and each join names who sat down; a seat shows its present occupant's
+  figures, from his own arrival. He gets his old seat back if it is still
+  free. *Rejected:* a second row per seat (a schema change); a returning
+  player always taking a new seat (six seats run out). A drop by the thirty
+  seconds keeps the seat.
+- **A drop stays a drop.** A vote that has dropped somebody is written as a
+  drop event into the voter's own row before anything replaces the vote.
+  Vote drops, derived or kept, read after the rows' own events, as they always
+  did. Before this, a player's next vote replayed the hand his earlier vote
+  had ended (true since round 22).
+
 ## Working practice
 
 - **Git is run without asking.** Commit and push on
