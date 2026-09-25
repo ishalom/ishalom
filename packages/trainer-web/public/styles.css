@@ -1,0 +1,3183 @@
+/*
+ * Spec §10.1: primary actions along the bottom edge, reachable one-handed on a
+ * phone; the rule badge pinned and non-dismissible; dealing fast rather than
+ * cinematic, because this is a drilling tool and not a casino simulator.
+ *
+ * Spec §13: card ranks legible without depending on colour, so every card shows
+ * its rank and suit glyph and carries a screen-reader label.
+ */
+
+:root {
+  color-scheme: dark;
+  /* Warmed a step and softened: the first version read as an instrument panel.
+     Same family, less glare — lower contrast on the lines, a touch of warmth in
+     the greys, and ink that is not quite white. */
+  --bg: #12161c;
+  --panel: #1b2129;
+  --panel-2: #222a33;
+  --line: #2c3540;
+  --ink: #e6e9ee;
+  --muted: #8e9aa8;
+  --felt: #14532d;
+
+  --optimal: #34d399;
+  --negligible: #94a3b8;
+  --minor: #fbbf24;
+  --significant: #fb923c;
+  --blunder: #f87171;
+}
+
+* { box-sizing: border-box; }
+
+/*
+ * `hidden` means hidden, whatever else the element's class says (round 29).
+ *
+ * The browser's own `[hidden] { display: none }` is the weakest rule on the
+ * page, so any class that sets `display` quietly overrides it. That is how the
+ * shared table showed an empty felt and an empty outlined box to two people on
+ * two phones: `.table` is flex and `.shared-clock` is flex, both were marked
+ * hidden, and both were drawn.
+ */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* --- Rule badge (§10.1, always visible) --- */
+.rules {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+.rules-main { display: flex; flex-direction: column; min-width: 0; }
+.rules-name { font-weight: 600; font-size: 14px; }
+.rules-sub { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rules-badge { color: var(--muted); font-size: 12px; }
+.rules-change { font-size: 11px; flex: none; }
+
+/* --- Session stats (§9.2: accuracy first, units last and quiet) ---
+ *
+ * Pinned under the rules bar, for the same reason the dock is pinned to the
+ * bottom: these four figures are what the session is *for*, and a player who
+ * has scrolled down to read a hand log should not have to scroll back to see
+ * what it did to their accuracy.
+ *
+ * `--rules-h` is measured rather than guessed. The bar above is two lines of
+ * text whose height depends on the language and the font, so a hardcoded offset
+ * would leave a gap in one locale and overlap in another. `pinStrip()` in
+ * app.js sets it and keeps it current.
+ */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: var(--rules-h, 52px);
+  z-index: 4; /* under the rules bar, over the felt */
+}
+.stat {
+  background: var(--panel);
+  padding: 10px 8px;
+  text-align: center;
+  min-width: 0;
+}
+.stat-value { display: block; font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.stat-label { display: block; font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.stat-quiet .stat-value { color: var(--muted); font-weight: 500; }
+
+/*
+ * Short screens: the strip gives way first.
+ *
+ * Pinned strip at the top plus pinned dock at the bottom leaves the felt what
+ * is left, and on a 768px-high laptop that is not much. Idan's decision: the
+ * strip shrinks to one compact line of figures before the cards shrink, with
+ * the labels behind the "?" — which is where the full explanation already
+ * lives, so nothing is lost that was not one tap away before.
+ */
+@media (max-height: 800px) {
+  .stat { padding: 5px 6px; }
+  .stat-value { font-size: 15px; }
+  .stat-label { display: none; }
+  .stat-more { opacity: 0.7; }
+}
+
+/* --- Table --- */
+.table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 14px;
+  background: radial-gradient(120% 80% at 50% 0%, #17362a 0%, var(--bg) 65%);
+}
+.seat-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.seat-total {
+  color: var(--ink);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+.cards { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.card {
+  width: 52px;
+  height: 74px;
+  border-radius: 7px;
+  background: #f7fafc;
+  color: #10151b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+.card.red { color: #c0233a; }
+.card-rank { font-size: 20px; line-height: 1; }
+.card-suit { font-size: 16px; line-height: 1; }
+.card.back {
+  background: repeating-linear-gradient(45deg, #2d4c72, #2d4c72 5px, #24405f 5px, #24405f 10px);
+  box-shadow: inset 0 0 0 2px #3d5f88, 0 2px 6px rgba(0, 0, 0, 0.45);
+}
+
+/*
+ * The frame around a hand says one thing: which of two hands is being played.
+ * With a single hand there is nothing to tell apart and the header names the
+ * seat, so it is padding on four sides and it goes (round 17).
+ */
+.hand { padding: 0; border-radius: 10px; border: 1px solid transparent; }
+#player-hands.split .hand { padding: 8px; }
+#player-hands.split .hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
+/*
+ * The total lives in the seat's header now (round 17), so the box holds cards
+ * and nothing else. It was 48px of number inside a frame, and it left the
+ * player with no total at all at showdown — the one moment he wanted it.
+ */
+.hand-meta { margin-top: 4px; font-size: 12px; color: var(--muted); }
+.hand-net { font-weight: 600; }
+.hand-net.win { color: var(--optimal); }
+.hand-net.loss { color: var(--blunder); }
+
+.empty { color: var(--muted); text-align: center; margin: auto 0; }
+
+/* --- Feedback card (§7.1) --- */
+.feedback {
+  margin: 0 14px 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border-inline-start: 4px solid var(--negligible);
+}
+.feedback.optimal { border-inline-start-color: var(--optimal); }
+.feedback.negligible { border-inline-start-color: var(--negligible); }
+.feedback.minor { border-inline-start-color: var(--minor); }
+.feedback.significant { border-inline-start-color: var(--significant); }
+.feedback.blunder { border-inline-start-color: var(--blunder); }
+
+.verdict { font-weight: 700; font-size: 15px; margin: 0 0 2px; }
+.feedback.optimal .verdict { color: var(--optimal); }
+.feedback.minor .verdict { color: var(--minor); }
+.feedback.significant .verdict { color: var(--significant); }
+.feedback.blunder .verdict { color: var(--blunder); }
+
+.did { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
+.reason { margin: 0; font-size: 13.5px; }
+.sensitivity {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* --- Actions (§10.1: bottom edge, one-handed) --- */
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+button.action {
+  flex: 1 1 0;
+  min-width: 84px;
+  min-height: 52px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.action:hover { background: #26313d; }
+button.action:active { transform: translateY(1px); }
+button.action.primary { background: #1f6f4a; border-color: #2c8f61; }
+button.action.primary:hover { background: #248055; }
+
+/* --- Chrome --- */
+.link {
+  background: none;
+  border: none;
+  color: #7dd3a8;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+}
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+.footer-note { color: var(--muted); font-size: 11.5px; text-align: end; }
+.muted { color: var(--muted); font-size: 13px; }
+.legend { display: block; margin-top: 4px; font-size: 12px; }
+
+dialog {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--ink);
+  max-width: min(720px, 94vw);
+  padding: 18px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+dialog h2 { margin: 0 0 6px; font-size: 17px; }
+dialog menu { display: flex; justify-content: flex-end; padding: 0; margin: 14px 0 0; }
+dialog menu button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.preset {
+  display: block;
+  width: 100%;
+  text-align: start;
+  margin-top: 8px;
+  padding: 11px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.preset.current { border-color: #2c8f61; }
+.preset-note { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+/* --- Reference chart --- */
+.chart-grid { overflow-x: auto; }
+table.chart { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; margin-bottom: 14px; }
+table.chart th, table.chart td { border: 1px solid var(--line); padding: 3px 6px; text-align: center; }
+table.chart th { color: var(--muted); font-weight: 600; }
+td.H { background: #4a2323; }
+td.S { background: #23402f; }
+td.D { background: #2c3a52; }
+td.P { background: #402c4f; }
+td.R { background: #4a3d21; }
+
+/* ===========================================================================
+ * The mastery grid (round 20): the same 311 cells, read the other way.
+ *
+ * The letters stay, because a grid of what you have mastered is only useful if
+ * it still says what the right play is. What changes is what the colour means:
+ * not "what to do here" but "how well you know it" — dark for a spot never
+ * played, faint for one met, lit for one mastered. A collection that also says
+ * what to practise next, which is the dark half.
+ * ======================================================================== */
+
+.chart-grid.mastery td { color: var(--muted); }
+td.m-none { background: transparent; color: rgba(230, 233, 238, 0.22); }
+td.m-met { background: #2b3440; color: var(--ink); }
+td.m-mastered { background: #23402f; color: var(--ink); font-weight: 700; }
+.chart-modes { display: flex; gap: 8px; margin: 0 0 8px; }
+.chart-mode {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.chart-mode[aria-pressed='true'] { background: #23402f; color: var(--ink); border-color: #2c8f61; }
+#mastery-legend { margin: 0 0 8px; line-height: 1.5; }
+#mastery-legend b { color: var(--ink); font-weight: 600; }
+.mastery-rule { color: var(--muted); }
+
+/* ===========================================================================
+ * The gestures (round 20).
+ *
+ * Evidence, not a compliment, and quiet: one line, the same size the fiftieth
+ * time as the first, no colour of its own beyond the brass that says "this is
+ * about you rather than about the hand", and nothing that moves. §16 — the app
+ * is not a slot machine and a line that celebrated like one would read as the
+ * thing it is trying not to be.
+ * ======================================================================== */
+
+.gesture {
+  margin: 7px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.gesture b { color: #d7b56d; font-weight: 600; }
+
+/* The records line on home, and the sentence that ends a sitting. */
+.records {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 12px;
+}
+.records-title {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.records-line { font-size: 13.5px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.sitting {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.sitting b { color: var(--ink); font-weight: 600; }
+
+@media (max-width: 420px) {
+  .card { width: 46px; height: 66px; }
+  .stat-value { font-size: 16px; }
+}
+
+
+/* --- Guided reveal (§3.4) -------------------------------------------------
+ * The reasoning arrives a step at a time, in the order a competent player
+ * thinks: read the dealer, read your hand, then combine them. Steps stack
+ * rather than replace, so by the third the whole chain is on screen.
+ */
+.reveal { margin: 12px 14px; }
+.step {
+  display: flex;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  margin-bottom: 7px;
+}
+.step-n {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #101820;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.step.latest .step-n { border-color: #3f7d5c; color: var(--optimal); }
+.step p { margin: 0; font-size: 13.5px; }
+.step-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.reveal-controls { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+.reveal-next {
+  flex: 1;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid #2f9e6c;
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reveal-next .key { font-size: 10px; color: var(--muted); margin-inline-start: 7px; letter-spacing: 0.08em; }
+.reveal-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 6px;
+}
+
+/* The evaluated hand, so every step has a referent even after a split has
+ * replaced it on the board with two others. */
+.anchor {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+.anchor b { color: var(--ink); font-weight: 600; }
+
+.dealer-note { color: var(--minor); font-size: 12px; margin-top: 4px; }
+
+/* Accuracy tooltip, so the number is not mysterious. */
+.stat { position: relative; }
+.tip {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 6px);
+  width: 210px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #0b1016;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+  text-transform: none;
+  letter-spacing: 0;
+  z-index: 20;
+}
+.stat:hover .tip, .stat:focus .tip, .stat:focus-within .tip { display: block; }
+
+
+/* --- Hand log --------------------------------------------------------------
+ * Every finished hand, kept rather than counted. Tapping one reopens its
+ * reasoning, which is the ground §8's Replay mode is built on.
+ */
+.panel { margin: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 8px;
+}
+.panel-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel-note { font-size: 11.5px; color: var(--muted); }
+
+.log { max-height: 280px; overflow-y: auto; }
+.log-row {
+  display: grid;
+  grid-template-columns: 3px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 13px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.log-row:hover { background: var(--panel-2); }
+.log-tier { align-self: stretch; border-radius: 2px; background: var(--negligible); }
+.log-tier.optimal { background: var(--optimal); }
+.log-tier.negligible { background: var(--negligible); }
+.log-tier.minor { background: var(--minor); }
+.log-tier.significant { background: var(--significant); }
+.log-tier.blunder { background: var(--blunder); }
+.log-hand { font-size: 13px; }
+.log-detail { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.log-net { text-align: end; font-variant-numeric: tabular-nums; font-size: 13px; }
+.log-net.win { color: var(--optimal); }
+.log-net.loss { color: var(--blunder); }
+.log-steps { padding: 2px 13px 12px 26px; }
+.log-steps p { margin: 0 0 5px; font-size: 12.5px; color: var(--muted); }
+
+/* One block per decision, so three decisions read as three, not as one that
+   changed its mind. The separator is what makes them visibly separate. */
+.log-decision { padding: 8px 0; }
+.log-decision + .log-decision { border-top: 1px solid var(--line); }
+.log-decision-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 5px;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+.log-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--negligible); flex: none; }
+.log-dot.optimal { background: var(--optimal); }
+.log-dot.negligible { background: var(--negligible); }
+.log-dot.minor { background: var(--minor); }
+.log-dot.significant { background: var(--significant); }
+.log-dot.blunder { background: var(--blunder); }
+.log-step-title {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+/* ===========================================================================
+ * Casino dressing, ported from the approved mockup.
+ *
+ * The palette above is unchanged; what follows is the room the game is played
+ * in — felt, a brass rail, chips, and the dealer who works the table. Nothing
+ * flashes and nothing counts down: §16 rules out anything that pressures a
+ * return, and a drilling tool should not fidget while you think.
+ * ======================================================================== */
+
+:root {
+  --brass: #c9a227;
+  --brass-dim: #8a6d1b;
+  --felt-hi: #1c6a40;
+  --felt-lo: #0c3a22;
+  --voice: #f2c879;
+  --shadow: rgba(0, 0, 0, 0.5);
+  --display: ui-serif, Georgia, "Times New Roman", serif;
+}
+
+.shell {
+  max-width: 540px;
+  /*
+   * The width of what holds it, and never of what is inside it (round 19).
+   *
+   * Ultimate's worked sums are one long unbreakable line — `(809,564 × +2.860
+   * − 250,716 × 3.410) ÷ 1,070,190 ÷ 2 = 1.234`. The shell was sized by its
+   * contents, so on a 360px phone that one line made the shell 520px and took
+   * the felt, the seats and the dock off the side of the screen with it.
+   * Measured, bisected, and fixed here rather than by shortening the sum: a
+   * page whose width depends on its longest line is a page waiting for the
+   * next long line. The sum scrolls inside `.worked-sum`, which is what that
+   * rule was written for.
+   */
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 auto;
+  min-height: 100dvh;
+  border-inline: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+hr.brass {
+  height: 3px;
+  border: none;
+  margin: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--brass-dim) 12%,
+    var(--brass) 50%,
+    var(--brass-dim) 88%,
+    transparent
+  );
+  opacity: 0.85;
+}
+
+/* --- Felt ----------------------------------------------------------------- */
+
+.felt {
+  position: relative;
+  background: radial-gradient(120% 90% at 50% -10%, var(--felt-hi) 0%, var(--felt-lo) 55%, #08281a 100%);
+  border-top: 1px solid rgba(201, 162, 39, 0.28);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image:
+    repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 3px);
+}
+/* The dealer's arc, the way it is painted on a real table. */
+.felt::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -46%;
+  width: 150%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.16);
+  pointer-events: none;
+}
+
+/* --- The dealer ----------------------------------------------------------- */
+
+
+.chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10151b;
+  background: var(--brass);
+  border: 3px dashed rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.hand-row { display: flex; align-items: center; gap: 10px; }
+
+/* --- Home screen ---------------------------------------------------------- */
+
+.crest {
+  padding: 26px 16px 20px;
+  text-align: center;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(201, 162, 39, 0.12) 0%, transparent 60%),
+    var(--panel);
+}
+.who { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.initial {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 22px;
+  color: #10151b;
+  background: linear-gradient(180deg, var(--brass) 0%, var(--brass-dim) 100%);
+  box-shadow: 0 3px 10px var(--shadow);
+}
+.who-name {
+  font-family: var(--display);
+  font-size: 26px;
+  background: none;
+  border: none;
+  color: var(--ink);
+  text-align: start;
+  padding: 0;
+  width: 100%;
+}
+.who-name:focus { outline: 1px dashed var(--brass-dim); outline-offset: 3px; }
+.who-since { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+.rating-block { margin-top: 18px; }
+.rating-value {
+  font-family: var(--display);
+  font-size: 60px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--brass);
+  text-shadow: 0 2px 14px rgba(201, 162, 39, 0.25);
+}
+.rating-value.provisional { opacity: 0.55; }
+.rating-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.rating-side {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.rating-side .up { color: var(--optimal); }
+.rating-side .down { color: var(--blunder); }
+
+.games { padding: 12px 16px 0; display: grid; gap: 10px; }
+.game {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 15px 16px;
+  background:
+    radial-gradient(140% 100% at 100% 0%, rgba(28, 106, 64, 0.35) 0%, transparent 62%),
+    var(--panel);
+  position: relative;
+  overflow: hidden;
+}
+.game:hover { border-color: var(--brass-dim); }
+.game-title { font-family: var(--display); font-size: 21px; }
+.game-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.game-foot {
+  margin-top: 11px;
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.game-foot b { color: var(--ink); font-weight: 600; }
+.game .pip { position: absolute; right: 14px; top: 12px; font-size: 34px; opacity: 0.18; line-height: 1; }
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--brass-dim);
+  color: var(--voice);
+  vertical-align: 2px;
+  margin-inline-start: 7px;
+}
+
+.modes { display: flex; gap: 6px; margin-top: 11px; }
+.mode {
+  flex: 1;
+  font: inherit;
+  font-size: 11.5px;
+  padding: 7px 4px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #101820;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: center;
+}
+.mode[aria-pressed="true"] {
+  border-color: var(--brass-dim);
+  color: var(--ink);
+  background: rgba(201, 162, 39, 0.12);
+}
+.mode small { display: block; font-size: 9.5px; opacity: 0.75; margin-top: 1px; }
+
+.ladder-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+}
+.ladder-row:first-child { border-top: none; }
+.ladder-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--optimal), var(--minor), var(--blunder));
+  margin-top: 4px;
+}
+.ladder-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ladder-score { font-family: var(--display); font-size: 16px; color: var(--brass); }
+
+.back { color: var(--brass); text-decoration: none; font-size: 13px; white-space: nowrap; }
+.topbar-title { display: flex; flex-direction: column; min-width: 0; }
+
+/* ===========================================================================
+ * Home: a greeting and two doors, with everything measured behind a tab.
+ *
+ * The first version put four figures across the top of the front page, which
+ * read as an instrument panel rather than an invitation. Numbers are not the
+ * welcome; they are what you look up when you want them.
+ * ======================================================================== */
+
+.hero {
+  padding: 34px 22px 26px;
+  text-align: center;
+  background:
+    radial-gradient(130% 90% at 50% -10%, rgba(201, 162, 39, 0.13) 0%, transparent 62%),
+    linear-gradient(180deg, #1d2530 0%, var(--bg) 100%);
+}
+.hero-top { display: flex; align-items: center; justify-content: center; gap: 13px; }
+.hero .initial {
+  width: 42px;
+  height: 42px;
+  font-size: 19px;
+}
+.hero .who-name {
+  font-family: var(--display);
+  font-size: 30px;
+  letter-spacing: 0.01em;
+  width: auto;
+  max-width: 240px;
+  text-align: start;
+}
+.hero-line {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* --- The two doors -------------------------------------------------------- */
+
+.doors { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 4px 18px 20px; }
+.door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 22px 18px 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  color: var(--ink);
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  background:
+    radial-gradient(140% 120% at 20% 0%, rgba(28, 106, 64, 0.55) 0%, transparent 70%),
+    linear-gradient(180deg, #1f2731 0%, #171d25 100%);
+}
+/* The lift and its transition live in the reduced-motion regime at the end of
+   this file; the colour change stays here, since it is not motion. */
+.door:hover { border-color: var(--brass); }
+.door.secondary {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, #1e242c 0%, #171c23 100%);
+}
+.door-title { font-family: var(--display); font-size: 23px; line-height: 1.15; }
+.door-sub { font-size: 12.5px; color: var(--muted); }
+.door-pip {
+  position: absolute;
+  inset-inline-end: 12px;
+  bottom: 4px;
+  font-size: 54px;
+  line-height: 1;
+  opacity: 0.13;
+}
+
+/* --- Tabs ----------------------------------------------------------------- */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 11px 6px 10px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brass); }
+.tab-body { padding: 18px; }
+
+/* --- Standing ------------------------------------------------------------- */
+
+.standing { text-align: center; padding: 6px 0 18px; }
+.standing-value {
+  font-family: var(--display);
+  font-size: 54px;
+  line-height: 1;
+  color: var(--brass);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 18px rgba(201, 162, 39, 0.22);
+}
+.standing-value.provisional { opacity: 0.5; }
+.standing-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+  margin-top: 7px;
+}
+.standing-note { margin: 12px auto 0; max-width: 34ch; font-size: 13px; color: var(--muted); }
+
+.ladder { margin-top: 20px; }
+.ladder-head {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* --- Stats, written rather than tabulated --------------------------------- */
+
+.figure { padding: 15px 0; border-top: 1px solid var(--line); }
+.figure:first-child { border-top: none; padding-top: 4px; }
+.figure-value { font-family: var(--display); font-size: 27px; color: var(--ink); }
+.figure-value.quiet { color: var(--muted); font-size: 22px; }
+.figure-label { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.figure-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; max-width: 42ch; }
+
+.empty-note { color: var(--muted); font-size: 13.5px; text-align: center; padding: 26px 10px; }
+
+/* --- Reveal: a card that does not move under the cursor ------------------- */
+
+.step.pending { opacity: 0.35; }
+/* Unrevealed steps keep their slot so the card's height never changes. Two
+   lines is the median step length; a rule stands in for the text. */
+.step.pending p::after {
+  content: "";
+  display: block;
+  height: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--line) 0 60px,
+    transparent 60px 72px
+  );
+}
+.step.pending p { min-height: 2.9em; }
+.step p { min-height: 2.9em; }
+
+.reveal-skip.pref {
+  display: block;
+  margin: 4px auto 0;
+  text-decoration: none;
+  border-bottom: 1px dotted var(--line);
+}
+
+/* --- Softer surfaces ------------------------------------------------------ */
+
+.feedback {
+  border-radius: 14px;
+  padding: 15px 16px;
+}
+.step {
+  border-radius: 12px;
+  padding: 12px 13px;
+}
+.action { border-radius: 12px; }
+.card { border-radius: 9px; }
+
+/* ===========================================================================
+ * Centre the table.
+ *
+ * The shell centres the page, but inside the felt everything was still packed
+ * against the left edge, so the cards sat in a corner of a wide green field
+ * instead of on a table. A real table deals to the middle; so does this one.
+ * ======================================================================== */
+
+.felt .seat { text-align: center; }
+.felt .cards { justify-content: center; }
+.felt .hand-row { justify-content: center; }
+.felt .hand-meta { text-align: center; }
+.felt .seat-title { text-align: center; }
+
+/* Give the felt a little more room to breathe around the cards. */
+.felt .seat { padding: 14px 16px; }
+
+/* --- Step text: shorter lines, figures that read as figures ---------------- */
+
+.step p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(230, 233, 238, 0.88);
+}
+/* The words the copy leans on. */
+.step p b {
+  color: var(--ink);
+  font-weight: 650;
+}
+/* Figures in the display face: a number set in the body font disappears into
+   the sentence, which is the opposite of what these sentences are for. */
+.num {
+  font-family: var(--display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.06em;
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.step p b .num, .step p .num { color: #f4f7fa; }
+
+/* ===========================================================================
+ * Typography.
+ *
+ * Bundled rather than linked: §13 requires the app to work offline, and a
+ * webfont from a CDN would make the typography the one part of the product that
+ * stops working on a plane. Four variable fonts, one file each, 152 KB total —
+ * against a 150 MB app budget. Licences in public/fonts/OFL.txt.
+ *
+ * The pairing is chosen by a `data-font` attribute on <html> so the candidates
+ * can be compared on real hands rather than from a description.
+ * ======================================================================== */
+
+@font-face {
+  font-family: 'Nunito';
+  src: url('/fonts/nunito.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/playfair.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Oswald';
+  src: url('/fonts/oswald.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Rubik carries both scripts in one warm, slightly rounded family, so Hebrew
+   does not land in a different voice from the English it sits beside. Split by
+   unicode-range: an English player never downloads the Hebrew subset, and a
+   Hebrew player gets the Latin one anyway because card ranks (A, K, T) and the
+   figures stay Latin in both languages. */
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-latin.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F, U+2212;
+}
+@font-face {
+  font-family: 'Rubik';
+  src: url('/fonts/rubik-hebrew.woff2') format('woff2');
+  font-weight: 300 900;
+  font-display: swap;
+  unicode-range: U+0590-05FF, U+FB1D-FB4F, U+200F, U+20AA;
+}
+
+:root,
+:root[data-font='warm'] {
+  /* Warm and soft: rounded humanist throughout, figures only a little heavier.
+     Least formal, and the easiest to sit in front of for an hour. */
+  --body: 'Nunito', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Nunito', 'Rubik', system-ui, sans-serif;
+  --display-weight: 800;
+  --display-tracking: -0.01em;
+}
+
+:root[data-font='elegant'] {
+  /* The card-room look: engraved figures, quiet body copy. */
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Playfair Display', 'Rubik', ui-serif, Georgia, serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
+
+:root[data-font='deco'] {
+  /* Signage on an old table rather than a modern app. */
+  --body: 'Inter', 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Oswald', 'Rubik', 'Arial Narrow', sans-serif;
+  --display-weight: 500;
+  --display-tracking: 0.02em;
+}
+
+:root[data-font='system'] {
+  /* Nothing downloaded. The floor, kept for comparison. */
+  --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: ui-serif, Georgia, 'Times New Roman', serif;
+  --display-weight: 600;
+  --display-tracking: 0;
+}
+
+body { font-family: var(--body); }
+
+:root[lang='he'] {
+  --body: 'Rubik', system-ui, 'Segoe UI', sans-serif;
+  --display: 'Rubik', system-ui, sans-serif;
+  --display-weight: 700;
+  --display-tracking: 0;
+}
+
+/* Everything set in the display face picks up its weight and tracking, so a
+   condensed deco face and a rounded sans both land right without per-rule
+   overrides. */
+.card-rank,
+.standing-value,
+.rating-value,
+.figure-value,
+.door-title,
+.who-name,
+.hero .who-name,
+.ladder-score,
+.stat-value,
+.num,
+.seat-total {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+}
+
+/* --- The switcher (temporary) --------------------------------------------- */
+
+.fontbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.fontbar button {
+  font: inherit;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.fontbar button[aria-pressed='true'] {
+  border-color: var(--brass-dim);
+  background: rgba(201, 162, 39, 0.14);
+  color: var(--ink);
+}
+.fontbar-sep {
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--line);
+  margin-inline-start: 2px;
+}
+
+/* ===========================================================================
+ * Scale.
+ *
+ * The first pass was sized for a phone held close. On a monitor at arm's length
+ * the cards read as icons and the figures — which are the entire point of the
+ * feedback card — sat smaller than the prose explaining them. Everything on the
+ * felt goes up: the cards most, then the headline, then the numbers, so the
+ * order things are noticed in matches the order they matter in.
+ * ======================================================================== */
+
+.card { width: 78px; height: 110px; border-radius: 11px; gap: 2px; }
+.card-rank { font-size: 34px; }
+.card-suit { font-size: 26px; }
+.cards { gap: 10px; }
+
+.seat-title { font-size: 14px; margin-bottom: 10px; }
+.seat-total { font-size: 20px; }
+
+/* The verdict is the answer, so it is the largest thing on the card. */
+.verdict { font-size: 21px; line-height: 1.25; margin-bottom: 4px; }
+.did { font-size: 15px; }
+.step p { font-size: 15.5px; }
+.step-head { font-size: 11.5px; }
+.step-n { width: 24px; height: 24px; font-size: 12.5px; }
+
+/* Figures carry the argument; they are set to be read, not scanned past. */
+.num { font-size: 1.18em; }
+.stat-value { font-size: 25px; }
+.stat-label { font-size: 11px; }
+.standing-value { font-size: 54px; }
+.figure-value { font-size: 30px; }
+
+/* A phone has less room, so it keeps a smaller step of the same scale rather
+   than the old one — the cards still come out bigger than they were. */
+@media (max-width: 560px) {
+  .card { width: 60px; height: 86px; }
+  .card-rank { font-size: 27px; }
+  .card-suit { font-size: 20px; }
+  .verdict { font-size: 18px; }
+  .stat-value { font-size: 20px; }
+  .standing-value { font-size: 44px; }
+}
+
+/* --- What a figure means, opened where the figure is ----------------------- */
+
+.stat {
+  font: inherit;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  text-align: center;
+}
+.stat[aria-expanded='true'] { background: var(--panel-2); }
+.stat-more {
+  position: absolute;
+  top: 5px;
+  inset-inline-end: 7px;
+  font-size: 10px;
+  color: var(--line);
+}
+.stat:hover .stat-more,
+.stat[aria-expanded='true'] .stat-more { color: var(--voice); }
+
+.stat-info {
+  padding: 12px 16px 14px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+}
+.stat-info-head {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--voice);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.stat-info p { margin: 0; font-size: 14px; line-height: 1.55; color: rgba(230, 233, 238, 0.84); }
+.stat-info-detail {
+  margin-top: 7px !important;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+}
+
+/* --- House restrictions, and the instructions ------------------------------ */
+
+.sub-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  margin: 18px 0 8px;
+  font-weight: 700;
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 7px;
+  cursor: pointer;
+}
+.check:hover { border-color: var(--brass-dim); }
+.check input { margin-top: 2px; accent-color: var(--voice); flex: none; }
+.check strong { display: block; font-size: 14px; font-weight: 600; }
+.check small { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+.fine { font-size: 12px; margin-top: 10px; }
+
+.howto { margin: 0; padding-inline-start: 22px; }
+.howto li { font-size: 14.5px; line-height: 1.6; margin-bottom: 9px; color: rgba(230, 233, 238, 0.88); }
+.howto li b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * The dock.
+ *
+ * The buttons were already pinned to the bottom edge (§10.1). The verdict is
+ * looked at in the same instant and from the same place, so it is pinned with
+ * them rather than sitting up the page where a fast player has to go and find
+ * it. One band, always in view: what the hand cost, what each play was worth,
+ * and what to do next.
+ *
+ * It reads as part of the bar rather than as another card — no radius, no
+ * shadow, just a rule down its leading edge in the severity colour, which is
+ * the one thing worth seeing from across the room.
+ * ======================================================================== */
+
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+/* The bar no longer pins itself; the dock around it does. */
+.actions {
+  position: static;
+  border-top: none;
+}
+
+.quickcard {
+  padding: 10px 14px 11px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--line);
+  border-inline-start: 3px solid var(--line);
+  text-align: start;
+  /*
+   * The dock has a ceiling, and round 15 lowered it.
+   *
+   * The explanation is open by default now, which made 42dvh the normal height
+   * rather than the tallest — and at that size the dock was covering the cards
+   * on a 360px phone. The card scrolls inside itself instead: the grade, the
+   * bars and the working are all still reachable, and the felt stays visible
+   * above them (§10.1).
+   */
+  max-height: 30dvh;
+  overflow-y: auto;
+}
+.quickcard.optimal { border-inline-start-color: var(--optimal); }
+.quickcard.negligible { border-inline-start-color: var(--negligible); }
+.quickcard.minor { border-inline-start-color: var(--minor); }
+.quickcard.significant { border-inline-start-color: var(--significant); }
+.quickcard.blunder { border-inline-start-color: var(--blunder); }
+.quickcard.thinking { border-inline-start-color: var(--brass-dim); }
+
+.quickcard .anchor {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.quickcard .anchor b { color: var(--ink); font-weight: var(--display-weight); }
+.quickcard .verdict { margin: 2px 0 0; font-size: 19px; }
+.quickcard.optimal .verdict { color: var(--optimal); }
+.quickcard.minor .verdict { color: var(--minor); }
+.quickcard.significant .verdict { color: var(--significant); }
+.quickcard.blunder .verdict { color: var(--blunder); }
+.quickcard .did { margin: 1px 0 0; font-size: 14px; }
+
+/* The feedback card below is now reasoning only, so it starts with a step
+   rather than a heading and needs no top padding of its own. */
+.feedback .reveal { margin-top: 0; }
+
+/* ===========================================================================
+ * Where a card came from.
+ *
+ * Three cards totalling sixteen say nothing about how the hand got there, and
+ * 10+6 is a different lesson from 5+4 then 7. The opening two sit flush and
+ * plain; every card taken since is stepped down and carries the number of the
+ * draw that brought it. Shape and badge, never colour alone (§13).
+ * ======================================================================== */
+
+.card { position: relative; }
+.card.drawn {
+  transform: translateY(7px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.card.drawn::after {
+  content: attr(data-draw);
+  position: absolute;
+  top: -7px;
+  inset-inline-end: -6px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--voice);
+  color: #16110a;
+  font-family: var(--display);
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 19px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
+}
+/* The cards sit lower now, so the row needs the headroom back. */
+.felt .cards { align-items: flex-start; padding-bottom: 9px; }
+
+/* --- Seat headers: readable from where the player actually sits ----------- */
+
+.seat-title {
+  font-size: 18px;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.seat-total { font-size: 24px; letter-spacing: 0; }
+
+/*
+ * Ultimate's seat header (round 19): what the seat is holding, in words.
+ *
+ * The same place as the Blackjack total and deliberately not the same size —
+ * a total is two characters and a hand is a phrase, so 24px would take the
+ * felt. Words, not a figure: no tabular numerals, and it may wrap at showdown,
+ * where the five ranks join it.
+ */
+.seat-hand {
+  font-size: 14px;
+  letter-spacing: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+@media (max-width: 560px) {
+  .seat-hand { font-size: 13px; }
+}
+
+/* ===========================================================================
+ * The rail.
+ *
+ * Real denominations broken high to low, because a stack of two hundred ones is
+ * a bar chart and a stack with a black chip in it is money. The colours are the
+ * ones every table uses, so the stack reads before the figure beside it does.
+ *
+ * §3.1 still holds: the balance is the arithmetic of settled hands, and the
+ * swing from the last one appears only once the grade is out.
+ * ======================================================================== */
+
+/*
+ * Laid out the way a table is, from the player's seat.
+ *
+ * Furthest away are the cards, then the betting circle with whatever is riding
+ * on this hand, and nearest the player their own stack. Side by side, the wager
+ * and the stack read as two statistics; stacked in that order they read as a
+ * table, and the wager is visibly in front of the money it came out of.
+ */
+.rail {
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* The betting circle: a spot printed on the felt, empty between hands. */
+.rail-bet .chips {
+  min-width: 74px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.22);
+  margin-bottom: 6px;
+}
+.rail-spot {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  position: relative;
+}
+.rail-value {
+  font-family: var(--display);
+  font-weight: var(--display-weight);
+  font-size: 23px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  line-height: 1;
+}
+.rail-bank .rail-value { font-size: 31px; }
+.rail-bank .chips { margin-bottom: 7px; }
+.rail-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--muted);
+}
+.rail-delta {
+  position: absolute;
+  top: -13px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.rail-delta.win { color: var(--optimal); }
+.rail-delta.loss { color: var(--blunder); }
+
+/*
+ * Chips, laid out in a row and marked with what they are worth.
+ *
+ * A stack seen from the side shows one face and hides the rest, which looks
+ * right and reads as nothing: a player cannot tell 201 from 61 by counting
+ * edges. Spread along the rail instead, each chip overlapping the last just
+ * enough to look handled, every denomination stays visible and the total can be
+ * read off the row.
+ */
+.chips {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+  row-gap: 3px;
+  max-width: 300px;
+}
+.chip {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: 50%;
+  margin-inline-start: -7px;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.chip:first-child { margin-inline-start: 0; }
+
+/* The colours every table uses, and text picked to stay legible on each. */
+.chip-purple { background: #5b3a86; border: 2px dashed #a385cd; color: #f3ecfb; }
+.chip-white { background: #eef2f6; border: 2px dashed #aeb9c4; color: #1b2530; }
+.chip-red { background: #b6283a; border: 2px dashed #e2818c; color: #fff4f5; }
+.chip-green { background: #1f7a4c; border: 2px dashed #6cc396; color: #eafaf1; }
+.chip-black { background: #1a1f26; border: 2px dashed #78838f; color: #e6e9ee; }
+.chip-half {
+  background: #eef2f6;
+  border: 2px dashed #aeb9c4;
+  color: #1b2530;
+  opacity: 0.8;
+  font-size: 13px;
+}
+
+/* The wager riding with each hand, so a double or a split reads as money. */
+.hand-wager { display: flex; justify-content: center; min-height: 22px; margin-top: 8px; }
+.hand-wager .chip { width: 22px; height: 22px; font-size: 9px; border-width: 2px; }
+
+@media (max-width: 560px) {
+  .rail { gap: 12px; }
+  .rail-bank .rail-value { font-size: 24px; }
+  .seat-title { font-size: 15px; }
+  .seat-total { font-size: 20px; }
+}
+
+/* ===========================================================================
+ * Playing well.
+ *
+ * The rating the decision was worth, the run it belongs to, and how hard the
+ * spot was — all of it about the decision, none of it about the money, and
+ * none of it louder at fifty than at one (§16).
+ * ======================================================================== */
+
+.quickcard .anchor { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.quickcard .rating-side {
+  display: flex;
+  margin-top: 0;
+  flex: none;
+  font-family: var(--display);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.quickcard .rating-side .unrated { color: var(--line); }
+
+/* A run, worn beside the verdict rather than kept as a score of its own. */
+.streak {
+  margin-inline-start: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-family: var(--body);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: 2px;
+  cursor: help;
+}
+
+.quickcard .spot { margin: 6px 0 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.quickcard .spot .tag { margin-inline-start: 0; }
+.spot-note { font-size: 12.5px; color: var(--muted); }
+
+.quickcard .milestone {
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickcard .milestone b { color: var(--ink); font-weight: 650; }
+
+/* ===========================================================================
+ * Motion.
+ *
+ * Built the way round that makes stillness the default: every animated rule
+ * lives inside `prefers-reduced-motion: no-preference`, so a player who has
+ * asked for less gets a page with none, and nothing needs an override to
+ * undo. Nothing in the input path waits on any of it.
+ *
+ * Vertical only. The app runs right-to-left in Hebrew, and a deal that slid
+ * in from the left would arrive from the wrong side of the table.
+ * ======================================================================== */
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes deal-in {
+    from { opacity: 0; transform: translate3d(0, -14px, 0) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Only cards that were not on the felt a moment ago carry `.arriving`, so
+     stepping through the reveal does not re-deal the hand. */
+  .card.arriving {
+    animation: deal-in 180ms ease-out backwards;
+    animation-delay: calc(var(--deal-index, 0) * 70ms);
+  }
+
+  @keyframes affirm-sweep {
+    from { transform: scaleY(0); opacity: 0.9; }
+    to { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* The leading rule brightens once down its length. That is the entire
+     celebration, and it is the same at the fiftieth as at the first. */
+  .quickcard.affirm { position: relative; }
+  .quickcard.affirm::after {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -3px;
+    width: 3px;
+    background: var(--optimal);
+    transform-origin: top;
+    animation: affirm-sweep 260ms ease-out forwards;
+    pointer-events: none;
+  }
+
+  @keyframes affirm-settle {
+    from { transform: scale(1.03); }
+    to { transform: none; }
+  }
+  .quickcard.affirm .verdict {
+    animation: affirm-settle 260ms ease-out;
+    transform-origin: inline-start;
+  }
+
+  .door { transition: transform 0.12s ease, border-color 0.12s ease; }
+  .door:hover { transform: translateY(-2px); }
+}
+
+/* --- The door's code field, and the way back out of it -------------------- */
+
+.welcome-code { max-width: 8ch; letter-spacing: 0.28em; text-align: center; }
+.welcome-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: -4px 0 0; max-width: 36ch; }
+.welcome-error {
+  margin: 4px 0 0;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--blunder);
+  background: rgba(248, 113, 113, 0.08);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 40ch;
+}
+.switch-player { display: block; margin: 18px auto 0; }
+
+/* ===========================================================================
+ * Ultimate Texas Hold'em (round 4a).
+ *
+ * The Blackjack table's pieces, reused: the same cards, the same dock, the same
+ * feedback card and severity colours. What is new is only what the game has
+ * and Blackjack does not — a board of five, and three separate stakes.
+ * ======================================================================== */
+
+.uth-felt .seat { padding: 10px 16px; }
+.uth-board .cards { gap: 7px; }
+.uth-board .card { width: 62px; height: 88px; }
+.uth-board .card-rank { font-size: 26px; }
+.uth-board .card-suit { font-size: 20px; }
+
+/* Ante, Blind, Play, then the stack, in one row under the hand. */
+.uth-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.4fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.uth-spot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 4px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-variant-numeric: tabular-nums;
+  position: relative;
+}
+.uth-spot.bank { border-color: rgba(201, 162, 39, 0.35); }
+.uth-spot .rail-value { font-size: 20px; font-weight: 650; }
+.uth-spot .rail-label { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.uth-spot .rail-delta { font-size: 12px; }
+
+/* Honest about where the money lives: nowhere, yet. */
+.uth-memory { margin: 8px 0 0; font-size: 11.5px; color: var(--muted); text-align: center; }
+.uth-keys { margin: 8px 14px 14px; font-size: 11.5px; color: var(--muted); text-align: center; }
+
+/* The result: under the grade, smaller and quieter than it (§3.1). */
+.uth-result { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--line); }
+.uth-result p { margin: 0 0 2px; font-size: 13px; color: var(--muted); }
+.uth-result .uth-net { margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.uth-waiting { margin: 0; padding: 14px 0; width: 100%; text-align: center; color: var(--muted); }
+/*
+ * The key hint sits in the button with a gap, not a margin. In Hebrew the label
+ * ("Check") and the hint ("C") are both left-to-right runs inside a
+ * right-to-left button, so the browser lays them out as one run and a margin on
+ * the hint's inline-start side ends up facing away from the label. A flex gap
+ * spaces children whichever way the text runs.
+ */
+.uth .actions .action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.uth .actions .action .key { opacity: 0.55; font-size: 12px; }
+
+/* ===========================================================================
+ * Decision buttons in rows (round 4b).
+ *
+ * The "yes" action on the physical left and the "no" action on the physical
+ * right, in Hebrew and English alike. Each row is laid out left to right with
+ * `direction: ltr`, so a right-to-left page does not mirror it; the label inside
+ * each button keeps the page's own direction, so Hebrew still reads right to
+ * left. A row takes as many equal columns as it has buttons, which is how a
+ * lone Double, a lone Surrender, Split or Raise 3x comes to fill its row.
+ * ======================================================================== */
+.actions.rows { flex-direction: column; flex-wrap: nowrap; }
+.action-row {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: 8px;
+  direction: ltr;
+}
+.action-row > .action { min-width: 0; }
+[dir="rtl"] .action-row > .action { direction: rtl; }
+
+/* ===========================================================================
+ * Portrait phone first (round 5).
+ *
+ * Most of the people this is played by hold a phone. Measured before this
+ * block at 360, 390 and 412 px wide, nothing overflowed and every decision
+ * button already sat in the bottom third, because the dock is pinned there. What
+ * was wrong was the table itself: on a 390x844 screen, UTH's five-card board
+ * wrapped to two rows and pushed the player's own cards under the dock, and the
+ * two-line stat labels and loose spacing did the same to Blackjack's rail.
+ *
+ * So on a phone the chrome gets tighter, the strip becomes one line of figures
+ * with the labels behind the "?" (round 3's rule for when the strip and the dock
+ * do not both fit), and UTH's board is sized so five cards share a row.
+ * ======================================================================== */
+
+html { -webkit-text-size-adjust: 100%; }
+/* No double-tap zoom delay and no grey flash on a tap. */
+button,
+.stat,
+.link,
+.log-row { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.action-row > .action { -webkit-user-select: none; user-select: none; }
+
+@media (max-width: 560px) {
+  .fontbar { padding: 3px 12px; }
+  .fontbar button { padding: 2px 9px; }
+
+  .rules { padding: 6px 12px; gap: 8px; }
+  .rules-name { font-size: 13px; }
+  .rules-sub { flex-wrap: nowrap; }
+  .rules-badge { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  /* A zero width, grown to fill. Sized by its content, the one-line badge's full
+     length became the page's minimum width, and a 360px phone laid the table out
+     at 398px — the stack and the last chip cut off at the edge. Measured in
+     round 6b; it had been there since the badge went onto one line in round 5. */
+  .rules-main { flex: 1 1 0; width: 0; }
+
+  .stat { padding: 6px 4px; }
+  .stat-value { font-size: 17px; }
+  .stat-label { display: none; }
+
+  .table { gap: 8px; padding: 8px 10px; }
+  .felt .seat { padding: 4px 8px; }
+  .seat-title { margin-bottom: 4px; font-size: 12px; }
+  .hand { padding: 4px; }
+
+  .rail { gap: 4px; margin-top: 6px; padding-top: 6px; }
+  .rail-bet .chips { height: 34px; min-width: 56px; margin-bottom: 2px; }
+  .rail-bank .rail-value { font-size: 21px; }
+  .rail-value { font-size: 19px; }
+
+  /* Five community cards on one row, whatever the phone's width. */
+  .uth-board .cards { flex-wrap: nowrap; gap: 5px; justify-content: center; }
+  .uth-board .card {
+    width: min(58px, calc((100vw - 36px - 4 * 5px) / 5));
+    height: auto;
+    aspect-ratio: 5 / 7;
+  }
+  .uth-board .card-rank { font-size: 22px; }
+  .uth-board .card-suit { font-size: 16px; }
+  .uth-felt .seat { padding: 4px 8px; }
+  .uth-rail { margin-top: 6px; gap: 5px; }
+  .uth-spot { padding: 3px 2px; }
+  .uth-spot .rail-value { font-size: 17px; }
+}
+
+/* --- UTH showdown: the five cards that make each hand (round 5) --------------- */
+/*
+ * Both hands marked with equal weight (round 7): the same ring, gold for yours
+ * and blue for the dealer's. A board card in both hands carries both at once,
+ * split across the card — the dealer's half on the edge facing the dealer, at
+ * the top, and yours on the edge facing you.
+ */
+.uth .card.best-you::after,
+.uth .card.best-dealer::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 3px solid transparent;
+  border-radius: 12px;
+  pointer-events: none;
+}
+.uth .card.best-you::after { border-color: var(--brass); }
+.uth .card.best-dealer::before { border-color: #5aa9ff; }
+.uth .card.best-you.best-dealer::before { clip-path: inset(0 0 50% 0); }
+.uth .card.best-you.best-dealer::after { clip-path: inset(50% 0 0 0); }
+.uth-hand-name { color: var(--ink) !important; font-size: 15px; }
+.uth-winner { color: var(--ink) !important; font-size: 15px; font-weight: 600; margin-top: 3px !important; }
+.uth-legend { font-size: 12.5px !important; opacity: 0.8; }
+.uth-note { margin-top: 6px; color: var(--muted); font-size: 15px; }
+/* The analysis on the card, big enough to read on a phone (round 7). */
+/* Round 7's size for the analysis text, kept when the commentary moved below
+   the table in round 12: the same words, the same size, a different place. */
+.uth .quickcard .reason,
+.uth .feedback .reason { font-size: 15.5px; line-height: 1.45; }
+.uth .uth-result p { font-size: 14.5px; }
+
+/* --- The decision track (round 6) ----------------------------------------------
+ *
+ * One row per hand: dots in the card's tier colours, a hollow dash for a hand
+ * that ended on the deal, and the result smaller and muted after them. No
+ * animation, no highlight for a run: the tenth green row looks like the first.
+ *
+ * On a phone, and up to a wide screen, it is one row under the strip, newest on
+ * the physical left in both languages. With room beside the 540px shell it sits
+ * on the felt's physical right, newest at the top. */
+.track-anchor { position: relative; }
+.track {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.track-title { display: none; margin: 0; }
+.track-empty { margin: 0; font-size: 11.5px; color: var(--muted); }
+.track-rows {
+  direction: ltr;
+  display: flex;
+  gap: 4px;
+  /* A zero width, grown to fill. Sized by its content instead, the full length
+     of twelve rows became the page's minimum width, and a 390px phone laid the
+     whole table out wider than its screen — measured, with Check cut off. */
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.track-rows::-webkit-scrollbar { display: none; }
+.track-row {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 7px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.track-row:hover,
+.track-row:focus-visible { background: var(--panel-2); }
+.track-dots { display: inline-flex; align-items: center; gap: 3px; }
+.track-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--negligible); }
+.track-dot.optimal { background: var(--optimal); }
+.track-dot.negligible,
+.track-dot.close { background: var(--negligible); }
+.track-dot.minor { background: var(--minor); }
+.track-dot.significant { background: var(--significant); }
+.track-dot.blunder { background: var(--blunder); }
+.track-dash {
+  width: 12px;
+  height: 5px;
+  border: 1.5px solid var(--muted);
+  border-radius: 3px;
+  background: transparent;
+}
+.track-net { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+@media (min-width: 900px) {
+  .track {
+    position: absolute;
+    top: 12px;
+    left: calc(100% + 14px);
+    width: 150px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+  }
+  .track-title {
+    display: block;
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .track-rows { flex-direction: column; flex: none; width: auto; overflow: visible; gap: 2px; }
+  .track-row { justify-content: space-between; border-color: transparent; border-radius: 6px; }
+}
+
+/* The hands a track row opens: each game under its name, the opened one marked. */
+.hands-game {
+  margin: 14px 14px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.log-row.opened { background: var(--panel-2); }
+
+/* --- Chips (round 6b) -----------------------------------------------------------
+ *
+ * The rail a bet is built on, the limits printed on the felt, the rebuy line,
+ * and a chip crossing the table. A stack below zero is drawn like any other
+ * figure: no colour, no warning, because it is units and nothing is owed. */
+.table-limits {
+  margin: 2px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.uth-rail .table-limits { grid-column: 1 / -1; }
+.bet-spot { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.bet-spot[aria-disabled='true'] { cursor: default; }
+.bet-spot:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; border-radius: 12px; }
+.action-row.bet-chips > .chip-button { display: grid; place-items: center; padding-block: 6px; }
+.chip-button .chip { width: 36px; height: 36px; margin: 0; font-size: 12px; }
+.chip-button:disabled .chip { opacity: 0.4; }
+.action-row.bet-tools > .action { font-size: 14px; padding-block: 9px; }
+.rebuy-line { margin: 0 0 8px; text-align: center; font-size: 14.5px; color: var(--ink); }
+.chip-flight {
+  position: fixed;
+  z-index: 40;
+  width: 26px;
+  height: 26px;
+  margin: -13px 0 0 -13px;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chip-flight { animation: chip-fly 280ms cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+  @keyframes chip-fly {
+    from { transform: translate(var(--fly-x), var(--fly-y)); }
+    to { transform: none; }
+  }
+}
+@media (max-width: 560px) {
+  .chip-button .chip { width: 32px; height: 32px; }
+  .action-row.bet-chips > .chip-button { padding-block: 4px; }
+  .action-row.bet-tools > .action { font-size: 13px; padding-block: 7px; }
+}
+
+/* --- The stat strip holds its four cells, whatever the figure (round 8) ---------
+ *
+ * A figure that ran long — +1.4000000000000004, before figures were rounded —
+ * overflowed its cell and was drawn off the strip, to the left in Hebrew. The
+ * columns cannot grow past their share, and a figure too long for its cell is
+ * cut short with an ellipsis rather than pushing anything. It is laid out left
+ * to right, so what stays visible is the sign and the leading digits. The cell
+ * itself is not clipped: its tooltip hangs outside it. */
+.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.stat-value {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+}
+/* The home Stats tab has room to wrap a long figure, so it wraps. */
+.figure-value { overflow-wrap: anywhere; }
+
+/* --- Two ratings (round 10) --------------------------------------------------
+ * Blackjack's and Ultimate's, side by side on home, each under its game's name.
+ * Two columns from the smallest phone up: the numbers are short and the notes
+ * wrap, so neither pushes the other off the screen. */
+.standings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.standings .standing { min-width: 0; padding-inline: 4px; }
+.standings .standing-value { font-size: 42px; }
+.standings .standing-note { overflow-wrap: anywhere; }
+.quickcard .rating-side .provisional { opacity: 0.6; }
+
+/* --- Trips (round 11) ---------------------------------------------------------
+ * A fourth small circle on the Ultimate rail, before the Ante. The circle the
+ * chips go on between hands carries the brass edge; the other is a tap away.
+ * Nothing here moves: Trips is a cost, quieter than the grade. */
+.uth-rail { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); }
+.uth-spot.bet-target { border-color: var(--brass); box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.45); }
+.uth-spot.trips .rail-label { letter-spacing: 0.03em; }
+@media (max-width: 380px) {
+  .uth-rail { gap: 4px; }
+  .uth-spot .rail-label { font-size: 9.5px; letter-spacing: 0.02em; }
+}
+
+/* --- Ultimate's commentary, below the table (round 12) ------------------------
+ * Blackjack's model: the reasoning and what the cards did sit under the table
+ * and scroll with the page; the dock keeps the grade and the buttons only. */
+.uth .feedback { margin: 0 14px 10px; }
+.uth .feedback .uth-result { margin-top: 10px; }
+
+/* --- What comes back to you (round 13) ----------------------------------------
+ *
+ * One row per legal action: its name, a bar whose length is what that action
+ * returns per unit staked, and the figure itself. Longest is best, because the
+ * display is there to encourage the right play rather than to mark the error —
+ * nothing here is coloured for being wrong.
+ *
+ * The scale is fixed from 0 to 2.0 and never scaled to the hand: that is what
+ * lets a player see at a glance whether the hand is winnable at all. Two lines
+ * run the whole height of the block, drawn once rather than per row — where the
+ * best action reaches, so the gap to each bar is what that move costs, and a
+ * dashed one at 1.0, break-even. No legend; the `?` carries the meaning. */
+.returns { margin: 9px 0 0; }
+.returns-head { display: flex; align-items: center; gap: 6px; margin: 0 0 6px; }
+.returns-title {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.returns-why {
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #101820;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  line-height: 1;
+  cursor: pointer;
+}
+.returns-why[aria-expanded='true'] { color: var(--ink); border-color: #4a5966; }
+
+.returns-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 5px;
+}
+/* The lines span every row of the bar column. The span is written out in the
+   markup: `1 / -1` collapses to one cell when no rows are declared, which is
+   how the first build of this drew a line one row tall. */
+/* `align-items: center` would leave this empty element no height at all, and
+   the lines inside it nothing to run down. */
+.ret-lines { position: relative; grid-column: 2; align-self: stretch; z-index: 3; pointer-events: none; }
+.ret-line { position: absolute; top: -3px; bottom: -3px; inset-inline-start: var(--at); width: 0; }
+.ret-best { border-inline-start: 1.5px solid rgba(52, 211, 153, 0.5); }
+.ret-even { border-inline-start: 1.5px dashed rgba(230, 233, 238, 0.32); }
+
+.ret-name { font-size: 12.5px; color: var(--muted); }
+.ret-name.best { color: var(--ink); }
+.ret-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.ret-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: #101820;
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.ret-bar {
+  display: block;
+  height: 100%;
+  width: var(--len);
+  border-radius: 999px;
+  background: var(--optimal);
+  /* One colour, stepping down from the best action. A second colour would be a
+     second meaning, and the only meaning here is "longer is better". */
+  opacity: calc(1 - var(--step) * 0.22);
+}
+/* Doubling and splitting can lose more than the stake, so a figure can be
+   negative: the bar bottoms out and the minus sign carries it. */
+.ret-bar.none { width: 0; }
+/* Ultimate's river can be worth more than the scale holds. The bar says so at
+   its end rather than the scale being redrawn for one hand. */
+.ret-track.over::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: 7px;
+  background: repeating-linear-gradient(45deg, rgba(230, 233, 238, 0.45) 0 2px, transparent 2px 4px);
+}
+.ret-fig {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.ret-fig.best { color: var(--ink); }
+
+/* ===========================================================================
+ * The same choices in chips (round 19).
+ *
+ * Idan: "you could simply add how many chips he expects to get back on each
+ * choice." In Ultimate the unclear part is not the odds but how much is on the
+ * table — 4x is six units at risk and a check is two — and no return figure
+ * says that. Four columns, one row an action, under the bars rather than
+ * between them: the bars are the grade, this is the money, and round 17's
+ * ordering rule keeps the grade's rows whole by putting everything that
+ * follows them below.
+ * ======================================================================== */
+
+.money { margin: 9px 0 0; }
+.money-title {
+  margin: 0 0 5px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.money-grid {
+  display: grid;
+  grid-template-columns: auto repeat(3, minmax(0, 1fr));
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.money-head {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: end;
+  line-height: 1.2;
+}
+.money-name { font-size: 12.5px; color: var(--muted); }
+.money-name.chosen { text-decoration: underline dotted; text-underline-offset: 3px; }
+.money-fig {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+  color: var(--muted);
+}
+/* What comes back is the one a player is reading for. */
+.money-back { color: var(--ink); font-weight: 600; }
+.money-note { margin: 6px 0 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.money-note b { color: var(--ink); font-weight: 600; }
+
+/* The size of the pre-flop answer, at the level that asked for the numbers. */
+.ret-scale { margin: 7px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.ret-scale b { color: var(--ink); font-weight: 600; }
+
+/* Two actions can come to the same figure — on 16 against a ten, hitting and
+   standing differ in the fourth decimal. They are equivalent, and the screen
+   says so rather than printing a decimal nobody can act on. */
+.ret-same { margin: 7px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+
+/*
+ * The explanation scrolls; the bars never do (round 17).
+ *
+ * Idan's screenshot had the last row of the block — "Hit +0.148" — cut in half
+ * by the button bar. The card has a ceiling so the buttons stay put, and what
+ * was being clipped was whatever fell past it. A row is either shown or it is
+ * not, so the explanation takes a ceiling of its own and the rows above it
+ * always fit inside the card's.
+ */
+.returns-help {
+  margin: 8px 0 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #0d141b;
+  max-height: 24vh;
+  overflow-y: auto;
+}
+.returns-help p { margin: 0 0 7px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.returns-help p:last-child { margin-bottom: 0; }
+.returns-help b { color: var(--ink); font-weight: 600; }
+
+/* The same step up in size the rest of the card takes on a larger screen. */
+@media (min-width: 561px) {
+  .ret-name, .ret-fig { font-size: 14px; }
+  .ret-track { height: 12px; }
+  .returns-help p, .ret-same { font-size: 13.5px; }
+}
+
+/* --- Said once, before the first hand ever (round 13) ------------------------
+ * One passage, in its own small dialog and again at the head of How to play.
+ * Sized to be read rather than skimmed past, and quiet: it states what the app
+ * is, and nothing here congratulates anybody. */
+.intro-body, .howto-lead {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.intro-body b, .howto-lead b { color: var(--ink); font-weight: 600; }
+
+/* --- The first screen, and the level it asks for (round 14) --------------------
+ * One screen: the slogan, what this app is, and one question with three large
+ * answers. It takes the table's place until it is answered — a question about
+ * how much you want explained is not something to dismiss on the way past. */
+.first-screen { padding: 26px 18px 30px; max-width: 460px; margin: 0 auto; }
+.slogan {
+  margin: 0 0 18px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.first-screen h1 { margin: 0 0 10px; font-family: var(--display); font-size: 23px; }
+.first-screen-ask { margin: 22px 0 12px; font-family: var(--display); font-size: 19px; }
+.first-screen-note { margin: 14px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+
+.levels { display: grid; gap: 10px; }
+.level-choice {
+  display: grid;
+  gap: 3px;
+  padding: 13px 15px;
+  text-align: start;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.level-choice:hover { border-color: #4a5966; }
+/* The level in force, marked on the control that changes it — never on the
+   first screen, where nothing has been chosen yet. */
+.level-choice.current { border-color: var(--brass); box-shadow: inset 0 0 0 1px rgba(201, 162, 39, 0.35); }
+.level-title { font-family: var(--display); font-size: 17px; }
+.level-body { font-size: 13px; color: var(--muted); line-height: 1.45; }
+.levels-settings { margin: 4px 0 8px; }
+
+/* --- What the cards did, below the table (round 14) ---------------------------
+ * One line, in the table's voice. Quieter than the grade, as everything about
+ * the result is (§3.1). */
+.table-talk {
+  margin: 8px 14px 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* --- The breakdown, for a player who asked for the numbers (round 14) ---------
+ * Advanced only. Nothing here is new arithmetic: it is the same decision with
+ * its working shown, so it reads as a footnote rather than as a second verdict. */
+.breakdown {
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #0d141b;
+}
+.breakdown-head {
+  margin: 0 0 7px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.breakdown p { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.breakdown p:last-child { margin-bottom: 0; }
+.breakdown b { color: var(--ink); font-weight: 600; }
+
+/* --- The strip, at the size the level asks for (round 14) ---------------------
+ * Round 8's four-cell rule still stands above; these say what the strip does
+ * when a level shows fewer, so the cells that remain fill the width rather
+ * than leaving a gap where an expert measure used to be. */
+.stats[data-cells='2'] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stats[data-cells='3'] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* --- There is more below (round 14) -------------------------------------------
+ * An arrow, only while there is commentary the player cannot see. It sits above
+ * the dock and outside the bottom third, never over the buttons (§10.1), and it
+ * moves twice and stops — a thing that never stops moving is nagging. */
+.more-below {
+  position: fixed;
+  inset-inline-end: 14px;
+  bottom: 38vh;
+  z-index: 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.more-below[hidden] { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .more-below { animation: more-below-nudge 360ms ease-in-out 2; }
+  @keyframes more-below-nudge {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
+}
+
+/* --- The working, one action at a time (round 15) ------------------------------
+ * Idan rejected the prose this replaces: an explanation that asks to be trusted
+ * is worth less than one a player can redo himself. So each action states its
+ * condition and its odds, and the sum sits on its own line below it.
+ *
+ * The sum never wraps. A line break through the middle of `2 × 23% = +0.460` is
+ * unreadable, and worse in a right-to-left page, so it is laid out left to
+ * right on a line of its own and scrolls if it must. */
+.worked { margin: 0 0 9px; }
+.worked:last-child { margin-bottom: 0; }
+.worked-say { margin: 0 0 3px; }
+.worked-sum {
+  margin: 0;
+  direction: ltr;
+  text-align: start;
+  white-space: nowrap;
+  overflow-x: auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--ink);
+}
+:root[dir='rtl'] .worked-sum { text-align: right; }
+/* Every number in the explanation is bold (round 15). */
+.returns-help .num { font-weight: 700; color: var(--ink); }
+/* The control that closes it, at a size a thumb can find. */
+.returns-why { width: 34px; height: 34px; font-size: 17px; }
+
+/* ===========================================================================
+ * Fourteen pixels, found on the smallest screen (round 19).
+ *
+ * Measured, at 360x800 in Hebrew, on Ultimate's pre-flop card: the anchor runs
+ * to two lines there, and with three actions the third row ended 14px below
+ * what the card can show. Round 17's rule is that a graded row is never the
+ * thing that falls past the fold, so the chrome around the rows gives the
+ * fourteen back — four from the gap above the block, four from the card's own
+ * padding, four from the heading, and two from the control that opens the
+ * explanation, which stays a 30px target.
+ *
+ * Only below 380px, because 390 and 412 already fit with room to spare.
+ * ======================================================================== */
+@media (max-width: 380px) {
+  /*
+   * And the board's label, which the smallest screen can do without.
+   *
+   * Ultimate's felt carries three headings on a phone, and the card below gets
+   * whatever the felt leaves. "Board" is the one that says nothing the cards do
+   * not: five community cards in the middle of a table are the board. The
+   * dealer's and the player's stay, because those say *whose* cards these are,
+   * which is not obvious. The section keeps its label for a screen reader.
+   * Measured: 22px, and it goes straight to the block that was losing a row.
+   */
+  .uth-board .seat-title { display: none; }
+  .quickcard { padding-top: 6px; padding-bottom: 7px; }
+  .returns { margin-top: 5px; }
+  .returns-head { margin-bottom: 2px; }
+  .returns-why { width: 30px; height: 30px; font-size: 16px; }
+}
+
+/* --- The game itself, for whoever asked to be taught it (round 15) ------------
+ * Idan played at the beginner setting and found nothing explaining how
+ * blackjack is played. This is that, in three places from one source: on the
+ * first screen the moment he asks for it, one tap from the felt while he is
+ * playing, and under How to play afterwards. */
+.primer { margin: 0; }
+.primer h2 { margin: 0 0 12px; font-family: var(--display); font-size: 21px; }
+.primer-head {
+  margin: 16px 0 6px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.primer-head:first-child { margin-top: 0; }
+.primer-line { margin: 0 0 8px; font-size: 14.5px; line-height: 1.55; color: var(--muted); }
+.primer-line b { color: var(--ink); font-weight: 600; }
+.primer .action { margin-top: 16px; width: 100%; }
+
+/* One tap from the felt, above the commentary — not in the footer menu. */
+.primer-here { margin: 10px 14px 0; }
+.primer-open {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  cursor: pointer;
+}
+.primer-open[aria-expanded='true'] { border-color: var(--brass); }
+.primer-here .primer { padding: 12px 13px 2px; }
+
+/* --- What people open (round 15) ---------------------------------------------
+ * A list of counts on the usage page. A control nobody has ever opened is the
+ * useful row, so it is marked rather than hidden. */
+.usage-subtitle { margin: 26px 0 4px; font-family: var(--display); font-size: 18px; }
+.usage-opened { display: grid; gap: 1px; margin-top: 10px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.usage-opened-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; background: var(--panel-2); font-size: 13.5px; }
+.usage-opened-label { color: var(--muted); }
+.usage-opened-count { font-variant-numeric: tabular-nums; color: var(--ink); }
+.usage-opened-row.never .usage-opened-count { color: var(--muted); opacity: 0.6; }
+
+/* --- A hand that keeps drawing (round 15) -------------------------------------
+ * Six cards or more, on the narrowest phone: the cards step down a size so the
+ * hand still ends above the dock rather than under it. Nothing else changes —
+ * the badges, the ring and the totals are all the same. */
+@media (max-width: 400px) {
+  .hand.long .card { width: 40px; height: 58px; font-size: 13px; }
+  .hand.long .card-suit { font-size: 12px; }
+}
+
+/* The control that closes the explanation belongs at the edge of its row, not
+   floating in the middle of it beside the heading (round 15). */
+.returns-head .returns-why { margin-inline-start: auto; }
+
+/* --- The hand analyser (round 16) ---------------------------------------------
+ * Cards in, an answer out, without playing. The whole screen is built around
+ * three taps on a phone: two slots that fill in order, one keypad of ranks, and
+ * no keyboard, no suits and no scrolling before the answer. */
+.analyser { padding-bottom: 28px; }
+.analyser-head .rules-title { font-family: var(--display); font-size: 16px; }
+.analyser-head .rules-sub { font-size: 12px; color: var(--muted); }
+
+.an-slots { display: flex; gap: 10px; padding: 14px 14px 0; }
+.an-group {
+  flex: 1;
+  padding: 10px 11px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--panel-2);
+}
+/* Which slot the next tap fills, said in the frame rather than in a sentence. */
+.an-group.active { border-color: var(--brass); }
+.an-label { font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.an-cards { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; min-height: 46px; }
+.an-card-slot {
+  width: 34px;
+  height: 46px;
+  border-radius: 7px;
+  border: none;
+  background: #f7fafc;
+  color: #10151b;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.an-card-slot.empty {
+  background: transparent;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.an-hint { margin: 9px 14px 0; font-size: 13px; color: var(--muted); }
+
+/* Ten keys, each a real target, and all of them on screen at once. */
+.an-pad {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px 14px 0;
+}
+.an-key {
+  height: 50px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.an-key:hover { border-color: #4a5966; }
+
+.an-controls { display: flex; gap: 8px; padding: 10px 14px 0; }
+.an-control {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.an-control:disabled { opacity: 0.4; cursor: default; }
+
+/* A hand that cannot exist, or one with nothing left to decide: a sentence, and
+   no figures at all. */
+.an-says {
+  margin: 14px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-inline-start: 3px solid var(--brass);
+  border-radius: 12px;
+  background: var(--panel-2);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.an-result { padding: 14px 14px 0; }
+.an-headline { margin: 0; font-family: var(--display); font-size: 16px; color: var(--muted); }
+.an-best { margin: 2px 0 10px; font-family: var(--display); font-size: 20px; color: var(--ink); }
+/* The card is the table's card, off the dock: nothing here has to fit above a
+   row of buttons, so it is not capped. */
+.an-card { max-height: none; overflow: visible; border-inline-start: 3px solid var(--line); }
+.an-steps { margin-top: 12px; }
+.an-step { margin: 0 0 8px; font-size: 14px; line-height: 1.5; color: var(--muted); }
+.an-note { margin: 16px 14px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+
+/* The third door on the home screen. */
+.door.analyse { background: var(--panel-2); }
+.door.analyse .door-pip { color: var(--brass); }
+
+/* --- The felt, tightened (round 16) -------------------------------------------
+ * Idan: the space between the two card rows is the tallest thing on the table
+ * and shows nothing. Two changes, both measured:
+ *
+ *   - the rail becomes a readout while a hand is in play. Between hands it is
+ *     where chips are placed and it keeps its room; once the cards are out the
+ *     bet cannot change, and a stacked column of chip art was spending 188px to
+ *     say two numbers that were not going to move.
+ *   - the paddings above and below the cards come in, which is the gap itself.
+ *
+ * What sets the floor is the cards: two rows at the size Idan asked for, plus
+ * the seat titles that name the totals. Nothing here touches either. */
+.rail.playing {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.rail.playing .rail-spot { display: flex; align-items: baseline; gap: 6px; }
+.rail.playing .chips { display: none; }
+.rail.playing .rail-label { font-size: 10.5px; }
+/* The limits are a thing to read before betting, not during a hand. */
+.rail.playing .table-limits { display: none; }
+
+@media (max-width: 560px) {
+  /* The gap between the rows: paddings, and nothing that carries a word. */
+  .felt .cards { padding-bottom: 4px; }
+  .felt .seat { padding: 2px 8px; }
+  .table { gap: 4px; }
+}
+
+/* Two hands, or a hand that kept drawing, on the narrowest phone: the cards
+   step down so the felt still ends above the dock (round 16). */
+@media (max-width: 400px) {
+  #player-hands.split .card { width: 40px; height: 58px; font-size: 13px; }
+  #player-hands.split .card-suit { font-size: 12px; }
+}
+
+/* The ten key names what it covers, and still fits on one line. */
+.an-key[data-rank='10'] { font-size: 13px; letter-spacing: 0.01em; }
+
+/* --- One header for both seats (round 17) -------------------------------------
+ * "Dealer · 26 · bust" and "You · 12 → 20 · won", in the same place, at the same
+ * weight, in both phases. The total has one home; the path is shown where there
+ * is one, because "what did I win with" is usually asked about a hand that drew.
+ *
+ * §3.1: the header states the total and what became of the hand. It says nothing
+ * about whether the decision was good — the grade does that, once. */
+.seat-total { font-variant-numeric: tabular-nums; color: var(--ink); }
+.hand-head {
+  font-family: var(--display);
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.hand-head.bust { color: var(--blunder); }
+
+/* The language and font controls, where a screen has a panel to keep them in
+   (round 17). On the felt they were a permanent bar for a setting changed once. */
+.fontbar.in-panel {
+  position: static;
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+/* One line on the felt: the name of the rule set. The rest is behind Rules. */
+.rules-sub { margin: 0 0 12px; }
+.lang-slot { margin-bottom: 4px; }
+
+/* Two hands sit side by side (round 17). Stacked, a split ran 351px of felt and
+   put its second hand under the dock; beside each other it is how a split looks
+   at a real table, and it fits. */
+#player-hands.split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+/* --- The shared table (round 22, spec A2) ---------------------------------
+ *
+ * Phone first, two seats. Mine full size and the others compact (§3.1), the
+ * status beside each name (§3.4), and the two measures in one block where the
+ * line that names them can sit directly under both (§3.5).
+ */
+
+.shared-door,
+.shared-invite,
+.shared-refused {
+  padding: 16px;
+  text-align: center;
+}
+
+.shared-door-body,
+.shared-note {
+  color: var(--muted);
+  margin: 8px 0 16px;
+}
+
+.shared-link {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  /* A link is read aloud and typed in as often as it is tapped, so it wraps
+     rather than being cut off at the edge of a phone. */
+  word-break: break-all;
+  font-size: 0.95rem;
+}
+
+.shared-refused {
+  border: 1px solid var(--blunder);
+  border-radius: 10px;
+  margin: 12px;
+  background: color-mix(in srgb, var(--blunder) 12%, var(--panel));
+}
+
+.shared-seat {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+
+/* Mine is the hand being played; the others are there to be glanced at. */
+.shared-seat.other {
+  opacity: 0.85;
+  font-size: 0.92em;
+}
+
+.shared-seat .seat-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.shared-name { font-weight: 600; }
+
+.shared-status {
+  color: var(--muted);
+  font-size: 0.8em;
+  text-transform: lowercase;
+}
+
+/* The one state that is about the table waiting, so it is the one that shows. */
+.shared-seat.is-deciding .shared-status { color: var(--minor); }
+.shared-seat.is-away .shared-status { color: var(--blunder); }
+
+.shared-empty,
+.shared-net {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.shared-clock {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--minor);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--minor) 10%, var(--panel));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.shared-clock-line { margin: 0; flex: 1 1 auto; }
+
+.shared-measures {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.shared-measure {
+  display: grid;
+  /* Name, bar, stack — and the bar before the stack on purpose: it is the
+     comparison, and the one people will read first should be the honest one. */
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.shared-measure.mine { font-weight: 600; }
+.shared-measure-bar { color: var(--optimal); }
+.shared-measure-stack { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.shared-legend,
+.shared-comparison {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 8px 0 0;
+}
+
+.shared-comparison { color: var(--ink); }
+
+/* Leaving is as cheap to reach as playing (§3.3), so it sits with the actions. */
+.shared-leave { margin-inline-start: auto; }
+.shared-debug { opacity: 0.6; }
+
+/* --- The social layer (round 24; §3.6, §3.8, §3.9, §3.10) ------------------ */
+
+/* The table's own row reads as one more player, with a line above it to say it
+   is not one: the figures are combined, and combined differently each. */
+.shared-measure-table {
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 8px;
+  font-weight: 600;
+}
+
+.shared-table-extras {
+  color: var(--muted);
+  font-size: 0.88rem;
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The ticker (§3.10). It fades and it does not move: `opacity` alone, with no
+ * transform and no height change, so nothing on the page shifts under a thumb
+ * that is reaching for a button.
+ */
+.shared-ticker {
+  margin: 8px 12px 0;
+  min-height: 1.4em;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+/*
+ * The fade lives inside the guard, the way everything that moves in this
+ * stylesheet does: written this way round, forgetting produces a still page
+ * rather than an unguarded one. And it is short — a ticker a player has to
+ * wait for is a ticker that has stopped being peripheral.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .shared-ticker.fading {
+    animation: shared-fade 300ms ease-out;
+  }
+}
+
+@keyframes shared-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/*
+ * What a player said (§3.9), and the visual separation is the rule rather than
+ * the decoration: a speech chip is indented, carries a name, and shares no
+ * border, colour or typeface with anything the app says about a decision.
+ */
+.shared-said {
+  margin: 8px 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shared-speech {
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border-start-start-radius: 4px;
+  background: color-mix(in srgb, var(--ink) 8%, var(--panel));
+  align-self: flex-start;
+  max-width: 85%;
+  font-size: 0.95rem;
+}
+
+.shared-speech.mine {
+  align-self: flex-end;
+  border-start-start-radius: 12px;
+  border-start-end-radius: 4px;
+  background: color-mix(in srgb, var(--optimal) 14%, var(--panel));
+}
+
+.shared-speech-who {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/*
+ * The six, one tap each (§3.9). One scrolling row above the dock, so sending
+ * one never covers the cards, and every button is a real target on a phone.
+ */
+.shared-reactions {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shared-reactions::-webkit-scrollbar { display: none; }
+
+.shared-react {
+  flex: 0 0 auto;
+  min-height: 44px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+/* He took my card (§3.8): a button until it is pressed, then the replay. */
+.shared-folklore {
+  margin: 10px 12px;
+  padding: 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.shared-ask { width: 100%; min-height: 44px; }
+.shared-cf-line { margin: 0; }
+.shared-cf-rule { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.shared-cf-none { margin: 0; color: var(--muted); }
+.shared-spots-title { margin: 12px 0 4px; font-size: 0.95rem; }
+.shared-spot-line { margin: 0; }
+
+.shared-explain { margin: 10px 12px; }
+
+/* --- Waiting for a friend, and the six-seat door (round 23) ----------------
+ *
+ * The strip is pinned above everything because it has to survive a screen
+ * changing under it: the player made a table on one screen and is playing on
+ * another, and what he is waiting for did not stop being true in between.
+ */
+
+.waiting-strip {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top, 0px));
+  background: color-mix(in srgb, var(--brass, #c9a227) 16%, var(--panel));
+  border-bottom: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.waiting-line { flex: 1 1 auto; }
+
+.waiting-copy,
+.waiting-go {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
+  padding: 4px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.shared-seats-pick {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
+.shared-seats-pick legend {
+  color: var(--muted);
+  padding: 0 6px;
+}
+
+.shared-seats-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* A choice between five things on a phone: square, thumb-sized, no dropdown. */
+.seat-pick {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Beyond four seats the other players are a list rather than a row (§3.1). */
+@media (max-width: 420px) {
+  .shared-seat.other .cards { gap: 2px; }
+  .shared-seat.other .card { transform: scale(0.88); transform-origin: left center; }
+}
+
+/*
+ * Beyond four seats the others are a list, not a stack of felts (§3.1).
+ *
+ * Each one becomes a single line — who, what they are doing, their total and
+ * their cards small beside it — so that my own hand, which is the one being
+ * played, still starts above the fold on a 360px screen.
+ */
+.shared-seats.many .shared-seat.other {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 0;
+}
+
+.shared-seats.many .shared-seat.other .seat-title {
+  margin: 0;
+  flex: 1 1 8rem;
+  font-size: 0.95em;
+}
+
+.shared-seats.many .shared-seat.other .cards { gap: 2px; }
+
+.shared-seats.many .shared-seat.other .card {
+  width: 30px;
+  height: 43px;
+  font-size: 0.7rem;
+}
+
+.shared-seats.many .shared-seat.other .shared-net { margin: 0; }
+
+/* --- The shared table says what happened (round 30) ---------------------------
+ *
+ * The bar beside each name, what each seat played, each hand of a split with
+ * its own result, the table's row on the felt, the dock that keeps its height
+ * between hands, and the hand's analysis where the bars used to be.
+ */
+
+.shared-seat-bar {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--optimal);
+  font-variant-numeric: tabular-nums;
+}
+.shared-seat-bar.settling { color: var(--muted); font-weight: 500; }
+
+.shared-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 6px;
+  justify-content: center;
+}
+.shared-act {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ink);
+}
+.shared-act.forfeit { color: var(--blunder); }
+
+.shared-split {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.shared-hand {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
+  min-width: 0;
+}
+/* The hand being decided now: the same mark the private table gives it. */
+.shared-hand.active { border-color: #3f7d5c; background: rgba(52, 211, 153, 0.06); }
+.shared-hand.bust .hand-head { color: var(--blunder); }
+/* Two hands side by side need the room of one: on a narrow phone their cards
+   step down, as the private table's split does (round 16). */
+@media (max-width: 420px) {
+  .shared-split.split .card { width: 40px; height: 58px; font-size: 13px; }
+}
+
+/* The table against the dealer, on the felt under the seats. */
+.shared-table-line {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.shared-table-line .shared-measure { font-weight: 600; }
+
+/*
+ * The dock keeps its height whatever it holds, so nothing below or above it
+ * moves when a hand ends and the buttons give way to words.
+ */
+#shared-actions { min-height: 64px; align-items: center; }
+.shared-dock-line {
+  flex: 1;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 15px;
+}
+.shared-dock-line span:first-child { color: var(--ink); font-weight: 600; }
+
+/* The analysis: the private quick card, laid out the same way. */
+.shared-measures .shared-analysis {
+  margin: 0 0 10px;
+  max-height: none;
+  overflow: visible;
+}
+.shared-analysis-earlier { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+.shared-analysis .reveal .step { display: block; padding: 6px 0; }
+.shared-analysis .reveal .step p { margin: 2px 0 0; }
+
+/*
+ * The crown on a player's current run (round 33): beside the name, in line
+ * with it, three sizes of one drawing. It never moves and never animates.
+ */
+.crown-slot,
+.crown {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+}
+.crown {
+  margin-inline: 4px 2px;
+  line-height: 0;
+}
+
+/* ===========================================================================
+ * The shared table's felt, round 34: display only.
+ * ======================================================================== */
+
+/* Each seat's chips, beside the name: a coin and the figure. */
+.shared-chips { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; color: #e8eee9; }
+.shared-coin {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffe28a, #d4a017 70%);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.18);
+}
+
+/* A tag coloured by whether the action was right. No words: the colour is the grade. */
+.shared-act.right { background: rgba(76, 208, 138, 0.22); color: #7ee2a8; box-shadow: inset 0 0 0 1px rgba(76, 208, 138, 0.55); }
+.shared-act.wrong { background: rgba(232, 93, 76, 0.22); color: #ff9a8c; box-shadow: inset 0 0 0 1px rgba(232, 93, 76, 0.55); }
+
+/* The cards, with the figures on their left in both languages. */
+.shared-cardrow { display: flex; align-items: center; justify-content: center; gap: 10px; direction: ltr; }
+.shared-figures {
+  display: grid; gap: 3px; min-width: 0; width: 118px; flex: 0 0 auto;
+  font-size: 11px; font-variant-numeric: tabular-nums; direction: ltr;
+}
+.shared-figure { display: grid; grid-template-columns: 34px 1fr 36px; align-items: center; gap: 4px; opacity: 0.8; }
+.shared-figure-name { overflow: hidden; text-overflow: clip; white-space: nowrap; }
+[dir="rtl"] .shared-figure-name { direction: rtl; text-align: right; }
+.shared-figure-track { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.shared-figure-fill { display: block; height: 100%; background: rgba(232, 238, 233, 0.55); }
+.shared-figure.best .shared-figure-fill { background: #4cd08a; }
+.shared-figure.best .shared-figure-value { color: #7ee2a8; }
+.shared-figure-value { text-align: right; }
+.shared-figure.chosen { opacity: 1; font-weight: 700; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-fill { background: #e85d4c; }
+.shared-figures.wrong .shared-figure.chosen .shared-figure-value { color: #ff9a8c; }
+/* The same table in the dock, at full size, when there is nothing to press. */
+.shared-figures.full { width: 100%; max-width: 420px; margin: 0 auto 6px; font-size: 14px; gap: 5px; pointer-events: none; }
+.shared-figures.full .shared-figure { grid-template-columns: 7.5em 1fr 4.2em; }
+.shared-figures.full .shared-figure-track { height: 9px; border-radius: 5px; }
+
+/* One accuracy bar for the table, a marker for each player on it. */
+.shared-accuracy { position: relative; margin: 6px 4px 10px; direction: ltr; }
+.shared-accuracy-track {
+  position: relative; min-height: 22px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.06), rgba(76, 208, 138, 0.22));
+  border-radius: 11px;
+}
+.shared-marker {
+  position: absolute; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px;
+  border-radius: 10px; background: #1d2a24; color: #e8eee9; font-size: 11px; white-space: nowrap;
+  box-shadow: 0 0 0 1px rgba(232, 238, 233, 0.35);
+}
+.shared-marker.mine { box-shadow: 0 0 0 1.5px #f2c14e; }
+.shared-marker b { font-weight: 800; }
+.shared-accuracy-settling { display: block; text-align: center; font-size: 12px; opacity: 0.7; }
+
+/* The evening so far, the priciest spot, the history, and the summary. */
+.shared-evening { margin: 4px 16px; font-size: 13px; opacity: 0.85; text-align: center; }
+.shared-priciest { font-size: 13px; opacity: 0.85; }
+.shared-history { margin-top: 8px; font-size: 13px; }
+.shared-history summary { cursor: pointer; font-weight: 700; }
+.shared-history-hand { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 6px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.shared-history-n { opacity: 0.7; }
+.shared-history-seat { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.shared-history-net { font-variant-numeric: tabular-nums; opacity: 0.7; }
+.shared-summary-card { margin: 12px 16px; padding: 14px 16px; border-radius: 14px; background: #123d27; box-shadow: inset 0 0 0 1px rgba(242, 193, 78, 0.35); }
+.shared-summary-card h2 { margin: 0 0 8px; color: #f2c14e; font-size: 18px; }
+.shared-summary-card p { margin: 4px 0; }
+.shared-summary-card .shared-share { margin-top: 10px; width: 100%; }
+
+/* Each player's average time to decide (round 35): a small figure beside the chips. */
+.shared-pace { font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums; white-space: nowrap; }

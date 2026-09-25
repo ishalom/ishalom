@@ -1,0 +1,455 @@
+/*
+ * Shared styling for the EV Trainer mockups.
+ *
+ * The existing palette is kept verbatim. What is added is the casino dressing:
+ * a felt table, a brass rail, chip and card motifs, and a warm accent for the
+ * dealer's voice — the room the game is played in, rather than the debugging
+ * surface the first client was.
+ *
+ * Deliberately quiet about the things §16 rules out: nothing flashes, nothing
+ * counts down, nothing suggests coming back tomorrow.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Unchanged from packages/trainer-web/public/styles.css */
+  --bg: #10151b;
+  --panel: #182029;
+  --panel-2: #1f2833;
+  --line: #2b3744;
+  --ink: #e8edf2;
+  --muted: #93a1b0;
+  --felt: #14532d;
+
+  --optimal: #34d399;
+  --negligible: #94a3b8;
+  --minor: #fbbf24;
+  --significant: #fb923c;
+  --blunder: #f87171;
+
+  /* Added for the casino dressing */
+  --brass: #c9a227;
+  --brass-dim: #8a6d1b;
+  --felt-hi: #1c6a40;
+  --felt-lo: #0c3a22;
+  --voice: #f2c879;
+  --shadow: rgba(0, 0, 0, 0.5);
+
+  --display: ui-serif, Georgia, "Times New Roman", serif;
+  --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--brass); }
+
+.shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Brass rail: the one flourish that carries the whole casino read ------ */
+
+.brass {
+  height: 3px;
+  border: none;
+  margin: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--brass-dim) 12%,
+    var(--brass) 50%,
+    var(--brass-dim) 88%,
+    transparent
+  );
+  opacity: 0.85;
+}
+
+/* --- Felt ----------------------------------------------------------------- */
+
+.felt {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 50% -10%, var(--felt-hi) 0%, var(--felt-lo) 55%, #08281a 100%);
+  border-top: 1px solid rgba(201, 162, 39, 0.28);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* Woven texture, faint enough to read as cloth rather than pattern. */
+.felt::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image:
+    repeating-linear-gradient(45deg, #fff 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, #fff 0 1px, transparent 1px 3px);
+}
+
+/* The dealer's arc, the way it is painted on a real table. */
+.felt::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -46%;
+  width: 150%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 39, 0.16);
+  pointer-events: none;
+}
+
+/* --- Header --------------------------------------------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 6;
+}
+.topbar-title { display: flex; flex-direction: column; min-width: 0; }
+.topbar-name { font-weight: 600; font-size: 14px; letter-spacing: 0.01em; }
+.topbar-sub { color: var(--muted); font-size: 11.5px; }
+
+.back {
+  color: var(--brass);
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* --- Cards ---------------------------------------------------------------- */
+
+.cards { display: flex; gap: 7px; flex-wrap: wrap; }
+
+.card {
+  width: 54px;
+  height: 77px;
+  border-radius: 8px;
+  background: linear-gradient(160deg, #ffffff 0%, #eef2f6 100%);
+  color: #10151b;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  font-weight: 700;
+  box-shadow: 0 3px 8px var(--shadow), inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+.card.red { color: #c0233a; }
+.card-rank { font-size: 21px; line-height: 1; font-family: var(--display); }
+.card-suit { font-size: 16px; line-height: 1; }
+
+.card.back {
+  background:
+    repeating-linear-gradient(45deg, #2f4f78 0 5px, #26436a 5px 10px);
+  box-shadow: 0 3px 8px var(--shadow), inset 0 0 0 2px rgba(201, 162, 39, 0.35);
+}
+
+.card.small { width: 30px; height: 42px; border-radius: 5px; }
+.card.small .card-rank { font-size: 13px; }
+.card.small .card-suit { font-size: 10px; }
+
+/* --- Chips ---------------------------------------------------------------- */
+
+.chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #10151b;
+  background: var(--brass);
+  border: 3px dashed rgba(255, 255, 255, 0.65);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+/* --- Dealer avatar -------------------------------------------------------- */
+
+.dealer-zone {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px 4px;
+}
+
+.avatar {
+  flex: none;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #24313d 0%, #18222c 100%);
+  border: 2px solid var(--brass-dim);
+  box-shadow: 0 3px 10px var(--shadow);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.avatar svg { width: 100%; height: 100%; display: block; }
+
+.speech {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--voice);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.speech::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  background: var(--panel-2);
+  border-left: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: rotate(45deg);
+}
+.speech-who {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--voice);
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.speech p { margin: 0; font-size: 14px; }
+.speech p + p { margin-top: 7px; }
+
+/* Questions the player can put to the dealer. */
+.asks { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.ask {
+  font: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--brass-dim);
+  color: var(--voice);
+  cursor: pointer;
+}
+.ask:hover { background: rgba(201, 162, 39, 0.12); }
+.ask[aria-pressed="true"] { background: rgba(201, 162, 39, 0.2); color: var(--ink); }
+
+/* --- Seats ---------------------------------------------------------------- */
+
+.seat { padding: 10px 16px; }
+.seat-title {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: rgba(232, 237, 242, 0.6);
+  font-weight: 700;
+}
+.seat-total {
+  font-family: var(--display);
+  font-size: 14px;
+  color: var(--ink);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.hand-row { display: flex; align-items: center; gap: 10px; }
+.hand-meta { margin-top: 6px; font-size: 12px; color: rgba(232, 237, 242, 0.62); }
+
+/* --- Stats strip ---------------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--line);
+}
+.stat { background: var(--panel); padding: 10px 6px; text-align: center; min-width: 0; }
+.stat-value {
+  display: block;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  display: block;
+  font-size: 9.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
+}
+.stat.quiet .stat-value { color: var(--muted); font-weight: 400; font-size: 16px; }
+
+/* --- Feedback card (§7.1) ------------------------------------------------- */
+
+.feedback {
+  margin: 12px 16px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--negligible);
+}
+.feedback.optimal { border-left-color: var(--optimal); }
+.feedback.negligible { border-left-color: var(--negligible); }
+.feedback.minor { border-left-color: var(--minor); }
+.feedback.significant { border-left-color: var(--significant); }
+.feedback.blunder { border-left-color: var(--blunder); }
+
+.verdict { margin: 0 0 3px; font-weight: 700; font-size: 15px; }
+.feedback.optimal .verdict { color: var(--optimal); }
+.feedback.minor .verdict { color: var(--minor); }
+.feedback.significant .verdict { color: var(--significant); }
+.feedback.blunder .verdict { color: var(--blunder); }
+.did { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+
+.evs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ev {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #101820;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.ev.best { color: var(--ink); border-color: #3f7d5c; background: rgba(52, 211, 153, 0.12); }
+.ev.chosen { outline: 1px dashed #6b7c8d; outline-offset: 1px; }
+.reason { margin: 0; font-size: 13.5px; }
+.sensitivity {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.sensitivity b { color: var(--voice); font-weight: 600; }
+
+/* --- Actions -------------------------------------------------------------- */
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  z-index: 5;
+}
+.action {
+  flex: 1 1 0;
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, var(--panel-2) 0%, #1a232d 100%);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+}
+.action:hover { background: #26313d; }
+.action .key { font-size: 9.5px; color: var(--muted); font-weight: 500; letter-spacing: 0.08em; }
+.action.primary {
+  background: linear-gradient(180deg, #24845a 0%, #1a6444 100%);
+  border-color: #2f9e6c;
+}
+
+/* --- Panels --------------------------------------------------------------- */
+
+.panel { margin: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px 8px;
+}
+.panel-title {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+  font-weight: 700;
+}
+.panel-note { font-size: 11.5px; color: var(--muted); }
+.panel-body { padding: 0 13px 12px; }
+
+/* --- Hand log ------------------------------------------------------------- */
+
+.log { max-height: 300px; overflow-y: auto; }
+.log-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 13px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+}
+.log-row:hover { background: var(--panel-2); }
+.log-tier { width: 3px; align-self: stretch; border-radius: 2px; background: var(--negligible); }
+.log-tier.optimal { background: var(--optimal); }
+.log-tier.negligible { background: var(--negligible); }
+.log-tier.minor { background: var(--minor); }
+.log-tier.significant { background: var(--significant); }
+.log-tier.blunder { background: var(--blunder); }
+.log-hand { font-size: 13px; }
+.log-detail { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.log-right { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
+.log-net.win { color: var(--optimal); }
+.log-net.loss { color: var(--blunder); }
+.log-delta { font-size: 11px; color: var(--muted); }
+.log-delta.up { color: var(--optimal); }
+.log-delta.down { color: var(--blunder); }
+
+/* --- Footer --------------------------------------------------------------- */
+
+.footer {
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: center;
+  border-top: 1px solid var(--line);
+}
+
+.muted { color: var(--muted); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 400px) {
+  .card { width: 47px; height: 68px; }
+  .stat-value { font-size: 17px; }
+}

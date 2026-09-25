@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "name": "Idan",
+  "hands": 412,
+  "decisions": 398,
+  "correct": 374,
+  "evLost": 3.307,
+  "netUnits": -11,
+  "closeCalls": 22,
+  "closeCallsCorrect": 14,
+  "bySeverity": { "optimal": 374, "negligible": 9, "minor": 8, "significant": 5, "blunder": 2 },
+  "rating": {
+    "mode": "recall",
+    "rating": 1642.4,
+    "peak": 1655.1,
+    "ratedDecisions": 341,
+    "provisional": false,
+    "sessionDelta": 42.4
+  },
+  "scenarioStats": [
+    {
+      "scenarioKey": "bj:hard16:vs10",
+      "attempts": 19,
+      "correct": 15,
+      "consecutiveCorrect": 3,
+      "evCostTotal": 0.417,
+      "confusion": { "stand": 4 },
+      "lastAttemptAt": 390
+    }
+  ],
+  "history": []
+}

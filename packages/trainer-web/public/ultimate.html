@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="i18n-title" content="ui.ultimateTitle" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Ultimate Texas Hold'em</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+    <script src="/figure.js"></script>
+    <script src="/crown.js"></script>
+    <script src="/track.js"></script>
+    <script src="/chips.js"></script>
+    <script src="/dock.js"></script>
+    <script src="/returns.js"></script>
+    <script src="/level.js"></script>
+    <script src="/count.js"></script>
+    <script src="/arrow.js"></script>
+    <script src="/intro.js"></script>
+  </head>
+  <body>
+    <div class="shell uth">
+      <!--
+        The first screen (round 14): what this app is, and one question — how
+        much should it explain? It takes over the table until it is answered.
+      -->
+      <section class="first-screen" id="uth-welcome" hidden>
+        <p class="slogan" data-i18n="brand.slogan">Simply winning more hands.</p>
+        <div class="first-screen-passage" id="uth-welcome-passage">
+          <h1 data-i18n="intro.title">Before your first hand</h1>
+          <p class="intro-body" id="uth-intro-body"></p>
+        </div>
+        <h2 class="first-screen-ask" id="uth-first-screen-ask" data-i18n="level.question">How much should the app explain?</h2>
+        <div class="levels" id="uth-level-choices"></div>
+        <p class="first-screen-note" id="uth-first-screen-note" data-i18n="level.note">This changes only how much is explained, never your score.</p>
+
+      <!-- The answer to "explain everything": the game itself, here, before the
+           first hand — not behind a menu somewhere. -->
+      <div class="primer" id="uth-primer" hidden>
+        <h2 data-i18n="prime.title">How the game works</h2>
+        <div id="uth-primer-body"></div>
+        <button class="action primary" type="button" id="uth-primer-start" data-i18n="prime.start">Start playing</button>
+      </div>
+      </section>
+
+      <!--
+        The rules are a statement (§10.1), and since round 19 there is a door
+        beside them: the Trips pay table can be chosen, and the language and the
+        level live behind it, where a player looks for them on the other table.
+        The Blind pay table is stated inside and is not a control — every figure
+        the trainer shows was solved against it.
+      -->
+      <header class="rules" id="rules-bar">
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
+        <div class="rules-main">
+          <span class="rules-name" data-i18n="ui.ultimateTitle">Ultimate Texas Hold’em</span>
+        </div>
+        <button class="link" id="uth-open-rules" data-i18n-attr="aria-label:ui.changeRuleSet" data-i18n="ui.rules">Rules</button>
+      </header>
+
+      <!-- The same strip as the Blackjack table, reading this game's figures. -->
+      <section class="stats" id="uth-stats" data-i18n-attr="aria-label:ui.sessionStats">
+        <button class="stat" type="button" data-info="accuracy" data-cell="accuracy"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-accuracy">—</span>
+          <span class="stat-label" data-i18n="ui.decisionAccuracy">decision accuracy</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEvLost" data-cell="evLost"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-evlost">—</span>
+          <span class="stat-label" data-i18n="ui.evLostPer100">EV lost / 100 hands</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat" type="button" data-info="uthEdge" data-cell="edge"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-edge">—</span>
+          <span class="stat-label" data-i18n="ui.yourEdge">house edge you face</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+        <button class="stat stat-quiet" type="button" data-info="units" data-cell="units"
+                aria-expanded="false" aria-controls="uth-stat-info">
+          <span class="stat-value" id="uth-stat-units">—</span>
+          <span class="stat-label" data-i18n="ui.units">units</span>
+          <span class="stat-more" aria-hidden="true">?</span>
+        </button>
+      </section>
+      <section class="stat-info" id="uth-stat-info" hidden aria-live="polite"></section>
+
+      <!-- The decision track, as on the Blackjack table. It replaces the list of
+           hands this screen used to carry; the hands themselves are reviewed
+           on the home screen, and a tap on a row opens one there. -->
+      <div class="track-anchor">
+        <section class="track" id="uth-track" data-i18n-attr="aria-label:track.title"></section>
+      </div>
+
+      <main class="table felt uth-felt" id="uth-table">
+        <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+          <!-- What he is holding, in words, once his cards are turned over —
+               round 17's treatment of his total on the Blackjack table. -->
+          <h2 class="seat-title"><span data-i18n="ui.dealer">Dealer</span><span class="seat-hand" id="uth-dealer-hand"></span></h2>
+          <div class="cards" id="uth-dealer"></div>
+        </section>
+
+        <section class="seat uth-board" data-i18n-attr="aria-label:uth.board">
+          <h2 class="seat-title"><span data-i18n="uth.board">Board</span></h2>
+          <div class="cards" id="uth-board"></div>
+        </section>
+
+        <section class="seat" data-i18n-attr="aria-label:ui.yourHand">
+          <h2 class="seat-title">
+            <span data-i18n="ui.you">You</span><span class="crown-slot" id="uth-you-crown" hidden></span><span class="seat-hand" id="uth-you-hand"></span>
+          </h2>
+          <div class="cards" id="uth-hole"></div>
+          <!-- Ante, Blind and Play, and the stack behind them. -->
+          <div class="uth-rail" id="uth-rail"></div>
+        </section>
+
+        <p class="empty" id="uth-empty"></p>
+      </main>
+
+      <!--
+        The commentary, below the table — Blackjack's model, which Idan named as
+        the right one (round 12). The reasoning, the notes and what the cards did
+        live here, where the page scrolls. Only the grade and its buttons are
+        pinned to the bottom, so nothing long can grow over the ringed cards.
+      -->
+      <section class="feedback" id="uth-feedback" hidden aria-live="polite"></section>
+
+      <div class="dock">
+        <!-- The grade first; the result under it, later and quieter (§3.1). -->
+        <section class="quickcard" id="uth-card" hidden aria-live="polite"></section>
+        <nav class="actions" id="uth-actions" data-i18n-attr="aria-label:ui.actions"></nav>
+      </div>
+
+      <dialog id="uth-howto">
+        <form method="dialog">
+          <h2 data-i18n="howto.title">How this works</h2>
+          <p class="howto-lead" id="uth-howto-lead"></p>
+          <ol class="howto" id="uth-howto-list"></ol>
+
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <dialog id="uth-rules">
+        <form method="dialog">
+          <h2 data-i18n="ui.ruleSet">Rule set</h2>
+
+          <!-- Stated, not offered. The note says why, in one sentence. -->
+          <p class="rules-sub"><span class="rules-badge" id="uth-blind-line"></span></p>
+          <p class="muted fine" id="uth-blind-note"></p>
+
+          <h3 class="sub-title" data-i18n="uth.rules.trips">Trips pay table</h3>
+          <div id="uth-trips-list"></div>
+          <p class="muted fine" id="uth-trips-note"></p>
+
+          <p class="muted fine" id="uth-limits-line"></p>
+
+          <!--
+            Not rules: the language and how much the app explains. They were
+            behind "How to play" while this table had no panel; they belong
+            here, in the same place as on the Blackjack table.
+          -->
+          <h3 class="sub-title" data-i18n="ui.language">Language</h3>
+          <div class="lang-slot" id="lang-slot"></div>
+
+          <h3 class="sub-title" data-i18n="level.question">How much should the app explain?</h3>
+          <div class="levels levels-settings" id="uth-level-settings"></div>
+          <p class="muted fine" data-i18n="level.note"></p>
+
+          <menu>
+            <button value="cancel" data-i18n="ui.close">Close</button>
+          </menu>
+        </form>
+      </dialog>
+
+      <footer class="footer">
+        <button class="link" id="uth-open-howto" type="button" data-i18n="howto.open">How to play</button>
+      </footer>
+    </div>
+
+    <script src="/ultimate.js"></script>
+  </body>
+</html>

@@ -1,0 +1,3403 @@
+{
+ "bj": {
+  "decisions": [
+   {
+    "headline": "13 vs 10 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 39.19511843381215,
+    "ranked": [
+     [
+      "hit",
+      -0.4224186402016803
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5398128986864069
+     ],
+     [
+      "double",
+      -0.8624287520807958
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "13 — a **stiff**. Standing never wins it; drawing breaks it 38% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.422 against −0.500 to surrender. Drawing breaks it 38% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "20 vs 10 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.402836151379655,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.555730990578855
+     ],
+     [
+      "hit",
+      -0.8471051608008
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "20 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.556 against −0.847 to hit. Standing wins 59% of the time and loses 4%. Little beats it."
+    ]
+   },
+   {
+    "headline": "12 vs 10 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 38.20087591657259,
+    "ranked": [
+     [
+      "hit",
+      -0.3777173317893294
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5397625569479463
+     ],
+     [
+      "double",
+      -0.7910699926719874
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.378 against −0.500 to surrender. Drawing breaks it 31% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "16 vs 10 → Surrender",
+    "chosen": "stand",
+    "optimal": "surrender",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.040118408099309444,
+    "ratingDelta": -1.6400895828158348,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5345713219890884
+     ],
+     [
+      "stand",
+      -0.5401184080993094
+     ],
+     [
+      "double",
+      -1.0691426439781768
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **narrow** win over the next best. −0.500 against −0.535 to hit. Drawing breaks it 62% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "8 vs 2 → Hit",
+    "chosen": "surrender",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.4791559914529846,
+    "ratingDelta": -8.435160450317783,
+    "ranked": [
+     [
+      "hit",
+      -0.020844008547015385
+     ],
+     [
+      "double",
+      -0.19854584122384722
+     ],
+     [
+      "stand",
+      -0.29004612923446055
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "8 — too small to stand, too small to double. **Not finished.**",
+     "**Hit** — **closer to the next best** than it looks. −0.021 against −0.199 to double. Doubling buys **one card and no more**. Here that card leaves you under seventeen 54% of the time — stuck standing on a hand you would still want to draw to, for twice the money."
+    ]
+   },
+   {
+    "headline": "17 vs 7 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.3694910765731804,
+    "ratingDelta": -37.09272024989445,
+    "ranked": [
+     [
+      "stand",
+      -0.1090597081089097
+     ],
+     [
+      "hit",
+      -0.4785507846820901
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.9571015693641802
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. −0.109 against −0.479 to hit. Standing still loses 37% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "9 vs 9 → Hit",
+    "chosen": "surrender",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.4477947147678664,
+    "ratingDelta": -22.871381469750393,
+    "ranked": [
+     [
+      "hit",
+      -0.05220528523213357
+     ],
+     [
+      "double",
+      -0.29735912602808595
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5430305875470426
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "9 — **cannot break** on one card, and every ten makes it a real hand.",
+     "**Hit** — **well clear** of the next best. −0.052 against −0.297 to double. Doubling buys **one card and no more**. Here that card leaves you under seventeen 46% of the time — stuck standing on a hand you would still want to draw to, for twice the money."
+    ]
+   },
+   {
+    "headline": "12 vs 4 → Stand",
+    "chosen": "surrender",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": true,
+    "evCost": 0.291163167766873,
+    "ratingDelta": -11.266334439695855,
+    "ranked": [
+     [
+      "stand",
+      -0.20883683223312696
+     ],
+     [
+      "hit",
+      -0.21286483595178865
+     ],
+     [
+      "double",
+      -0.4257296719035773
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A 4 — a **bust card**. Breaks 40% of the time.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — a **coin-flip** with the next best; either is defensible. −0.209 against −0.213 to hit. Standing only wins when the dealer breaks, and the dealer breaks 40% of the time."
+    ]
+   },
+   {
+    "headline": "19 vs 2 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.8509379726320643,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.3861749524110881
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.732381510110488
+     ],
+     [
+      "double",
+      -1.464763020220976
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "19 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.386 against −0.500 to surrender. Standing wins 63% of the time and loses 24%. Little beats it."
+    ]
+   },
+   {
+    "headline": "13 vs 10 → Hit",
+    "chosen": "double",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.44001011187911554,
+    "ratingDelta": -0.7873217982764207,
+    "ranked": [
+     [
+      "hit",
+      -0.4224186402016803
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5398128986864069
+     ],
+     [
+      "double",
+      -0.8624287520807958
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "13 — a **stiff**. Standing never wins it; drawing breaks it 38% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.422 against −0.500 to surrender. Drawing breaks it 38% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "19 vs 7 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.327759938844478,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.615046956058773
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.7127129827857049
+     ],
+     [
+      "double",
+      -1.4254259655714099
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "19 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.615 against −0.500 to surrender. Standing wins 77% of the time and loses 15%. Little beats it."
+    ]
+   },
+   {
+    "headline": "13 vs 9 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 38.73705604692216,
+    "ranked": [
+     [
+      "hit",
+      -0.3853782149534911
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5421623658589578
+     ],
+     [
+      "double",
+      -0.8040105362026349
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "13 — a **stiff**. Standing never wins it; drawing breaks it 38% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.385 against −0.500 to surrender. Drawing breaks it 38% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "17 vs 9 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 38.939548008226296,
+    "ranked": [
+     [
+      "stand",
+      -0.42199453690796956
+     ],
+     [
+      "hit",
+      -0.5497454955923954
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **closer to the next best** than it looks. −0.422 against −0.550 to hit. Standing still loses 65% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "16 vs 10 → Surrender",
+    "chosen": "double",
+    "optimal": "surrender",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.5691426439781768,
+    "ratingDelta": -1.6005667496106804,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5345713219890884
+     ],
+     [
+      "stand",
+      -0.5401184080993094
+     ],
+     [
+      "double",
+      -1.0691426439781768
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **narrow** win over the next best. −0.500 against −0.535 to hit. Drawing breaks it 62% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "A,8 vs 10 → Stand",
+    "chosen": "surrender",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.5633213503142009,
+    "ratingDelta": -6.079997904336273,
+    "ranked": [
+     [
+      "stand",
+      0.06332135031420089
+     ],
+     [
+      "hit",
+      -0.08875595907982575
+     ],
+     [
+      "double",
+      -0.23613819808130254
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "Soft 19 — already good, and **free to improve**. The question is whether it is worth it.",
+     "**Stand** — **closer to the next best** than it looks. +0.063 against −0.089 to hit. The draw is free — and against a ten, what you have is not enough."
+    ]
+   },
+   {
+    "headline": "10,10 vs 10 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 0,
+    "ranked": [
+     [
+      "stand",
+      0.5591450775312319
+     ],
+     [
+      "split",
+      -0.36522179270944405
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.8476332821872248
+     ],
+     [
+      "double",
+      -1.6952665643744496
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "10,10 — a pair worth **keeping**. Apart it is two weaker hands.",
+     "**Stand** — **well clear** of the next best. +0.559 against −0.365 to split. Splitting costs 0.924 — one good total becomes two worse ones."
+    ]
+   },
+   {
+    "headline": "17 vs 6 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.512614699342126,
+    "ratingDelta": -37.42978325970698,
+    "ranked": [
+     [
+      "stand",
+      0.008320783913085966
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.50429391542904
+     ],
+     [
+      "double",
+      -1.00858783085808
+     ]
+    ],
+    "steps": [
+     "A 6, their worst — a **bust card**. Breaks 42% of the time.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.008 against −0.500 to surrender. Standing wins 42% of the time and loses 41%. Little beats it."
+    ]
+   },
+   {
+    "headline": "17 vs 3 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.9471981902114441,
+    "ratingDelta": -36.860315946659775,
+    "ranked": [
+     [
+      "stand",
+      -0.11749240532169437
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5323452977665692
+     ],
+     [
+      "double",
+      -1.0646905955331385
+     ]
+    ],
+    "steps": [
+     "A 3 — a **bust card**. Breaks 37% of the time.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. −0.117 against −0.500 to surrender. Standing still loses 49% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "17 vs 2 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.38305375019089616,
+    "ratingDelta": -34.27861751909794,
+    "ranked": [
+     [
+      "stand",
+      -0.15314687483076353
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5362006250216597
+     ],
+     [
+      "double",
+      -1.0724012500433193
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. −0.153 against −0.500 to surrender. Standing still loses 51% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "18 vs 2 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.12211507428089621
+     ],
+     [
+      "hit",
+      -0.6275389799108528
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "18 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.122 against −0.628 to hit. Standing wins 49% of the time and loses 37%. Little beats it."
+    ]
+   },
+   {
+    "headline": "18 vs 2 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.3693287603528217,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.12118029895238504
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.6240742307002183
+     ],
+     [
+      "double",
+      -1.2481484614004366
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "18 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.121 against −0.500 to surrender. Standing wins 49% of the time and loses 37%. Little beats it."
+    ]
+   },
+   {
+    "headline": "14 vs 9 → Hit",
+    "chosen": "surrender",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.07087054076293636,
+    "ratingDelta": -0.6126084639383431,
+    "ranked": [
+     [
+      "hit",
+      -0.42912945923706364
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5417722781930845
+     ],
+     [
+      "double",
+      -0.8740228015022772
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "14 — a **stiff**. Standing never wins it; drawing breaks it 46% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.429 against −0.500 to surrender. Drawing breaks it 46% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "12 vs 9 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 37.857381627857656,
+    "ranked": [
+     [
+      "hit",
+      -0.343749673418163
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5412952085237093
+     ],
+     [
+      "double",
+      -0.7443960728100841
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.344 against −0.500 to surrender. Drawing breaks it 31% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "14 vs 9 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 39.24367684550805,
+    "ranked": [
+     [
+      "hit",
+      -0.42912945923706364
+     ],
+     [
+      "stand",
+      -0.5417722781930845
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "14 — a **stiff**. Standing never wins it; drawing breaks it 46% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.429 against −0.542 to stand. Standing only wins when the dealer breaks, and the dealer breaks 23% of the time."
+    ]
+   },
+   {
+    "headline": "15 vs 9 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.07049544926961154,
+    "ratingDelta": -1.2483520356312912,
+    "ranked": [
+     [
+      "hit",
+      -0.4714514184214477
+     ],
+     [
+      "stand",
+      -0.5419468676910593
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.471 against −0.542 to stand. Standing only wins when the dealer breaks, and the dealer breaks 23% of the time."
+    ]
+   },
+   {
+    "headline": "10,10 vs 10 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 0,
+    "ranked": [
+     [
+      "stand",
+      0.5591450775312319
+     ],
+     [
+      "split",
+      -0.36522179270944405
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.8476332821872248
+     ],
+     [
+      "double",
+      -1.6952665643744496
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "10,10 — a pair worth **keeping**. Apart it is two weaker hands.",
+     "**Stand** — **well clear** of the next best. +0.559 against −0.365 to split. Splitting costs 0.924 — one good total becomes two worse ones."
+    ]
+   },
+   {
+    "headline": "10,10 vs 6 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 2.4073081905484313,
+    "ratingDelta": -25.706957987425785,
+    "ranked": [
+     [
+      "stand",
+      0.7028260413409185
+     ],
+     [
+      "split",
+      0.44832506845507714
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.8522410746037563
+     ],
+     [
+      "double",
+      -1.7044821492075126
+     ]
+    ],
+    "steps": [
+     "A 6, their worst — a **bust card**. Breaks 42% of the time.",
+     "10,10 — a pair worth **keeping**. Apart it is two weaker hands.",
+     "**Stand** — **well clear** of the next best. +0.703 against +0.448 to split. Splitting costs 0.255 — one good total becomes two worse ones."
+    ]
+   },
+   {
+    "headline": "6 vs 2 → Hit",
+    "chosen": "double",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.42086952768930364,
+    "ratingDelta": -4.566318347589456,
+    "ranked": [
+     [
+      "hit",
+      -0.14191570475864143
+     ],
+     [
+      "stand",
+      -0.2921908634617161
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.5627852324479451
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "6 — too small to stand, too small to double. **Not finished.**",
+     "**Hit** — **closer to the next best** than it looks. −0.142 against −0.292 to stand. Standing only wins when the dealer breaks, and the dealer breaks 35% of the time."
+    ]
+   },
+   {
+    "headline": "7 vs 7 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 0.5063556777802205,
+    "ranked": [
+     [
+      "hit",
+      -0.06903433179932209
+     ],
+     [
+      "stand",
+      -0.4745130506695856
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.5823528361375485
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "7 — too small to stand, too small to double. **Not finished.**",
+     "**Hit** — **well clear** of the next best. −0.069 against −0.475 to stand. Standing only wins when the dealer breaks, and the dealer breaks 26% of the time."
+    ]
+   },
+   {
+    "headline": "16 vs 7 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.06803638851228216,
+    "ratingDelta": -0.7189246398658232,
+    "ranked": [
+     [
+      "hit",
+      -0.4092180869252055
+     ],
+     [
+      "stand",
+      -0.47725447543748767
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.409 against −0.477 to stand. Standing only wins when the dealer breaks, and the dealer breaks 26% of the time."
+    ]
+   },
+   {
+    "headline": "14 vs 2 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.0694761456514208,
+    "ratingDelta": -1.2557689326600334,
+    "ranked": [
+     [
+      "stand",
+      -0.2933544363752804
+     ],
+     [
+      "hit",
+      -0.3628305820267012
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.7256611640534024
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "14 — a **stiff**. Standing never wins it; drawing breaks it 46% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **closer to the next best** than it looks. −0.293 against −0.363 to hit. Standing only wins when the dealer breaks, and the dealer breaks 35% of the time."
+    ]
+   },
+   {
+    "headline": "12 vs 9 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 37.31210085748864,
+    "ranked": [
+     [
+      "hit",
+      -0.343749673418163
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5412952085237093
+     ],
+     [
+      "double",
+      -0.7443960728100841
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.344 against −0.500 to surrender. Drawing breaks it 31% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "18 vs 9 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.43442195639707015,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      -0.18284621251259067
+     ],
+     [
+      "hit",
+      -0.6172681689096609
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "18 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. −0.183 against −0.617 to hit. Standing still loses 53% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "12 vs 2 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.03968357448327231,
+    "ratingDelta": -1.8608629149139162,
+    "ranked": [
+     [
+      "hit",
+      -0.25371039435576725
+     ],
+     [
+      "stand",
+      -0.29339396883903957
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.5074207887115345
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — a **narrow** win over the next best. −0.254 against −0.293 to stand. Standing only wins when the dealer breaks, and the dealer breaks 35% of the time."
+    ]
+   },
+   {
+    "headline": "16 vs 9 → Surrender",
+    "chosen": "hit",
+    "optimal": "surrender",
+    "correct": false,
+    "severity": "negligible",
+    "closeCall": true,
+    "evCost": 0.004718990381339605,
+    "ratingDelta": 16.485882962060707,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5047189903813396
+     ],
+     [
+      "stand",
+      -0.5425605276094131
+     ],
+     [
+      "double",
+      -1.0094379807626792
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **coin-flip** with the next best; either is defensible. −0.500 against −0.505 to hit. Drawing breaks it 62% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "16 vs 8 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.05971458744803221,
+    "ratingDelta": -0.6395683038028757,
+    "ranked": [
+     [
+      "hit",
+      -0.45359608196936735
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5133106694173996
+     ],
+     [
+      "double",
+      -0.9071921639387347
+     ]
+    ],
+    "steps": [
+     "An 8 — **strong**. Breaks 24% of the time, and makes 17+ the other 76%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — a **narrow** win over the next best. −0.454 against −0.500 to surrender. Drawing breaks it 62% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "8,8 vs 6 → Split",
+    "chosen": "double",
+    "optimal": "split",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.2568986541069962,
+    "ratingDelta": -22.319720228790978,
+    "ranked": [
+     [
+      "split",
+      0.40515261703501665
+     ],
+     [
+      "stand",
+      -0.15749512863699566
+     ],
+     [
+      "hit",
+      -0.42587301853598974
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.8517460370719795
+     ]
+    ],
+    "steps": [
+     "A 6, their worst — a **bust card**. Breaks 42% of the time.",
+     "8,8 — **sixteen**, the worst total there is. Splitting is an **escape**, not an attack.",
+     "**Split** — **well clear** of the next best. +0.405 against −0.157 to stand. Two hands are worth 0.563 more than one."
+    ]
+   },
+   {
+    "headline": "16 vs 5 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.7340264034659381,
+    "ratingDelta": -17.152657108386947,
+    "ranked": [
+     [
+      "stand",
+      -0.16378903717926285
+     ],
+     [
+      "hit",
+      -0.44890772032260046
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.8978154406452009
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **well clear** of the next best. −0.164 against −0.449 to hit. Standing only wins when the dealer breaks, and the dealer breaks 42% of the time."
+    ]
+   },
+   {
+    "headline": "15 vs 5 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.2247619654500748,
+    "ratingDelta": -10.027622786422022,
+    "ranked": [
+     [
+      "stand",
+      -0.163002430232098
+     ],
+     [
+      "hit",
+      -0.3877643956821728
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.7755287913643456
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **well clear** of the next best. −0.163 against −0.388 to hit. Standing only wins when the dealer breaks, and the dealer breaks 42% of the time."
+    ]
+   },
+   {
+    "headline": "19 vs 5 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.4470069008397388
+     ],
+     [
+      "hit",
+      -0.7222042947588336
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "19 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.447 against −0.722 to hit. Standing wins 66% of the time and loses 22%. Little beats it."
+    ]
+   },
+   {
+    "headline": "17 vs 9 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.6774964542768211,
+    "ratingDelta": -0.59586947924094,
+    "ranked": [
+     [
+      "stand",
+      -0.42199453690796956
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5497454955923954
+     ],
+     [
+      "double",
+      -1.0994909911847908
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **closer to the next best** than it looks. −0.422 against −0.500 to surrender. Standing still loses 65% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "8 vs 4 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.24917402968166255,
+    "ratingDelta": -1.1564644263550439,
+    "ranked": [
+     [
+      "hit",
+      0.045616196799886516
+     ],
+     [
+      "double",
+      -0.05161687807924839
+     ],
+     [
+      "stand",
+      -0.20355783288177604
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A 4 — a **bust card**. Breaks 40% of the time.",
+     "8 — too small to stand, too small to double. **Not finished.**",
+     "**Hit** — **closer to the next best** than it looks. +0.046 against −0.052 to double. Doubling buys **one card and no more**. Here that card leaves you under seventeen 54% of the time — stuck standing on a hand you would still want to draw to, for twice the money."
+    ]
+   },
+   {
+    "headline": "15 vs 10 → Surrender",
+    "chosen": "hit",
+    "optimal": "surrender",
+    "correct": false,
+    "severity": "negligible",
+    "closeCall": true,
+    "evCost": 0.003180672114972305,
+    "ratingDelta": 9.694200960916225,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5031806721149723
+     ],
+     [
+      "stand",
+      -0.5394704896684672
+     ],
+     [
+      "double",
+      -1.0065063242358028
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **coin-flip** with the next best; either is defensible. −0.500 against −0.503 to hit. Drawing breaks it 54% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "13 vs 9 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 23.079671399401633,
+    "ranked": [
+     [
+      "hit",
+      -0.3853782149534911
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5421623658589578
+     ],
+     [
+      "double",
+      -0.8040105362026349
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "13 — a **stiff**. Standing never wins it; drawing breaks it 38% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.385 against −0.500 to surrender. Drawing breaks it 38% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "15 vs 5 → Stand",
+    "chosen": "surrender",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.33699756976790196,
+    "ratingDelta": -10.739340325779875,
+    "ranked": [
+     [
+      "stand",
+      -0.163002430232098
+     ],
+     [
+      "hit",
+      -0.3877643956821728
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.7755287913643456
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **well clear** of the next best. −0.163 against −0.388 to hit. Standing only wins when the dealer breaks, and the dealer breaks 42% of the time."
+    ]
+   },
+   {
+    "headline": "19 vs A → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.2824876909497016
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.7272215961424613
+     ],
+     [
+      "double",
+      -1.4544431922849226
+     ]
+    ],
+    "steps": [
+     "An ace, and **no blackjack** behind it. The dealer still breaks only 17% of the time.",
+     "19 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.282 against −0.500 to surrender. Standing wins 54% of the time and loses 27%. Little beats it."
+    ]
+   },
+   {
+    "headline": "A,6 vs 10 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 17.024044905003716,
+    "ranked": [
+     [
+      "hit",
+      -0.19542805873291175
+     ],
+     [
+      "stand",
+      -0.41955728435202433
+     ],
+     [
+      "double",
+      -0.45492156688905083
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "Soft 17 — the ace protects you. **Nothing you draw can break it**.",
+     "**Hit** — **well clear** of the next best. −0.195 against −0.420 to stand. The draw is free — and against a ten, what you have is not enough."
+    ]
+   },
+   {
+    "headline": "17 vs 10 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.1622305975372147,
+    "ratingDelta": -1.0095960315812529,
+    "ranked": [
+     [
+      "stand",
+      -0.41776724818244093
+     ],
+     [
+      "hit",
+      -0.5799978457196556
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **closer to the next best** than it looks. −0.418 against −0.580 to hit. Standing still loses 65% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "5 vs A → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.3854609819017524,
+    "ratingDelta": -12.450730481920768,
+    "ranked": [
+     [
+      "hit",
+      -0.2802899929798077
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.6657509748815601
+     ],
+     [
+      "double",
+      -1.3315019497631202
+     ]
+    ],
+    "steps": [
+     "An ace, and **no blackjack** behind it. The dealer still breaks only 17% of the time.",
+     "5 — too small to stand, too small to double. **Not finished.**",
+     "**Hit** — **well clear** of the next best. −0.280 against −0.500 to surrender. Drawing breaks it 0% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "18 vs 2 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.7452545296526033,
+    "ratingDelta": null,
+    "ranked": [
+     [
+      "stand",
+      0.12118029895238504
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.6240742307002183
+     ],
+     [
+      "double",
+      -1.2481484614004366
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "18 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. +0.121 against −0.500 to surrender. Standing wins 49% of the time and loses 37%. Little beats it."
+    ]
+   },
+   {
+    "headline": "12 vs 7 → Hit",
+    "chosen": "hit",
+    "optimal": "hit",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 12.84117792173584,
+    "ranked": [
+     [
+      "hit",
+      -0.2156483204668209
+     ],
+     [
+      "stand",
+      -0.47600794070597474
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.5113199263334014
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **well clear** of the next best. −0.216 against −0.476 to stand. Standing only wins when the dealer breaks, and the dealer breaks 26% of the time."
+    ]
+   },
+   {
+    "headline": "15 vs 7 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.10857687254682369,
+    "ratingDelta": -1.0750409393124691,
+    "ranked": [
+     [
+      "hit",
+      -0.36844958323180094
+     ],
+     [
+      "stand",
+      -0.4770264557786246
+     ]
+    ],
+    "steps": [
+     "A 7 — **strong**. Breaks 26% of the time, and makes 17+ the other 74%.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.368 against −0.477 to stand. Standing only wins when the dealer breaks, and the dealer breaks 26% of the time."
+    ]
+   },
+   {
+    "headline": "14 vs 5 → Stand",
+    "chosen": "double",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.4810468157993538,
+    "ratingDelta": -4.983726920285248,
+    "ranked": [
+     [
+      "stand",
+      -0.16246034907522014
+     ],
+     [
+      "hit",
+      -0.32175358243728697
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.6435071648745739
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "14 — a **stiff**. Standing never wins it; drawing breaks it 46% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **closer to the next best** than it looks. −0.162 against −0.322 to hit. Standing only wins when the dealer breaks, and the dealer breaks 42% of the time."
+    ]
+   },
+   {
+    "headline": "15 vs 10 → Surrender",
+    "chosen": "double",
+    "optimal": "surrender",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": true,
+    "evCost": 0.5065063242358028,
+    "ratingDelta": -3.4057683704737878,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5031806721149723
+     ],
+     [
+      "stand",
+      -0.5394704896684672
+     ],
+     [
+      "double",
+      -1.0065063242358028
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "15 — a **stiff**. Standing never wins it; drawing breaks it 54% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **coin-flip** with the next best; either is defensible. −0.500 against −0.503 to hit. Drawing breaks it 54% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "10,10 vs 10 → Stand",
+    "chosen": "hit",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 1.4067783597184567,
+    "ratingDelta": -22.67967245357008,
+    "ranked": [
+     [
+      "stand",
+      0.5591450775312319
+     ],
+     [
+      "split",
+      -0.36522179270944405
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.8476332821872248
+     ],
+     [
+      "double",
+      -1.6952665643744496
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "10,10 — a pair worth **keeping**. Apart it is two weaker hands.",
+     "**Stand** — **well clear** of the next best. +0.559 against −0.365 to split. Splitting costs 0.924 — one good total becomes two worse ones."
+    ]
+   },
+   {
+    "headline": "11 vs 10 → Double",
+    "chosen": "hit",
+    "optimal": "double",
+    "correct": false,
+    "severity": "significant",
+    "closeCall": false,
+    "evCost": 0.060263673181463084,
+    "ratingDelta": -1.4738168694227063,
+    "ranked": [
+     [
+      "double",
+      0.17932309911632516
+     ],
+     [
+      "hit",
+      0.11905942593486207
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.5398235974075564
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "11 — **cannot break** on one card, and every ten makes it a real hand.",
+     "**Double** — **closer to the next best** than it looks. +0.179 against +0.119 to hit. The same card either way, on **half the money** — what you gave up is **the raise**, not the hand."
+    ]
+   },
+   {
+    "headline": "12 vs 10 → Hit",
+    "chosen": "stand",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.16204522515861686,
+    "ratingDelta": -1.2765717345495684,
+    "ranked": [
+     [
+      "hit",
+      -0.3777173317893294
+     ],
+     [
+      "stand",
+      -0.5397625569479463
+     ]
+    ],
+    "steps": [
+     "A ten — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "12 — a **stiff**. Standing never wins it; drawing breaks it 31% of the time. No good answer, only a **cheaper** one.",
+     "**Hit** — **closer to the next best** than it looks. −0.378 against −0.540 to stand. Standing only wins when the dealer breaks, and the dealer breaks 23% of the time."
+    ]
+   },
+   {
+    "headline": "A,7 vs 5 → Double",
+    "chosen": "stand",
+    "optimal": "double",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.10141939933551053,
+    "ratingDelta": -0.990352728363075,
+    "ranked": [
+     [
+      "double",
+      0.3045476101785072
+     ],
+     [
+      "stand",
+      0.20312821084299665
+     ],
+     [
+      "hit",
+      0.1522738050892536
+     ],
+     [
+      "surrender",
+      -0.5
+     ]
+    ],
+    "steps": [
+     "A 5, their worst — a **bust card**. Breaks 42% of the time.",
+     "Soft 18 — already good, and **free to improve**. The question is whether it is worth it.",
+     "**Double** — **closer to the next best** than it looks. +0.305 against +0.203 to stand. Standing wins 54% of the time and loses 34%. Little beats it. The same card either way, on **half the money** — what you gave up is **the raise**, not the hand."
+    ]
+   },
+   {
+    "headline": "11 vs 8 → Double",
+    "chosen": "surrender",
+    "optimal": "double",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.8492711076292537,
+    "ratingDelta": -2.749067561020785,
+    "ranked": [
+     [
+      "double",
+      0.34927110762925373
+     ],
+     [
+      "hit",
+      0.22877446644871488
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "stand",
+      -0.513424348163042
+     ]
+    ],
+    "steps": [
+     "An 8 — **strong**. Breaks 24% of the time, and makes 17+ the other 76%.",
+     "11 — **cannot break** on one card, and every ten makes it a real hand.",
+     "**Double** — **closer to the next best** than it looks. +0.349 against +0.229 to hit. The same card either way, on **half the money** — what you gave up is **the raise**, not the hand."
+    ]
+   },
+   {
+    "headline": "16 vs 4 → Stand",
+    "chosen": "surrender",
+    "optimal": "stand",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.2915673553083169,
+    "ratingDelta": -12.929778215136839,
+    "ranked": [
+     [
+      "stand",
+      -0.20843264469168307
+     ],
+     [
+      "hit",
+      -0.45584590997715474
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "double",
+      -0.9116918199543095
+     ]
+    ],
+    "steps": [
+     "A 4 — a **bust card**. Breaks 40% of the time.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Stand** — **well clear** of the next best. −0.208 against −0.456 to hit. Standing only wins when the dealer breaks, and the dealer breaks 40% of the time."
+    ]
+   },
+   {
+    "headline": "17 vs 2 → Stand",
+    "chosen": "stand",
+    "optimal": "stand",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": false,
+    "evCost": 0,
+    "ratingDelta": 2.2507815532078475,
+    "ranked": [
+     [
+      "stand",
+      -0.15314687483076353
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5362006250216597
+     ],
+     [
+      "double",
+      -1.0724012500433193
+     ]
+    ],
+    "steps": [
+     "A 2 — a **bust card**. Breaks 35% of the time.",
+     "17 — **pat**. It wins what it wins; the rest is the dealer's business.",
+     "**Stand** — **well clear** of the next best. −0.153 against −0.500 to surrender. Standing still loses 51% of the time — **bad, just less bad** than the rest."
+    ]
+   },
+   {
+    "headline": "6,6 vs A → Hit",
+    "chosen": "surrender",
+    "optimal": "hit",
+    "correct": false,
+    "severity": "blunder",
+    "closeCall": false,
+    "evCost": 0.14508412818235106,
+    "ratingDelta": -3.3387191655166957,
+    "ranked": [
+     [
+      "hit",
+      -0.35491587181764894
+     ],
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "split",
+      -0.6528015309639162
+     ],
+     [
+      "stand",
+      -0.6594382569321039
+     ],
+     [
+      "double",
+      -0.8287634697162417
+     ]
+    ],
+    "steps": [
+     "An ace, and **no blackjack** behind it. The dealer still breaks only 17% of the time.",
+     "6,6 — a pair worth **keeping**. Apart it is two weaker hands.",
+     "**Hit** — **closer to the next best** than it looks. −0.355 against −0.500 to surrender. Drawing breaks it 0% of the time on the very next card."
+    ]
+   },
+   {
+    "headline": "16 vs 9 → Surrender",
+    "chosen": "surrender",
+    "optimal": "surrender",
+    "correct": true,
+    "severity": "optimal",
+    "closeCall": true,
+    "evCost": 0,
+    "ratingDelta": 21.103166835989224,
+    "ranked": [
+     [
+      "surrender",
+      -0.5
+     ],
+     [
+      "hit",
+      -0.5047189903813396
+     ],
+     [
+      "stand",
+      -0.5425605276094131
+     ],
+     [
+      "double",
+      -1.0094379807626792
+     ]
+    ],
+    "steps": [
+     "A 9 — **strong**. Breaks 23% of the time, and makes 17+ the other 77%.",
+     "16 — a **stiff**. Standing never wins it; drawing breaks it 62% of the time. No good answer, only a **cheaper** one.",
+     "**Surrender** — a **coin-flip** with the next best; either is defensible. −0.500 against −0.505 to hit. Drawing breaks it 62% of the time on the very next card."
+    ]
+   }
+  ],
+  "track": [
+   {
+    "dots": [
+     "close"
+    ],
+    "net": -0.5
+   },
+   {
+    "dots": [
+     "optimal",
+     "blunder"
+    ],
+    "net": -0.5
+   },
+   {
+    "dots": [
+     "optimal"
+    ],
+    "net": 1
+   },
+   {
+    "dots": [
+     "blunder"
+    ],
+    "net": -0.5
+   },
+   {
+    "dots": [
+     "blunder"
+    ],
+    "net": -0.5
+   },
+   {
+    "dots": [
+     "optimal"
+    ],
+    "net": -1
+   },
+   {
+    "dots": [
+     "blunder"
+    ],
+    "net": 1
+   },
+   {
+    "dots": [
+     "significant",
+     "blunder"
+    ],
+    "net": -1
+   },
+   {
+    "dots": [
+     "blunder"
+    ],
+    "net": -1
+   },
+   {
+    "dots": [
+     "close"
+    ],
+    "net": 2
+   },
+   {
+    "dots": [
+     "blunder"
+    ],
+    "net": -2
+   },
+   {
+    "dots": [
+     "optimal",
+     "blunder"
+    ],
+    "net": -1
+   }
+  ],
+  "log": [
+   -0.5,
+   -0.5,
+   1,
+   -0.5,
+   -0.5,
+   -1,
+   1,
+   -1,
+   -1,
+   2,
+   -2,
+   -1,
+   -1,
+   -1,
+   -1,
+   0,
+   1.5,
+   -0.5,
+   -1,
+   -1,
+   1.5,
+   1,
+   -2,
+   -1,
+   2,
+   -1,
+   2,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -1,
+   -2,
+   1,
+   -2,
+   0,
+   1.5,
+   -1,
+   -0.5,
+   1.5,
+   -2,
+   1,
+   -1,
+   -2,
+   -1,
+   0,
+   -0.5,
+   2,
+   -1,
+   -1,
+   -2,
+   -2,
+   -0.5,
+   -0.5,
+   -1,
+   -0.5,
+   -1,
+   -1,
+   -1
+  ],
+  "rating": {
+   "rating": 1316.133507408673,
+   "peak": 1316.133507408673,
+   "ratedDecisions": 60
+  },
+  "stats": {
+   "hands": 60,
+   "decisions": 69,
+   "correct": 23,
+   "evLost": 23.564540889942187,
+   "netUnits": -28
+  }
+ },
+ "uth": {
+  "decisions": [
+   {
+    "headline": "7-2, different suits · before the flop",
+    "verdict": "Blunder — cost 0.926 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.926445288469618,
+    "ranked": [
+     [
+      "check",
+      -0.8828064839621256
+     ],
+     [
+      "raise3x",
+      -1.8092517724317436
+     ],
+     [
+      "raise4x",
+      -2.1175788261261084
+     ]
+    ]
+   },
+   {
+    "headline": "9-5, same suit · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.32348703019738384
+     ],
+     [
+      "raise3x",
+      -0.7269135036786148
+     ],
+     [
+      "raise4x",
+      -0.8124760125063185
+     ]
+    ]
+   },
+   {
+    "headline": "9-5, same suit · on the flop",
+    "verdict": "Correct — Raise 2×",
+    "chosen": "raise2x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise2x",
+      -0.15542006559582883
+     ],
+     [
+      "check",
+      -0.2760883581420111
+     ]
+    ]
+   },
+   {
+    "headline": "Q-2, same suit · before the flop",
+    "verdict": "Blunder — cost 0.171 units",
+    "chosen": "raise4x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.170986758693542,
+    "ranked": [
+     [
+      "check",
+      -0.2204399799024813
+     ],
+     [
+      "raise4x",
+      -0.3914267385960233
+     ],
+     [
+      "raise3x",
+      -0.3948074438340476
+     ]
+    ]
+   },
+   {
+    "headline": "J-8, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.1549439939713176
+     ],
+     [
+      "raise4x",
+      -0.2721453064027481
+     ],
+     [
+      "raise3x",
+      -0.3019485665899074
+     ]
+    ]
+   },
+   {
+    "headline": "J-8, different suits · on the flop",
+    "verdict": "Blunder — cost 0.324 units",
+    "chosen": "raise2x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.32390510096338576,
+    "ranked": [
+     [
+      "check",
+      -1.1701529634924601
+     ],
+     [
+      "raise2x",
+      -1.4940580644558459
+     ]
+    ]
+   },
+   {
+    "headline": "4-2, same suit · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.599060723339038
+     ],
+     [
+      "raise3x",
+      -1.4810770352913558
+     ],
+     [
+      "raise4x",
+      -1.7444967408501526
+     ]
+    ]
+   },
+   {
+    "headline": "4-2, same suit · on the flop",
+    "verdict": "Minor error — cost 0.017 units",
+    "chosen": "check",
+    "correct": false,
+    "severity": "minor",
+    "evCost": 0.017083882301275333,
+    "ranked": [
+     [
+      "raise2x",
+      -0.5143086741606636
+     ],
+     [
+      "check",
+      -0.531392556461939
+     ]
+    ]
+   },
+   {
+    "headline": "4-2, same suit · on the river",
+    "verdict": "Blunder — cost 0.764 units",
+    "chosen": "fold",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.7636363636363637,
+    "ranked": [
+     [
+      "raise1x",
+      -1.2363636363636363
+     ],
+     [
+      "fold",
+      -2
+     ]
+    ]
+   },
+   {
+    "headline": "J-7, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.26982916265488444
+     ],
+     [
+      "raise3x",
+      -0.4716903566706839
+     ],
+     [
+      "raise4x",
+      -0.4780516846534657
+     ]
+    ]
+   },
+   {
+    "headline": "J-7, different suits · on the flop",
+    "verdict": "Blunder — cost 0.270 units",
+    "chosen": "raise2x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.27018566796550725,
+    "ranked": [
+     [
+      "check",
+      -1.0897677048000782
+     ],
+     [
+      "raise2x",
+      -1.3599533727655855
+     ]
+    ]
+   },
+   {
+    "headline": "4-2, same suit · before the flop",
+    "verdict": "Blunder — cost 1.145 units",
+    "chosen": "raise4x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 1.1454360175111145,
+    "ranked": [
+     [
+      "check",
+      -0.599060723339038
+     ],
+     [
+      "raise3x",
+      -1.4810770352913558
+     ],
+     [
+      "raise4x",
+      -1.7444967408501526
+     ]
+    ]
+   },
+   {
+    "headline": "10-9, different suits · before the flop",
+    "verdict": "Blunder — cost 0.152 units",
+    "chosen": "raise4x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.15204576886162408,
+    "ranked": [
+     [
+      "check",
+      -0.07945994912976624
+     ],
+     [
+      "raise4x",
+      -0.2315057179913903
+     ],
+     [
+      "raise3x",
+      -0.2621391659706812
+     ]
+    ]
+   },
+   {
+    "headline": "9-7, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.34195540206383734
+     ],
+     [
+      "raise3x",
+      -0.7401490677998525
+     ],
+     [
+      "raise4x",
+      -0.8141929396559976
+     ]
+    ]
+   },
+   {
+    "headline": "9-7, different suits · on the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -1.164084882123735
+     ],
+     [
+      "raise2x",
+      -1.718191162316972
+     ]
+    ]
+   },
+   {
+    "headline": "9-7, different suits · on the river",
+    "verdict": "Blunder — cost 0.100 units",
+    "chosen": "raise1x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.10000000000000009,
+    "ranked": [
+     [
+      "fold",
+      -2
+     ],
+     [
+      "raise1x",
+      -2.1
+     ]
+    ]
+   },
+   {
+    "headline": "Q-10, same suit · before the flop",
+    "verdict": "Blunder — cost 0.189 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.1893511861602566,
+    "ranked": [
+     [
+      "raise4x",
+      0.9435947567272469
+     ],
+     [
+      "raise3x",
+      0.7542435705669903
+     ],
+     [
+      "check",
+      0.6480229414727258
+     ]
+    ]
+   },
+   {
+    "headline": "6-5, different suits · before the flop",
+    "verdict": "Blunder — cost 0.753 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.7534093485442043,
+    "ranked": [
+     [
+      "check",
+      -0.5205721469256565
+     ],
+     [
+      "raise3x",
+      -1.2739814954698607
+     ],
+     [
+      "raise4x",
+      -1.475095449390523
+     ]
+    ]
+   },
+   {
+    "headline": "10-2, same suit · before the flop",
+    "verdict": "Blunder — cost 0.412 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.41180290740108694,
+    "ranked": [
+     [
+      "check",
+      -0.4298413679070119
+     ],
+     [
+      "raise3x",
+      -0.8416442753080988
+     ],
+     [
+      "raise4x",
+      -0.9448546207478626
+     ]
+    ]
+   },
+   {
+    "headline": "J-3, different suits · before the flop",
+    "verdict": "Blunder — cost 0.360 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.35956934645136374,
+    "ranked": [
+     [
+      "check",
+      -0.5167116760784978
+     ],
+     [
+      "raise3x",
+      -0.8762810225298615
+     ],
+     [
+      "raise4x",
+      -0.9707701247881219
+     ]
+    ]
+   },
+   {
+    "headline": "K-10, different suits · before the flop",
+    "verdict": "Blunder — cost 0.195 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.1947783027661283,
+    "ranked": [
+     [
+      "raise4x",
+      0.6074844355783832
+     ],
+     [
+      "raise3x",
+      0.4127061328122549
+     ],
+     [
+      "check",
+      0.26936643211934
+     ]
+    ]
+   },
+   {
+    "headline": "8-5, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.5561678847414234
+     ],
+     [
+      "raise3x",
+      -1.1732282475685387
+     ],
+     [
+      "raise4x",
+      -1.3446777279323523
+     ]
+    ]
+   },
+   {
+    "headline": "8-5, different suits · on the flop",
+    "verdict": "Blunder — cost 0.756 units",
+    "chosen": "raise2x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.7555181790149583,
+    "ranked": [
+     [
+      "check",
+      -1.534244386510807
+     ],
+     [
+      "raise2x",
+      -2.2897625655257654
+     ]
+    ]
+   },
+   {
+    "headline": "Q-10, different suits · before the flop",
+    "verdict": "Blunder — cost 0.194 units",
+    "chosen": "check",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.19359896969295995,
+    "ranked": [
+     [
+      "raise4x",
+      0.3694949962139043
+     ],
+     [
+      "raise3x",
+      0.22367934427482147
+     ],
+     [
+      "check",
+      0.17589602652094435
+     ]
+    ]
+   },
+   {
+    "headline": "Q-10, different suits · on the flop",
+    "verdict": "Blunder — cost 0.440 units",
+    "chosen": "raise2x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.4399732757734507,
+    "ranked": [
+     [
+      "check",
+      -1.238884684028076
+     ],
+     [
+      "raise2x",
+      -1.6788579598015267
+     ]
+    ]
+   },
+   {
+    "headline": "J-8, same suit · before the flop",
+    "verdict": "Correct — Raise 4×",
+    "chosen": "raise4x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise4x",
+      0.10738602657993926
+     ],
+     [
+      "check",
+      0.09631778965055236
+     ],
+     [
+      "raise3x",
+      0.02707314298254699
+     ]
+    ]
+   },
+   {
+    "headline": "5-4, different suits · before the flop",
+    "verdict": "Blunder — cost 0.835 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.8353523319630705,
+    "ranked": [
+     [
+      "check",
+      -0.5977044879118416
+     ],
+     [
+      "raise3x",
+      -1.433056819874912
+     ],
+     [
+      "raise4x",
+      -1.6699510782074032
+     ]
+    ]
+   },
+   {
+    "headline": "K-9, different suits · before the flop",
+    "verdict": "Correct — Raise 4×",
+    "chosen": "raise4x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise4x",
+      0.37102442518808676
+     ],
+     [
+      "raise3x",
+      0.21478593206212615
+     ],
+     [
+      "check",
+      0.11622767142626472
+     ]
+    ]
+   },
+   {
+    "headline": "J-10, same suit · before the flop",
+    "verdict": "Blunder — cost 0.151 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.15055714215140836,
+    "ranked": [
+     [
+      "raise4x",
+      0.7788410280851984
+     ],
+     [
+      "raise3x",
+      0.62828388593379
+     ],
+     [
+      "check",
+      0.6019045305420644
+     ]
+    ]
+   },
+   {
+    "headline": "6-4, different suits · before the flop",
+    "verdict": "Blunder — cost 0.828 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.8282642409408566,
+    "ranked": [
+     [
+      "check",
+      -0.6311462542604028
+     ],
+     [
+      "raise3x",
+      -1.4594104952012594
+     ],
+     [
+      "raise4x",
+      -1.6992007303338748
+     ]
+    ]
+   },
+   {
+    "headline": "9-2, same suit · before the flop",
+    "verdict": "Blunder — cost 0.534 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.5339067911556602,
+    "ranked": [
+     [
+      "check",
+      -0.5279027859538942
+     ],
+     [
+      "raise3x",
+      -1.0618095771095544
+     ],
+     [
+      "raise4x",
+      -1.2135061397657383
+     ]
+    ]
+   },
+   {
+    "headline": "8-2, same suit · before the flop",
+    "verdict": "Blunder — cost 0.852 units",
+    "chosen": "raise4x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.8516204247351125,
+    "ranked": [
+     [
+      "check",
+      -0.5887118262521076
+     ],
+     [
+      "raise3x",
+      -1.2457649397446462
+     ],
+     [
+      "raise4x",
+      -1.44033225098722
+     ]
+    ]
+   },
+   {
+    "headline": "J-3, same suit · before the flop",
+    "verdict": "Blunder — cost 0.259 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.25944347951881364,
+    "ranked": [
+     [
+      "check",
+      -0.28909636039260966
+     ],
+     [
+      "raise3x",
+      -0.5485398399114233
+     ],
+     [
+      "raise4x",
+      -0.5839073595273346
+     ]
+    ]
+   },
+   {
+    "headline": "Q-2, different suits · before the flop",
+    "verdict": "Blunder — cost 0.265 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.26526266492944023,
+    "ranked": [
+     [
+      "check",
+      -0.4522182999738193
+     ],
+     [
+      "raise3x",
+      -0.7174809649032595
+     ],
+     [
+      "raise4x",
+      -0.771572227255709
+     ]
+    ]
+   },
+   {
+    "headline": "K-4, same suit · before the flop",
+    "verdict": "Correct — Raise 4×",
+    "chosen": "raise4x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise4x",
+      0.11701624578088718
+     ],
+     [
+      "raise3x",
+      0.01932351441069998
+     ],
+     [
+      "check",
+      0.018917021934498686
+     ]
+    ]
+   },
+   {
+    "headline": "6-2, different suits · before the flop",
+    "verdict": "Blunder — cost 0.978 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.9783282917447284,
+    "ranked": [
+     [
+      "check",
+      -0.861363462162264
+     ],
+     [
+      "raise3x",
+      -1.8396917539069924
+     ],
+     [
+      "raise4x",
+      -2.158188987189212
+     ]
+    ]
+   },
+   {
+    "headline": "Q-10, different suits · before the flop",
+    "verdict": "Correct — Raise 4×",
+    "chosen": "raise4x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise4x",
+      0.3694949962139043
+     ],
+     [
+      "raise3x",
+      0.22367934427482147
+     ],
+     [
+      "check",
+      0.17589602652094435
+     ]
+    ]
+   },
+   {
+    "headline": "8-5, different suits · before the flop",
+    "verdict": "Blunder — cost 0.617 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.6170603628271153,
+    "ranked": [
+     [
+      "check",
+      -0.5561678847414234
+     ],
+     [
+      "raise3x",
+      -1.1732282475685387
+     ],
+     [
+      "raise4x",
+      -1.3446777279323523
+     ]
+    ]
+   },
+   {
+    "headline": "Q-8, different suits · before the flop",
+    "verdict": "Minor error — cost 0.023 units",
+    "chosen": "check",
+    "correct": false,
+    "severity": "minor",
+    "evCost": 0.02313434725731872,
+    "ranked": [
+     [
+      "raise4x",
+      -0.06942854034551268
+     ],
+     [
+      "check",
+      -0.0925628876028314
+     ],
+     [
+      "raise3x",
+      -0.1414243818228927
+     ]
+    ]
+   },
+   {
+    "headline": "Q-8, different suits · on the flop",
+    "verdict": "Blunder — cost 0.450 units",
+    "chosen": "check",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.4500051392743369,
+    "ranked": [
+     [
+      "raise2x",
+      0.9324858202749043
+     ],
+     [
+      "check",
+      0.48248068100056746
+     ]
+    ]
+   },
+   {
+    "headline": "Q-8, different suits · on the river",
+    "verdict": "Correct — Raise 1×",
+    "chosen": "raise1x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise1x",
+      -0.13535353535353536
+     ],
+     [
+      "fold",
+      -2
+     ]
+    ]
+   },
+   {
+    "headline": "Q-2, different suits · before the flop",
+    "verdict": "Blunder — cost 0.265 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.26526266492944023,
+    "ranked": [
+     [
+      "check",
+      -0.4522182999738193
+     ],
+     [
+      "raise3x",
+      -0.7174809649032595
+     ],
+     [
+      "raise4x",
+      -0.771572227255709
+     ]
+    ]
+   },
+   {
+    "headline": "6-2, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.861363462162264
+     ],
+     [
+      "raise3x",
+      -1.8396917539069924
+     ],
+     [
+      "raise4x",
+      -2.158188987189212
+     ]
+    ]
+   },
+   {
+    "headline": "6-2, different suits · on the flop",
+    "verdict": "Blunder — cost 0.809 units",
+    "chosen": "raise2x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.8086208990926899,
+    "ranked": [
+     [
+      "check",
+      -0.6777787121912929
+     ],
+     [
+      "raise2x",
+      -1.4863996112839828
+     ]
+    ]
+   },
+   {
+    "headline": "Q-9, different suits · before the flop",
+    "verdict": "Correct — Raise 4×",
+    "chosen": "raise4x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise4x",
+      0.13250515667488955
+     ],
+     [
+      "check",
+      0.02618642979856062
+     ],
+     [
+      "raise3x",
+      0.02529645818222727
+     ]
+    ]
+   },
+   {
+    "headline": "7-4, different suits · before the flop",
+    "verdict": "Blunder — cost 0.774 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.7743616488758528,
+    "ranked": [
+     [
+      "check",
+      -0.6522036849359739
+     ],
+     [
+      "raise3x",
+      -1.4265653338118267
+     ],
+     [
+      "raise4x",
+      -1.655568777031564
+     ]
+    ]
+   },
+   {
+    "headline": "J-5, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.41585453427018604
+     ],
+     [
+      "raise3x",
+      -0.6976335889526777
+     ],
+     [
+      "raise4x",
+      -0.7540158244364418
+     ]
+    ]
+   },
+   {
+    "headline": "J-5, different suits · on the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -1.1311566170493064
+     ],
+     [
+      "raise2x",
+      -1.601744082826417
+     ]
+    ]
+   },
+   {
+    "headline": "J-5, different suits · on the river",
+    "verdict": "Correct — Raise 1×",
+    "chosen": "raise1x",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "raise1x",
+      2.006060606060606
+     ],
+     [
+      "fold",
+      -2
+     ]
+    ]
+   },
+   {
+    "headline": "9-8, different suits · before the flop",
+    "verdict": "Blunder — cost 0.373 units",
+    "chosen": "raise4x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.3732526938288854,
+    "ranked": [
+     [
+      "check",
+      -0.2361106637844775
+     ],
+     [
+      "raise3x",
+      -0.5713040129140196
+     ],
+     [
+      "raise4x",
+      -0.6093633576133629
+     ]
+    ]
+   },
+   {
+    "headline": "10-5, different suits · before the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -0.5272588053218078
+     ],
+     [
+      "raise3x",
+      -0.9455995364004
+     ],
+     [
+      "raise4x",
+      -1.060580545393795
+     ]
+    ]
+   },
+   {
+    "headline": "10-5, different suits · on the flop",
+    "verdict": "Correct — Check",
+    "chosen": "check",
+    "correct": true,
+    "severity": "optimal",
+    "evCost": 0,
+    "ranked": [
+     [
+      "check",
+      -1.3953671777908616
+     ],
+     [
+      "raise2x",
+      -2.1284865304291825
+     ]
+    ]
+   },
+   {
+    "headline": "10-5, different suits · on the river",
+    "verdict": "Blunder — cost 0.391 units",
+    "chosen": "raise1x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.3909090909090911,
+    "ranked": [
+     [
+      "fold",
+      -2
+     ],
+     [
+      "raise1x",
+      -2.390909090909091
+     ]
+    ]
+   },
+   {
+    "headline": "a pair of nines · before the flop",
+    "verdict": "Blunder — cost 0.441 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.44114503890143175,
+    "ranked": [
+     [
+      "raise4x",
+      2.1325134054904105
+     ],
+     [
+      "raise3x",
+      1.6913683665889787
+     ],
+     [
+      "check",
+      1.2502816821960505
+     ]
+    ]
+   },
+   {
+    "headline": "A-5, different suits · before the flop",
+    "verdict": "Blunder — cost 0.154 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.15393068720765435,
+    "ranked": [
+     [
+      "raise4x",
+      0.35854077766290077
+     ],
+     [
+      "raise3x",
+      0.20461009045524642
+     ],
+     [
+      "check",
+      0.09355643962515924
+     ]
+    ]
+   },
+   {
+    "headline": "A-J, different suits · before the flop",
+    "verdict": "Blunder — cost 0.271 units",
+    "chosen": "raise3x",
+    "correct": false,
+    "severity": "blunder",
+    "evCost": 0.27126515823603714,
+    "ranked": [
+     [
+      "raise4x",
+      0.9917668110044442
+     ],
+     [
+      "raise3x",
+      0.720501652768407
+     ],
+     [
+      "check",
+      0.4612609109463863
+     ]
+    ]
+   }
+  ],
+  "log": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "rating": {
+   "rating": 1261.0719278224983,
+   "peak": 1331.103373803513,
+   "ratedDecisions": 27
+  },
+  "stats": {
+   "hands": 40,
+   "decisions": 56,
+   "correct": 20,
+   "accuracy": 0.35714285714285715,
+   "closeCallsExcluded": 0,
+   "accuracyIncludingCloseCalls": 0.35714285714285715,
+   "evLost": 16.43940946268578,
+   "evLostPer100": 41.098523656714455,
+   "effectiveHouseEdgePercent": 43.28349503297889,
+   "netUnits": 9
+  }
+ }
+}

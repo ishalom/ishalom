@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+    <script src="/figure.js"></script>
+    <script src="/evening.js"></script>
+    <script src="/count.js"></script>
+    <script src="/track.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <!--
+        The front of the app is a greeting and two doors. Everything measured
+        lives behind a tab, because a wall of figures is not a welcome — and
+        §3.1 would rather you came here to play than to check a scoreboard.
+      -->
+      <section class="hero">
+        <!-- What the app is for, at the door (round 14). The claim is factual:
+             the comparison is this player's own play against the maths, not
+             optimal play against some theoretical alternative. -->
+        <p class="slogan" data-i18n="brand.slogan">Simply winning more hands.</p>
+        <div class="hero-top">
+          <div class="initial" id="initial">P</div>
+          <input class="who-name" id="name" value="Player" data-i18n-value="ui.defaultName"
+                 data-i18n-attr="aria-label:ui.yourName" spellcheck="false" />
+        </div>
+        <p class="hero-line" id="greeting" data-i18n="ui.greeting">Good to see you.</p>
+        <!-- Said once, after a name with no code was just claimed (round 33). -->
+        <p class="hero-line claimed" id="claimed" role="status" hidden></p>
+      </section>
+
+      <!-- The last shared table's evening, summed up once after leaving it (round 34). -->
+      <section class="shared-summary" id="home-evening" hidden></section>
+
+      <!--
+        How the sitting went, when there was one (round 20). One sentence, on
+        the way out of the table rather than on top of it: a reward and a
+        lesson, and the lesson is the half that lasts.
+      -->
+      <p class="sitting" id="sitting" hidden></p>
+
+      <!--
+        The records line (round 20). Idan asked for the app to give something
+        "like chips" when a player improves; chips are the currency of the
+        outcome and would break three figures that tell the truth, so this is
+        the chip-shaped thing without a chip's meaning. It touches no figure:
+        every number in it is a count of something the player did.
+      -->
+      <section class="records" id="records" hidden>
+        <span class="records-title" data-i18n="records.title">Your records</span>
+        <span class="records-line" id="records-line"></span>
+      </section>
+
+      <section class="doors">
+        <a class="door" href="/table.html">
+          <span class="door-pip">♠</span>
+          <span class="door-title" data-i18n="ui.blackjack">Blackjack</span>
+          <span class="door-sub" id="bj-sub" data-i18n="ui.playAHand">Play a hand</span>
+        </a>
+        <a class="door secondary" href="/ultimate.html">
+          <span class="door-pip">♦</span>
+          <span class="door-title" data-i18n="ui.ultimate">Ultimate</span>
+          <span class="door-sub" data-i18n="ui.playAHand">Play a hand</span>
+        </a>
+        <!-- The shared table (round 22). A door, because the link is the only
+             growth this app has and a door is where somebody starts one. -->
+        <a class="door shared" href="/shared.html">
+          <span class="door-pip">♣</span>
+          <span class="door-title" data-i18n="shared.doorTitle">Play at the same table</span>
+          <span class="door-sub" data-i18n="shared.doorSub">With a friend, on two phones</span>
+        </a>
+        <a class="door analyse" href="/analyse.html">
+          <span class="door-pip">?</span>
+          <span class="door-title" data-i18n="an.open">Analyse a hand</span>
+          <span class="door-sub" data-i18n="an.sub">Any cards, without playing</span>
+        </a>
+      </section>
+
+      <nav class="tabs" role="tablist" data-i18n-attr="aria-label:ui.yourPlay">
+        <button class="tab" role="tab" data-tab="standing" aria-selected="true" data-i18n="ui.tab.standing">Standing</button>
+        <button class="tab" role="tab" data-tab="hands" aria-selected="false" data-i18n="ui.tab.hands">Hands</button>
+        <button class="tab" role="tab" data-tab="stats" aria-selected="false" data-i18n="ui.tab.stats">Stats</button>
+      </nav>
+
+      <section class="tab-body" id="panel-standing" role="tabpanel">
+        <!-- Two ratings side by side, each named with its game, never added up (round 10). -->
+        <div class="standings">
+          <div class="standing">
+            <div class="standing-value" id="rating">—</div>
+            <div class="standing-label" id="rating-label" data-i18n="ui.rating">Blackjack rating</div>
+            <div class="rating-side" id="rating-swing" hidden></div>
+            <p class="standing-note" id="rating-note"></p>
+          </div>
+          <div class="standing">
+            <div class="standing-value" id="uth-rating">—</div>
+            <div class="standing-label" id="uth-rating-label" data-i18n="home.uthRating">Ultimate rating</div>
+            <div class="rating-side" id="uth-rating-swing" hidden></div>
+            <p class="standing-note" id="uth-rating-note"></p>
+          </div>
+        </div>
+        <div class="modes" role="group" data-i18n-attr="aria-label:ui.drilledOn">
+          <button class="mode" type="button" data-mode="basic" aria-pressed="true">
+            <span data-i18n="ui.mode.basic">Basic</span><small data-i18n="ui.mode.basicNote">the costly hands</small>
+          </button>
+          <button class="mode" type="button" data-mode="recall" aria-pressed="false">
+            <span data-i18n="ui.mode.recall">Recall</span><small data-i18n="ui.mode.recallNote">thin and rare</small>
+          </button>
+          <button class="mode" type="button" data-mode="value" aria-pressed="false">
+            <span data-i18n="ui.mode.value">Value</span><small data-i18n="ui.mode.valueNote">your own leaks</small>
+          </button>
+        </div>
+        <div id="ladder" class="ladder"></div>
+      </section>
+
+      <section class="tab-body" id="panel-hands" role="tabpanel" hidden>
+        <div id="hands"></div>
+      </section>
+
+      <section class="tab-body" id="panel-stats" role="tabpanel" hidden>
+        <div id="stats"></div>
+      </section>
+
+      <p class="footer" id="footer"></p>
+    </div>
+
+    <script src="/home.js"></script>
+  </body>
+</html>

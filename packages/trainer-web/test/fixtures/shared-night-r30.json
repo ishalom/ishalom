@@ -1,0 +1,1175 @@
+{
+ "note": "The first real two-phone night (2026-09-22, 97 hands), anonymised: seed, rules and moves only. Round 30 fixture for the ticker, the bars and the split display.",
+ "id": "night-r30",
+ "seed": 1734150375,
+ "presetId": "vegas-strip-6d-s17",
+ "restrictions": {
+  "noSurrender": false,
+  "likeRanksOnly": false
+ },
+ "seats": [
+  {
+   "seat": 0,
+   "playerId": "player-a",
+   "name": "Player A",
+   "bet": 1,
+   "moves": [
+    {
+     "hand": 0,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 0,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 0,
+     "round": 3,
+     "action": "hit"
+    },
+    {
+     "hand": 0,
+     "round": 4,
+     "action": "stand"
+    },
+    {
+     "hand": 1,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 2,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 3,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 3,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 3,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 4,
+     "round": 0,
+     "action": "surrender"
+    },
+    {
+     "hand": 5,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 6,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 6,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 7,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 8,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 9,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 10,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 11,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 12,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 13,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 14,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 16,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 17,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 17,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 18,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 19,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 20,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 21,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 22,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 23,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 24,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 25,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 26,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 26,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 27,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 28,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 29,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 30,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 31,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 32,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 33,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 33,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 34,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 34,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 35,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 36,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 38,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 39,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 40,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 41,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 42,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 44,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 45,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 45,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 46,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 48,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 49,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 52,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 52,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 53,
+     "round": 0,
+     "action": "surrender"
+    },
+    {
+     "hand": 54,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 55,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 56,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 57,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 58,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 58,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 59,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 59,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 59,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 60,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 61,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 61,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 62,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 63,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 64,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 65,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 66,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 66,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 67,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 68,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 70,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 70,
+     "round": 2,
+     "action": "double"
+    },
+    {
+     "hand": 70,
+     "round": 3,
+     "action": "stand"
+    },
+    {
+     "hand": 71,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 72,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 72,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 73,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 74,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 75,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 76,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 78,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 79,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 80,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 81,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 82,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 83,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 85,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 86,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 88,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 89,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 90,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 92,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 92,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 93,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 93,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 94,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 95,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 95,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 96,
+     "round": 0,
+     "action": "hit"
+    }
+   ],
+   "hands": 97,
+   "events": [
+    {
+     "hand": 0,
+     "kind": "join",
+     "seat": 0
+    },
+    {
+     "why": "left",
+     "hand": 96,
+     "kind": "drop",
+     "seat": 0
+    }
+   ]
+  },
+  {
+   "seat": 1,
+   "playerId": "player-b",
+   "name": "Player B",
+   "bet": 1,
+   "moves": [
+    {
+     "hand": 0,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 1,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 2,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 4,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 5,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 6,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 6,
+     "round": 2,
+     "action": "hit"
+    },
+    {
+     "hand": 6,
+     "round": 3,
+     "action": "stand"
+    },
+    {
+     "hand": 6,
+     "round": 4,
+     "action": "hit"
+    },
+    {
+     "hand": 7,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 8,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 9,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 10,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 10,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 10,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 11,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 12,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 13,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 16,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 17,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 19,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 19,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 20,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 21,
+     "round": 0,
+     "action": "surrender"
+    },
+    {
+     "hand": 22,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 22,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 23,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 24,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 25,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 25,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 25,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 26,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 27,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 27,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 27,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 28,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 29,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 30,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 30,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 31,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 32,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 32,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 33,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 33,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 35,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 36,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 37,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 38,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 39,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 40,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 41,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 42,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 43,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 46,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 46,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 47,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 48,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 49,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 51,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 51,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 52,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 53,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 54,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 54,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 55,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 56,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 58,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 58,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 59,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 59,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 60,
+     "round": 0,
+     "action": "split"
+    },
+    {
+     "hand": 60,
+     "round": 2,
+     "action": "double"
+    },
+    {
+     "hand": 60,
+     "round": 3,
+     "action": "double"
+    },
+    {
+     "hand": 61,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 61,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 61,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 62,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 63,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 64,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 65,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 66,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 67,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 67,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 68,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 69,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 69,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 70,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 72,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 72,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 73,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 73,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 74,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 75,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 75,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 76,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 78,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 78,
+     "round": 1,
+     "action": "stand"
+    },
+    {
+     "hand": 79,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 80,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 80,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 80,
+     "round": 2,
+     "action": "stand"
+    },
+    {
+     "hand": 81,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 82,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 83,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 84,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 85,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 86,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 88,
+     "round": 0,
+     "action": "hit"
+    },
+    {
+     "hand": 88,
+     "round": 1,
+     "action": "hit"
+    },
+    {
+     "hand": 89,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 90,
+     "round": 0,
+     "action": "double"
+    },
+    {
+     "hand": 91,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 92,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 93,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 94,
+     "round": 0,
+     "action": "stand"
+    },
+    {
+     "hand": 95,
+     "round": 0,
+     "action": "hit"
+    }
+   ],
+   "hands": 54,
+   "events": [
+    {
+     "hand": 0,
+     "kind": "join",
+     "seat": 1
+    }
+   ]
+  }
+ ]
+}

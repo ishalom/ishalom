@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="i18n-title" content="shared.title" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>EV Trainer — Shared table</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/i18n.js"></script>
+    <script src="/i18n-client.js"></script>
+    <script src="/fontswitch.js"></script>
+    <script src="/figure.js"></script>
+    <script src="/crown.js"></script>
+    <script src="/evening.js"></script>
+    <!-- The returns block, shared by both tables: "תסביר לי" opens the same one
+         the private table draws, rather than a second copy of it (§3.9). -->
+    <script src="/returns.js"></script>
+    <!-- The dock's settle-in hold and the reading level, shared with the private table (round 30). -->
+    <script src="/dock.js"></script>
+    <script src="/level.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="rules" id="shared-bar">
+        <a class="back" href="/home.html">‹ <span data-i18n="ui.home">Home</span></a>
+        <div class="rules-main">
+          <span class="rules-name" id="shared-rules">—</span>
+        </div>
+      </header>
+
+      <!--
+        The door. A table is either made here or arrived at by link, and the two
+        are the same screen because a player who follows a link and finds the
+        seat taken has to be able to make his own without going anywhere.
+      -->
+      <section class="shared-door" id="shared-door" hidden>
+        <h1 data-i18n="shared.doorTitle">Play at the same table</h1>
+        <p class="shared-door-body" data-i18n="shared.doorBody">
+          The same table, your own cards, and nobody waits for anybody.
+        </p>
+        <!-- No "how many of you" (round 34): a table has room for six, and seats
+             fill as people arrive by the link. -->
+        <!-- Which game (round 32): Blackjack, or Ultimate with one board for everybody. -->
+        <fieldset class="shared-seats-pick" id="shared-game-pick">
+          <legend data-i18n="shared.whichGame">Which game?</legend>
+          <div class="shared-seats-row" id="shared-game-row"></div>
+        </fieldset>
+        <button class="action primary" type="button" id="shared-make" data-i18n="shared.make">
+          Make a table
+        </button>
+        <p class="shared-note" id="shared-door-note" hidden></p>
+      </section>
+
+      <!-- Somebody has to be sent the link, and until they arrive this is the screen. -->
+      <!-- The evening, summed up once there is nobody left to play it with (round 34). -->
+      <section class="shared-summary" id="shared-summary" hidden></section>
+
+      <section class="shared-invite" id="shared-invite" hidden>
+        <h2 data-i18n="shared.inviteTitle">Send this to your friend</h2>
+        <p class="shared-link" id="shared-link"></p>
+        <button class="action" type="button" id="shared-copy" data-i18n="shared.copy">Copy link</button>
+        <p class="shared-note" id="shared-waiting" data-i18n="shared.waiting">
+          Waiting for somebody to sit down.
+        </p>
+        <!--
+          Waiting is the worst screen in the app, so nobody has to sit in it:
+          the ordinary private table is one tap away and a strip along the top
+          keeps saying what he is waiting for (round 23).
+        -->
+        <button class="action primary" type="button" id="shared-meanwhile" data-i18n="waiting.meanwhile">
+          Play meanwhile
+        </button>
+      </section>
+
+      <!--
+        The refusal (§A1). Two seats disagreeing about what was dealt is the one
+        thing this app will not paper over: it shows neither of them a table
+        rather than showing two people two different truths about one hand.
+      -->
+      <section class="shared-refused" id="shared-refused" hidden role="alert">
+        <h2 data-i18n="shared.refusedTitle">This table cannot be shown</h2>
+        <p data-i18n="shared.refusedBody">
+          Two seats disagree about what was dealt. Rather than show you one
+          version and your friend another, the app is showing neither.
+        </p>
+      </section>
+
+      <!--
+        The ticker (§3.10). One line, rotating every eight seconds, and it
+        holds still while a hand is live: a line that changed under a player
+        deciding would be the app talking over him. It fades and does not move,
+        and it never announces money.
+      -->
+      <p class="shared-ticker" id="shared-ticker" hidden aria-live="polite"></p>
+
+      <!-- The evening so far (round 34): who leads on the bar, who leads on chips. -->
+      <p class="shared-evening" id="shared-evening" hidden></p>
+
+      <main class="table felt" id="shared-table" hidden>
+        <section class="seat" data-i18n-attr="aria-label:ui.dealer">
+          <h2 class="seat-title">
+            <span data-i18n="ui.dealer">Dealer</span>
+            <span class="seat-total" id="shared-dealer-total"></span>
+          </h2>
+          <div class="cards" id="shared-dealer-cards"></div>
+        </section>
+
+        <!-- Ultimate only (round 32): the one board, the same cards for everybody. -->
+        <section class="seat uth-board" id="shared-board-seat" data-i18n-attr="aria-label:uth.board" hidden>
+          <h2 class="seat-title"><span data-i18n="uth.board">Board</span></h2>
+          <div class="cards" id="shared-board"></div>
+        </section>
+
+        <div id="shared-seats"></div>
+
+        <!-- The table against the dealer, on the felt with the seats (round 30, item 4). -->
+        <div class="shared-table-line" id="shared-table-line" hidden></div>
+      </main>
+
+      <!--
+        The clock, and the vote. Visible to the player it is about and to
+        everybody waiting — §3.4: thirty seconds is only fair if a player can
+        see the table is waiting for him.
+      -->
+      <section class="shared-clock" id="shared-clock" hidden aria-live="polite"></section>
+
+      <!--
+        What has just been said, attributed (§3.9).
+
+        Its own block, apart from everything the app says about a decision, and
+        never on a card or in a verdict line. That separation is the condition
+        Cowork set when it withdrew the decisions-never-outcomes rule for player
+        speech: two of Idan's six are about luck, and they are fine between
+        friends precisely because it is a friend saying them and the screen
+        makes that unmistakable.
+      -->
+      <section class="shared-said" id="shared-said" hidden aria-live="polite"></section>
+
+      <!--
+        Under the felt: this hand's analysis first — the private table's own
+        commentary for my latest decision — and then the table's figures and the
+        lines that name the two measures (round 30, item 5). The bars themselves
+        moved onto the felt, beside each name.
+      -->
+      <section class="shared-measures" id="shared-measures" hidden></section>
+
+      <!--
+        He took my card (§3.8) — offered, not shown, and once a session. The
+        answer is a real replay of this shoe with one decision of his changed,
+        which is why the app can say it at all.
+      -->
+      <section class="shared-folklore" id="shared-folklore" hidden></section>
+
+
+
+      <p class="table-talk" id="shared-talk" hidden aria-live="polite"></p>
+
+      <!--
+        The six things a player can say (§3.9). One tap, above the dock and
+        below the felt, so sending one never covers the cards.
+      -->
+      <nav class="shared-reactions" id="shared-reactions" hidden
+           data-i18n-attr="aria-label:shared.say"></nav>
+
+      <div class="dock">
+        <nav class="actions" id="shared-actions" data-i18n-attr="aria-label:ui.actions"></nav>
+      </div>
+    </div>
+    <script src="/shared.js"></script>
+  </body>
+</html>

@@ -1,0 +1,2170 @@
+{
+ "constants": {
+  "slope": 660,
+  "centre": -2.25
+ },
+ "reach": 400,
+ "cases": [
+  {
+   "from": "pre-flop 22",
+   "evByAction": {
+    "raise4x": -0.2878776990023634,
+    "raise3x": -0.29455808056962934,
+    "check": -0.1794784366918627
+   },
+   "difficulty": 1865
+  },
+  {
+   "from": "pre-flop 33",
+   "evByAction": {
+    "raise4x": 0.08845558179425665,
+    "raise3x": 0.0145940540597555,
+    "check": 0.007454228326048681
+   },
+   "difficulty": 1910
+  },
+  {
+   "from": "pre-flop 44",
+   "evByAction": {
+    "raise4x": 0.46156950244178907,
+    "raise3x": 0.3211130786258267,
+    "check": 0.2106180341617795
+   },
+   "difficulty": 1660
+  },
+  {
+   "from": "pre-flop 55",
+   "evByAction": {
+    "raise4x": 0.8316433516145525,
+    "raise3x": 0.6251449413662831,
+    "check": 0.4298843196068029
+   },
+   "difficulty": 1380
+  },
+  {
+   "from": "pre-flop 66",
+   "evByAction": {
+    "raise4x": 1.159873092821814,
+    "raise3x": 0.8941781284808331,
+    "check": 0.6325584940953576
+   },
+   "difficulty": 1140
+  },
+  {
+   "from": "pre-flop 77",
+   "evByAction": {
+    "raise4x": 1.4869482507584562,
+    "raise3x": 1.1622277948501232,
+    "check": 0.8386095612242053
+   },
+   "difficulty": 940
+  },
+  {
+   "from": "pre-flop 88",
+   "evByAction": {
+    "raise4x": 1.8114612859255144,
+    "raise3x": 1.4282005765288983,
+    "check": 1.0451773466317353
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 99",
+   "evByAction": {
+    "raise4x": 2.1325134054904105,
+    "raise3x": 1.6913683665889787,
+    "check": 1.2502816821960505
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop A2o",
+   "evByAction": {
+    "raise4x": 0.04172992932349652,
+    "raise3x": -0.05684124419356213,
+    "check": -0.08232740996210702
+   },
+   "difficulty": 1865
+  },
+  {
+   "from": "pre-flop K5o",
+   "evByAction": {
+    "raise4x": -0.11758213470919712,
+    "raise3x": -0.18386159138010777,
+    "check": -0.15109970158836616
+   },
+   "difficulty": 1860
+  },
+  {
+   "from": "pre-flop K4o",
+   "evByAction": {
+    "raise4x": -0.22881163934891227,
+    "raise3x": -0.27536108145903315,
+    "check": -0.20601432408244946
+   },
+   "difficulty": 1820
+  },
+  {
+   "from": "pre-flop K2s",
+   "evByAction": {
+    "raise4x": -0.07450668448882375,
+    "raise3x": -0.13874125107798377,
+    "check": -0.0799197399813249
+   },
+   "difficulty": 1685
+  },
+  {
+   "from": "pre-flop Q8o",
+   "evByAction": {
+    "raise4x": -0.06942854034551268,
+    "raise3x": -0.1414243818228927,
+    "check": -0.0925628876028314
+   },
+   "difficulty": 1820
+  },
+  {
+   "from": "pre-flop Q7o",
+   "evByAction": {
+    "raise4x": -0.2776057994472402,
+    "raise3x": -0.3129191183102297,
+    "check": -0.20938796753809472
+   },
+   "difficulty": 1895
+  },
+  {
+   "from": "pre-flop Q6s",
+   "evByAction": {
+    "raise4x": -0.006073839453488858,
+    "raise3x": -0.07832516818022242,
+    "check": -0.028120218067324846
+   },
+   "difficulty": 1815
+  },
+  {
+   "from": "pre-flop Q5s",
+   "evByAction": {
+    "raise4x": -0.09568226441235636,
+    "raise3x": -0.15107048223898753,
+    "check": -0.0744700579107548
+   },
+   "difficulty": 1810
+  },
+  {
+   "from": "pre-flop JTo",
+   "evByAction": {
+    "raise4x": 0.17402375217105207,
+    "raise3x": 0.06906969051511944,
+    "check": 0.11028687186196572
+   },
+   "difficulty": 1895
+  },
+  {
+   "from": "pre-flop J9o",
+   "evByAction": {
+    "raise4x": -0.07000007341853272,
+    "raise3x": -0.13502401108986248,
+    "check": -0.03854835027386967
+   },
+   "difficulty": 1845
+  },
+  {
+   "from": "pre-flop J8s",
+   "evByAction": {
+    "raise4x": 0.10738602657993926,
+    "raise3x": 0.02707314298254699,
+    "check": 0.09631778965055236
+   },
+   "difficulty": 1735
+  },
+  {
+   "from": "pre-flop J7s",
+   "evByAction": {
+    "raise4x": -0.10660755309312663,
+    "raise3x": -0.15310317679553848,
+    "check": -0.03444510945128834
+   },
+   "difficulty": 1885
+  },
+  {
+   "from": "pre-flop AA",
+   "evByAction": {
+    "raise4x": 3.6010726380495988,
+    "raise3x": 2.8969983720247803,
+    "check": 2.1929241059807616
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop AKs",
+   "evByAction": {
+    "raise4x": 1.6583264053227311,
+    "raise3x": 1.317433759139855,
+    "check": 0.9867402297055493
+   },
+   "difficulty": 890
+  },
+  {
+   "from": "pre-flop AKo",
+   "evByAction": {
+    "raise4x": 1.17191350153165,
+    "raise3x": 0.8655120657575303,
+    "check": 0.5689276916019729
+   },
+   "difficulty": 995
+  },
+  {
+   "from": "pre-flop AQs",
+   "evByAction": {
+    "raise4x": 1.5727046518166679,
+    "raise3x": 1.2485274038697174,
+    "check": 0.935690706599695
+   },
+   "difficulty": 940
+  },
+  {
+   "from": "pre-flop AQo",
+   "evByAction": {
+    "raise4x": 1.080609022841694,
+    "raise3x": 0.7919722353801811,
+    "check": 0.5144081797605607
+   },
+   "difficulty": 1060
+  },
+  {
+   "from": "pre-flop AJs",
+   "evByAction": {
+    "raise4x": 1.4895067805528217,
+    "raise3x": 1.1816531999088011,
+    "check": 0.8860204801512479
+   },
+   "difficulty": 990
+  },
+  {
+   "from": "pre-flop AJo",
+   "evByAction": {
+    "raise4x": 0.9917668110044442,
+    "raise3x": 0.720501652768407,
+    "check": 0.4612609109463863
+   },
+   "difficulty": 1120
+  },
+  {
+   "from": "pre-flop ATs",
+   "evByAction": {
+    "raise4x": 1.4093121376893036,
+    "raise3x": 1.1172644019332898,
+    "check": 0.8378836690929017
+   },
+   "difficulty": 1045
+  },
+  {
+   "from": "pre-flop ATo",
+   "evByAction": {
+    "raise4x": 0.906070676034354,
+    "raise3x": 0.651637583284524,
+    "check": 0.40963711631598376
+   },
+   "difficulty": 1185
+  },
+  {
+   "from": "pre-flop A9s",
+   "evByAction": {
+    "raise4x": 0.9535638512406284,
+    "raise3x": 0.697939572909332,
+    "check": 0.4582399185839779
+   },
+   "difficulty": 1180
+  },
+  {
+   "from": "pre-flop A9o",
+   "evByAction": {
+    "raise4x": 0.6676953944477301,
+    "raise3x": 0.45223926668761383,
+    "check": 0.252452110306181
+   },
+   "difficulty": 1345
+  },
+  {
+   "from": "pre-flop A8s",
+   "evByAction": {
+    "raise4x": 0.8688901884859006,
+    "raise3x": 0.6300139756801245,
+    "check": 0.40961910516175576
+   },
+   "difficulty": 1250
+  },
+  {
+   "from": "pre-flop A8o",
+   "evByAction": {
+    "raise4x": 0.5753141638879533,
+    "raise3x": 0.3778620621156635,
+    "check": 0.19946807218668697
+   },
+   "difficulty": 1420
+  },
+  {
+   "from": "pre-flop A7s",
+   "evByAction": {
+    "raise4x": 0.7674309344459117,
+    "raise3x": 0.54775176341958,
+    "check": 0.351950992537848
+   },
+   "difficulty": 1330
+  },
+  {
+   "from": "pre-flop A7o",
+   "evByAction": {
+    "raise4x": 0.4659964969511885,
+    "raise3x": 0.28917258851176475,
+    "check": 0.13919819168101244
+   },
+   "difficulty": 1505
+  },
+  {
+   "from": "pre-flop A6s",
+   "evByAction": {
+    "raise4x": 0.6492745628235149,
+    "raise3x": 0.45115800198353095,
+    "check": 0.2856993079237654
+   },
+   "difficulty": 1420
+  },
+  {
+   "from": "pre-flop A6o",
+   "evByAction": {
+    "raise4x": 0.33976286134470407,
+    "raise3x": 0.18611381542741756,
+    "check": 0.07090996596827769
+   },
+   "difficulty": 1610
+  },
+  {
+   "from": "pre-flop A5s",
+   "evByAction": {
+    "raise4x": 0.6902166761918456,
+    "raise3x": 0.4917581638663082,
+    "check": 0.3297471682979829
+   },
+   "difficulty": 1420
+  },
+  {
+   "from": "pre-flop A5o",
+   "evByAction": {
+    "raise4x": 0.35854077766290077,
+    "raise3x": 0.20461009045524642,
+    "check": 0.09355643962515924
+   },
+   "difficulty": 1610
+  },
+  {
+   "from": "pre-flop A4s",
+   "evByAction": {
+    "raise4x": 0.5901045086688835,
+    "raise3x": 0.4094317891001081,
+    "check": 0.27410500028509305
+   },
+   "difficulty": 1500
+  },
+  {
+   "from": "pre-flop A4o",
+   "evByAction": {
+    "raise4x": 0.2493951648597956,
+    "raise3x": 0.11480161232940987,
+    "check": 0.03373172482628076
+   },
+   "difficulty": 1705
+  },
+  {
+   "from": "pre-flop A3s",
+   "evByAction": {
+    "raise4x": 0.4967138545487403,
+    "raise3x": 0.3323074426411495,
+    "check": 0.22137183255271425
+   },
+   "difficulty": 1575
+  },
+  {
+   "from": "pre-flop A3o",
+   "evByAction": {
+    "raise4x": 0.14744684498315902,
+    "raise3x": 0.030554798250342317,
+    "check": -0.023205877565894928
+   },
+   "difficulty": 1785
+  },
+  {
+   "from": "pre-flop A2s",
+   "evByAction": {
+    "raise4x": 0.39985491943019935,
+    "raise3x": 0.25227696216839646,
+    "check": 0.16651751667785053
+   },
+   "difficulty": 1655
+  },
+  {
+   "from": "pre-flop KK",
+   "evByAction": {
+    "raise4x": 3.289359145863713,
+    "raise3x": 2.6414455500972274,
+    "check": 1.9935319543678462
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop KQs",
+   "evByAction": {
+    "raise4x": 1.3126203140823205,
+    "raise3x": 1.0446122481851658,
+    "check": 0.8164077785348363
+   },
+   "difficulty": 1135
+  },
+  {
+   "from": "pre-flop KQo",
+   "evByAction": {
+    "raise4x": 0.7829415058560011,
+    "raise3x": 0.5538255049020482,
+    "check": 0.3704903968034687
+   },
+   "difficulty": 1295
+  },
+  {
+   "from": "pre-flop KJs",
+   "evByAction": {
+    "raise4x": 1.2275003751925122,
+    "raise3x": 0.9761535725771194,
+    "check": 0.7675870945860992
+   },
+   "difficulty": 1200
+  },
+  {
+   "from": "pre-flop KJo",
+   "evByAction": {
+    "raise4x": 0.69199111696901,
+    "raise3x": 0.4806174137283753,
+    "check": 0.31864897674092285
+   },
+   "difficulty": 1370
+  },
+  {
+   "from": "pre-flop KTs",
+   "evByAction": {
+    "raise4x": 1.1484691353184733,
+    "raise3x": 0.9126979719491383,
+    "check": 0.7212971193747544
+   },
+   "difficulty": 1265
+  },
+  {
+   "from": "pre-flop KTo",
+   "evByAction": {
+    "raise4x": 0.6074844355783832,
+    "raise3x": 0.4127061328122549,
+    "check": 0.26936643211934
+   },
+   "difficulty": 1440
+  },
+  {
+   "from": "pre-flop K9s",
+   "evByAction": {
+    "raise4x": 0.694570631745729,
+    "raise3x": 0.49480112152402117,
+    "check": 0.34475050935071516
+   },
+   "difficulty": 1420
+  },
+  {
+   "from": "pre-flop K9o",
+   "evByAction": {
+    "raise4x": 0.37102442518808676,
+    "raise3x": 0.21478593206212615,
+    "check": 0.11622767142626472
+   },
+   "difficulty": 1610
+  },
+  {
+   "from": "pre-flop K8s",
+   "evByAction": {
+    "raise4x": 0.48161109647517225,
+    "raise3x": 0.3153640978023703,
+    "check": 0.20908557039556785
+   },
+   "difficulty": 1570
+  },
+  {
+   "from": "pre-flop K8o",
+   "evByAction": {
+    "raise4x": 0.16625885452127478,
+    "raise3x": 0.04585540337137848,
+    "check": -0.003953671062794147
+   },
+   "difficulty": 1780
+  },
+  {
+   "from": "pre-flop K7s",
+   "evByAction": {
+    "raise4x": 0.40389877841781247,
+    "raise3x": 0.25314402830706884,
+    "check": 0.16717183440247466
+   },
+   "difficulty": 1645
+  },
+  {
+   "from": "pre-flop K7o",
+   "evByAction": {
+    "raise4x": 0.08135426243205023,
+    "raise3x": -0.022392741008365927,
+    "check": -0.049437234824408864
+   },
+   "difficulty": 1850
+  },
+  {
+   "from": "pre-flop K6s",
+   "evByAction": {
+    "raise4x": 0.3091488880194197,
+    "raise3x": 0.1763341775469947,
+    "check": 0.1164798519946193
+   },
+   "difficulty": 1730
+  },
+  {
+   "from": "pre-flop K6o",
+   "evByAction": {
+    "raise4x": -0.02077434871792275,
+    "raise3x": -0.10523992759529496,
+    "check": -0.10298990518754131
+   },
+   "difficulty": 1905
+  },
+  {
+   "from": "pre-flop K5s",
+   "evByAction": {
+    "raise4x": 0.21914830997003987,
+    "raise3x": 0.10328995723812653,
+    "check": 0.07063821920997823
+   },
+   "difficulty": 1815
+  },
+  {
+   "from": "pre-flop K4s",
+   "evByAction": {
+    "raise4x": 0.11701624578088718,
+    "raise3x": 0.01932351441069998,
+    "check": 0.018917021934498686
+   },
+   "difficulty": 1890
+  },
+  {
+   "from": "pre-flop K3s",
+   "evByAction": {
+    "raise4x": 0.02200040651854686,
+    "raise3x": -0.05909912263448339,
+    "check": -0.030194612543529373
+   },
+   "difficulty": 1895
+  },
+  {
+   "from": "pre-flop K3o",
+   "evByAction": {
+    "raise4x": -0.3324120776459777,
+    "raise3x": -0.3609258705459657,
+    "check": -0.2583165826838691
+   },
+   "difficulty": 1895
+  },
+  {
+   "from": "pre-flop K2o",
+   "evByAction": {
+    "raise4x": -0.43770245737233626,
+    "raise3x": -0.4478769328792482,
+    "check": -0.3112957215207475
+   },
+   "difficulty": 1815
+  },
+  {
+   "from": "pre-flop QQ",
+   "evByAction": {
+    "raise4x": 3.0186485267485796,
+    "raise3x": 2.420145245526065,
+    "check": 1.8216419643012125
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop QJs",
+   "evByAction": {
+    "raise4x": 1.0241563742903645,
+    "raise3x": 0.8189722714680848,
+    "check": 0.6935980730391001
+   },
+   "difficulty": 1405
+  },
+  {
+   "from": "pre-flop QJo",
+   "evByAction": {
+    "raise4x": 0.45568102750543765,
+    "raise3x": 0.2929872339575196,
+    "check": 0.22429717262679796
+   },
+   "difficulty": 1615
+  },
+  {
+   "from": "pre-flop QTs",
+   "evByAction": {
+    "raise4x": 0.9435947567272469,
+    "raise3x": 0.7542435705669903,
+    "check": 0.6480229414727258
+   },
+   "difficulty": 1480
+  },
+  {
+   "from": "pre-flop QTo",
+   "evByAction": {
+    "raise4x": 0.3694949962139043,
+    "raise3x": 0.22367934427482147,
+    "check": 0.17589602652094435
+   },
+   "difficulty": 1700
+  },
+  {
+   "from": "pre-flop Q9s",
+   "evByAction": {
+    "raise4x": 0.48919867533509276,
+    "raise3x": 0.33591224097919836,
+    "check": 0.27409331062899134
+   },
+   "difficulty": 1660
+  },
+  {
+   "from": "pre-flop Q9o",
+   "evByAction": {
+    "raise4x": 0.13250515667488955,
+    "raise3x": 0.02529645818222727,
+    "check": 0.02618642979856062
+   },
+   "difficulty": 1875
+  },
+  {
+   "from": "pre-flop Q8s",
+   "evByAction": {
+    "raise4x": 0.27893151697682,
+    "raise3x": 0.15857685746670136,
+    "check": 0.1401992697367674
+   },
+   "difficulty": 1820
+  },
+  {
+   "from": "pre-flop Q7s",
+   "evByAction": {
+    "raise4x": 0.06277568750437272,
+    "raise3x": -0.0232695765349994,
+    "check": 0.007849858245655417
+   },
+   "difficulty": 1900
+  },
+  {
+   "from": "pre-flop Q6o",
+   "evByAction": {
+    "raise4x": -0.352995258233586,
+    "raise3x": -0.3734763043211152,
+    "check": -0.24872999759149986
+   },
+   "difficulty": 1855
+  },
+  {
+   "from": "pre-flop Q5o",
+   "evByAction": {
+    "raise4x": -0.44934704995277347,
+    "raise3x": -0.4517487057884988,
+    "check": -0.29752454923606036
+   },
+   "difficulty": 1750
+  },
+  {
+   "from": "pre-flop Q4s",
+   "evByAction": {
+    "raise4x": -0.19844777467569724,
+    "raise3x": -0.2355538154485103,
+    "check": -0.12444930697028542
+   },
+   "difficulty": 1890
+  },
+  {
+   "from": "pre-flop Q4o",
+   "evByAction": {
+    "raise4x": -0.5612151213467383,
+    "raise3x": -0.5437688034032799,
+    "check": -0.3503434529840307
+   },
+   "difficulty": 1570
+  },
+  {
+   "from": "pre-flop Q3s",
+   "evByAction": {
+    "raise4x": -0.29416010717971347,
+    "raise3x": -0.3145450369196439,
+    "check": -0.17211494649720002
+   },
+   "difficulty": 1815
+  },
+  {
+   "from": "pre-flop Q3o",
+   "evByAction": {
+    "raise4x": -0.6655171778566026,
+    "raise3x": -0.6299058983627335,
+    "check": -0.4008844106644403
+   },
+   "difficulty": 1395
+  },
+  {
+   "from": "pre-flop Q2s",
+   "evByAction": {
+    "raise4x": -0.3914267385960233,
+    "raise3x": -0.3948074438340476,
+    "check": -0.2204399799024813
+   },
+   "difficulty": 1680
+  },
+  {
+   "from": "pre-flop Q2o",
+   "evByAction": {
+    "raise4x": -0.771572227255709,
+    "raise3x": -0.7174809649032595,
+    "check": -0.4522182999738193
+   },
+   "difficulty": 1225
+  },
+  {
+   "from": "pre-flop JJ",
+   "evByAction": {
+    "raise4x": 2.749738853361271,
+    "raise3x": 2.200349395334511,
+    "check": 1.6509599373065842
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop JTs",
+   "evByAction": {
+    "raise4x": 0.7788410280851984,
+    "raise3x": 0.62828388593379,
+    "check": 0.6019045305420644
+   },
+   "difficulty": 1715
+  },
+  {
+   "from": "pre-flop J9s",
+   "evByAction": {
+    "raise4x": 0.317836845819052,
+    "raise3x": 0.20458743474164784,
+    "check": 0.22819617320479693
+   },
+   "difficulty": 1880
+  },
+  {
+   "from": "pre-flop J8o",
+   "evByAction": {
+    "raise4x": -0.2721453064027481,
+    "raise3x": -0.3019485665899074,
+    "check": -0.1549439939713176
+   },
+   "difficulty": 1815
+  },
+  {
+   "from": "pre-flop J7o",
+   "evByAction": {
+    "raise4x": -0.4780516846534657,
+    "raise3x": -0.4716903566706839,
+    "check": -0.26982916265488444
+   },
+   "difficulty": 1560
+  },
+  {
+   "from": "pre-flop J6s",
+   "evByAction": {
+    "raise4x": -0.32272907957892616,
+    "raise3x": -0.33484722243585185,
+    "check": -0.16364430705705438
+   },
+   "difficulty": 1710
+  },
+  {
+   "from": "pre-flop J6o",
+   "evByAction": {
+    "raise4x": -0.6861593237506182,
+    "raise3x": -0.6430447847717807,
+    "check": -0.3828948467285304
+   },
+   "difficulty": 1260
+  },
+  {
+   "from": "pre-flop J5s",
+   "evByAction": {
+    "raise4x": -0.38480706530266434,
+    "raise3x": -0.3845440555454872,
+    "check": -0.19406184372945076
+   },
+   "difficulty": 1615
+  },
+  {
+   "from": "pre-flop J5o",
+   "evByAction": {
+    "raise4x": -0.7540158244364418,
+    "raise3x": -0.6976335889526777,
+    "check": -0.41585453427018604
+   },
+   "difficulty": 1155
+  },
+  {
+   "from": "pre-flop J4s",
+   "evByAction": {
+    "raise4x": -0.48785673786668166,
+    "raise3x": -0.46926580579350335,
+    "check": -0.24252602842218415
+   },
+   "difficulty": 1435
+  },
+  {
+   "from": "pre-flop J4o",
+   "evByAction": {
+    "raise4x": -0.8661489164805923,
+    "raise3x": -0.7898766071200863,
+    "check": -0.46702301984904
+   },
+   "difficulty": 990
+  },
+  {
+   "from": "pre-flop J3s",
+   "evByAction": {
+    "raise4x": -0.5839073595273346,
+    "raise3x": -0.5485398399114233,
+    "check": -0.28909636039260966
+   },
+   "difficulty": 1270
+  },
+  {
+   "from": "pre-flop J3o",
+   "evByAction": {
+    "raise4x": -0.9707701247881219,
+    "raise3x": -0.8762810225298615,
+    "check": -0.5167116760784978
+   },
+   "difficulty": 870
+  },
+  {
+   "from": "pre-flop J2s",
+   "evByAction": {
+    "raise4x": -0.6815664069573353,
+    "raise3x": -0.6291294550792746,
+    "check": -0.33622026605612987
+   },
+   "difficulty": 1115
+  },
+  {
+   "from": "pre-flop J2o",
+   "evByAction": {
+    "raise4x": -1.0771984571326414,
+    "raise3x": -0.9641678094195043,
+    "check": -0.5672160913253761
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop TT",
+   "evByAction": {
+    "raise4x": 2.4808030583244842,
+    "raise3x": 1.9805674593246119,
+    "check": 1.480331860297181
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop T9s",
+   "evByAction": {
+    "raise4x": 0.18516906734490873,
+    "raise3x": 0.10461849421761345,
+    "check": 0.20548471814369879
+   },
+   "difficulty": 1785
+  },
+  {
+   "from": "pre-flop T9o",
+   "evByAction": {
+    "raise4x": -0.2315057179913903,
+    "raise3x": -0.2621391659706812,
+    "check": -0.07945994912976624
+   },
+   "difficulty": 1705
+  },
+  {
+   "from": "pre-flop T8s",
+   "evByAction": {
+    "raise4x": -0.030267350961457103,
+    "raise3x": -0.07695476542224082,
+    "check": 0.07541122037074788
+   },
+   "difficulty": 1825
+  },
+  {
+   "from": "pre-flop T8o",
+   "evByAction": {
+    "raise4x": -0.43896341075159623,
+    "raise3x": -0.4333888842170598,
+    "check": -0.1934615004945712
+   },
+   "difficulty": 1405
+  },
+  {
+   "from": "pre-flop T7s",
+   "evByAction": {
+    "raise4x": -0.2448989121902075,
+    "raise3x": -0.257679662927804,
+    "check": -0.05343486160477551
+   },
+   "difficulty": 1585
+  },
+  {
+   "from": "pre-flop T7o",
+   "evByAction": {
+    "raise4x": -0.6455667432514816,
+    "raise3x": -0.6037294536303985,
+    "check": -0.30584546292656734
+   },
+   "difficulty": 1110
+  },
+  {
+   "from": "pre-flop T6s",
+   "evByAction": {
+    "raise4x": -0.4592530553420835,
+    "raise3x": -0.43806656900090374,
+    "check": -0.18096044889797147
+   },
+   "difficulty": 1305
+  },
+  {
+   "from": "pre-flop T6o",
+   "evByAction": {
+    "raise4x": -0.8518236857996381,
+    "raise3x": -0.7736637514896363,
+    "check": -0.4167288876894085
+   },
+   "difficulty": 885
+  },
+  {
+   "from": "pre-flop T5s",
+   "evByAction": {
+    "raise4x": -0.6762606790095376,
+    "raise3x": -0.6205858584444003,
+    "check": -0.30800359305833713
+   },
+   "difficulty": 1040
+  },
+  {
+   "from": "pre-flop T5o",
+   "evByAction": {
+    "raise4x": -1.060580545393795,
+    "raise3x": -0.9455995364004,
+    "check": -0.5272588053218078
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop T4s",
+   "evByAction": {
+    "raise4x": -0.7511395749650044,
+    "raise3x": -0.6817494471240426,
+    "check": -0.3393843474008308
+   },
+   "difficulty": 930
+  },
+  {
+   "from": "pre-flop T4o",
+   "evByAction": {
+    "raise4x": -1.1435249190917467,
+    "raise3x": -1.0136070793096636,
+    "check": -0.5616517848919007
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop T3s",
+   "evByAction": {
+    "raise4x": -0.8471702817002218,
+    "raise3x": -0.76102052210554,
+    "check": -0.38425014411897856
+   },
+   "difficulty": 830
+  },
+  {
+   "from": "pre-flop T3o",
+   "evByAction": {
+    "raise4x": -1.2480828127809982,
+    "raise3x": -1.0999738297485877,
+    "check": -0.6100154819447443
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop T2s",
+   "evByAction": {
+    "raise4x": -0.9448546207478626,
+    "raise3x": -0.8416442753080988,
+    "check": -0.4298413679070119
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop T2o",
+   "evByAction": {
+    "raise4x": -1.3544930413379994,
+    "raise3x": -1.1878600531281989,
+    "check": -0.6594542085412722
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 98s",
+   "evByAction": {
+    "raise4x": -0.17047555903168907,
+    "raise3x": -0.18649066678122972,
+    "check": 0.051068794383450286
+   },
+   "difficulty": 1460
+  },
+  {
+   "from": "pre-flop 98o",
+   "evByAction": {
+    "raise4x": -0.6093633576133629,
+    "raise3x": -0.5713040129140196,
+    "check": -0.2361106637844775
+   },
+   "difficulty": 980
+  },
+  {
+   "from": "pre-flop 97s",
+   "evByAction": {
+    "raise4x": -0.38345300572297275,
+    "raise3x": -0.36580762766543806,
+    "check": -0.07168506298042532
+   },
+   "difficulty": 1160
+  },
+  {
+   "from": "pre-flop 97o",
+   "evByAction": {
+    "raise4x": -0.8141929396559976,
+    "raise3x": -0.7401490677998525,
+    "check": -0.34195540206383734
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 96s",
+   "evByAction": {
+    "raise4x": -0.597023806423366,
+    "raise3x": -0.5455896218412217,
+    "check": -0.19658492870138677
+   },
+   "difficulty": 925
+  },
+  {
+   "from": "pre-flop 96o",
+   "evByAction": {
+    "raise4x": -1.019603985300628,
+    "raise3x": -0.9094308904430515,
+    "check": -0.4500325201647403
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 95s",
+   "evByAction": {
+    "raise4x": -0.8124760125063185,
+    "raise3x": -0.7269135036786148,
+    "check": -0.32348703019738384
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 95o",
+   "evByAction": {
+    "raise4x": -1.2267344261891846,
+    "raise3x": -1.0801172824858651,
+    "check": -0.5605232215584087
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 94s",
+   "evByAction": {
+    "raise4x": -1.0492282325984832,
+    "raise3x": -0.9264676489829569,
+    "check": -0.4524715050121797
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 94o",
+   "evByAction": {
+    "raise4x": -1.4579848941121887,
+    "raise3x": -1.271405964580509,
+    "check": -0.6746778117408416
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 93s",
+   "evByAction": {
+    "raise4x": -1.1161414507086302,
+    "raise3x": -0.9814266065375997,
+    "check": -0.4825009247356566
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 93o",
+   "evByAction": {
+    "raise4x": -1.5323399542779166,
+    "raise3x": -1.3327302411584419,
+    "check": -0.7086657587599755
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 92s",
+   "evByAction": {
+    "raise4x": -1.2135061397657383,
+    "raise3x": -1.0618095771095544,
+    "check": -0.5279027859538942
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 92o",
+   "evByAction": {
+    "raise4x": -1.6383637875910462,
+    "raise3x": -1.4203225133044473,
+    "check": -0.758210973790462
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 87s",
+   "evByAction": {
+    "raise4x": -0.47468508095438483,
+    "raise3x": -0.43341188580623685,
+    "check": -0.05275362685931743
+   },
+   "difficulty": 850
+  },
+  {
+   "from": "pre-flop 87o",
+   "evByAction": {
+    "raise4x": -0.932875595615095,
+    "raise3x": -0.8338918408729035,
+    "check": -0.34019656680264937
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 86s",
+   "evByAction": {
+    "raise4x": -0.688214740763462,
+    "raise3x": -0.6130801261017461,
+    "check": -0.17497693638608075
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 86o",
+   "evByAction": {
+    "raise4x": -1.1382643359521551,
+    "raise3x": -1.0030823732235639,
+    "check": -0.4462643042976721
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 85s",
+   "evByAction": {
+    "raise4x": -0.9030024050647704,
+    "raise3x": -0.7939022591074936,
+    "check": -0.3007403171876209
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 85o",
+   "evByAction": {
+    "raise4x": -1.3446777279323523,
+    "raise3x": -1.1732282475685387,
+    "check": -0.5561678847414234
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 84s",
+   "evByAction": {
+    "raise4x": -1.1382902251676656,
+    "raise3x": -0.9923227710750963,
+    "check": -0.42952482498339745
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 84o",
+   "evByAction": {
+    "raise4x": -1.5743882184985456,
+    "raise3x": -1.363324047835709,
+    "check": -0.670508026373726
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 83s",
+   "evByAction": {
+    "raise4x": -1.372776024086824,
+    "raise3x": -1.190246106162782,
+    "check": -0.557778002609107
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 83o",
+   "evByAction": {
+    "raise4x": -1.8031279740381074,
+    "raise3x": -1.552804225969284,
+    "check": -0.7849046073928113
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 82s",
+   "evByAction": {
+    "raise4x": -1.44033225098722,
+    "raise3x": -1.2457649397446462,
+    "check": -0.5887118262521076
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 82o",
+   "evByAction": {
+    "raise4x": -1.8782139469917414,
+    "raise3x": -1.6147674290060452,
+    "check": -0.8200607105146929
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 76s",
+   "evByAction": {
+    "raise4x": -0.7463244153085082,
+    "raise3x": -0.6537597481724201,
+    "check": -0.14096196650947834
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 76o",
+   "evByAction": {
+    "raise4x": -1.2218706100441485,
+    "raise3x": -1.0683255476655253,
+    "check": -0.4309226486771097
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 75s",
+   "evByAction": {
+    "raise4x": -0.9605767109643346,
+    "raise3x": -0.8340874436554114,
+    "check": -0.2641652142257375
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 75o",
+   "evByAction": {
+    "raise4x": -1.4277367007694977,
+    "raise3x": -1.2379760779667544,
+    "check": -0.5386155017104506
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 74s",
+   "evByAction": {
+    "raise4x": -1.1941314571556856,
+    "raise3x": -1.031117694673866,
+    "check": -0.3921040661576224
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 74o",
+   "evByAction": {
+    "raise4x": -1.655568777031564,
+    "raise3x": -1.4265653338118267,
+    "check": -0.6522036849359739
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 73s",
+   "evByAction": {
+    "raise4x": -1.4273125120748167,
+    "raise3x": -1.2280312295762377,
+    "check": -0.5208795897581435
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 73o",
+   "evByAction": {
+    "raise4x": -1.882941708235829,
+    "raise3x": -1.6149868481291636,
+    "check": -0.7670264260723461
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 72s",
+   "evByAction": {
+    "raise4x": -1.6672915278166796,
+    "raise3x": -1.4304093973106031,
+    "check": -0.6503523585645996
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 72o",
+   "evByAction": {
+    "raise4x": -2.1175788261261084,
+    "raise3x": -1.8092517724317436,
+    "check": -0.8828064839621256
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 65s",
+   "evByAction": {
+    "raise4x": -0.9845393217448568,
+    "raise3x": -0.8472070461094509,
+    "check": -0.22688829339096855
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 65o",
+   "evByAction": {
+    "raise4x": -1.475095449390523,
+    "raise3x": -1.2739814954698607,
+    "check": -0.5205721469256565
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 64s",
+   "evByAction": {
+    "raise4x": -1.2145873780114849,
+    "raise3x": -1.0412537586334554,
+    "check": -0.35184872812971657
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 64o",
+   "evByAction": {
+    "raise4x": -1.6992007303338748,
+    "raise3x": -1.4594104952012594,
+    "check": -0.6311462542604028
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 63s",
+   "evByAction": {
+    "raise4x": -1.4463057468278622,
+    "raise3x": -1.236976945589355,
+    "check": -0.47982243626012766
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 63o",
+   "evByAction": {
+    "raise4x": -1.9249938533751723,
+    "raise3x": -1.6465464724855154,
+    "check": -0.7451543183920636
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 62s",
+   "evByAction": {
+    "raise4x": -1.6849058199395086,
+    "raise3x": -1.43828510210315,
+    "check": -0.6096730622981142
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 62o",
+   "evByAction": {
+    "raise4x": -2.158188987189212,
+    "raise3x": -1.8396917539069924,
+    "check": -0.861363462162264
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 54s",
+   "evByAction": {
+    "raise4x": -1.166242007907269,
+    "raise3x": -0.9953104152725928,
+    "check": -0.2989838271136683
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 54o",
+   "evByAction": {
+    "raise4x": -1.6699510782074032,
+    "raise3x": -1.433056819874912,
+    "check": -0.5977044879118416
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 53s",
+   "evByAction": {
+    "raise4x": -1.3931302526216556,
+    "raise3x": -1.1869895005782543,
+    "check": -0.4236566078005228
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 53o",
+   "evByAction": {
+    "raise4x": -1.8906065340098699,
+    "raise3x": -1.6159019564705919,
+    "check": -0.7083363844318283
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 52s",
+   "evByAction": {
+    "raise4x": -1.6294759677912194,
+    "raise3x": -1.3864625275878957,
+    "check": -0.5523983299456078
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 52o",
+   "evByAction": {
+    "raise4x": -2.1213968907570653,
+    "raise3x": -1.8070898008093457,
+    "check": -0.8233239267450384
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 43s",
+   "evByAction": {
+    "raise4x": -1.5118550694593986,
+    "raise3x": -1.2846940370208837,
+    "check": -0.4726585564340974
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 43o",
+   "evByAction": {
+    "raise4x": -2.0169258324496737,
+    "raise3x": -1.7198437002696798,
+    "check": -0.760050744708503
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 42s",
+   "evByAction": {
+    "raise4x": -1.7444967408501526,
+    "raise3x": -1.4810770352913558,
+    "check": -0.599060723339038
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 42o",
+   "evByAction": {
+    "raise4x": -2.243692522124829,
+    "raise3x": -1.9076875246377816,
+    "check": -0.8725602011163013
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 32s",
+   "evByAction": {
+    "raise4x": -1.8428056097114673,
+    "raise3x": -1.5624942216530042,
+    "check": -0.6492684543332066
+   },
+   "difficulty": null
+  },
+  {
+   "from": "pre-flop 32o",
+   "evByAction": {
+    "raise4x": -2.348116416621728,
+    "raise3x": -1.9941809791647884,
+    "check": -0.9258374060413875
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 1",
+   "evByAction": {
+    "raise2x": -2.4234107962137643,
+    "check": -1.584564423139821
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 1",
+   "evByAction": {
+    "raise1x": -2.021212121212121,
+    "fold": -2
+   },
+   "difficulty": 1625
+  },
+  {
+   "from": "flop, hand 2",
+   "evByAction": {
+    "raise2x": -1.0887393827264362,
+    "check": -0.8869509152580274
+   },
+   "difficulty": 1390
+  },
+  {
+   "from": "river, hand 2",
+   "evByAction": {
+    "raise1x": -1.788888888888889,
+    "fold": -2
+   },
+   "difficulty": 1350
+  },
+  {
+   "from": "flop, hand 3",
+   "evByAction": {
+    "raise2x": -1.0525439407955581,
+    "check": -0.4349479998878703
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 3",
+   "evByAction": {
+    "raise1x": -2.9727272727272727,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 4",
+   "evByAction": {
+    "raise2x": -2.074209252562623,
+    "check": -1.3640764724020975
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 4",
+   "evByAction": {
+    "raise1x": -2.4393939393939394,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 5",
+   "evByAction": {
+    "raise2x": -0.7264326895224169,
+    "check": -0.6336454274474644
+   },
+   "difficulty": 1735
+  },
+  {
+   "from": "river, hand 5",
+   "evByAction": {
+    "raise1x": -1.2727272727272727,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 6",
+   "evByAction": {
+    "raise2x": -2.262205776544359,
+    "check": -1.2289742942841917
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 6",
+   "evByAction": {
+    "raise1x": 0.43636363636363634,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 7",
+   "evByAction": {
+    "raise2x": -2.345785327838969,
+    "check": -1.3822713723731326
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 7",
+   "evByAction": {
+    "raise1x": -2.697979797979798,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 8",
+   "evByAction": {
+    "raise2x": -1.086819162952377,
+    "check": -0.543410983096457
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 8",
+   "evByAction": {
+    "raise1x": -2.9,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 9",
+   "evByAction": {
+    "raise2x": -0.32806884758780536,
+    "check": -0.3434362122613754
+   },
+   "difficulty": 1555
+  },
+  {
+   "from": "river, hand 9",
+   "evByAction": {
+    "raise1x": 3.175757575757576,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 10",
+   "evByAction": {
+    "raise2x": -1.2323288388043272,
+    "check": -1.028834132256888
+   },
+   "difficulty": 1380
+  },
+  {
+   "from": "river, hand 10",
+   "evByAction": {
+    "raise1x": -1.8484848484848484,
+    "fold": -2
+   },
+   "difficulty": 1575
+  },
+  {
+   "from": "flop, hand 11",
+   "evByAction": {
+    "raise2x": -1.1988076883543997,
+    "check": -0.9380988422616546
+   },
+   "difficulty": 1160
+  },
+  {
+   "from": "river, hand 11",
+   "evByAction": {
+    "raise1x": 2.801010101010101,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 12",
+   "evByAction": {
+    "raise2x": -1.6420663620478606,
+    "check": -0.9033694951363792
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 12",
+   "evByAction": {
+    "raise1x": 1.6595959595959595,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 13",
+   "evByAction": {
+    "raise2x": -1.443217559498783,
+    "check": -0.8581326680309108
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 13",
+   "evByAction": {
+    "raise1x": -2.71010101010101,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 14",
+   "evByAction": {
+    "raise2x": -2.1130934693839563,
+    "check": -1.1969991309954282
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 14",
+   "evByAction": {
+    "raise1x": -2.390909090909091,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 15",
+   "evByAction": {
+    "raise2x": -1.4444061334903062,
+    "check": -0.8287481662134714
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 15",
+   "evByAction": {
+    "raise1x": -2.5,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 16",
+   "evByAction": {
+    "raise2x": -1.4574785785701685,
+    "check": -1.1145628346368337
+   },
+   "difficulty": 885
+  },
+  {
+   "from": "river, hand 16",
+   "evByAction": {
+    "raise1x": -1.6797979797979798,
+    "fold": -2
+   },
+   "difficulty": 950
+  },
+  {
+   "from": "flop, hand 17",
+   "evByAction": {
+    "raise2x": -1.369912352012264,
+    "check": -0.8421509264710028
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 17",
+   "evByAction": {
+    "raise1x": -0.23333333333333334,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 18",
+   "evByAction": {
+    "raise2x": -1.089307506143768,
+    "check": -0.8574028910754169
+   },
+   "difficulty": 1270
+  },
+  {
+   "from": "river, hand 18",
+   "evByAction": {
+    "raise1x": -1.4212121212121211,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 19",
+   "evByAction": {
+    "raise2x": -0.5085321298087239,
+    "check": -0.5043338098842264
+   },
+   "difficulty": 1245
+  },
+  {
+   "from": "river, hand 19",
+   "evByAction": {
+    "raise1x": -1.7545454545454546,
+    "fold": -2
+   },
+   "difficulty": 1215
+  },
+  {
+   "from": "flop, hand 20",
+   "evByAction": {
+    "raise2x": -2.432300806398856,
+    "check": -1.434328483727187
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 20",
+   "evByAction": {
+    "raise1x": -0.19494949494949496,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 21",
+   "evByAction": {
+    "raise2x": 1.8210112223063193,
+    "check": 1.2827909062876652
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 21",
+   "evByAction": {
+    "raise1x": 1.5232323232323233,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 22",
+   "evByAction": {
+    "raise2x": -1.390688569319466,
+    "check": -0.8679440099421603
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 22",
+   "evByAction": {
+    "raise1x": -2.5323232323232325,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 23",
+   "evByAction": {
+    "raise2x": -2.5914809519804947,
+    "check": -1.6631028135190968
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 23",
+   "evByAction": {
+    "raise1x": -2.54040404040404,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 24",
+   "evByAction": {
+    "raise2x": -2.3743297919060993,
+    "check": -1.482426485016678
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 24",
+   "evByAction": {
+    "raise1x": -0.38282828282828285,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 25",
+   "evByAction": {
+    "raise2x": 0.1781020192676059,
+    "check": 0.00529812463207526
+   },
+   "difficulty": 1500
+  },
+  {
+   "from": "river, hand 25",
+   "evByAction": {
+    "raise1x": 0.8010101010101011,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 26",
+   "evByAction": {
+    "raise2x": -1.140283033853812,
+    "check": -0.873346321681193
+   },
+   "difficulty": 1135
+  },
+  {
+   "from": "river, hand 26",
+   "evByAction": {
+    "raise1x": 3.1914141414141413,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 27",
+   "evByAction": {
+    "raise2x": 1.1133887440547987,
+    "check": 0.6277572206804437
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 27",
+   "evByAction": {
+    "raise1x": 1.6202020202020202,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 28",
+   "evByAction": {
+    "raise2x": 0.8956484362589707,
+    "check": 0.6177174146646816
+   },
+   "difficulty": 1095
+  },
+  {
+   "from": "river, hand 28",
+   "evByAction": {
+    "raise1x": 0.16464646464646465,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 29",
+   "evByAction": {
+    "raise2x": -2.671880694082364,
+    "check": -1.5699455236920556
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 29",
+   "evByAction": {
+    "raise1x": -1.2858585858585858,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 30",
+   "evByAction": {
+    "raise2x": -1.7167012399667365,
+    "check": -1.2329768545772246
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 30",
+   "evByAction": {
+    "raise1x": -2.1484848484848484,
+    "fold": -2
+   },
+   "difficulty": 1585
+  },
+  {
+   "from": "flop, hand 31",
+   "evByAction": {
+    "raise2x": 0.47910184172903747,
+    "check": 0.18286192171483562
+   },
+   "difficulty": 1030
+  },
+  {
+   "from": "river, hand 31",
+   "evByAction": {
+    "raise1x": -0.39191919191919194,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 32",
+   "evByAction": {
+    "raise2x": 0.2681065978938321,
+    "check": 0.04307179099038473
+   },
+   "difficulty": 1295
+  },
+  {
+   "from": "river, hand 32",
+   "evByAction": {
+    "raise1x": 0.5434343434343434,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 33",
+   "evByAction": {
+    "raise2x": -0.6305151421710169,
+    "check": -0.5704080583821572
+   },
+   "difficulty": 1765
+  },
+  {
+   "from": "river, hand 33",
+   "evByAction": {
+    "raise1x": -1.405050505050505,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 34",
+   "evByAction": {
+    "raise2x": -1.17953914725423,
+    "check": -1.0118306095179377
+   },
+   "difficulty": 1515
+  },
+  {
+   "from": "river, hand 34",
+   "evByAction": {
+    "raise1x": -2.0474747474747477,
+    "fold": -2
+   },
+   "difficulty": 1750
+  },
+  {
+   "from": "flop, hand 35",
+   "evByAction": {
+    "raise2x": -0.9283687943262403,
+    "check": -0.7527280202580865
+   },
+   "difficulty": 1490
+  },
+  {
+   "from": "river, hand 35",
+   "evByAction": {
+    "raise1x": 1.6813131313131313,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 36",
+   "evByAction": {
+    "raise2x": 1.1188424485371748,
+    "check": 0.7635859053065324
+   },
+   "difficulty": 855
+  },
+  {
+   "from": "river, hand 36",
+   "evByAction": {
+    "raise1x": -0.7505050505050505,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 37",
+   "evByAction": {
+    "raise2x": 0.8626851306777293,
+    "check": 0.4389996168904572
+   },
+   "difficulty": null
+  },
+  {
+   "from": "river, hand 37",
+   "evByAction": {
+    "raise1x": 0.2222222222222222,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 38",
+   "evByAction": {
+    "raise2x": -1.2726235528270546,
+    "check": -0.906315700950299
+   },
+   "difficulty": 830
+  },
+  {
+   "from": "river, hand 38",
+   "evByAction": {
+    "raise1x": 0.8414141414141414,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 39",
+   "evByAction": {
+    "raise2x": 0.27734140666610596,
+    "check": 0.03344079088760004
+   },
+   "difficulty": 1225
+  },
+  {
+   "from": "river, hand 39",
+   "evByAction": {
+    "raise1x": -0.7525252525252525,
+    "fold": -2
+   },
+   "difficulty": null
+  },
+  {
+   "from": "flop, hand 40",
+   "evByAction": {
+    "raise2x": -0.029881609807604383,
+    "check": -0.14061054579093363
+   },
+   "difficulty": 1700
+  },
+  {
+   "from": "river, hand 40",
+   "evByAction": {
+    "raise1x": -0.007070707070707071,
+    "fold": -2
+   },
+   "difficulty": null
+  }
+ ]
+}

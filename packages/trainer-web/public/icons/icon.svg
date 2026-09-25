@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="felt" cx="50%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#1f6b44"/>
+      <stop offset="0.6" stop-color="#14532d"/>
+      <stop offset="1" stop-color="#0a2e1b"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112.64" fill="url(#felt)"/>
+  <g transform="rotate(-12 256 256)">
+    <rect x="72.2944" y="91.136" width="235.52" height="329.728" rx="28.2624"
+          fill="#dfe6ec" stroke="#0a2e1b" stroke-width="3.072"/>
+  </g>
+  <g transform="rotate(8 256 256)">
+    <rect x="190.0544" y="91.136" width="235.52" height="329.728" rx="28.2624"
+          fill="#ffffff" stroke="#0a2e1b" stroke-width="3.072"/>
+    <text x="307.8144" y="298.86464" text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif" font-weight="900"
+          font-size="108.3392" fill="#14532d" letter-spacing="-2.3552">EV</text>
+    <rect x="237.1584" y="335.13472" width="141.312" height="6.144"
+          rx="3.072" fill="#c9a227"/>
+  </g>
+</svg>

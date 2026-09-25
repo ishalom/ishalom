@@ -1,0 +1,20 @@
+node_modules/
+
+# Generated strategy charts. The committed golden copies live in
+# packages/ev-engine/test/golden; these are scratch output from `npm run charts`.
+charts/
+packages/trainer-web/build/
+
+# A working channel between two Claude sessions, not documentation.
+handoff/
+
+# The one credential this project holds: Idan's Supabase database connection
+# string, pasted once so migrations can be run for him (round 12). It reaches
+# that database and nothing else in his account, and it never leaves this file.
+.env.local
+
+# Another of Idan's projects writes its notes here. Not this project's work, and
+# not something to commit — but the build stamp asks `git status --porcelain`, so
+# an untracked folder marks every build dirty (round 22).
+Claude outputs/
+

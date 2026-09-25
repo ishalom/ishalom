@@ -1,0 +1,26 @@
+{
+  "name": "@evtrainer/ev-engine",
+  "version": "0.1.0",
+  "description": "Exact, pure, dependency-free expected-value engine for Blackjack and Ultimate Texas Hold'em.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./blackjack": "./src/blackjack/index.ts",
+    "./uth": "./src/uth-entry.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node scripts/test.ts",
+    "test:slow": "node scripts/test.ts --slow",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "charts:golden": "node scripts/test.ts --update-golden test/chart.test.ts",
+    "charts": "node scripts/generate-charts.ts",
+    "preflop": "node --max-old-space-size=4096 scripts/generate-preflop.ts"
+  },
+  "dependencies": {},
+  "license": "UNLICENSED",
+  "private": true
+}
