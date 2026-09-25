@@ -99,6 +99,65 @@ const UTH_BOARD_FROM = 14;
 const UTH_SOLVED = new Map<string, UthEvaluation>();
 
 /**
+ * The flop solves this page has made, for the phone to keep (round 35).
+ *
+ * A 62-hand table took four seconds to derive after a reload, nearly all of it
+ * re-solving flops the phone had already solved before the reload. Only the
+ * flop is kept: the pre-flop is a table lookup and a river is under a
+ * millisecond. The newest `limit`, oldest first, so the store stays small.
+ */
+export function exportUthSolves(limit = 400): Array<[string, UthEvaluation]> {
+  const flops = [...UTH_SOLVED.entries()].filter(([, evaluation]) => evaluation.phase === 'flop');
+  return flops.slice(Math.max(0, flops.length - limit));
+}
+
+/**
+ * Take kept solves back, trusting none of them blindly (round 35).
+ *
+ * Each is checked for the shape a flop solve has — a key naming the paytable,
+ * the street, two hole cards and three board cards; both actions' figures
+ * finite; the best action really the best — and anything else is dropped, so
+ * the spot is simply solved again. A kept answer can make a reload fast; it can
+ * never make a figure different, because it is only ever found under the same
+ * key a fresh solve would be stored under. Returns how many were taken.
+ */
+export function importUthSolves(entries: unknown): number {
+  if (!Array.isArray(entries)) return 0;
+  let taken = 0;
+  for (const entry of entries) {
+    if (!Array.isArray(entry) || entry.length !== 2) continue;
+    const [key, evaluation] = entry as [unknown, unknown];
+    if (typeof key !== 'string' || !/^\{.*\}\|flop\|\d+,\d+\|\d+,\d+,\d+$/.test(key)) continue;
+    if (!isFlopEvaluation(evaluation)) continue;
+    if (!UTH_SOLVED.has(key)) {
+      UTH_SOLVED.set(key, evaluation);
+      taken++;
+    }
+  }
+  return taken;
+}
+
+/** Forget every solve this page holds — what a phone with nothing kept starts from. */
+export function forgetUthSolves(): void {
+  UTH_SOLVED.clear();
+}
+
+/** Whether something read back from storage has the shape of a flop solve. */
+function isFlopEvaluation(value: unknown): value is UthEvaluation {
+  if (!value || typeof value !== 'object') return false;
+  const evaluation = value as Partial<UthEvaluation>;
+  if (evaluation.phase !== 'flop') return false;
+  const ev = evaluation.evByAction as Record<string, unknown> | undefined;
+  if (!ev || typeof ev.raise2x !== 'number' || typeof ev.check !== 'number') return false;
+  if (!Number.isFinite(ev.raise2x) || !Number.isFinite(ev.check)) return false;
+  const best = ev.raise2x >= ev.check ? 'raise2x' : 'check';
+  if (evaluation.optimalAction !== best && ev.raise2x !== ev.check) return false;
+  const counts = evaluation.counts as Record<string, unknown> | undefined;
+  if (!counts || typeof counts !== 'object') return false;
+  return Object.values(counts).every((n) => n === undefined || (typeof n === 'number' && Number.isFinite(n)));
+}
+
+/**
  * What an Ultimate decision carries beyond what every decision carries: the
  * evaluation it was graded on, the class and cards the card words, and the
  * seat's Ante — everything the private table's card is composed from.

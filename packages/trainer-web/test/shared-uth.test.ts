@@ -34,6 +34,7 @@ import {
   seatView,
   seatsAgree,
   counterfactualBack,
+  forgetLastDerivation,
   sharedSpots,
   type SeatMove,
   type TableRecord,
@@ -235,6 +236,8 @@ test('an Ultimate table replays from its log alone, whatever the clock says', ()
   try {
     for (const fake of [0, 1e12, 4242]) {
       Date.now = () => fake;
+      // Afresh each time, not the derivation `deriveTable` kept from the last one.
+      forgetLastDerivation();
       assert.deepEqual(boardsOf(deriveTable(copyOf(record))), played);
     }
   } finally {

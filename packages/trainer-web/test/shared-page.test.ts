@@ -469,3 +469,79 @@ test('a seventh arrival is told the table is full, at the door (round 34)', asyn
     server.close();
   }
 });
+
+/** Open the built page at a link, as one player, against the given store; returns what the test needs. */
+async function openAs(origin: string, hash: string, id: string, name: string) {
+  const page = loadHosted(hash, [['ev:playerName', name], ['ev:playerId', id], ['ev:locale', 'he']], { url: origin, key: 'k' });
+  await page.booted;
+  return page;
+}
+
+test('a seat is freed when its player leaves for good; he gets it back if it is still free, and another if not (round 35)', async () => {
+  const { server, tables, seats } = fakeRest();
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
+  tables.push({ id: 'freetable1', seed: 9, preset_id: 'uth-standard', restrictions: {}, state: 'open', seats: 6 });
+  for (let seat = 0; seat < 6; seat++) {
+    seats.push({
+      table_id: 'freetable1',
+      seat,
+      player_id: seat === 0 ? 'idan-row' : null,
+      name: seat === 0 ? 'Idan' : null,
+      bet: 1,
+      moves: [],
+      hands: 0,
+      events: seat === 0 ? [{ kind: 'join', seat: 0, hand: 0, playerId: 'idan-row', name: 'Idan' }] : [],
+      reactions: {},
+    });
+  }
+  const timers: any[] = [];
+  const realInterval = globalThis.setInterval;
+  (globalThis as any).setInterval = (fn: any, ms: number, ...rest: any[]) => {
+    const handle = realInterval(fn, ms, ...rest);
+    timers.push(handle);
+    return handle;
+  };
+  const row = (seat: number) => seats.find((entry) => entry.seat === seat)!;
+  let page: ReturnType<typeof loadHosted> | null = null;
+  try {
+    // נירו arrives by the link and sits in the first free seat, his join naming him.
+    page = await openAs(origin, '#shared=freetable1', 'niro-row', 'נירו');
+    await until(() => row(1).player_id === 'niro-row' && (row(1).events as any[]).length > 0);
+    assert.equal(row(1).player_id, 'niro-row');
+    assert.deepEqual((row(1).events as any[])[0], { kind: 'join', seat: 1, hand: 0, playerId: 'niro-row', name: 'נירו' });
+
+    // He leaves by the home link: the drop is written, and the seat is freed — its history stays.
+    const home = page.document.querySelector('#shared-bar a.back');
+    for (const click of home.listeners.click ?? []) click({ preventDefault() {} });
+    await until(() => row(1).player_id === null);
+    assert.equal(row(1).player_id, null, 'leaving did not free the seat');
+    assert.ok((row(1).events as any[]).some((event) => event.kind === 'drop' && event.why === 'left'));
+    assert.equal(row(1).name, 'נירו', 'the freed row lost the name of who sat there');
+    page.stopWatching();
+
+    // He comes back while it is still free: it is his again.
+    page = await openAs(origin, '#shared=freetable1', 'niro-row', 'נירו');
+    await until(() => row(1).player_id === 'niro-row');
+    assert.equal(row(1).player_id, 'niro-row', 'a free seat he left was not given back to him');
+    assert.equal(seats.filter((entry) => entry.player_id === 'niro-row').length, 1);
+    for (const click of page.document.querySelector('#shared-bar a.back').listeners.click ?? []) click({ preventDefault() {} });
+    await until(() => row(1).player_id === null);
+    page.stopWatching();
+
+    // Somebody else takes it; when he comes back he is given another free seat, carrying nothing.
+    page = await openAs(origin, '#shared=freetable1', 'dana-row', 'Dana');
+    await until(() => row(1).player_id === 'dana-row');
+    assert.equal(row(1).player_id, 'dana-row', 'the freed seat was not given to the next arrival');
+    page.stopWatching();
+    page = await openAs(origin, '#shared=freetable1', 'niro-row', 'נירו');
+    await until(() => seats.some((entry) => entry.player_id === 'niro-row'));
+    assert.equal(seats.find((entry) => entry.player_id === 'niro-row')!.seat, 2, 'he was not given the next free seat');
+  } finally {
+    page?.stopWatching();
+    for (const handle of timers) clearInterval(handle);
+    (globalThis as any).setInterval = realInterval;
+    server.closeAllConnections();
+    server.close();
+  }
+});

@@ -765,7 +765,7 @@ async function api(path, body) {
 
     case '/api/shared/act': {
       if (!sharedAvailable()) return { available: false };
-      const screen = await sharedAct(String(b.action || ''));
+      const screen = await sharedAct(String(b.action || ''), b.ms);
       await absorbSharedRating();
       return { available: true, seat: sharedState.seat, screen, clock: sharedClock() };
     }

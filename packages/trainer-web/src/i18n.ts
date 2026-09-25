@@ -83,6 +83,9 @@ const EN: Catalogue = {
   'shared.summaryAccurate': 'Most accurate: {name}, {pct}% right',
   'shared.summaryChips': 'Most chips: {name}, {n}',
   'shared.summaryShare': 'Share as a picture',
+  // Round 35: each player's average time to decide, measured by his own phone.
+  'shared.paceLabel': 'Average time to decide',
+  'shared.paceValue': '⏱ {s}s',
   'shared.make': 'Make a table',
   'shared.needsHosted': 'The shared table needs the hosted app. This copy plays on its own.',
   'shared.missing': 'That table is not there any more — the link may be old. You can open a new one here.',
@@ -1176,6 +1179,9 @@ const HE: Catalogue = {
   'shared.summaryAccurate': 'הכי מדויק: {name}, {pct}% נכון',
   'shared.summaryChips': 'הכי הרבה צ׳יפים: {name}, {n}',
   'shared.summaryShare': 'לשתף כתמונה',
+  // Round 35: each player's average time to decide, measured by his own phone.
+  'shared.paceLabel': 'זמן החלטה ממוצע',
+  'shared.paceValue': '⏱ {s} ש׳',
   'shared.make': 'לפתוח שולחן',
   'shared.needsHosted': 'השולחן המשותף עובד רק בגרסה המתארחת. העותק הזה משחק לבד.',
   'shared.missing': 'השולחן הזה כבר לא קיים — אולי הקישור ישן. אפשר לפתוח כאן שולחן חדש.',

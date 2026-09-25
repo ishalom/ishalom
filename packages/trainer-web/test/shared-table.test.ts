@@ -34,6 +34,7 @@ import { analyse } from '../src/analyse.ts';
 import {
   cardsHash,
   deriveTable,
+  forgetLastDerivation,
   isLive,
   playTable,
   seatCardsHash,
@@ -90,7 +91,9 @@ test('a table derives to the same cards every time, over hundreds of them', () =
     // The record now holds the moves. Deriving it again must produce the table.
     const second = deriveTable(played);
     assert.deepEqual(cardsOf(second), cardsOf(first), `seed ${seed} derived differently the second time`);
-    // And a third derivation on a *copy* of the record, as another device would.
+    // And a third derivation on a *copy* of the record, as another device would —
+    // worked out afresh, not handed the last one `deriveTable` kept (round 34's memo).
+    forgetLastDerivation();
     const elsewhere = deriveTable(JSON.parse(JSON.stringify(played)) as TableRecord);
     assert.deepEqual(cardsOf(elsewhere), cardsOf(first), `seed ${seed} derived differently elsewhere`);
     for (const hand of first.hands) {

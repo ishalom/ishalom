@@ -98,6 +98,18 @@ export interface SeatMove {
    */
   round: number;
   action: BlackjackAction | 'takeInsurance' | 'declineInsurance' | UthAction;
+  /**
+   * How long the player took, in milliseconds, from his buttons appearing to
+   * his tap — measured by his own phone and written into his own row (round 35).
+   *
+   * **The derivation never reads it.** Nothing about a card, a grade or a
+   * rating can be reached from it: moves are matched by hand, round and action
+   * and nothing else, and `test/shared-pace.test.ts` holds that by deriving a
+   * table with and without every time and comparing everything. Absent on a
+   * first hand, after a reload, and whenever the phone did not see the buttons
+   * appear — such a decision has no time rather than a guessed one.
+   */
+  ms?: number;
 }
 
 /** One seat, as its own row holds it. Only this seat ever writes here. */
@@ -227,7 +239,7 @@ export function tableReactions(record: TableRecord): ReactionPost[] {
       const at = Number(hand);
       if (!Number.isInteger(at) || !Array.isArray(keys)) continue;
       keys.forEach((key, index) => {
-        if (isReaction(key)) posts.push({ seat: seat.seat, name: seat.name, hand: at, key, index });
+        if (isReaction(key)) posts.push({ seat: seat.seat, name: occupantAt(seat, at).name, hand: at, key, index });
       });
     }
   }
@@ -244,7 +256,14 @@ export function tableReactions(record: TableRecord): ReactionPost[] {
  * what happened; the cards follow the log (spec A 3.3).
  */
 export type TableEvent =
-  | { kind: 'join'; seat: number; hand: number }
+  /*
+   * A join names who sat down (round 35): a seat can now be left for good and
+   * taken by somebody else, so the row keeps each occupant's arrival — and so
+   * each hand's play stays his, under his name — rather than one name for the
+   * seat's whole life. Joins written before round 35 carry neither, and read as
+   * the row's own player.
+   */
+  | { kind: 'join'; seat: number; hand: number; playerId?: string; name?: string }
   | { kind: 'drop'; seat: number; hand: number; why?: string }
   | { kind: 'return'; seat: number; hand: number };
 
@@ -861,6 +880,11 @@ export function deriveTable(record: TableRecord): DerivedTable {
 /** The last table derived, and the key it was derived for. See `deriveTable`. */
 let LAST_DERIVED: { key: string; table: DerivedTable } | null = null;
 
+/** Forget the last derivation, so the next one is worked out afresh (for the tests). */
+export function forgetLastDerivation(): void {
+  LAST_DERIVED = null;
+}
+
 /** Everything the derivation reads from a record, and nothing it does not. */
 function derivationKey(record: TableRecord): string {
   return JSON.stringify([
@@ -1142,6 +1166,12 @@ export interface SeatGlance {
   /** His graded decisions in the hand on screen that this screen may show (round 34). */
   shown: DerivedDecision[];
   /**
+   * His average time to decide, from the times his own phone wrote into his
+   * own moves (round 35), and how many timed decisions it is over. Null when
+   * none was timed. Display only: see `SeatMove.ms`.
+   */
+  pace: { ms: number; n: number } | null;
+  /**
    * How many of his cards are face down to me (round 32). An Ultimate player's
    * two cards are his own, as at a real table, until the hand is over — and the
    * grade never counts them, so showing them would show a player something
@@ -1366,6 +1396,10 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     if (event.kind !== 'drop' || event.why === 'left') continue;
     forfeitAt.set(event.seat, [...(forfeitAt.get(event.seat) ?? []), event.hand]);
   }
+  for (const entry of record.seats) {
+    const start = tenureStart(entry);
+    forfeitAt.set(entry.seat, (forfeitAt.get(entry.seat) ?? []).filter((hand) => hand >= start));
+  }
   const endRunsUpTo = (hand: number) => {
     for (const [who, hands] of forfeitAt) {
       const due = hands.filter((at) => at <= hand);
@@ -1375,15 +1409,19 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       forfeitAt.set(who, hands.filter((at) => at > hand));
     }
   };
+  /* Each seat's figures are its present occupant's, from his own arrival (round 35). */
+  const since = new Map(record.seats.map((entry) => [entry.seat, tenureStart(entry)]));
   for (const hand of table.hands) {
     endRunsUpTo(hand.hand);
     for (const seatHand of hand.seats) {
+      if (hand.hand < (since.get(seatHand.seat) ?? 0)) continue;
       dealtIn.set(seatHand.seat, (dealtIn.get(seatHand.seat) ?? 0) + 1);
       if (seatHand.net !== null) stacks.set(seatHand.seat, (stacks.get(seatHand.seat) ?? 0) + seatHand.net);
     }
     for (const decision of hand.decisions) {
       const tally = counts.get(decision.seat);
       if (!tally) continue;
+      if (hand.hand < (since.get(decision.seat) ?? 0)) continue;
       if (!countsOnScreen(record, decision, hand, current, seat, pending)) continue;
       countDecision(tally, decision);
     }
@@ -1467,6 +1505,7 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
       active: seatHand ? seatHand.active : null,
       faceDown: hidden ? dealt!.cards.length : 0,
       crown: { tier: crownFor(tally.crownRun), run: tally.crownRun },
+      pace: paceOf(entry.moves.filter((move) => move.hand >= (since.get(entry.seat) ?? 0))),
     };
   };
 
@@ -1488,6 +1527,54 @@ export function seatView(record: TableRecord, seat: number | null): SeatView {
     decisions: current ? current.decisions.filter((d) => d.seat === seat || (iActed && gradeVisible(d, current, current, seat, pending))) : [],
     disagrees,
   };
+}
+
+/**
+ * The hand the seat's present occupant sat down at (round 35).
+ *
+ * A seat left for good is freed and may be taken by somebody else, and what
+ * the seat shows — its bar, chips, crown and pace — is the present occupant's,
+ * from his own arrival. A player who comes back to his own seat keeps his
+ * tenure: only a join by somebody *else* starts a new one. A row whose joins
+ * name nobody (written before round 35) has one occupant from the start.
+ */
+export function tenureStart(row: SeatRecord): number {
+  let start = 0;
+  let owner: string | undefined;
+  for (const event of [...(row.events ?? [])].sort((a, b) => a.hand - b.hand)) {
+    if (event.kind !== 'join' || !event.playerId) continue;
+    if (event.playerId !== owner) {
+      owner = event.playerId;
+      start = event.hand;
+    }
+  }
+  return start;
+}
+
+/** Who sat in a seat at a given hand, by the joins in its row; the row's own name otherwise. */
+export function occupantAt(row: SeatRecord, hand: number): { playerId: string | null; name: string } {
+  let found: { playerId: string | null; name: string } | null = null;
+  for (const event of [...(row.events ?? [])].sort((a, b) => a.hand - b.hand)) {
+    if (event.kind !== 'join' || event.hand > hand || !event.playerId) continue;
+    found = { playerId: event.playerId, name: event.name ?? row.name };
+  }
+  return found ?? { playerId: row.playerId, name: row.name };
+}
+
+/** The player who sat down last in a seat, by its joins, or null if none is named. */
+export function lastOccupant(row: SeatRecord): string | null {
+  let last: string | null = null;
+  for (const event of [...(row.events ?? [])].sort((a, b) => a.hand - b.hand)) {
+    if (event.kind === 'join' && event.playerId) last = event.playerId;
+  }
+  return last;
+}
+
+/** A seat's average time to decide, over the moves its own phone timed (round 35). */
+function paceOf(moves: readonly SeatMove[]): { ms: number; n: number } | null {
+  const timed = moves.filter((move) => typeof move.ms === 'number' && Number.isFinite(move.ms) && move.ms > 0);
+  if (timed.length === 0) return null;
+  return { ms: timed.reduce((sum, move) => sum + move.ms!, 0) / timed.length, n: timed.length };
 }
 
 /** Whether an Ultimate seat has nothing left to decide in the hand: it raised, or it folded. */

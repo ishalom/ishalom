@@ -272,6 +272,26 @@ function httpBackend({ url, key, table = 'players' }) {
       return rows.length > 0 ? { seat, taken: false } : { seat, taken: true };
     },
 
+    /**
+     * Free my own seat, having left for good (round 35). The same filter as a
+     * write — this seat and this player — so nobody can free a seat that is not
+     * his. The row keeps its moves and events: the table is derived from them.
+     */
+    async releaseSeat(tableId, seat, playerId) {
+      const response = await fetch(
+        `${seatsEndpoint}?table_id=eq.${encodeURIComponent(tableId)}&seat=eq.${seat}` +
+          `&player_id=eq.${encodeURIComponent(playerId)}`,
+        {
+          method: 'PATCH',
+          headers,
+          /* The name stays: it is who sat here last, for a join written before round 35 that names nobody. */
+          body: JSON.stringify({ player_id: null, vote: null }),
+        },
+      );
+      if (!response.ok) throw new Error(`releaseSeat failed: ${response.status}`);
+      return true;
+    },
+
     /** Write my own row, and never anybody else's. */
     async pushSeat(tableId, seat, seatRecord) {
       const response = await fetch(

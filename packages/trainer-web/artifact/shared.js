@@ -90,6 +90,48 @@ const sharedState = {
   toldCounterfactual: false,
 };
 
+/*
+ * The flop solves, kept on this phone between visits (round 35).
+ *
+ * Stored under the build the page came from, so a new build — which may solve
+ * differently — starts again rather than reading an older build's answers; and
+ * each answer is checked on the way in (`importUthSolves`). Whatever goes wrong
+ * — storage full, cleared, or unavailable in a private window — the answer is
+ * the same: the spot is solved again, slowly, and never read wrongly.
+ */
+const SHARED_SOLVES_KEY = 'ev:uthSolves';
+let sharedSolvesLoaded = false;
+let sharedSolvesSaved = -1;
+
+function sharedSolvesBuild() {
+  const meta = typeof document !== 'undefined' && document.querySelector
+    ? document.querySelector('meta[name="ev-build-commit"]')
+    : null;
+  return (meta && meta.getAttribute && meta.getAttribute('content')) || 'local';
+}
+
+function sharedLoadSolves() {
+  if (sharedSolvesLoaded) return;
+  sharedSolvesLoaded = true;
+  try {
+    const blob = JSON.parse(localStorage.getItem(SHARED_SOLVES_KEY) || 'null');
+    if (blob && blob.build === sharedSolvesBuild()) importUthSolves(blob.entries);
+  } catch {
+    // Nothing kept, or nothing readable: the spots are solved again.
+  }
+}
+
+function sharedSaveSolves() {
+  const entries = exportUthSolves();
+  if (entries.length === sharedSolvesSaved) return;
+  try {
+    localStorage.setItem(SHARED_SOLVES_KEY, JSON.stringify({ build: sharedSolvesBuild(), entries }));
+    sharedSolvesSaved = entries.length;
+  } catch {
+    // Full or unavailable: this visit is unaffected; the next reload solves again.
+  }
+}
+
 /** The store the page was built with, or none — in which case say so plainly. */
 function sharedBackend() {
   return typeof backend !== 'undefined' && backend && typeof backend.readTable === 'function'
@@ -126,6 +168,8 @@ async function sharedRefresh() {
       return null;
     }
     sharedState.record = sharedNormalise(record);
+    /* An Ultimate table: take back the solves this phone kept, before the first derivation. */
+    if (isUthTable(sharedState.record)) sharedLoadSolves();
     sharedTickHold();
     return sharedState.record;
   } catch (failure) {
@@ -186,7 +230,10 @@ function sharedScreenNow() {
   if (!sharedState.record) return null;
   /* In the player's language: the hand's analysis is the solo card's own prose (round 30). */
   const locale = typeof window !== 'undefined' && window.EV && window.EV.locale === 'he' ? 'he' : 'en';
-  return sharedScreen(sharedState.record, sharedState.seat, locale);
+  const screen = sharedScreen(sharedState.record, sharedState.seat, locale);
+  /* Whatever this drawing had to solve, kept for the next visit (round 35). */
+  if (isUthTable(sharedState.record)) sharedSaveSolves();
+  return screen;
 }
 
 /** Write my own row back: my moves, my bet, my count of hands, my hash, my vote. */
@@ -362,8 +409,15 @@ async function sharedJoin(id, player) {
     }
     return { available: true, seat: already.seat, taken: false };
   }
-  for (const row of record.seats) {
-    if (row.playerId) continue;
+  /*
+   * A free seat, and his own first if he left it and nobody has taken it since
+   * (round 35): a seat is freed when its player leaves for good, and he may
+   * still come back to it while it is free.
+   */
+  const free = record.seats
+    .filter((row) => !row.playerId)
+    .sort((a, b) => Number(lastOccupant(b) === player.id) - Number(lastOccupant(a) === player.id) || a.seat - b.seat);
+  for (const row of free) {
     const answer = await store.joinTable(id, row.seat, {
       id: player.id,
       name: player.name,
@@ -394,7 +448,21 @@ async function sharedJoin(id, player) {
       await sharedRefresh();
       const seen = sharedScreenNow();
       const from = seen && seen.hand !== null ? seen.hand + 1 : 0;
-      await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from });
+      /*
+       * A seat somebody else sat in before (round 35): its history stays in
+       * the row, and none of it is his. His rating starts after it — the mark
+       * moves past every decision already in the seat — and a vote the last
+       * occupant left behind is not his either.
+       */
+      const mine = sharedMyRow();
+      if (mine) {
+        const before = lastOccupant(mine);
+        if (before && before !== player.id) {
+          mine.ratedDecisions = seatRatable(sharedState.record, mine.seat).length;
+        }
+        mine.vote = null;
+      }
+      await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from, playerId: player.id, name: player.name });
       await sharedRefresh();
       return { available: true, seat: row.seat, taken: false };
     }
@@ -404,12 +472,20 @@ async function sharedJoin(id, player) {
 }
 
 /** Record one decision in my own row, and write it. */
-async function sharedAct(action) {
+async function sharedAct(action, ms) {
   const screen = sharedScreenNow();
   const row = sharedMyRow();
   if (!screen || !row || !screen.legal.includes(action)) return sharedScreenNow();
   if (screen.hand === null) return screen;
-  row.moves = [...row.moves, { hand: screen.hand, round: screen.round, action }];
+  const move = { hand: screen.hand, round: screen.round, action };
+  /*
+   * The time this phone measured for its own player (round 35), when it has
+   * one. Kept only if it is a plausible time to decide: anything else is not a
+   * measurement, and no time is better than a wrong one.
+   */
+  const time = Number(ms);
+  if (Number.isFinite(time) && time > 0 && time < 10 * 60 * 1000) move.ms = Math.round(time);
+  row.moves = [...row.moves, move];
   /*
    * Written to the screen before the network, so the player's own tap is
    * instant. The table is read back afterwards; if the write failed, the next
@@ -577,6 +653,21 @@ async function sharedDrop(seat, why) {
 async function sharedLeave() {
   if (sharedState.seat === null) return;
   await sharedDrop(sharedState.seat, 'left');
+  /*
+   * And the seat is freed (round 35): the row keeps his history under his
+   * name, and the next person to arrive by the link may sit in it. If nobody
+   * has by the time he comes back, it is his again. The thirty-second drop is
+   * not this: a seat the clock took a hand from stays its player's.
+   */
+  const store = sharedBackend();
+  const row = sharedMyRow();
+  if (store && row && typeof store.releaseSeat === 'function') {
+    try {
+      await store.releaseSeat(sharedState.id, row.seat, row.playerId);
+    } catch {
+      // Not freed: he keeps the seat, which is how every table worked before.
+    }
+  }
   sharedState.seat = null;
 }
 

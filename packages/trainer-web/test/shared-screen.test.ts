@@ -23,11 +23,14 @@ import {
   counterfactualBack,
   deriveTable,
   isLive,
+  lastOccupant,
   seatCardsHash,
+  seatRatable,
   sharedSpots,
   type SeatMove,
   type TableRecord,
 } from '../src/shared-table.ts';
+import { exportUthSolves, importUthSolves, isUthTable } from '../src/shared-uth.ts';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const source = (...parts: string[]) => readFileSync(join(HERE, '..', ...parts), 'utf8');
@@ -180,6 +183,12 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     'counterfactualBack',
     'sharedSpots',
     'isLive',
+    // Round 35: the driver tells the games apart, keeps solves, and knows who sat in a seat before.
+    'isUthTable',
+    'importUthSolves',
+    'exportUthSolves',
+    'lastOccupant',
+    'seatRatable',
     `${code}
      return {
        sharedCreate, sharedJoin, sharedRefresh, sharedAct, sharedDeal,
@@ -187,7 +196,20 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
        sharedReact, sharedCounterfactual, sharedCounterfactualShown, sharedSpotsNow,
        sharedScreenNow, sharedClock, sharedState,
      };`,
-  )(store, sharedScreen, deriveTable, seatCardsHash, counterfactualBack, sharedSpots, isLive) as any;
+  )(
+    store,
+    sharedScreen,
+    deriveTable,
+    seatCardsHash,
+    counterfactualBack,
+    sharedSpots,
+    isLive,
+    isUthTable,
+    importUthSolves,
+    exportUthSolves,
+    lastOccupant,
+    seatRatable,
+  ) as any;
 
   return {
     create: (options = {}) =>

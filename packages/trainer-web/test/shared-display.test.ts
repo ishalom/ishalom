@@ -156,3 +156,52 @@ test('a watcher with no seat sees no grade from a hand still being played', () =
   assert.deepEqual(view.seats[1]!.shown, []);
   assert.ok(deriveTable(record).hands[0]!.decisions.length === 1);
 });
+
+test('a seat that changed hands shows its present player\'s figures, and each hand keeps its own player\'s name (round 35)', async () => {
+  const { occupantAt, tenureStart } = await import('../src/shared-table.ts');
+  const rng = makeRng(41);
+  const record: TableRecord = {
+    id: 'swap',
+    seed: 404,
+    presetId: 'vegas-strip-6d-s17',
+    restrictions: { noSurrender: false, likeRanksOnly: false },
+    seats: [
+      { seat: 0, playerId: 'idan', name: 'Idan', bet: 1, moves: [] as SeatMove[], events: [{ kind: 'join' as const, seat: 0, hand: 0, playerId: 'idan', name: 'Idan' }] },
+      {
+        seat: 1,
+        playerId: 'dana',
+        name: 'Dana',
+        bet: 1,
+        moves: [] as SeatMove[],
+        // נירו sat here from hand 0 and left for good at hand 4; Dana sat down from hand 6.
+        events: [
+          { kind: 'join' as const, seat: 1, hand: 0, playerId: 'niro', name: 'נירו' },
+          { kind: 'drop' as const, seat: 1, hand: 4, why: 'left' },
+          { kind: 'join' as const, seat: 1, hand: 6, playerId: 'dana', name: 'Dana' },
+        ],
+      },
+    ],
+  };
+  const table = playTable(record, 10, ({ legal }) => legal[rng.nextInt(legal.length)] as SeatMove['action']);
+  assert.equal(tenureStart(record.seats[1]!), 6);
+  assert.equal(occupantAt(record.seats[1]!, 2).name, 'נירו');
+  assert.equal(occupantAt(record.seats[1]!, 7).name, 'Dana');
+
+  const screen = sharedScreen(record, 0, 'en');
+  const dana = screen.seats.find((seat) => seat.seat === 1)!;
+  const hers = table.hands.filter((hand) => hand.hand >= 6);
+  const decisions = hers.flatMap((hand) => hand.decisions.filter((d) => d.seat === 1 && d.round >= 0));
+  assert.equal(dana.decisions, decisions.length, 'the seat counts decisions made before she sat down');
+  const chips = hers.reduce((sum, hand) => sum + (hand.seats.find((s) => s.seat === 1)?.net ?? 0), 0);
+  assert.ok(Math.abs(dana.stack - chips) < 1e-9, 'the seat shows chips won before she sat down');
+  assert.equal(dana.handsPlayed, hers.filter((hand) => hand.seats.some((s) => s.seat === 1)).length);
+
+  // The history and the ticker say who was sitting there at the time.
+  for (const hand of screen.history) {
+    const seat1 = hand.seats.find((s) => s.seat === 1);
+    if (seat1) assert.equal(seat1.name, hand.hand >= 6 ? 'Dana' : 'נירו', `hand ${hand.hand} is under the wrong name`);
+  }
+  const left = screen.ticker.find((item) => item.kind === 'left' && item.seat === 1)!;
+  assert.equal(left.name, 'נירו', 'the ticker says the wrong player left');
+  assert.ok(screen.ticker.some((item) => item.kind === 'arrived' && item.seat === 1 && item.name === 'Dana'));
+});

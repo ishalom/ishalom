@@ -3178,3 +3178,6 @@ button,
 .shared-summary-card h2 { margin: 0 0 8px; color: #f2c14e; font-size: 18px; }
 .shared-summary-card p { margin: 4px 0; }
 .shared-summary-card .shared-share { margin-top: 10px; width: 100%; }
+
+/* Each player's average time to decide (round 35): a small figure beside the chips. */
+.shared-pace { font-size: 11px; opacity: 0.75; font-variant-numeric: tabular-nums; white-space: nowrap; }

@@ -35,6 +35,7 @@ import { isUthTable } from './shared-uth.ts';
 import { UthSession, pokerCardView } from './uth-session.ts';
 import {
   deriveTable,
+  occupantAt,
   rulesFor,
   scenarioKeyOf,
   seatView,
@@ -115,6 +116,8 @@ export interface SeatPanel {
   faceDown: number;
   /** The crown on its current run, and the run (round 33). Never in the ticker. */
   crown: { tier: string | null; run: number };
+  /** Its average time to decide, measured by its own phone (round 35), or null. */
+  pace: { ms: number; n: number } | null;
   /**
    * Whether each of `actions` was right, in the same order (round 34):
    * 'right', 'wrong', or null while the grade may not be shown here yet. The
@@ -384,7 +387,11 @@ function tableMeasures(seats: SeatPanel[]): TableMeasures {
 function tickerFor(record: TableRecord): TickerItem[] {
   const table = deriveTable(record);
   const items: TickerItem[] = [];
-  const nameOf = (seat: number) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
+  /* Whoever sat there at that hand: a seat can change hands (round 35). */
+  const nameOf = (seat: number, hand: number) => {
+    const row = record.seats.find((entry) => entry.seat === seat);
+    return row ? occupantAt(row, hand).name : '';
+  };
 
   /*
    * THE SOLO GAME'S RARITY, KEPT (round 30). This used to hand
@@ -432,7 +439,7 @@ function tickerFor(record: TableRecord): TickerItem[] {
         !spokeThisHand.has(seat) &&
         mark.sitting < PER_SITTING
       ) {
-        items.push({ kind: 'record', seat, name: nameOf(seat), hand: hand.hand, streak: now });
+        items.push({ kind: 'record', seat, name: nameOf(seat, hand.hand), hand: hand.hand, streak: now });
         mark.announced = true;
         mark.sitting++;
         spokeThisHand.add(seat);
@@ -459,7 +466,7 @@ function tickerFor(record: TableRecord): TickerItem[] {
         items.push({
           kind: 'gesture',
           seat: seatHand.seat,
-          name: nameOf(seatHand.seat),
+          name: nameOf(seatHand.seat, hand.hand),
           hand: hand.hand,
           decisions: gesture.decisions,
         });
@@ -487,7 +494,9 @@ function tickerFor(record: TableRecord): TickerItem[] {
    * never announce.
    */
   for (const event of tableEvents(record)) {
-    const name = nameOf(event.seat);
+    const row = record.seats.find((entry) => entry.seat === event.seat);
+    /* A join names its own player; anything else is whoever sat there at the time. */
+    const name = event.kind === 'join' && event.name ? event.name : row ? occupantAt(row, event.hand).name : '';
     if (event.kind === 'join' || event.kind === 'return') {
       items.push({ kind: 'arrived', seat: event.seat, name, hand: event.hand });
     } else {
@@ -634,6 +643,7 @@ function panel(
     streak: glance.streak,
     faceDown: glance.faceDown,
     crown: { ...glance.crown },
+    pace: glance.pace ? { ...glance.pace } : null,
     grades: glance.acted.map((action, index) => {
       if (action === 'forfeit') return 'wrong';
       const decision = glance.shown.find((entry) => entry.round === glance.actedRounds[index]);
@@ -681,7 +691,10 @@ function spotOf(decision: DerivedDecision, locale: Locale): { key: string; label
 function eveningOf(record: TableRecord, locale: Locale) {
   const table = deriveTable(record);
   const finished = table.hands.filter((hand) => !hand.incomplete);
-  const nameOf = (seat: number) => record.seats.find((entry) => entry.seat === seat)?.name ?? '';
+  const nameOf = (seat: number, hand: number) => {
+    const row = record.seats.find((entry) => entry.seat === seat);
+    return row ? occupantAt(row, hand).name : '';
+  };
   const drops = tableEvents(record).filter((event) => event.kind === 'drop' && event.why !== 'left');
 
   const history: HistoryHand[] = finished
@@ -691,7 +704,7 @@ function eveningOf(record: TableRecord, locale: Locale) {
       hand: hand.hand,
       seats: hand.seats.map((seatHand) => ({
         seat: seatHand.seat,
-        name: nameOf(seatHand.seat),
+        name: nameOf(seatHand.seat, hand.hand),
         actions: hand.decisions
           .filter((d) => d.seat === seatHand.seat && d.round >= 0)
           .map((d) => ({ action: String(d.action), grade: d.evCost <= 0 ? ('right' as const) : ('wrong' as const) })),

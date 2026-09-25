@@ -53,6 +53,10 @@ const shared = {
   /** Which ticker item is showing, and when it last changed (§3.10). */
   tickerAt: 0,
   tickerShownAt: 0,
+  /** Pace (round 35): the offer on screen, when it appeared, and whether it is timed. */
+  offer: null,
+  /** Whether this page has already drawn a table with no decision of mine on it. */
+  sawTable: false,
   /** The counterfactual, once asked for, and whether it has been asked (§3.8). */
   folklore: null,
   folkloreAsked: false,
@@ -198,6 +202,18 @@ function seatNode(seat) {
   const sum = document.createElement('span');
   sum.textContent = window.EVFigure ? window.EVFigure.units(seat.stack, true) : String(seat.stack);
   chips.append(coin, sum);
+  /*
+   * His average time to decide (round 35), measured by his own phone: a fact,
+   * shown beside the chips, and never a grade.
+   */
+  let pace = null;
+  if (seat.pace) {
+    pace = document.createElement('span');
+    pace.className = 'shared-pace';
+    pace.title = T('shared.paceLabel');
+    pace.textContent = T('shared.paceValue', { s: (seat.pace.ms / 1000).toFixed(1) });
+    pace.setAttribute('aria-label', `${T('shared.paceLabel')}: ${pace.textContent}`);
+  }
   const status = document.createElement('span');
   status.className = 'shared-status';
   status.textContent = T(`shared.status.${seat.status}`);
@@ -205,7 +221,7 @@ function seatNode(seat) {
   total.className = 'seat-total';
   const only = seat.split.length === 1 ? seat.split[0] : null;
   total.textContent = only ? headerFigure(only, seat.words) : seat.words || '';
-  title.append(...[who, crown, chips, status, total].filter(Boolean));
+  title.append(...[who, crown, chips, pace, status, total].filter(Boolean));
   box.appendChild(title);
 
   if (seat.actions.length > 0) {
@@ -1123,6 +1139,7 @@ function renderActions(screen) {
 
   const offer = screen.legal.join(',');
   if (window.EVDock) window.EVDock.enter(`shared:${screen.hand}:${screen.round}:${offer}`);
+  noteOffer(screen);
 
   const press = (action) => {
     const button = document.createElement('button');
@@ -1137,7 +1154,8 @@ function renderActions(screen) {
     button.textContent = actionLabel(action);
     button.addEventListener('click', () => {
       if (window.EVDock && !window.EVDock.ready()) return;
-      void act(() => api('/api/shared/act', { id: shared.id, action }), 'move');
+      const ms = timeTaken(screen);
+      void act(() => api('/api/shared/act', { id: shared.id, action, ...(ms === null ? {} : { ms }) }), 'move');
     });
     return button;
   };
@@ -1205,6 +1223,33 @@ function renderActions(screen) {
     );
     box.appendChild(breaker);
   }
+}
+
+/**
+ * Pace (round 35): when this phone's player was shown his buttons.
+ *
+ * Only this phone's own player, only on this phone, and only when the phone
+ * actually saw the buttons appear: not the first hand of a table, not the offer
+ * a reload lands on (the buttons were up before the page was), and not while
+ * the page was hidden. Anything else has no time rather than a guessed one.
+ */
+function noteOffer(screen) {
+  if (screen.legal.length === 0) return;
+  const key = `${screen.hand}:${screen.round}:${screen.legal.join(',')}`;
+  if (shared.offer && shared.offer.key === key) return;
+  const visible = typeof document.visibilityState !== 'string' || document.visibilityState === 'visible';
+  shared.offer = {
+    key,
+    at: Date.now(),
+    timed: shared.sawTable && screen.hand !== null && screen.hand > 0 && visible,
+  };
+}
+
+/** Milliseconds from the buttons appearing to now, or null when this offer is not timed. */
+function timeTaken(screen) {
+  const key = `${screen.hand}:${screen.round}:${screen.legal.join(',')}`;
+  if (!shared.offer || shared.offer.key !== key || !shared.offer.timed) return null;
+  return Date.now() - shared.offer.at;
 }
 
 /** What the dock says while there is nothing for me to decide. */
@@ -1456,6 +1501,8 @@ function render() {
   renderClock(shared.clock);
   renderMeasures(screen);
   renderActions(screen);
+  /* A table seen with nothing of mine to decide: the next buttons that appear are seen appearing. */
+  if (screen.legal.length === 0) shared.sawTable = true;
   renderTicker(screen);
   renderSaid(screen);
   renderReactions(screen);
@@ -1569,6 +1616,8 @@ function openShared() {
   shared.screen = null;
   shared.clock = null;
   shared.unavailable = false;
+  shared.offer = null;
+  shared.sawTable = false;
 
   renderGamePicker();
 
@@ -1613,6 +1662,11 @@ function openShared() {
       if (shared.id && shared.seat !== null) void api('/api/shared/leave', { id: shared.id });
     });
   }
+
+  /* A page hidden while buttons are up did not see the whole decision: that one has no time (round 35). */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' && shared.offer) shared.offer.timed = false;
+  });
 
   if (shared.ticking) clearInterval(shared.ticking);
   shared.ticking = setInterval(tickNextHand, 250);
