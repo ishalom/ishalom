@@ -24,6 +24,7 @@ import {
   deriveTable,
   isLive,
   lastOccupant,
+  passedVote,
   seatCardsHash,
   seatRatable,
   sharedSpots,
@@ -189,6 +190,7 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     'exportUthSolves',
     'lastOccupant',
     'seatRatable',
+    'passedVote',
     `${code}
      return {
        sharedCreate, sharedJoin, sharedRefresh, sharedAct, sharedDeal,
@@ -209,6 +211,7 @@ function phone(store: ReturnType<typeof fakeStore>, who: { id: string; name: str
     exportUthSolves,
     lastOccupant,
     seatRatable,
+    passedVote,
   ) as any;
 
   return {
@@ -928,4 +931,67 @@ test('leaving is the home link, one tap and in plain sight, and nothing to press
   const dock = screen.slice(screen.indexOf('function renderActions('), screen.indexOf('function dockWords('));
   assert.doesNotMatch(dock, /shared-deal|shared-leave/, 'the dock still offers Deal or Leave');
   assert.ok(dock.includes('EVDock.ready()'), "the new hand's buttons take a press the moment they appear");
+});
+
+test('a drop stays a drop: a later vote, or the voter leaving, never rewrites a hand already played (round 35)', async () => {
+  /*
+   * Found on round 35's six-phone walk. A drop is derived from the votes in the
+   * voters' own rows, and a row holds one vote — so the next vote a player cast,
+   * or his row being freed when he left, took the old vote away, and the hand
+   * it had ended was played again as if nobody had been dropped: the dropped
+   * seat back in it, owing a decision, and the table's past changed under
+   * everybody.
+   */
+  const { idan, dani, id } = await twoSeats(3);
+  const handAt = async (hand: number) => {
+    await idan.refresh();
+    return deriveTable(idan.state.record).hands.find((entry: any) => entry.hand === hand);
+  };
+  const shape = (hand: any) => ({ incomplete: hand.incomplete, seats: hand.seats.map((seat: any) => [seat.seat, seat.cards]) });
+
+  // Hand 0: Idan stands, Dani holds the table, the thirty seconds end it (as the two-seat test).
+  await idan.deal();
+  await dani.refresh();
+  await idan.act('stand');
+  await idan.refresh();
+  assert.ok(idan.clock(), 'the table is not being held');
+  idan.state.heldSince = Date.now() - 31000;
+  await idan.expire();
+  const before = shape(await handAt(0));
+  assert.equal(before.incomplete, false, 'the thirty seconds did not end hand 0');
+  assert.ok(!before.seats.some(([seat]: any) => seat === dani.state.seat), 'Dani was still in hand 0');
+
+  // Dani comes back, and a later hand is held by him too: the clock ends it again.
+  await dani.join(id);
+  let votedAgain = false;
+  for (let hand = 0; hand < 8 && !votedAgain; hand++) {
+    await idan.refresh();
+    await idan.deal();
+    await dani.refresh();
+    await idan.refresh();
+    for (let guard = 0; guard < 10 && idan.screen().legal.length > 0; guard++) {
+      await idan.act(idan.screen().legal.includes('stand') ? 'stand' : idan.screen().legal[0]);
+      await idan.refresh();
+    }
+    if (idan.clock()) {
+      idan.state.heldSince = Date.now() - 31000;
+      await idan.expire();
+      votedAgain = true;
+    } else {
+      // Dani plays this one out, so the next can be dealt.
+      for (let guard = 0; guard < 10; guard++) {
+        await dani.refresh();
+        if (dani.screen().legal.length === 0) break;
+        await dani.act(dani.screen().legal.includes('stand') ? 'stand' : dani.screen().legal[0]);
+      }
+    }
+  }
+  assert.ok(votedAgain, 'no later hand was held, so the second vote is untested');
+  assert.deepEqual(shape(await handAt(0)), before, 'a second vote rewrote hand 0');
+
+  // And Idan leaving — his row freed — changes nothing that was played either.
+  await idan.leave();
+  await dani.refresh();
+  const still = deriveTable(dani.state.record).hands.find((entry: any) => entry.hand === 0);
+  assert.deepEqual(shape(still), before, 'the voter leaving rewrote hand 0');
 });

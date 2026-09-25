@@ -205,3 +205,46 @@ test('a seat that changed hands shows its present player\'s figures, and each ha
   assert.equal(left.name, 'נירו', 'the ticker says the wrong player left');
   assert.ok(screen.ticker.some((item) => item.kind === 'arrived' && item.seat === 1 && item.name === 'Dana'));
 });
+
+test('a row\'s own events keep their order at the same hand, and a kept vote drop reads as the vote did (round 35)', async () => {
+  const { isLive, tableEvents } = await import('../src/shared-table.ts');
+  // Idan's seat on his Ultimate evening: joined, left and came back, all at hand 0.
+  const record: TableRecord = {
+    id: 'order',
+    seed: 1,
+    presetId: UTH_PRESET_ID,
+    restrictions: { noSurrender: false, likeRanksOnly: false },
+    seats: [
+      {
+        seat: 0,
+        playerId: 'idan',
+        name: 'Idan',
+        bet: 1,
+        moves: [] as SeatMove[],
+        events: [
+          { kind: 'join' as const, seat: 0, hand: 0 },
+          { kind: 'drop' as const, seat: 0, hand: 0, why: 'left' },
+          { kind: 'return' as const, seat: 0, hand: 0 },
+        ],
+      },
+      {
+        seat: 1,
+        playerId: 'niro',
+        name: 'נירו',
+        bet: 1,
+        moves: [] as SeatMove[],
+        // A drop kept from seat 0's vote, sitting in seat 0's row before seat 1's own join.
+        events: [{ kind: 'join' as const, seat: 1, hand: 0 }],
+      },
+    ],
+  };
+  assert.equal(isLive(record, 0, 0), true, 'join, leave and return at one hand no longer reads as back');
+  record.seats[0]!.events!.push({ kind: 'drop', seat: 1, hand: 0, why: 'vote' });
+  record.seats[0]!.vote = { hand: 0, against: 1, at: 0, needs: 1 };
+  assert.equal(isLive(record, 1, 0), false, 'a kept vote drop was read before the join it followed');
+  assert.equal(
+    tableEvents(record).filter((event) => event.kind === 'drop' && event.seat === 1).length,
+    1,
+    'the same drop, kept and derived, counted twice',
+  );
+});

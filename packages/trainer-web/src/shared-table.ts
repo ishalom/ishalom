@@ -1014,11 +1014,47 @@ export function isLive(record: TableRecord, seat: number, hand: number): boolean
  */
 export function tableEvents(record: TableRecord): TableEvent[] {
   const events: TableEvent[] = [];
+  /*
+   * Every row's own events, in the order the rows hold them — and then the
+   * drops the votes decided, after all of them, exactly where they have always
+   * gone. Since round 35 a vote's drop can also be kept in a voter's own row
+   * (see `passedVote`); it is still a vote's drop, so it goes with them, not
+   * with the row's own events, and the same drop arriving twice is one drop.
+   * Tables with no kept drops read exactly as they did.
+   */
+  const votes: TableEvent[] = [];
   for (const seat of record.seats) {
-    for (const event of seat.events ?? []) events.push(event);
+    for (const event of seat.events ?? []) {
+      if (event.kind === 'drop' && event.why === 'vote') votes.push(event);
+      else events.push(event);
+    }
   }
-  for (const dropped of votedOut(record)) events.push(dropped);
+  const seen = new Set<string>();
+  for (const dropped of [...votedOut(record), ...votes]) {
+    const key = `${dropped.seat}:${dropped.hand}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    events.push(dropped);
+  }
   return events.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
+}
+
+/**
+ * The drop a row's vote has already decided, as an event to keep — or null
+ * (round 35).
+ *
+ * A row holds one vote, and a drop is derived from the votes; so the moment a
+ * voter's vote is replaced — by his next vote, or by his seat being freed —
+ * the drop it made would disappear, and the hand it ended would be played
+ * again with the dropped player back in it. Found on the six-phone walk; true
+ * since round 22. The driver writes this event into the voter's own row before
+ * anything replaces the vote, so the drop stays a fact of the log.
+ */
+export function passedVote(record: TableRecord, row: SeatRecord): TableEvent | null {
+  const vote = row.vote;
+  if (!vote || vote.hand === null) return null;
+  const dropped = votedOut(record).find((event) => event.seat === vote.against && event.hand === vote.hand);
+  return dropped ?? null;
 }
 
 /**

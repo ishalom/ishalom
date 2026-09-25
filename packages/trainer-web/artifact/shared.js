@@ -460,6 +460,8 @@ async function sharedJoin(id, player) {
         if (before && before !== player.id) {
           mine.ratedDecisions = seatRatable(sharedState.record, mine.seat).length;
         }
+        /* The last occupant's vote is not mine — but what it decided stays decided. */
+        sharedKeepPassedVote(mine);
         mine.vote = null;
       }
       await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from, playerId: player.id, name: player.name });
@@ -590,6 +592,7 @@ async function sharedClockExpired() {
   const screen = sharedScreenNow();
   if (!row || !screen) return clock;
   if (row.vote && row.vote.hand === screen.hand && row.vote.against === clock.seat) return clock;
+  sharedKeepPassedVote(row);
   row.vote = { hand: screen.hand, against: clock.seat, at: 0, needs: 1 };
   await sharedPushMine();
   await sharedRefresh();
@@ -602,6 +605,7 @@ async function sharedVote() {
   const row = sharedMyRow();
   const screen = sharedScreenNow();
   if (!clock || !clock.canVote || !row || !screen) return clock;
+  sharedKeepPassedVote(row);
   row.vote = { hand: screen.hand, against: clock.seat, at: clock.step, needs: clock.needs };
   await sharedPushMine();
   await sharedRefresh();
@@ -611,6 +615,21 @@ async function sharedVote() {
    * is about a player but not done by him, and still needs no shared row.
    */
   return sharedClock();
+}
+
+/**
+ * Before a vote in my row is replaced, keep the drop it already decided
+ * (round 35): see `passedVote`. Written into my own row's events, so the
+ * one-writer rule holds, and read by the derivation like any other drop.
+ */
+function sharedKeepPassedVote(row) {
+  if (!sharedState.record || !row) return;
+  const dropped = passedVote(sharedState.record, row);
+  if (!dropped) return;
+  const events = row.events ?? [];
+  const same = (event) =>
+    event.kind === 'drop' && event.seat === dropped.seat && event.hand === dropped.hand && event.why === dropped.why;
+  if (!events.some(same)) row.events = [...events, dropped];
 }
 
 /**
@@ -661,6 +680,11 @@ async function sharedLeave() {
    */
   const store = sharedBackend();
   const row = sharedMyRow();
+  /* Freeing the row clears its vote: whatever that vote decided is kept first. */
+  if (row && passedVote(sharedState.record, row)) {
+    sharedKeepPassedVote(row);
+    await sharedPushMine();
+  }
   if (store && row && typeof store.releaseSeat === 'function') {
     try {
       await store.releaseSeat(sharedState.id, row.seat, row.playerId);
