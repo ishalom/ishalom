@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="EV Trainer" />
     <title>EV Trainer</title>
-<meta name="ev-build-commit" content="29d445912b648b2128e9c27f55f154d160f1e31d" />
-<meta name="ev-build-at" content="2026-09-25T20:25:32.690Z" />
+<meta name="ev-build-commit" content="89e18ac8c248d95de1930beaf5a28af7f971a727" />
+<meta name="ev-build-at" content="2026-09-25T20:42:40.659Z" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet"
@@ -17694,11 +17694,47 @@ function isLive(record             , seat        , hand        )          {
  */
 function tableEvents(record             )               {
   const events               = [];
+  /*
+   * Every row's own events, in the order the rows hold them — and then the
+   * drops the votes decided, after all of them, exactly where they have always
+   * gone. Since round 35 a vote's drop can also be kept in a voter's own row
+   * (see `passedVote`); it is still a vote's drop, so it goes with them, not
+   * with the row's own events, and the same drop arriving twice is one drop.
+   * Tables with no kept drops read exactly as they did.
+   */
+  const votes               = [];
   for (const seat of record.seats) {
-    for (const event of seat.events ?? []) events.push(event);
+    for (const event of seat.events ?? []) {
+      if (event.kind === 'drop' && event.why === 'vote') votes.push(event);
+      else events.push(event);
+    }
   }
-  for (const dropped of votedOut(record)) events.push(dropped);
+  const seen = new Set        ();
+  for (const dropped of [...votedOut(record), ...votes]) {
+    const key = `${dropped.seat}:${dropped.hand}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    events.push(dropped);
+  }
   return events.sort((a, b) => a.hand - b.hand || a.seat - b.seat);
+}
+
+/**
+ * The drop a row's vote has already decided, as an event to keep — or null
+ * (round 35).
+ *
+ * A row holds one vote, and a drop is derived from the votes; so the moment a
+ * voter's vote is replaced — by his next vote, or by his seat being freed —
+ * the drop it made would disappear, and the hand it ended would be played
+ * again with the dropped player back in it. Found on the six-phone walk; true
+ * since round 22. The driver writes this event into the voter's own row before
+ * anything replaces the vote, so the drop stays a fact of the log.
+ */
+function passedVote(record             , row            )                    {
+  const vote = row.vote;
+  if (!vote || vote.hand === null) return null;
+  const dropped = votedOut(record).find((event) => event.seat === vote.against && event.hand === vote.hand);
+  return dropped ?? null;
 }
 
 /**
@@ -28628,6 +28664,8 @@ async function sharedJoin(id, player) {
         if (before && before !== player.id) {
           mine.ratedDecisions = seatRatable(sharedState.record, mine.seat).length;
         }
+        /* The last occupant's vote is not mine — but what it decided stays decided. */
+        sharedKeepPassedVote(mine);
         mine.vote = null;
       }
       await sharedAddEvent({ kind: 'join', seat: row.seat, hand: from, playerId: player.id, name: player.name });
@@ -28758,6 +28796,7 @@ async function sharedClockExpired() {
   const screen = sharedScreenNow();
   if (!row || !screen) return clock;
   if (row.vote && row.vote.hand === screen.hand && row.vote.against === clock.seat) return clock;
+  sharedKeepPassedVote(row);
   row.vote = { hand: screen.hand, against: clock.seat, at: 0, needs: 1 };
   await sharedPushMine();
   await sharedRefresh();
@@ -28770,6 +28809,7 @@ async function sharedVote() {
   const row = sharedMyRow();
   const screen = sharedScreenNow();
   if (!clock || !clock.canVote || !row || !screen) return clock;
+  sharedKeepPassedVote(row);
   row.vote = { hand: screen.hand, against: clock.seat, at: clock.step, needs: clock.needs };
   await sharedPushMine();
   await sharedRefresh();
@@ -28779,6 +28819,21 @@ async function sharedVote() {
    * is about a player but not done by him, and still needs no shared row.
    */
   return sharedClock();
+}
+
+/**
+ * Before a vote in my row is replaced, keep the drop it already decided
+ * (round 35): see `passedVote`. Written into my own row's events, so the
+ * one-writer rule holds, and read by the derivation like any other drop.
+ */
+function sharedKeepPassedVote(row) {
+  if (!sharedState.record || !row) return;
+  const dropped = passedVote(sharedState.record, row);
+  if (!dropped) return;
+  const events = row.events ?? [];
+  const same = (event) =>
+    event.kind === 'drop' && event.seat === dropped.seat && event.hand === dropped.hand && event.why === dropped.why;
+  if (!events.some(same)) row.events = [...events, dropped];
 }
 
 /**
@@ -28829,6 +28884,11 @@ async function sharedLeave() {
    */
   const store = sharedBackend();
   const row = sharedMyRow();
+  /* Freeing the row clears its vote: whatever that vote decided is kept first. */
+  if (row && passedVote(sharedState.record, row)) {
+    sharedKeepPassedVote(row);
+    await sharedPushMine();
+  }
   if (store && row && typeof store.releaseSeat === 'function') {
     try {
       await store.releaseSeat(sharedState.id, row.seat, row.playerId);
